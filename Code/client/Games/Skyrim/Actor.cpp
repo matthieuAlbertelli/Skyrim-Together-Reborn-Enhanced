@@ -892,8 +892,8 @@ void Actor::FixVampireLordModel() noexcept
     uint32_t isLevitating = GetAnimationVariableInt(&str);
     spdlog::critical("isLevitating {}", isLevitating);
 
-    // Enforce levitation via SAE
-    if (!isLevitating)
+    // By default, a loaded vampire lord is not levitating.
+    if (isLevitating)
     {
         BSFixedString levitation("LevitationToggle");
         SendAnimationEvent(&levitation);
