@@ -875,16 +875,16 @@ extern thread_local bool g_forceAnimation;
 
 void Actor::FixVampireLordModel() noexcept
 {
-    TESBoundObject* pObject = Cast<TESBoundObject>(TESForm::GetById(0x2011a84));
-    if (!pObject)
+    TESBoundObject* pLordArmor = Cast<TESBoundObject>(TESForm::GetById(0x2011a84));
+    if (!pLordArmor)
         return;
 
     {
         ScopedInventoryOverride _;
-        AddObjectToContainer(pObject, nullptr, 1, nullptr);
+        AddObjectToContainer(pLordArmor, nullptr, 1, nullptr);
     }
 
-    EquipManager::Get()->Equip(this, pObject, nullptr, 1, nullptr, false, true, false, false);
+    EquipManager::Get()->Equip(this, pLordArmor, nullptr, 1, nullptr, false, true, false, false);
 
     g_forceAnimation = true;
 
@@ -892,8 +892,8 @@ void Actor::FixVampireLordModel() noexcept
     uint32_t isLevitating = GetAnimationVariableInt(&str);
     spdlog::critical("isLevitating {}", isLevitating);
 
-    // By default, a loaded vampire lord is not levitating.
-    if (isLevitating)
+    // Enforce levitation via SAE
+    if (!isLevitating)
     {
         BSFixedString levitation("LevitationToggle");
         SendAnimationEvent(&levitation);
