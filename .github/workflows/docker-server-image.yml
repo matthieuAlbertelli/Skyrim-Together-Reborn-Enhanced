@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.version.outputs.version }}
+      semver: ${{ steps.version.outputs.semver }}
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +44,10 @@ jobs:
 
       - name: Store version in output
         id: version
-        run: echo "version=$(git describe --tags)" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(git describe --tags)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "semver=${VERSION#v}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -116,7 +120,7 @@ jobs:
           tags: |
             type=schedule,pattern=weekly-latest
             type=semver,pattern={{version}}
-            type=raw,value=${{ needs.build.outputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ needs.build.outputs.semver }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Create manifest list and push
         run: |
