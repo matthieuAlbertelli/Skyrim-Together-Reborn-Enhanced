@@ -1,4 +1,4 @@
-#include <TiltedOnlinePCH.h>
+﻿#include <TiltedOnlinePCH.h>
 
 #include "World.h"
 
@@ -13,6 +13,7 @@
 #include <Services/QuestService.h>
 #include <Services/ActorValueService.h>
 #include <Services/InventoryService.h>
+#include <Services/TradeService.h>
 #include <Services/MagicService.h>
 #include <Services/CommandService.h>
 #include <Services/CalendarService.h>
@@ -45,6 +46,7 @@ World::World()
     ctx().emplace<CalendarService>(*this, m_dispatcher, m_transport);
     ctx().emplace<QuestService>(*this, m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
+    ctx().emplace<TradeService>(*this, m_dispatcher, m_transport);
     ctx().emplace<ActorValueService>(*this, m_dispatcher, m_transport);
     ctx().emplace<InventoryService>(*this, m_dispatcher, m_transport);
     ctx().emplace<MagicService>(*this, m_dispatcher, m_transport);
@@ -107,3 +109,4 @@ World& World::Get() noexcept
 {
     return entt::locator<World>::value();
 }
+
