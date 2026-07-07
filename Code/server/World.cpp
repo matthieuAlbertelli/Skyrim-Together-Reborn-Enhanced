@@ -8,6 +8,7 @@
 #include <Services/ActorValueService.h>
 #include <Services/AdminService.h>
 #include <Services/InventoryService.h>
+#include <Services/TradeService.h>
 #include <Services/MagicService.h>
 #include <Services/OverlayService.h>
 #include <Services/CommandService.h>
@@ -32,6 +33,7 @@ World::World()
     ctx().emplace<ServerListService>(*this, m_dispatcher);
     ctx().emplace<QuestService>(*this, m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher);
+    ctx().emplace<TradeService>(*this, m_dispatcher);
     ctx().emplace<ActorValueService>(*this, m_dispatcher);
     ctx().emplace<InventoryService>(*this, m_dispatcher);
     ctx().emplace<MagicService>(*this, m_dispatcher);
