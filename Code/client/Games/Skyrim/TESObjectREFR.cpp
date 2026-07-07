@@ -1,9 +1,11 @@
-#include <TiltedOnlinePCH.h>
+﻿#include <TiltedOnlinePCH.h>
 
 #include <Games/References.h>
 #include <Games/Overrides.h>
 
 #include <World.h>
+#include <Services/TradeService.h>
+#include <Components.h>
 #include <Services/PapyrusService.h>
 #include <Events/ActivateEvent.h>
 #include <Events/InventoryChangeEvent.h>
@@ -982,6 +984,29 @@ bool TP_MAKE_THISCALL(HookActivate, TESObjectREFR, TESObjectREFR* apActivator, u
 {
     Actor* pActivator = Cast<Actor>(apActivator);
 
+    // Trade interaction prototype:
+    // If the local player activates a remote STR player, swallow vanilla activation
+    // and send a trade invitation instead of entering the normal dialogue flow.
+    if (pActivator && apThis)
+    {
+        auto& world = World::Get();
+        const auto view = world.view<FormIdComponent, RemoteComponent, PlayerComponent>();
+        const auto it = std::find_if(std::begin(view), std::end(view), [formId = apThis->formID, view](entt::entity entity)
+        {
+            return view.get<FormIdComponent>(entity).Id == formId;
+        });
+
+        if (it != std::end(view))
+        {
+            const auto& playerComponent = view.get<PlayerComponent>(*it);
+
+            spdlog::info("[TradeService]: intercepted remote player activation, target player {}", playerComponent.Id);
+            world.ctx().at<TradeService>().InvitePlayer(playerComponent.Id);
+
+            return true;
+        }
+    }
+
     // Exclude books from activation since only reading them removes them from the cell
     // Note: Books are now unsynced 
     if (pActivator && apThis->baseForm->formType != FormType::Book)
@@ -1129,3 +1154,4 @@ static TiltedPhoques::Initializer s_objectReferencesHooks(
         TP_HOOK(&RealPlayAnimationAndWait, HookPlayAnimationAndWait);
         TP_HOOK(&RealPlayAnimation, HookPlayAnimation);
     });
+
