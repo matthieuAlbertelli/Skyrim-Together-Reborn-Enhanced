@@ -1,7 +1,9 @@
 #pragma once
 
 #include <TiltedCore/Stl.hpp>
+
 #include <Messages/Message.h>
+
 #include <MetaMessage.h>
 
 #include <Messages/AuthenticationResponse.h>
@@ -61,6 +63,8 @@
 #include <Messages/NotifyRemoveWaypoint.h>
 #include <Messages/NotifySetTimeResult.h>
 #include <Messages/NotifyTradeInvite.h>
+#include <Messages/NotifyTradeStarted.h>
+#include <Messages/NotifyTradeCancelled.h>
 
 using TiltedPhoques::UniquePtr;
 
@@ -75,7 +79,7 @@ struct ServerMessageFactory
             NotifyActorValueChanges, NotifyPartyJoined, NotifyPartyLeft, NotifyActorMaxValueChanges, NotifyHealthChangeBroadcast, NotifySpawnData, NotifyActivate, NotifyLockChange, AssignObjectsResponse, NotifyDeathStateChange, NotifyOwnershipTransfer, NotifyObjectInventoryChanges, NotifySpellCast,
             NotifyProjectileLaunch, NotifyInterruptCast, NotifyAddTarget, NotifyScriptAnimation, NotifyDrawWeapon, NotifyMount, NotifyNewPackage, NotifyRespawn, NotifySyncExperience, NotifyEquipmentChanges, NotifyChatMessageBroadcast, TeleportCommandResponse, NotifyPlayerRespawn, NotifyDialogue,
             NotifySubtitle, NotifyPlayerDialogue, NotifyActorTeleport, NotifyRelinquishControl, NotifyPlayerLeft, NotifyPlayerJoined, NotifyDialogue, NotifySubtitle, NotifyPlayerDialogue, NotifyPlayerLevel, NotifyPlayerCellChanged, NotifyTeleport, NotifyPlayerHealthUpdate, NotifySettingsChange,
-            NotifyWeatherChange, NotifySetWaypoint, NotifyRemoveWaypoint, NotifySetTimeResult, NotifyRemoveSpell, NotifyTradeInvite>;
+            NotifyWeatherChange, NotifySetWaypoint, NotifyRemoveWaypoint, NotifySetTimeResult, NotifyRemoveSpell, NotifyTradeInvite, NotifyTradeStarted, NotifyTradeCancelled>;
 
         return s_visitor(std::forward<T>(func));
     }

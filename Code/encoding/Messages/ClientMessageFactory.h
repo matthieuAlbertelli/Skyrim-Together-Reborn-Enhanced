@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Messages/Message.h>
+
 #include <MetaMessage.h>
 
 #include <Messages/AuthenticationRequest.h>
@@ -57,6 +58,7 @@
 #include <Messages/RequestSetWaypoint.h>
 #include <Messages/RequestRemoveWaypoint.h>
 #include <Messages/TradeInviteRequest.h>
+#include <Messages/TradeInviteResponseRequest.h>
 
 using TiltedPhoques::UniquePtr;
 
@@ -71,7 +73,7 @@ struct ClientMessageFactory
             PartyChangeLeaderRequest, PartyKickRequest, RequestActorValueChanges, RequestActorMaxValueChanges, EnterExteriorCellRequest, RequestHealthChangeBroadcast, ActivateRequest, LockChangeRequest, AssignObjectsRequest, RequestDeathStateChange, ShiftGridCellRequest,
             RequestOwnershipTransfer, RequestOwnershipClaim, RequestObjectInventoryChanges, SpellCastRequest, ProjectileLaunchRequest, InterruptCastRequest, AddTargetRequest, ScriptAnimationRequest, DrawWeaponRequest, MountRequest, NewPackageRequest, RequestRespawn, SyncExperienceRequest,
             RequestEquipmentChanges, SendChatMessageRequest, TeleportCommandRequest, PlayerRespawnRequest, DialogueRequest, SubtitleRequest, PlayerDialogueRequest, PlayerLevelRequest, TeleportRequest, RequestPlayerHealthUpdate, RequestWeatherChange, RequestCurrentWeather, RequestSetWaypoint,
-            RequestRemoveWaypoint, RemoveSpellRequest, SetTimeCommandRequest, TradeInviteRequest>;
+            RequestRemoveWaypoint, RemoveSpellRequest, SetTimeCommandRequest, TradeInviteRequest, TradeInviteResponseRequest>;
 
         return s_visitor(std::forward<T>(func));
     }
