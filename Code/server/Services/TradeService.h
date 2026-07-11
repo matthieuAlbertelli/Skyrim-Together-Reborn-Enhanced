@@ -3,6 +3,7 @@
 #include <Events/PacketEvent.h>
 #include <Trade/TradeApplication.h>
 #include <Trade/TradeInventory.h>
+#include <Trade/TradeReconciliation.h>
 #include <Trade/TradeSession.h>
 
 #include <cstdint>
@@ -18,6 +19,7 @@ struct TradeOfferUpdateRequest;
 struct TradeConfirmRequest;
 struct TradeCancelRequest;
 struct TradeApplyResultRequest;
+struct TradeReconcileResultRequest;
 enum class TradeCancelReason : std::uint8_t;
 
 class TradeService
@@ -31,12 +33,14 @@ public:
     void OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>& acPacket) noexcept;
     void OnTradeCancelRequest(const PacketEvent<TradeCancelRequest>& acPacket) noexcept;
     void OnTradeApplyResultRequest(const PacketEvent<TradeApplyResultRequest>& acPacket) noexcept;
+    void OnTradeReconcileResultRequest(const PacketEvent<TradeReconcileResultRequest>& acPacket) noexcept;
     void OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept;
     void OnUpdate(const UpdateEvent& acEvent) noexcept;
 
 private:
     [[nodiscard]] Trade::SessionId AllocateSessionId() noexcept;
     [[nodiscard]] Trade::ApplyId AllocateApplyId() noexcept;
+    [[nodiscard]] Trade::ReconcileId AllocateReconcileId() noexcept;
     [[nodiscard]] Trade::Session* FindSession(Trade::SessionId aSessionId) noexcept;
     [[nodiscard]] const Trade::Session* FindSession(Trade::SessionId aSessionId) const noexcept;
     [[nodiscard]] bool IsPlayerInSession(Trade::PlayerId aPlayerId) const noexcept;
@@ -49,6 +53,8 @@ private:
         Trade::InventorySnapshot& aSnapshot) const noexcept;
     [[nodiscard]] Trade::MutationPlanResult ValidateAndBuildMutationPlan(
         const Trade::Session& acSession) const noexcept;
+    [[nodiscard]] Trade::ReconciliationPlanResult BuildCurrentReconciliationPlan(
+        const Trade::Application& acApplication) const noexcept;
     [[nodiscard]] bool CommitMutationPlan(
         const Trade::MutationPlan& acPlan) noexcept;
 
@@ -56,12 +62,23 @@ private:
         Trade::Session& aSession,
         Trade::MutationPlan aPlan,
         Trade::Tick aCurrentTick) noexcept;
+    void BeginReconciliation(
+        Trade::Session& aSession,
+        Trade::Application& aApplication,
+        Trade::Tick aCurrentTick,
+        Trade::PlayerId aUnavailablePlayerId = 0,
+        Player* apIgnoredPlayer = nullptr) noexcept;
+
     void SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept;
     void SendStarted(const Trade::Session& acSession) const noexcept;
     void SendState(const Trade::Session& acSession, Player* apRecipient = nullptr) const noexcept;
     void SendApply(
         const Trade::Session& acSession,
         const Trade::Application& acApplication) const noexcept;
+    void SendReconciliation(
+        const Trade::Reconciliation& acReconciliation,
+        Player* apRecipient = nullptr,
+        Player* apIgnoredPlayer = nullptr) const noexcept;
     void SendCancelled(
         const Trade::Session& acSession,
         TradeCancelReason aReason,
@@ -79,10 +96,13 @@ private:
     std::unordered_map<Trade::SessionId, Trade::Session> m_sessions;
     std::unordered_map<Trade::PlayerId, Trade::SessionId> m_playerSessions;
     std::unordered_map<Trade::SessionId, Trade::Application> m_applications;
+    std::unordered_map<Trade::SessionId, Trade::ReconciliationPlan> m_reconciliationBaselines;
+    std::unordered_map<Trade::SessionId, Trade::Reconciliation> m_reconciliations;
     std::unordered_map<Trade::SessionId, Trade::Tick> m_terminalCleanupTicks;
 
     Trade::SessionId m_nextSessionId{1};
     Trade::ApplyId m_nextApplyId{1};
+    Trade::ReconcileId m_nextReconcileId{1};
     Trade::Tick m_nextExpirySweepTick{};
 
     entt::scoped_connection m_updateConnection;
@@ -93,4 +113,5 @@ private:
     entt::scoped_connection m_tradeConfirmConnection;
     entt::scoped_connection m_tradeCancelConnection;
     entt::scoped_connection m_tradeApplyResultConnection;
+    entt::scoped_connection m_tradeReconcileResultConnection;
 };

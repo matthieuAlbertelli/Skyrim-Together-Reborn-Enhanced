@@ -7,15 +7,18 @@
 #include <Messages/NotifyTradeStarted.h>
 #include <Messages/NotifyTradeState.h>
 #include <Messages/NotifyTradeApply.h>
+#include <Messages/NotifyTradeReconcile.h>
 #include <Messages/TradeCancelRequest.h>
 #include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
 #include <Messages/TradeOfferUpdateRequest.h>
 #include <Messages/TradeApplyResultRequest.h>
+#include <Messages/TradeReconcileResultRequest.h>
 
 #include <Structs/TradeOffer.h>
 #include <Structs/TradeApplication.h>
+#include <Structs/TradeReconciliation.h>
 
 #include <World.h>
 #include <PlayerCharacter.h>
@@ -114,6 +117,7 @@ TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher, Transpo
     , m_tradeCancelledConnection(aDispatcher.sink<NotifyTradeCancelled>().connect<&TradeService::OnNotifyTradeCancelled>(this))
     , m_tradeStateConnection(aDispatcher.sink<NotifyTradeState>().connect<&TradeService::OnNotifyTradeState>(this))
     , m_tradeApplyConnection(aDispatcher.sink<NotifyTradeApply>().connect<&TradeService::OnNotifyTradeApply>(this))
+    , m_tradeReconcileConnection(aDispatcher.sink<NotifyTradeReconcile>().connect<&TradeService::OnNotifyTradeReconcile>(this))
 {
 }
 
@@ -316,7 +320,7 @@ void TradeService::OnNotifyTradeState(const NotifyTradeState& acTradeState) noex
 
     ClientTradeSessionState state;
     if (acTradeState.TerminalError >
-        static_cast<std::uint8_t>(Trade::Error::ServerCommitFailed))
+        static_cast<std::uint8_t>(Trade::Error::ReconciliationTimedOut))
     {
         spdlog::error(
             "[TradeService]: rejected state snapshot with invalid terminal error {} for session {}",
@@ -569,4 +573,282 @@ void TradeService::RememberApplyResult(
 
     m_applyJournalOrder.push_back(
         acTradeApply.ApplyId);
+}
+
+
+void TradeService::OnNotifyTradeReconcile(
+    const NotifyTradeReconcile& acTradeReconcile) noexcept
+{
+    const auto existingIt =
+        m_reconcileJournal.find(
+            acTradeReconcile.ReconcileId);
+
+    if (existingIt != m_reconcileJournal.end())
+    {
+        const ClientTradeReconcileRecord& record =
+            existingIt->second;
+
+        if (record.SessionId !=
+                acTradeReconcile.SessionId ||
+            record.Revision !=
+                acTradeReconcile.Revision ||
+            record.Apply !=
+                acTradeReconcile.ApplyId)
+        {
+            spdlog::error(
+                "[TradeService]: reconcile id collision reconcile={} incoming_session={} recorded_session={}",
+                acTradeReconcile.ReconcileId,
+                acTradeReconcile.SessionId,
+                record.SessionId);
+
+            SendReconcileResult(
+                acTradeReconcile,
+                TradeReconcileResultCode::MalformedPlan);
+            return;
+        }
+
+        const auto result =
+            static_cast<TradeReconcileResultCode>(
+                record.ResultCode);
+
+        spdlog::info(
+            "[TradeService]: replaying reconcile result session={} revision={} apply={} reconcile={} result={}",
+            acTradeReconcile.SessionId,
+            acTradeReconcile.Revision,
+            acTradeReconcile.ApplyId,
+            acTradeReconcile.ReconcileId,
+            record.ResultCode);
+
+        SendReconcileResult(
+            acTradeReconcile,
+            result);
+        return;
+    }
+
+    const TradeReconcileResultCode result =
+        ApplyReconciliationPlan(
+            acTradeReconcile);
+
+    RememberReconcileResult(
+        acTradeReconcile,
+        result);
+    SendReconcileResult(
+        acTradeReconcile,
+        result);
+}
+
+TradeReconcileResultCode TradeService::ApplyReconciliationPlan(
+    const NotifyTradeReconcile& acTradeReconcile) noexcept
+{
+    if (!acTradeReconcile.Plan.Valid)
+    {
+        return TradeReconcileResultCode::MalformedPlan;
+    }
+
+    if (m_sessionState &&
+        (m_sessionState->SessionId !=
+             acTradeReconcile.SessionId ||
+         m_sessionState->Revision !=
+             acTradeReconcile.Revision))
+    {
+        return TradeReconcileResultCode::SessionMismatch;
+    }
+
+    PlayerCharacter* const pPlayer =
+        PlayerCharacter::Get();
+
+    if (!pPlayer)
+    {
+        return TradeReconcileResultCode::
+            LocalPlayerUnavailable;
+    }
+
+    const Inventory currentInventory =
+        pPlayer->GetInventory();
+
+    struct PendingCorrection
+    {
+        GameId Id{};
+        std::int32_t Delta{};
+        std::int64_t ExpectedCount{};
+    };
+
+    std::vector<PendingCorrection> corrections;
+    corrections.reserve(
+        acTradeReconcile.Plan.Targets.size());
+
+    auto& modSystem =
+        World::Get().GetModSystem();
+
+    for (const TradeInventoryTargetData& target :
+         acTradeReconcile.Plan.Targets)
+    {
+        const GameId itemId =
+            ToGameId(target.ItemId);
+        const std::uint32_t gameId =
+            modSystem.GetGameId(itemId);
+
+        TESBoundObject* const pObject =
+            Cast<TESBoundObject>(
+                TESForm::GetById(gameId));
+
+        if (!pObject)
+        {
+            return TradeReconcileResultCode::
+                ItemUnavailable;
+        }
+
+        const LocalItemLookup lookup =
+            FindLocalItem(
+                currentInventory,
+                itemId);
+
+        if (lookup.Matches > 1)
+        {
+            return TradeReconcileResultCode::
+                AmbiguousItem;
+        }
+
+        if (lookup.pEntry &&
+            !IsMvpTransferable(*lookup.pEntry))
+        {
+            return TradeReconcileResultCode::
+                ItemNotTransferable;
+        }
+
+        const std::int64_t currentCount =
+            lookup.pEntry
+                ? lookup.pEntry->Count
+                : 0;
+        const std::int64_t targetCount =
+            target.Quantity;
+        const std::int64_t delta =
+            targetCount - currentCount;
+
+        if (delta <
+                std::numeric_limits<std::int32_t>::min() ||
+            delta >
+                std::numeric_limits<std::int32_t>::max())
+        {
+            return TradeReconcileResultCode::
+                LocalStateMismatch;
+        }
+
+        corrections.push_back(
+            PendingCorrection{
+                itemId,
+                static_cast<std::int32_t>(delta),
+                targetCount});
+    }
+
+    {
+        ScopedInventoryOverride inventoryOverride;
+
+        for (int pass = 0; pass < 2; ++pass)
+        {
+            for (const PendingCorrection& correction :
+                 corrections)
+            {
+                if (correction.Delta == 0)
+                    continue;
+
+                const bool isRemoval =
+                    correction.Delta < 0;
+
+                if ((pass == 0) != isRemoval)
+                    continue;
+
+                Inventory::Entry entry;
+                entry.BaseId = correction.Id;
+                entry.Count = correction.Delta;
+                pPlayer->AddOrRemoveItem(entry);
+            }
+        }
+    }
+
+    const Inventory updatedInventory =
+        pPlayer->GetInventory();
+
+    for (const PendingCorrection& correction :
+         corrections)
+    {
+        const LocalItemLookup lookup =
+            FindLocalItem(
+                updatedInventory,
+                correction.Id);
+
+        if (lookup.Matches > 1)
+        {
+            return TradeReconcileResultCode::
+                LocalStateMismatch;
+        }
+
+        const std::int64_t actualCount =
+            lookup.pEntry
+                ? lookup.pEntry->Count
+                : 0;
+
+        if (actualCount != correction.ExpectedCount)
+        {
+            return TradeReconcileResultCode::
+                LocalStateMismatch;
+        }
+    }
+
+    return TradeReconcileResultCode::Success;
+}
+
+void TradeService::SendReconcileResult(
+    const NotifyTradeReconcile& acTradeReconcile,
+    TradeReconcileResultCode aResult) const noexcept
+{
+    TradeReconcileResultRequest request;
+    request.SessionId =
+        acTradeReconcile.SessionId;
+    request.Revision =
+        acTradeReconcile.Revision;
+    request.ApplyId =
+        acTradeReconcile.ApplyId;
+    request.ReconcileId =
+        acTradeReconcile.ReconcileId;
+    request.Result = aResult;
+
+    if (!m_transport.Send(request))
+    {
+        spdlog::warn(
+            "[TradeService]: failed to send reconcile result session={} revision={} apply={} reconcile={} result={}",
+            request.SessionId,
+            request.Revision,
+            request.ApplyId,
+            request.ReconcileId,
+            static_cast<std::uint32_t>(aResult));
+    }
+}
+
+void TradeService::RememberReconcileResult(
+    const NotifyTradeReconcile& acTradeReconcile,
+    TradeReconcileResultCode aResult) noexcept
+{
+    constexpr std::size_t kMaxReconcileJournalEntries =
+        64;
+
+    if (m_reconcileJournal.size() >=
+        kMaxReconcileJournalEntries)
+    {
+        const Trade::ReconcileId oldest =
+            m_reconcileJournalOrder.front();
+        m_reconcileJournalOrder.pop_front();
+        m_reconcileJournal.erase(oldest);
+    }
+
+    m_reconcileJournal.insert_or_assign(
+        acTradeReconcile.ReconcileId,
+        ClientTradeReconcileRecord{
+            acTradeReconcile.SessionId,
+            acTradeReconcile.Revision,
+            acTradeReconcile.ApplyId,
+            static_cast<std::uint8_t>(aResult)});
+
+    m_reconcileJournalOrder.push_back(
+        acTradeReconcile.ReconcileId);
 }

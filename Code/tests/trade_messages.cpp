@@ -13,14 +13,17 @@
 #include <Messages/NotifyTradeStarted.h>
 #include <Messages/NotifyTradeState.h>
 #include <Messages/NotifyTradeApply.h>
+#include <Messages/NotifyTradeReconcile.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
 #include <Messages/TradeOfferUpdateRequest.h>
 #include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeCancelRequest.h>
 #include <Messages/TradeApplyResultRequest.h>
+#include <Messages/TradeReconcileResultRequest.h>
 #include <Structs/TradeOffer.h>
 #include <Structs/TradeApplication.h>
+#include <Structs/TradeReconciliation.h>
 
 using namespace TiltedPhoques;
 
@@ -307,4 +310,83 @@ TEST_CASE("Trade apply decoder rejects oversized mutation plans", "[trade.protoc
 
     REQUIRE_FALSE(plan.Valid);
     REQUIRE(plan.Mutations.empty());
+}
+
+
+TEST_CASE("Trade reconciliation notification preserves absolute targets", "[trade.protocol]")
+{
+    NotifyTradeReconcile notification;
+    notification.SessionId = 77;
+    notification.Revision = 9;
+    notification.ApplyId = 123456789;
+    notification.ReconcileId = 987654321;
+    notification.Plan.Targets = {
+        {1001, 0},
+        {2002, 7}
+    };
+
+    Buffer buffer(256);
+    Buffer::Writer writer(&buffer);
+    notification.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ServerMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() ==
+        notification.GetOpcode());
+
+    auto pNotification =
+        CastUnique<NotifyTradeReconcile>(
+            std::move(pMessage));
+
+    REQUIRE(*pNotification == notification);
+    REQUIRE(pNotification->Plan.Valid);
+}
+
+TEST_CASE("Trade reconciliation result round-trips through the client factory", "[trade.protocol]")
+{
+    TradeReconcileResultRequest request;
+    request.SessionId = 77;
+    request.Revision = 9;
+    request.ApplyId = 123456789;
+    request.ReconcileId = 987654321;
+    request.Result =
+        TradeReconcileResultCode::LocalStateMismatch;
+
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() ==
+        request.GetOpcode());
+
+    auto pRequest =
+        CastUnique<TradeReconcileResultRequest>(
+            std::move(pMessage));
+
+    REQUIRE(*pRequest == request);
+    REQUIRE(pRequest->Valid);
+}
+
+TEST_CASE("Trade reconciliation decoder rejects oversized target plans", "[trade.protocol]")
+{
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    Serialization::WriteVarInt(
+        writer,
+        TradeReconciliationPlanData::MaxTargets + 1);
+
+    Buffer::Reader reader(&buffer);
+    TradeReconciliationPlanData plan;
+    plan.Deserialize(reader);
+
+    REQUIRE_FALSE(plan.Valid);
+    REQUIRE(plan.Targets.empty());
 }

@@ -15,7 +15,9 @@ struct NotifyTradeStarted;
 struct NotifyTradeCancelled;
 struct NotifyTradeState;
 struct NotifyTradeApply;
+struct NotifyTradeReconcile;
 enum class TradeApplyResultCode : std::uint8_t;
+enum class TradeReconcileResultCode : std::uint8_t;
 
 struct ClientTradeSessionState
 {
@@ -31,6 +33,14 @@ struct ClientTradeApplyRecord
 {
     Trade::SessionId SessionId{};
     Trade::Revision Revision{};
+    std::uint8_t ResultCode{};
+};
+
+struct ClientTradeReconcileRecord
+{
+    Trade::SessionId SessionId{};
+    Trade::Revision Revision{};
+    Trade::ApplyId Apply{};
     std::uint8_t ResultCode{};
 };
 
@@ -70,17 +80,28 @@ protected:
     void OnNotifyTradeCancelled(const NotifyTradeCancelled& acTradeCancelled) noexcept;
     void OnNotifyTradeState(const NotifyTradeState& acTradeState) noexcept;
     void OnNotifyTradeApply(const NotifyTradeApply& acTradeApply) noexcept;
+    void OnNotifyTradeReconcile(const NotifyTradeReconcile& acTradeReconcile) noexcept;
 
 private:
     void RespondToInvite(std::uint64_t aSessionId, bool aAccepted) const noexcept;
     [[nodiscard]] TradeApplyResultCode ApplyMutationPlan(
         const NotifyTradeApply& acTradeApply) noexcept;
+    [[nodiscard]] TradeReconcileResultCode ApplyReconciliationPlan(
+        const NotifyTradeReconcile& acTradeReconcile) noexcept;
+
     void SendApplyResult(
         const NotifyTradeApply& acTradeApply,
         TradeApplyResultCode aResult) const noexcept;
+    void SendReconcileResult(
+        const NotifyTradeReconcile& acTradeReconcile,
+        TradeReconcileResultCode aResult) const noexcept;
+
     void RememberApplyResult(
         const NotifyTradeApply& acTradeApply,
         TradeApplyResultCode aResult) noexcept;
+    void RememberReconcileResult(
+        const NotifyTradeReconcile& acTradeReconcile,
+        TradeReconcileResultCode aResult) noexcept;
 
     World& m_world;
     TransportService& m_transport;
@@ -92,9 +113,13 @@ private:
     std::unordered_map<Trade::ApplyId, ClientTradeApplyRecord> m_applyJournal;
     std::deque<Trade::ApplyId> m_applyJournalOrder;
 
+    std::unordered_map<Trade::ReconcileId, ClientTradeReconcileRecord> m_reconcileJournal;
+    std::deque<Trade::ReconcileId> m_reconcileJournalOrder;
+
     entt::scoped_connection m_tradeInviteConnection;
     entt::scoped_connection m_tradeStartedConnection;
     entt::scoped_connection m_tradeCancelledConnection;
     entt::scoped_connection m_tradeStateConnection;
     entt::scoped_connection m_tradeApplyConnection;
+    entt::scoped_connection m_tradeReconcileConnection;
 };

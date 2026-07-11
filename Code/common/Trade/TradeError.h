@@ -28,7 +28,11 @@ enum class Error : std::uint8_t
     ApplyFailed,
     ApplyTimedOut,
     ParticipantDisconnected,
-    ServerCommitFailed
+    ServerCommitFailed,
+    ReconcileResultConflict,
+    ReconciliationUnavailable,
+    ReconciliationFailed,
+    ReconciliationTimedOut
 };
 
 struct Result

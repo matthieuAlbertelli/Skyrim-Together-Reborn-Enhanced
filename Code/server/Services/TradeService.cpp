@@ -14,15 +14,18 @@
 #include <Messages/NotifyTradeStarted.h>
 #include <Messages/NotifyTradeState.h>
 #include <Messages/NotifyTradeApply.h>
+#include <Messages/NotifyTradeReconcile.h>
 #include <Messages/TradeCancelRequest.h>
 #include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
 #include <Messages/TradeOfferUpdateRequest.h>
 #include <Messages/TradeApplyResultRequest.h>
+#include <Messages/TradeReconcileResultRequest.h>
 
 #include <Structs/TradeOffer.h>
 #include <Structs/TradeApplication.h>
+#include <Structs/TradeReconciliation.h>
 
 #include <algorithm>
 #include <limits>
@@ -37,6 +40,7 @@ constexpr Trade::Tick kInviteLifetimeMs = 30000;
 constexpr Trade::Tick kExpirySweepIntervalMs = 1000;
 constexpr Trade::Tick kApplyTimeoutMs = 15000;
 constexpr Trade::Tick kTerminalRetentionMs = 5000;
+constexpr Trade::Tick kReconciliationTimeoutMs = 30000;
 
 Trade::Offer ToDomainOffer(const TradeOfferData& acOffer)
 {
@@ -104,6 +108,29 @@ TradeMutationPlanData ToNetworkPlan(
 
     for (const Trade::InventoryMutation& mutation : acPlan.Mutations)
         result.Mutations.push_back({mutation.Item, mutation.Delta});
+
+    return result;
+}
+
+Trade::ReconcileOutcome ToReconcileOutcome(
+    TradeReconcileResultCode aResult) noexcept
+{
+    return static_cast<Trade::ReconcileOutcome>(
+        static_cast<std::uint8_t>(aResult));
+}
+
+TradeReconciliationPlanData ToNetworkPlan(
+    const Trade::PlayerReconciliationPlan& acPlan)
+{
+    TradeReconciliationPlanData result;
+    result.Targets.reserve(acPlan.Targets.size());
+
+    for (const Trade::InventoryTarget& target :
+         acPlan.Targets)
+    {
+        result.Targets.push_back(
+            {target.Item, target.Quantity});
+    }
 
     return result;
 }
@@ -201,6 +228,7 @@ TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher) noexcep
     , m_tradeConfirmConnection(aDispatcher.sink<PacketEvent<TradeConfirmRequest>>().connect<&TradeService::OnTradeConfirmRequest>(this))
     , m_tradeCancelConnection(aDispatcher.sink<PacketEvent<TradeCancelRequest>>().connect<&TradeService::OnTradeCancelRequest>(this))
     , m_tradeApplyResultConnection(aDispatcher.sink<PacketEvent<TradeApplyResultRequest>>().connect<&TradeService::OnTradeApplyResultRequest>(this))
+    , m_tradeReconcileResultConnection(aDispatcher.sink<PacketEvent<TradeReconcileResultRequest>>().connect<&TradeService::OnTradeReconcileResultRequest>(this))
 {
 }
 
@@ -629,6 +657,21 @@ void TradeService::OnTradeApplyResultRequest(
     Trade::Session& session = *pSession;
     Trade::Application& application = applicationIt->second;
 
+    const auto reconciliationIt =
+        m_reconciliations.find(message.SessionId);
+
+    if (reconciliationIt != m_reconciliations.end())
+    {
+        if (reconciliationIt->second.IsParticipant(playerId))
+        {
+            SendReconciliation(
+                reconciliationIt->second,
+                pPlayer);
+        }
+
+        return;
+    }
+
     if (!session.IsParticipant(playerId) ||
         application.GetId() != message.ApplyId ||
         application.GetRevision() != message.Revision)
@@ -648,10 +691,11 @@ void TradeService::OnTradeApplyResultRequest(
             ? message.Result
             : TradeApplyResultCode::MalformedPlan;
 
-    const Trade::Result recordResult = application.RecordResult(
-        playerId,
-        ToApplyOutcome(resultCode),
-        GameServer::Get()->GetTick());
+    const Trade::Result recordResult =
+        application.RecordResult(
+            playerId,
+            ToApplyOutcome(resultCode),
+            GameServer::Get()->GetTick());
 
     if (!recordResult.Succeeded())
     {
@@ -661,7 +705,8 @@ void TradeService::OnTradeApplyResultRequest(
             session.GetRevision(),
             application.GetId(),
             playerId,
-            static_cast<std::uint32_t>(recordResult.ErrorCode));
+            static_cast<std::uint32_t>(
+                recordResult.ErrorCode));
         SendState(session, pPlayer);
         return;
     }
@@ -675,26 +720,23 @@ void TradeService::OnTradeApplyResultRequest(
         static_cast<std::uint32_t>(resultCode),
         recordResult.Changed ? 1 : 0);
 
-    const Trade::Tick currentTick = GameServer::Get()->GetTick();
-
-    if (session.IsTerminal())
-    {
-        SendState(session, pPlayer);
-
-        if (application.IsSettled())
-            ScheduleTerminalCleanup(session.GetId(), currentTick);
-
-        return;
-    }
+    const Trade::Tick currentTick =
+        GameServer::Get()->GetTick();
 
     if (application.HasFailed())
     {
-        session.Fail(Trade::Error::ApplyFailed, currentTick);
+        if (!session.IsTerminal())
+        {
+            session.Fail(
+                Trade::Error::ApplyFailed,
+                currentTick);
+        }
+
         SendState(session);
-
-        if (application.IsSettled())
-            ScheduleTerminalCleanup(session.GetId(), currentTick);
-
+        BeginReconciliation(
+            session,
+            application,
+            currentTick);
         return;
     }
 
@@ -703,7 +745,9 @@ void TradeService::OnTradeApplyResultRequest(
 
     if (!CommitMutationPlan(application.GetPlan()))
     {
-        session.Fail(Trade::Error::ServerCommitFailed, currentTick);
+        session.Fail(
+            Trade::Error::ServerCommitFailed,
+            currentTick);
 
         spdlog::error(
             "[trade={}][revision={}][apply={}] server_commit_failed",
@@ -712,7 +756,10 @@ void TradeService::OnTradeApplyResultRequest(
             application.GetId());
 
         SendState(session);
-        ScheduleTerminalCleanup(session.GetId(), currentTick);
+        BeginReconciliation(
+            session,
+            application,
+            currentTick);
         return;
     }
 
@@ -725,32 +772,201 @@ void TradeService::OnTradeApplyResultRequest(
         application.GetId());
 
     SendState(session);
-    ScheduleTerminalCleanup(session.GetId(), currentTick);
+    ScheduleTerminalCleanup(
+        session.GetId(),
+        currentTick);
 }
 
-void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
+void TradeService::OnTradeReconcileResultRequest(
+    const PacketEvent<TradeReconcileResultRequest>& acPacket) noexcept
+{
+    Player* const pPlayer = acPacket.pPlayer;
+    if (!pPlayer)
+        return;
+
+    const TradeReconcileResultRequest& message =
+        acPacket.Packet;
+    const Trade::PlayerId playerId =
+        pPlayer->GetId();
+
+    Trade::Session* const pSession =
+        FindSession(message.SessionId);
+    const auto reconciliationIt =
+        m_reconciliations.find(message.SessionId);
+
+    if (!pSession ||
+        reconciliationIt == m_reconciliations.end())
+    {
+        spdlog::warn(
+            "[trade={}][reconcile={}][player={}] reconcile_result_rejected reason=session_not_found",
+            message.SessionId,
+            message.ReconcileId,
+            playerId);
+        return;
+    }
+
+    Trade::Reconciliation& reconciliation =
+        reconciliationIt->second;
+
+    if (!reconciliation.IsParticipant(playerId) ||
+        reconciliation.GetId() != message.ReconcileId ||
+        reconciliation.GetApplyId() != message.ApplyId ||
+        reconciliation.GetRevision() != message.Revision)
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][apply={}][reconcile={}][player={}] reconcile_result_rejected reason=identity_mismatch",
+            message.SessionId,
+            message.Revision,
+            message.ApplyId,
+            message.ReconcileId,
+            playerId);
+        SendState(*pSession, pPlayer);
+        return;
+    }
+
+    const TradeReconcileResultCode resultCode =
+        message.Valid
+            ? message.Result
+            : TradeReconcileResultCode::MalformedPlan;
+
+    const Trade::Result result =
+        reconciliation.RecordResult(
+            playerId,
+            ToReconcileOutcome(resultCode),
+            GameServer::Get()->GetTick());
+
+    if (!result.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][apply={}][reconcile={}][player={}] reconcile_result_rejected error={}",
+            reconciliation.GetSessionId(),
+            reconciliation.GetRevision(),
+            reconciliation.GetApplyId(),
+            reconciliation.GetId(),
+            playerId,
+            static_cast<std::uint32_t>(
+                result.ErrorCode));
+        return;
+    }
+
+    spdlog::info(
+        "[trade={}][revision={}][apply={}][reconcile={}][player={}] reconcile_result={} changed={}",
+        reconciliation.GetSessionId(),
+        reconciliation.GetRevision(),
+        reconciliation.GetApplyId(),
+        reconciliation.GetId(),
+        playerId,
+        static_cast<std::uint32_t>(resultCode),
+        result.Changed ? 1 : 0);
+
+    if (!reconciliation.IsSettled())
+        return;
+
+    if (reconciliation.AllSucceeded())
+    {
+        spdlog::info(
+            "[trade={}][revision={}][apply={}][reconcile={}] reconciliation_completed",
+            reconciliation.GetSessionId(),
+            reconciliation.GetRevision(),
+            reconciliation.GetApplyId(),
+            reconciliation.GetId());
+    }
+    else
+    {
+        spdlog::error(
+            "[trade={}][revision={}][apply={}][reconcile={}] reconciliation_unresolved",
+            reconciliation.GetSessionId(),
+            reconciliation.GetRevision(),
+            reconciliation.GetApplyId(),
+            reconciliation.GetId());
+    }
+
+    ScheduleTerminalCleanup(
+        reconciliation.GetSessionId(),
+        GameServer::Get()->GetTick());
+}
+
+void TradeService::OnPlayerLeave(
+    const PlayerLeaveEvent& acEvent) noexcept
 {
     Player* const pPlayer = acEvent.pPlayer;
     if (!pPlayer)
         return;
 
-    const Trade::PlayerId playerId = pPlayer->GetId();
-    const auto playerSessionIt = m_playerSessions.find(playerId);
+    const Trade::PlayerId playerId =
+        pPlayer->GetId();
+    const auto playerSessionIt =
+        m_playerSessions.find(playerId);
+
     if (playerSessionIt == m_playerSessions.end())
         return;
 
-    const Trade::SessionId sessionId = playerSessionIt->second;
-    Trade::Session* const pSession = FindSession(sessionId);
+    const Trade::SessionId sessionId =
+        playerSessionIt->second;
+    Trade::Session* const pSession =
+        FindSession(sessionId);
+
     if (!pSession)
     {
         m_playerSessions.erase(playerSessionIt);
         return;
     }
 
-    const Trade::Tick currentTick = GameServer::Get()->GetTick();
+    const Trade::Tick currentTick =
+        GameServer::Get()->GetTick();
+
+    const auto reconciliationIt =
+        m_reconciliations.find(sessionId);
+
+    if (reconciliationIt != m_reconciliations.end())
+    {
+        Trade::Reconciliation& reconciliation =
+            reconciliationIt->second;
+
+        const Trade::Result unavailableResult =
+            reconciliation.MarkUnavailable(
+                playerId,
+                currentTick);
+
+        if (!unavailableResult.Succeeded())
+        {
+            spdlog::warn(
+                "[trade={}][reconcile={}][player={}] unavailable_mark_failed error={}",
+                sessionId,
+                reconciliation.GetId(),
+                playerId,
+                static_cast<std::uint32_t>(
+                    unavailableResult.ErrorCode));
+        }
+
+        if (reconciliation.IsSettled())
+        {
+            ScheduleTerminalCleanup(
+                sessionId,
+                currentTick);
+        }
+
+        return;
+    }
 
     if (pSession->GetState() == Trade::State::Applying)
     {
+        const auto applicationIt =
+            m_applications.find(sessionId);
+
+        if (applicationIt ==
+            m_applications.end())
+        {
+            pSession->Fail(
+                Trade::Error::ParticipantDisconnected,
+                currentTick);
+            SendState(*pSession);
+            ScheduleTerminalCleanup(
+                sessionId,
+                currentTick);
+            return;
+        }
+
         pSession->Fail(
             Trade::Error::ParticipantDisconnected,
             currentTick);
@@ -762,11 +978,18 @@ void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
             pSession->GetRevision(),
             playerId);
 
-        ScheduleTerminalCleanup(sessionId, currentTick);
+        BeginReconciliation(
+            *pSession,
+            applicationIt->second,
+            currentTick,
+            playerId,
+            pPlayer);
         return;
     }
 
-    const Trade::Result result = pSession->Cancel(playerId, currentTick);
+    const Trade::Result result =
+        pSession->Cancel(playerId, currentTick);
+
     if (!result.Succeeded())
     {
         spdlog::warn(
@@ -774,7 +997,8 @@ void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
             pSession->GetId(),
             pSession->GetRevision(),
             playerId,
-            static_cast<std::uint32_t>(result.ErrorCode));
+            static_cast<std::uint32_t>(
+                result.ErrorCode));
         return;
     }
 
@@ -793,55 +1017,92 @@ void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
     RemoveSession(sessionId);
 }
 
-void TradeService::OnUpdate(const UpdateEvent& acEvent) noexcept
+void TradeService::OnUpdate(
+    const UpdateEvent& acEvent) noexcept
 {
     TP_UNUSED(acEvent);
 
-    const Trade::Tick currentTick = GameServer::Get()->GetTick();
+    const Trade::Tick currentTick =
+        GameServer::Get()->GetTick();
+
     if (currentTick < m_nextExpirySweepTick)
         return;
 
-    m_nextExpirySweepTick = currentTick + kExpirySweepIntervalMs;
+    m_nextExpirySweepTick =
+        currentTick + kExpirySweepIntervalMs;
 
     std::vector<Trade::SessionId> expiredInvitations;
     std::vector<Trade::SessionId> timedOutApplications;
+    std::vector<Trade::SessionId> timedOutReconciliations;
     std::vector<Trade::SessionId> cleanupSessions;
 
     expiredInvitations.reserve(m_sessions.size());
     timedOutApplications.reserve(m_applications.size());
-    cleanupSessions.reserve(m_terminalCleanupTicks.size());
+    timedOutReconciliations.reserve(
+        m_reconciliations.size());
+    cleanupSessions.reserve(
+        m_terminalCleanupTicks.size());
 
-    for (const auto& [sessionId, session] : m_sessions)
+    for (const auto& [sessionId, session] :
+         m_sessions)
     {
-        if (session.GetState() == Trade::State::PendingAcceptance &&
+        if (session.GetState() ==
+                Trade::State::PendingAcceptance &&
             currentTick >= session.GetExpiryTick())
         {
             expiredInvitations.push_back(sessionId);
         }
     }
 
-    for (const auto& [sessionId, application] : m_applications)
+    for (const auto& [sessionId, application] :
+         m_applications)
     {
+        if (m_reconciliations.find(sessionId) !=
+            m_reconciliations.end())
+        {
+            continue;
+        }
+
         if (application.IsTimedOut(currentTick))
             timedOutApplications.push_back(sessionId);
     }
 
-    for (const auto& [sessionId, cleanupTick] : m_terminalCleanupTicks)
+    for (const auto& [sessionId, reconciliation] :
+         m_reconciliations)
+    {
+        if (reconciliation.IsTimedOut(currentTick))
+        {
+            timedOutReconciliations.push_back(
+                sessionId);
+        }
+    }
+
+    for (const auto& [sessionId, cleanupTick] :
+         m_terminalCleanupTicks)
     {
         if (currentTick >= cleanupTick)
             cleanupSessions.push_back(sessionId);
     }
 
-    for (const Trade::SessionId sessionId : expiredInvitations)
+    for (const Trade::SessionId sessionId :
+         expiredInvitations)
     {
-        Trade::Session* const pSession = FindSession(sessionId);
+        Trade::Session* const pSession =
+            FindSession(sessionId);
+
         if (!pSession)
             continue;
 
-        const Trade::Result result = pSession->Expire(currentTick);
+        const Trade::Result result =
+            pSession->Expire(currentTick);
+
         if (result.Changed)
         {
-            SendCancelled(*pSession, TradeCancelReason::Expired, 0);
+            SendCancelled(
+                *pSession,
+                TradeCancelReason::Expired,
+                0);
+
             spdlog::info(
                 "[trade={}][revision={}] cancelled reason=expired",
                 pSession->GetId(),
@@ -851,15 +1112,25 @@ void TradeService::OnUpdate(const UpdateEvent& acEvent) noexcept
         RemoveSession(sessionId);
     }
 
-    for (const Trade::SessionId sessionId : timedOutApplications)
+    for (const Trade::SessionId sessionId :
+         timedOutApplications)
     {
-        Trade::Session* const pSession = FindSession(sessionId);
-        if (!pSession)
+        Trade::Session* const pSession =
+            FindSession(sessionId);
+        const auto applicationIt =
+            m_applications.find(sessionId);
+
+        if (!pSession ||
+            applicationIt == m_applications.end())
+        {
             continue;
+        }
 
         if (!pSession->IsTerminal())
         {
-            pSession->Fail(Trade::Error::ApplyTimedOut, currentTick);
+            pSession->Fail(
+                Trade::Error::ApplyTimedOut,
+                currentTick);
             SendState(*pSession);
 
             spdlog::warn(
@@ -868,11 +1139,41 @@ void TradeService::OnUpdate(const UpdateEvent& acEvent) noexcept
                 pSession->GetRevision());
         }
 
-        ScheduleTerminalCleanup(sessionId, currentTick);
+        BeginReconciliation(
+            *pSession,
+            applicationIt->second,
+            currentTick);
     }
 
-    for (const Trade::SessionId sessionId : cleanupSessions)
+    for (const Trade::SessionId sessionId :
+         timedOutReconciliations)
+    {
+        const auto reconciliationIt =
+            m_reconciliations.find(sessionId);
+
+        if (reconciliationIt ==
+            m_reconciliations.end())
+        {
+            continue;
+        }
+
+        spdlog::error(
+            "[trade={}][revision={}][apply={}][reconcile={}] reconciliation_timeout",
+            reconciliationIt->second.GetSessionId(),
+            reconciliationIt->second.GetRevision(),
+            reconciliationIt->second.GetApplyId(),
+            reconciliationIt->second.GetId());
+
+        ScheduleTerminalCleanup(
+            sessionId,
+            currentTick);
+    }
+
+    for (const Trade::SessionId sessionId :
+         cleanupSessions)
+    {
         RemoveSession(sessionId);
+    }
 }
 
 Trade::SessionId TradeService::AllocateSessionId() noexcept
@@ -904,6 +1205,35 @@ Trade::ApplyId TradeService::AllocateApplyId() noexcept
             TP_UNUSED(sessionId);
 
             if (application.GetId() == candidate)
+            {
+                alreadyUsed = true;
+                break;
+            }
+        }
+
+        if (candidate != 0 && !alreadyUsed)
+            return candidate;
+    }
+}
+
+Trade::ReconcileId TradeService::AllocateReconcileId() noexcept
+{
+    for (;;)
+    {
+        const Trade::ReconcileId candidate =
+            m_nextReconcileId++;
+
+        if (m_nextReconcileId == 0)
+            m_nextReconcileId = 1;
+
+        bool alreadyUsed = false;
+
+        for (const auto& [sessionId, reconciliation] :
+             m_reconciliations)
+        {
+            TP_UNUSED(sessionId);
+
+            if (reconciliation.GetId() == candidate)
             {
                 alreadyUsed = true;
                 break;
@@ -1027,6 +1357,29 @@ Trade::MutationPlanResult TradeService::ValidateAndBuildMutationPlan(
         recipientInventory);
 }
 
+Trade::ReconciliationPlanResult TradeService::BuildCurrentReconciliationPlan(
+    const Trade::Application& acApplication) const noexcept
+{
+    Trade::InventorySnapshot initiatorInventory;
+    Trade::InventorySnapshot recipientInventory;
+
+    if (!TryBuildInventorySnapshot(
+            acApplication.GetPlan().Initiator.Player,
+            initiatorInventory) ||
+        !TryBuildInventorySnapshot(
+            acApplication.GetPlan().Recipient.Player,
+            recipientInventory))
+    {
+        return Trade::ReconciliationPlanResult::Failure(
+            Trade::Error::InventoryUnavailable);
+    }
+
+    return Trade::BuildReconciliationPlan(
+        acApplication,
+        initiatorInventory,
+        recipientInventory);
+}
+
 bool TradeService::CommitMutationPlan(
     const Trade::MutationPlan& acPlan) noexcept
 {
@@ -1109,6 +1462,32 @@ void TradeService::BeginApplication(
     const Trade::Application& application =
         applicationIt->second;
 
+    Trade::ReconciliationPlanResult baselineResult =
+        BuildCurrentReconciliationPlan(application);
+
+    if (!baselineResult.Succeeded())
+    {
+        aSession.Fail(
+            Trade::Error::ReconciliationUnavailable,
+            aCurrentTick);
+
+        spdlog::error(
+            "[trade={}][revision={}][apply={}] reconciliation_baseline_failed error={}",
+            aSession.GetId(),
+            aSession.GetRevision(),
+            application.GetId(),
+            static_cast<std::uint32_t>(
+                baselineResult.ErrorCode));
+
+        SendState(aSession);
+        RemoveSession(aSession.GetId());
+        return;
+    }
+
+    m_reconciliationBaselines.insert_or_assign(
+        aSession.GetId(),
+        std::move(baselineResult.Plan));
+
     spdlog::info(
         "[trade={}][revision={}][apply={}] applying initiator_mutations={} recipient_mutations={}",
         aSession.GetId(),
@@ -1119,6 +1498,130 @@ void TradeService::BeginApplication(
 
     SendState(aSession);
     SendApply(aSession, application);
+}
+
+void TradeService::BeginReconciliation(
+    Trade::Session& aSession,
+    Trade::Application& aApplication,
+    Trade::Tick aCurrentTick,
+    Trade::PlayerId aUnavailablePlayerId,
+    Player* apIgnoredPlayer) noexcept
+{
+    const auto existingIt =
+        m_reconciliations.find(aSession.GetId());
+
+    if (existingIt != m_reconciliations.end())
+    {
+        SendReconciliation(
+            existingIt->second,
+            nullptr,
+            apIgnoredPlayer);
+        return;
+    }
+
+    Trade::ReconciliationPlan plan;
+
+    Trade::ReconciliationPlanResult currentPlanResult =
+        BuildCurrentReconciliationPlan(aApplication);
+
+    if (currentPlanResult.Succeeded())
+    {
+        plan = std::move(currentPlanResult.Plan);
+    }
+    else
+    {
+        const auto baselineIt =
+            m_reconciliationBaselines.find(
+                aSession.GetId());
+
+        const bool canUseBaseline =
+            currentPlanResult.ErrorCode ==
+                Trade::Error::InventoryUnavailable &&
+            baselineIt !=
+                m_reconciliationBaselines.end();
+
+        if (!canUseBaseline)
+        {
+            spdlog::error(
+                "[trade={}][revision={}][apply={}] reconciliation_plan_failed error={}",
+                aSession.GetId(),
+                aSession.GetRevision(),
+                aApplication.GetId(),
+                static_cast<std::uint32_t>(
+                    currentPlanResult.ErrorCode));
+
+            ScheduleTerminalCleanup(
+                aSession.GetId(),
+                aCurrentTick);
+            return;
+        }
+
+        plan = baselineIt->second;
+
+        spdlog::warn(
+            "[trade={}][revision={}][apply={}] reconciliation_using_application_baseline current_error={}",
+            aSession.GetId(),
+            aSession.GetRevision(),
+            aApplication.GetId(),
+            static_cast<std::uint32_t>(
+                currentPlanResult.ErrorCode));
+    }
+
+    const Trade::ReconcileId reconcileId =
+        AllocateReconcileId();
+
+    const auto [reconciliationIt, inserted] =
+        m_reconciliations.try_emplace(
+            aSession.GetId(),
+            reconcileId,
+            std::move(plan),
+            aCurrentTick,
+            aCurrentTick + kReconciliationTimeoutMs);
+
+    if (!inserted)
+    {
+        ScheduleTerminalCleanup(
+            aSession.GetId(),
+            aCurrentTick);
+        return;
+    }
+
+    Trade::Reconciliation& reconciliation =
+        reconciliationIt->second;
+
+    m_reconciliationBaselines.erase(
+        aSession.GetId());
+
+    if (aUnavailablePlayerId != 0)
+    {
+        reconciliation.MarkUnavailable(
+            aUnavailablePlayerId,
+            aCurrentTick);
+    }
+
+    m_terminalCleanupTicks.erase(
+        aSession.GetId());
+
+    spdlog::warn(
+        "[trade={}][revision={}][apply={}][reconcile={}] reconciliation_started initiator_targets={} recipient_targets={}",
+        reconciliation.GetSessionId(),
+        reconciliation.GetRevision(),
+        reconciliation.GetApplyId(),
+        reconciliation.GetId(),
+        reconciliation.GetPlan().Initiator.Targets.size(),
+        reconciliation.GetPlan().Recipient.Targets.size());
+
+    SendReconciliation(
+        reconciliation,
+        nullptr,
+        apIgnoredPlayer);
+
+    if (reconciliation.IsSettled())
+    {
+        ScheduleTerminalCleanup(
+            aSession.GetId(),
+            aCurrentTick);
+    }
 }
 
 void TradeService::SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept
@@ -1215,6 +1718,68 @@ void TradeService::SendApply(
         pRecipient->Send(recipientNotify);
 }
 
+void TradeService::SendReconciliation(
+    const Trade::Reconciliation& acReconciliation,
+    Player* apRecipient,
+    Player* apIgnoredPlayer) const noexcept
+{
+    const Trade::ReconciliationPlan& plan =
+        acReconciliation.GetPlan();
+
+    auto sendPlan =
+        [&](Player* apPlayer,
+            const Trade::PlayerReconciliationPlan& acPlan) noexcept
+        {
+            if (!apPlayer ||
+                apPlayer == apIgnoredPlayer)
+            {
+                return;
+            }
+
+            NotifyTradeReconcile notify;
+            notify.SessionId =
+                acReconciliation.GetSessionId();
+            notify.Revision =
+                acReconciliation.GetRevision();
+            notify.ApplyId =
+                acReconciliation.GetApplyId();
+            notify.ReconcileId =
+                acReconciliation.GetId();
+            notify.Plan = ToNetworkPlan(acPlan);
+            apPlayer->Send(notify);
+        };
+
+    if (apRecipient)
+    {
+        if (apRecipient->GetId() ==
+            plan.Initiator.Player)
+        {
+            sendPlan(
+                apRecipient,
+                plan.Initiator);
+        }
+        else if (apRecipient->GetId() ==
+                 plan.Recipient.Player)
+        {
+            sendPlan(
+                apRecipient,
+                plan.Recipient);
+        }
+
+        return;
+    }
+
+    sendPlan(
+        m_world.GetPlayerManager().GetById(
+            plan.Initiator.Player),
+        plan.Initiator);
+
+    sendPlan(
+        m_world.GetPlayerManager().GetById(
+            plan.Recipient.Player),
+        plan.Recipient);
+}
+
 void TradeService::SendCancelled(
     const Trade::Session& acSession,
     TradeCancelReason aReason,
@@ -1280,6 +1845,8 @@ void TradeService::RemoveSession(
 {
     ReleaseSessionParticipants(aSessionId);
     m_applications.erase(aSessionId);
+    m_reconciliationBaselines.erase(aSessionId);
+    m_reconciliations.erase(aSessionId);
     m_terminalCleanupTicks.erase(aSessionId);
     m_sessions.erase(aSessionId);
 }
