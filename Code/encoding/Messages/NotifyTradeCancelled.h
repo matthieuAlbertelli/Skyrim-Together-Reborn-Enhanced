@@ -9,7 +9,8 @@ enum class TradeCancelReason : std::uint8_t
     Rejected,
     Expired,
     PlayerDisconnected,
-    ParticipantUnavailable
+    ParticipantUnavailable,
+    CancelledByParticipant
 };
 
 struct NotifyTradeCancelled final : ServerMessage

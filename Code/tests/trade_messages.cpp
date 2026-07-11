@@ -11,8 +11,13 @@
 #include <Messages/NotifyTradeCancelled.h>
 #include <Messages/NotifyTradeInvite.h>
 #include <Messages/NotifyTradeStarted.h>
+#include <Messages/NotifyTradeState.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
+#include <Messages/TradeOfferUpdateRequest.h>
+#include <Messages/TradeConfirmRequest.h>
+#include <Messages/TradeCancelRequest.h>
+#include <Structs/TradeOffer.h>
 
 using namespace TiltedPhoques;
 
@@ -102,4 +107,123 @@ TEST_CASE("Trade cancelled notification round-trips through the server factory",
 
     auto pNotification = CastUnique<NotifyTradeCancelled>(std::move(pMessage));
     REQUIRE(*pNotification == notification);
+}
+
+
+TEST_CASE("Trade offer update request round-trips through the client factory", "[trade.protocol]")
+{
+    TradeOfferUpdateRequest request;
+    request.SessionId = 0x1020304050607080ull;
+    request.ExpectedRevision = 19;
+    request.Offer.Items = {
+        {0x1111222233334444ull, 2},
+        {0xAAAABBBBCCCCDDDDull, 7}
+    };
+
+    Buffer buffer(256);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() == request.GetOpcode());
+
+    auto pRequest = CastUnique<TradeOfferUpdateRequest>(std::move(pMessage));
+    REQUIRE(*pRequest == request);
+    REQUIRE(pRequest->Offer.Valid);
+}
+
+TEST_CASE("Trade confirmation request round-trips through the client factory", "[trade.protocol]")
+{
+    TradeConfirmRequest request;
+    request.SessionId = 1234;
+    request.Revision = 22;
+
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() == request.GetOpcode());
+
+    auto pRequest = CastUnique<TradeConfirmRequest>(std::move(pMessage));
+    REQUIRE(*pRequest == request);
+}
+
+TEST_CASE("Trade cancellation request round-trips through the client factory", "[trade.protocol]")
+{
+    TradeCancelRequest request;
+    request.SessionId = 0xABCDEF0123456789ull;
+
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() == request.GetOpcode());
+
+    auto pRequest = CastUnique<TradeCancelRequest>(std::move(pMessage));
+    REQUIRE(*pRequest == request);
+}
+
+TEST_CASE("Authoritative trade state round-trips through the server factory", "[trade.protocol]")
+{
+    NotifyTradeState notification;
+    notification.SessionId = 77;
+    notification.Revision = 5;
+    notification.State = 1;
+    notification.InitiatorId = 12;
+    notification.RecipientId = 24;
+    notification.InitiatorOffer.Items = {
+        {1001, 2},
+        {1002, 4}
+    };
+    notification.RecipientOffer.Items = {
+        {2001, 1}
+    };
+    notification.InitiatorConfirmed = true;
+    notification.RecipientConfirmed = false;
+    notification.InitiatorConfirmedRevision = 5;
+    notification.RecipientConfirmedRevision = 0;
+
+    Buffer buffer(512);
+    Buffer::Writer writer(&buffer);
+    notification.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ServerMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() == notification.GetOpcode());
+
+    auto pNotification = CastUnique<NotifyTradeState>(std::move(pMessage));
+    REQUIRE(*pNotification == notification);
+    REQUIRE(pNotification->InitiatorOffer.Valid);
+    REQUIRE(pNotification->RecipientOffer.Valid);
+}
+
+TEST_CASE("Trade offer decoder rejects oversized snapshots", "[trade.protocol]")
+{
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    Serialization::WriteVarInt(writer, TradeOfferData::MaxLines + 1);
+
+    Buffer::Reader reader(&buffer);
+    TradeOfferData offer;
+    offer.Deserialize(reader);
+
+    REQUIRE_FALSE(offer.Valid);
+    REQUIRE(offer.Items.empty());
 }

@@ -9,8 +9,14 @@
 #include <Messages/NotifyTradeCancelled.h>
 #include <Messages/NotifyTradeInvite.h>
 #include <Messages/NotifyTradeStarted.h>
+#include <Messages/NotifyTradeState.h>
+#include <Messages/TradeCancelRequest.h>
+#include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
+#include <Messages/TradeOfferUpdateRequest.h>
+
+#include <Structs/TradeOffer.h>
 
 #include <vector>
 
@@ -18,6 +24,28 @@ namespace
 {
 constexpr Trade::Tick kInviteLifetimeMs = 30000;
 constexpr Trade::Tick kExpirySweepIntervalMs = 1000;
+
+Trade::Offer ToDomainOffer(const TradeOfferData& acOffer)
+{
+    Trade::Offer result;
+    result.Items.reserve(acOffer.Items.size());
+
+    for (const TradeOfferLineData& line : acOffer.Items)
+        result.Items.push_back({line.ItemId, line.Quantity});
+
+    return result;
+}
+
+TradeOfferData ToNetworkOffer(const Trade::Offer& acOffer)
+{
+    TradeOfferData result;
+    result.Items.reserve(acOffer.Items.size());
+
+    for (const Trade::OfferLine& line : acOffer.Items)
+        result.Items.push_back({line.Item, line.Quantity});
+
+    return result;
+}
 }
 
 TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
@@ -26,6 +54,9 @@ TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher) noexcep
     , m_playerLeaveConnection(aDispatcher.sink<PlayerLeaveEvent>().connect<&TradeService::OnPlayerLeave>(this))
     , m_tradeInviteConnection(aDispatcher.sink<PacketEvent<TradeInviteRequest>>().connect<&TradeService::OnTradeInviteRequest>(this))
     , m_tradeInviteResponseConnection(aDispatcher.sink<PacketEvent<TradeInviteResponseRequest>>().connect<&TradeService::OnTradeInviteResponseRequest>(this))
+    , m_tradeOfferUpdateConnection(aDispatcher.sink<PacketEvent<TradeOfferUpdateRequest>>().connect<&TradeService::OnTradeOfferUpdateRequest>(this))
+    , m_tradeConfirmConnection(aDispatcher.sink<PacketEvent<TradeConfirmRequest>>().connect<&TradeService::OnTradeConfirmRequest>(this))
+    , m_tradeCancelConnection(aDispatcher.sink<PacketEvent<TradeCancelRequest>>().connect<&TradeService::OnTradeCancelRequest>(this))
 {
 }
 
@@ -141,8 +172,8 @@ void TradeService::OnTradeInviteResponseRequest(const PacketEvent<TradeInviteRes
     const TradeInviteResponseRequest& message = acPacket.Packet;
     const Trade::PlayerId responderId = pResponder->GetId();
 
-    auto sessionIt = m_sessions.find(message.SessionId);
-    if (sessionIt == m_sessions.end())
+    Trade::Session* const pSession = FindSession(message.SessionId);
+    if (!pSession)
     {
         spdlog::warn(
             "[trade={}][player={}] invite_response_rejected reason=session_not_found",
@@ -151,8 +182,7 @@ void TradeService::OnTradeInviteResponseRequest(const PacketEvent<TradeInviteRes
         return;
     }
 
-    const auto playerSessionIt = m_playerSessions.find(responderId);
-    if (playerSessionIt == m_playerSessions.end() || playerSessionIt->second != message.SessionId)
+    if (!IsIndexedParticipant(responderId, message.SessionId))
     {
         spdlog::warn(
             "[trade={}][player={}] invite_response_rejected reason=not_indexed_participant",
@@ -161,7 +191,7 @@ void TradeService::OnTradeInviteResponseRequest(const PacketEvent<TradeInviteRes
         return;
     }
 
-    Trade::Session& session = sessionIt->second;
+    Trade::Session& session = *pSession;
     const Trade::Tick currentTick = GameServer::Get()->GetTick();
 
     if (session.GetState() == Trade::State::PendingAcceptance &&
@@ -231,6 +261,7 @@ void TradeService::OnTradeInviteResponseRequest(const PacketEvent<TradeInviteRes
     }
 
     SendStarted(session);
+    SendState(session);
 
     spdlog::info(
         "[trade={}][revision={}] started initiator={} recipient={} retransmission={}",
@@ -239,6 +270,162 @@ void TradeService::OnTradeInviteResponseRequest(const PacketEvent<TradeInviteRes
         session.GetInitiator().Id,
         session.GetRecipient().Id,
         result.Changed ? 0 : 1);
+}
+
+void TradeService::OnTradeOfferUpdateRequest(const PacketEvent<TradeOfferUpdateRequest>& acPacket) noexcept
+{
+    Player* const pPlayer = acPacket.pPlayer;
+    if (!pPlayer)
+        return;
+
+    const TradeOfferUpdateRequest& message = acPacket.Packet;
+    const Trade::PlayerId playerId = pPlayer->GetId();
+    Trade::Session* const pSession = FindSession(message.SessionId);
+
+    if (!pSession || !IsIndexedParticipant(playerId, message.SessionId))
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] offer_update_rejected reason=session_or_participant_invalid",
+            message.SessionId,
+            message.ExpectedRevision,
+            playerId);
+        return;
+    }
+
+    if (!message.Offer.Valid)
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] offer_update_rejected reason=malformed_offer",
+            message.SessionId,
+            message.ExpectedRevision,
+            playerId);
+        SendState(*pSession, pPlayer);
+        return;
+    }
+
+    Trade::Session& session = *pSession;
+    const Trade::Result result = session.UpdateOffer(
+        playerId,
+        message.ExpectedRevision,
+        ToDomainOffer(message.Offer),
+        GameServer::Get()->GetTick());
+
+    if (!result.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] offer_update_rejected error={}",
+            session.GetId(),
+            session.GetRevision(),
+            playerId,
+            static_cast<std::uint32_t>(result.ErrorCode));
+        SendState(session, pPlayer);
+        return;
+    }
+
+    spdlog::info(
+        "[trade={}][revision={}][player={}] offer_updated lines={} changed={}",
+        session.GetId(),
+        session.GetRevision(),
+        playerId,
+        message.Offer.Items.size(),
+        result.Changed ? 1 : 0);
+
+    SendState(session, result.Changed ? nullptr : pPlayer);
+}
+
+void TradeService::OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>& acPacket) noexcept
+{
+    Player* const pPlayer = acPacket.pPlayer;
+    if (!pPlayer)
+        return;
+
+    const TradeConfirmRequest& message = acPacket.Packet;
+    const Trade::PlayerId playerId = pPlayer->GetId();
+    Trade::Session* const pSession = FindSession(message.SessionId);
+
+    if (!pSession || !IsIndexedParticipant(playerId, message.SessionId))
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] confirm_rejected reason=session_or_participant_invalid",
+            message.SessionId,
+            message.Revision,
+            playerId);
+        return;
+    }
+
+    Trade::Session& session = *pSession;
+    const Trade::Result result = session.Confirm(
+        playerId,
+        message.Revision,
+        GameServer::Get()->GetTick());
+
+    if (!result.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] confirm_rejected error={}",
+            session.GetId(),
+            session.GetRevision(),
+            playerId,
+            static_cast<std::uint32_t>(result.ErrorCode));
+        SendState(session, pPlayer);
+        return;
+    }
+
+    spdlog::info(
+        "[trade={}][revision={}][player={}] confirmed state={} changed={}",
+        session.GetId(),
+        session.GetRevision(),
+        playerId,
+        static_cast<std::uint32_t>(session.GetState()),
+        result.Changed ? 1 : 0);
+
+    SendState(session, result.Changed ? nullptr : pPlayer);
+}
+
+void TradeService::OnTradeCancelRequest(const PacketEvent<TradeCancelRequest>& acPacket) noexcept
+{
+    Player* const pPlayer = acPacket.pPlayer;
+    if (!pPlayer)
+        return;
+
+    const TradeCancelRequest& message = acPacket.Packet;
+    const Trade::PlayerId playerId = pPlayer->GetId();
+    Trade::Session* const pSession = FindSession(message.SessionId);
+
+    if (!pSession || !IsIndexedParticipant(playerId, message.SessionId))
+    {
+        spdlog::warn(
+            "[trade={}][player={}] cancel_rejected reason=session_or_participant_invalid",
+            message.SessionId,
+            playerId);
+        return;
+    }
+
+    Trade::Session& session = *pSession;
+    const Trade::Result result = session.Cancel(playerId, GameServer::Get()->GetTick());
+
+    if (!result.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] cancel_rejected error={}",
+            session.GetId(),
+            session.GetRevision(),
+            playerId,
+            static_cast<std::uint32_t>(result.ErrorCode));
+        SendState(session, pPlayer);
+        return;
+    }
+
+    SendCancelled(session, TradeCancelReason::CancelledByParticipant, playerId);
+
+    spdlog::info(
+        "[trade={}][revision={}][player={}] cancelled reason=participant_request changed={}",
+        session.GetId(),
+        session.GetRevision(),
+        playerId,
+        result.Changed ? 1 : 0);
+
+    RemoveSession(session.GetId());
 }
 
 void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
@@ -346,6 +533,15 @@ bool TradeService::IsPlayerInSession(Trade::PlayerId aPlayerId) const noexcept
     return m_playerSessions.find(aPlayerId) != m_playerSessions.end();
 }
 
+bool TradeService::IsIndexedParticipant(
+    Trade::PlayerId aPlayerId,
+    Trade::SessionId aSessionId) const noexcept
+{
+    const auto playerSessionIt = m_playerSessions.find(aPlayerId);
+    return playerSessionIt != m_playerSessions.end() &&
+           playerSessionIt->second == aSessionId;
+}
+
 void TradeService::SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept
 {
     NotifyTradeInvite notify;
@@ -362,6 +558,40 @@ void TradeService::SendStarted(const Trade::Session& acSession) const noexcept
     notify.InitiatorId = acSession.GetInitiator().Id;
     notify.RecipientId = acSession.GetRecipient().Id;
     notify.Revision = acSession.GetRevision();
+
+    Player* const pInitiator = m_world.GetPlayerManager().GetById(notify.InitiatorId);
+    Player* const pRecipient = m_world.GetPlayerManager().GetById(notify.RecipientId);
+
+    if (pInitiator)
+        pInitiator->Send(notify);
+
+    if (pRecipient)
+        pRecipient->Send(notify);
+}
+
+void TradeService::SendState(const Trade::Session& acSession, Player* apRecipient) const noexcept
+{
+    NotifyTradeState notify;
+    notify.SessionId = acSession.GetId();
+    notify.Revision = acSession.GetRevision();
+    notify.State = static_cast<std::uint8_t>(acSession.GetState());
+
+    notify.InitiatorId = acSession.GetInitiator().Id;
+    notify.RecipientId = acSession.GetRecipient().Id;
+
+    notify.InitiatorOffer = ToNetworkOffer(acSession.GetInitiator().CurrentOffer);
+    notify.RecipientOffer = ToNetworkOffer(acSession.GetRecipient().CurrentOffer);
+
+    notify.InitiatorConfirmed = acSession.GetInitiator().Confirmed;
+    notify.RecipientConfirmed = acSession.GetRecipient().Confirmed;
+    notify.InitiatorConfirmedRevision = acSession.GetInitiator().ConfirmedRevision;
+    notify.RecipientConfirmedRevision = acSession.GetRecipient().ConfirmedRevision;
+
+    if (apRecipient)
+    {
+        apRecipient->Send(notify);
+        return;
+    }
 
     Player* const pInitiator = m_world.GetPlayerManager().GetById(notify.InitiatorId);
     Player* const pRecipient = m_world.GetPlayerManager().GetById(notify.RecipientId);

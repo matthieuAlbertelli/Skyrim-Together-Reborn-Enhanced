@@ -12,6 +12,9 @@ struct PlayerLeaveEvent;
 struct UpdateEvent;
 struct TradeInviteRequest;
 struct TradeInviteResponseRequest;
+struct TradeOfferUpdateRequest;
+struct TradeConfirmRequest;
+struct TradeCancelRequest;
 enum class TradeCancelReason : std::uint8_t;
 
 class TradeService
@@ -21,6 +24,9 @@ public:
 
     void OnTradeInviteRequest(const PacketEvent<TradeInviteRequest>& acPacket) noexcept;
     void OnTradeInviteResponseRequest(const PacketEvent<TradeInviteResponseRequest>& acPacket) noexcept;
+    void OnTradeOfferUpdateRequest(const PacketEvent<TradeOfferUpdateRequest>& acPacket) noexcept;
+    void OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>& acPacket) noexcept;
+    void OnTradeCancelRequest(const PacketEvent<TradeCancelRequest>& acPacket) noexcept;
     void OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept;
     void OnUpdate(const UpdateEvent& acEvent) noexcept;
 
@@ -29,9 +35,13 @@ private:
     [[nodiscard]] Trade::Session* FindSession(Trade::SessionId aSessionId) noexcept;
     [[nodiscard]] const Trade::Session* FindSession(Trade::SessionId aSessionId) const noexcept;
     [[nodiscard]] bool IsPlayerInSession(Trade::PlayerId aPlayerId) const noexcept;
+    [[nodiscard]] bool IsIndexedParticipant(
+        Trade::PlayerId aPlayerId,
+        Trade::SessionId aSessionId) const noexcept;
 
     void SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept;
     void SendStarted(const Trade::Session& acSession) const noexcept;
+    void SendState(const Trade::Session& acSession, Player* apRecipient = nullptr) const noexcept;
     void SendCancelled(
         const Trade::Session& acSession,
         TradeCancelReason aReason,
@@ -51,4 +61,7 @@ private:
     entt::scoped_connection m_playerLeaveConnection;
     entt::scoped_connection m_tradeInviteConnection;
     entt::scoped_connection m_tradeInviteResponseConnection;
+    entt::scoped_connection m_tradeOfferUpdateConnection;
+    entt::scoped_connection m_tradeConfirmConnection;
+    entt::scoped_connection m_tradeCancelConnection;
 };
