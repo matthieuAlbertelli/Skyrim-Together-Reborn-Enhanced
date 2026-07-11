@@ -194,3 +194,36 @@ TEST_CASE("Mutation planning requires a locked session and matching inventory ow
     REQUIRE_FALSE(wrongOwner.Succeeded());
     REQUIRE(wrongOwner.ErrorCode == Trade::Error::InvalidParticipant);
 }
+
+
+TEST_CASE("Trade mutation plan rejects incompatible destination stacks", "[trade.inventory]")
+{
+    Trade::Session session = MakeLockedSession(
+        MakeOffer({{100, 1}}));
+
+    SECTION("Destination contains a non-transferable instance")
+    {
+        const Trade::MutationPlanResult result =
+            Trade::BuildMutationPlan(
+                session,
+                MakeInventory(10, {{100, 1, true, false}}),
+                MakeInventory(20, {{100, 1, false, false}}));
+
+        REQUIRE_FALSE(result.Succeeded());
+        REQUIRE(result.ErrorCode ==
+            Trade::Error::ItemNotTransferable);
+    }
+
+    SECTION("Destination contains an ambiguous stack")
+    {
+        const Trade::MutationPlanResult result =
+            Trade::BuildMutationPlan(
+                session,
+                MakeInventory(10, {{100, 1, true, false}}),
+                MakeInventory(20, {{100, 1, true, true}}));
+
+        REQUIRE_FALSE(result.Succeeded());
+        REQUIRE(result.ErrorCode ==
+            Trade::Error::AmbiguousItem);
+    }
+}

@@ -59,6 +59,7 @@ enum ClientOpcode : unsigned char
     kTradeOfferUpdateRequest,
     kTradeConfirmRequest,
     kTradeCancelRequest,
+    kTradeApplyResultRequest,
     kClientOpcodeMax
 };
 
@@ -124,5 +125,6 @@ enum ServerOpcode : unsigned char
     kNotifyTradeStarted,
     kNotifyTradeCancelled,
     kNotifyTradeState,
+    kNotifyTradeApply,
     kServerOpcodeMax
 };

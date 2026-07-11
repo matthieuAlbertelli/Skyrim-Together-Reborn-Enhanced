@@ -12,12 +12,15 @@
 #include <Messages/NotifyTradeInvite.h>
 #include <Messages/NotifyTradeStarted.h>
 #include <Messages/NotifyTradeState.h>
+#include <Messages/NotifyTradeApply.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
 #include <Messages/TradeOfferUpdateRequest.h>
 #include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeCancelRequest.h>
+#include <Messages/TradeApplyResultRequest.h>
 #include <Structs/TradeOffer.h>
+#include <Structs/TradeApplication.h>
 
 using namespace TiltedPhoques;
 
@@ -227,4 +230,81 @@ TEST_CASE("Trade offer decoder rejects oversized snapshots", "[trade.protocol]")
 
     REQUIRE_FALSE(offer.Valid);
     REQUIRE(offer.Items.empty());
+}
+
+
+TEST_CASE("Trade apply notification preserves signed mutations", "[trade.protocol]")
+{
+    NotifyTradeApply notification;
+    notification.SessionId = 77;
+    notification.Revision = 9;
+    notification.ApplyId = 123456789;
+    notification.Plan.Mutations = {
+        {1001, -3},
+        {2002, 5}
+    };
+
+    Buffer buffer(256);
+    Buffer::Writer writer(&buffer);
+    notification.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ServerMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() ==
+        notification.GetOpcode());
+
+    auto pNotification =
+        CastUnique<NotifyTradeApply>(
+            std::move(pMessage));
+
+    REQUIRE(*pNotification == notification);
+    REQUIRE(pNotification->Plan.Valid);
+}
+
+TEST_CASE("Trade apply result request round-trips through the client factory", "[trade.protocol]")
+{
+    TradeApplyResultRequest request;
+    request.SessionId = 77;
+    request.Revision = 9;
+    request.ApplyId = 123456789;
+    request.Result =
+        TradeApplyResultCode::LocalStateMismatch;
+
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto pMessage = factory.Extract(reader);
+
+    REQUIRE(pMessage);
+    REQUIRE(pMessage->GetOpcode() ==
+        request.GetOpcode());
+
+    auto pRequest =
+        CastUnique<TradeApplyResultRequest>(
+            std::move(pMessage));
+
+    REQUIRE(*pRequest == request);
+    REQUIRE(pRequest->Valid);
+}
+
+TEST_CASE("Trade apply decoder rejects oversized mutation plans", "[trade.protocol]")
+{
+    Buffer buffer(128);
+    Buffer::Writer writer(&buffer);
+    Serialization::WriteVarInt(
+        writer,
+        TradeMutationPlanData::MaxMutations + 1);
+
+    Buffer::Reader reader(&buffer);
+    TradeMutationPlanData plan;
+    plan.Deserialize(reader);
+
+    REQUIRE_FALSE(plan.Valid);
+    REQUIRE(plan.Mutations.empty());
 }

@@ -13,24 +13,30 @@
 #include <Messages/NotifyTradeInvite.h>
 #include <Messages/NotifyTradeStarted.h>
 #include <Messages/NotifyTradeState.h>
+#include <Messages/NotifyTradeApply.h>
 #include <Messages/TradeCancelRequest.h>
 #include <Messages/TradeConfirmRequest.h>
 #include <Messages/TradeInviteRequest.h>
 #include <Messages/TradeInviteResponseRequest.h>
 #include <Messages/TradeOfferUpdateRequest.h>
+#include <Messages/TradeApplyResultRequest.h>
 
 #include <Structs/TradeOffer.h>
+#include <Structs/TradeApplication.h>
 
 #include <algorithm>
 #include <limits>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
 {
 constexpr Trade::Tick kInviteLifetimeMs = 30000;
 constexpr Trade::Tick kExpirySweepIntervalMs = 1000;
+constexpr Trade::Tick kApplyTimeoutMs = 15000;
+constexpr Trade::Tick kTerminalRetentionMs = 5000;
 
 Trade::Offer ToDomainOffer(const TradeOfferData& acOffer)
 {
@@ -76,6 +82,113 @@ bool IsMvpTransferable(const Inventory::Entry& acEntry) noexcept
            acEntry.ExtraSoulLevel == 0 &&
            !acEntry.ExtraEnchantRemoveUnequip;
 }
+
+GameId ToGameId(Trade::ItemId aItemId) noexcept
+{
+    return GameId{
+        static_cast<std::uint32_t>(aItemId >> 32),
+        static_cast<std::uint32_t>(aItemId & 0xFFFFFFFFu)};
+}
+
+Trade::ApplyOutcome ToApplyOutcome(TradeApplyResultCode aResult) noexcept
+{
+    return static_cast<Trade::ApplyOutcome>(
+        static_cast<std::uint8_t>(aResult));
+}
+
+TradeMutationPlanData ToNetworkPlan(
+    const Trade::PlayerMutationPlan& acPlan)
+{
+    TradeMutationPlanData result;
+    result.Mutations.reserve(acPlan.Mutations.size());
+
+    for (const Trade::InventoryMutation& mutation : acPlan.Mutations)
+        result.Mutations.push_back({mutation.Item, mutation.Delta});
+
+    return result;
+}
+
+struct InventoryTarget
+{
+    InventoryComponent* pComponent{};
+};
+
+bool TryGetInventoryTarget(
+    World& aWorld,
+    Trade::PlayerId aPlayerId,
+    InventoryTarget& aTarget) noexcept
+{
+    Player* const pPlayer = aWorld.GetPlayerManager().GetById(aPlayerId);
+    if (!pPlayer)
+        return false;
+
+    const std::optional<entt::entity> character = pPlayer->GetCharacter();
+    if (!character)
+        return false;
+
+    auto inventoryView = aWorld.view<InventoryComponent>();
+    const auto inventoryIt = inventoryView.find(*character);
+    if (inventoryIt == inventoryView.end())
+        return false;
+
+    aTarget.pComponent = &inventoryView.get<InventoryComponent>(*inventoryIt);
+    return true;
+}
+
+bool ApplyMutationsToInventory(
+    Inventory& aInventory,
+    const Trade::PlayerMutationPlan& acPlan) noexcept
+{
+    for (const Trade::InventoryMutation& mutation : acPlan.Mutations)
+    {
+        if (mutation.Item == 0 || mutation.Delta == 0)
+            return false;
+
+        const GameId itemId = ToGameId(mutation.Item);
+
+        Inventory::Entry* pMatchingEntry = nullptr;
+        std::size_t matches = 0;
+
+        for (Inventory::Entry& entry : aInventory.Entries)
+        {
+            if (entry.BaseId != itemId)
+                continue;
+
+            ++matches;
+            pMatchingEntry = &entry;
+        }
+
+        if (matches > 1)
+            return false;
+
+        if (pMatchingEntry && !IsMvpTransferable(*pMatchingEntry))
+            return false;
+
+        const std::int64_t currentCount =
+            pMatchingEntry ? pMatchingEntry->Count : 0;
+        const std::int64_t resultingCount =
+            currentCount + mutation.Delta;
+
+        if (resultingCount < 0 ||
+            resultingCount > std::numeric_limits<std::int32_t>::max())
+        {
+            return false;
+        }
+
+        if (mutation.Delta < 0 && !pMatchingEntry)
+            return false;
+
+        Inventory::Entry deltaEntry;
+        if (pMatchingEntry)
+            deltaEntry = *pMatchingEntry;
+
+        deltaEntry.BaseId = itemId;
+        deltaEntry.Count = mutation.Delta;
+        aInventory.AddOrRemoveEntry(deltaEntry);
+    }
+
+    return true;
+}
 }
 
 TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
@@ -87,6 +200,7 @@ TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher) noexcep
     , m_tradeOfferUpdateConnection(aDispatcher.sink<PacketEvent<TradeOfferUpdateRequest>>().connect<&TradeService::OnTradeOfferUpdateRequest>(this))
     , m_tradeConfirmConnection(aDispatcher.sink<PacketEvent<TradeConfirmRequest>>().connect<&TradeService::OnTradeConfirmRequest>(this))
     , m_tradeCancelConnection(aDispatcher.sink<PacketEvent<TradeCancelRequest>>().connect<&TradeService::OnTradeCancelRequest>(this))
+    , m_tradeApplyResultConnection(aDispatcher.sink<PacketEvent<TradeApplyResultRequest>>().connect<&TradeService::OnTradeApplyResultRequest>(this))
 {
 }
 
@@ -425,21 +539,11 @@ void TradeService::OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>&
             return;
         }
 
-        const std::size_t initiatorMutations =
-            planResult.Plan.Initiator.Mutations.size();
-        const std::size_t recipientMutations =
-            planResult.Plan.Recipient.Mutations.size();
-
-        m_mutationPlans.insert_or_assign(
-            session.GetId(),
-            std::move(planResult.Plan));
-
-        spdlog::info(
-            "[trade={}][revision={}] mutation_plan_created initiator_mutations={} recipient_mutations={}",
-            session.GetId(),
-            session.GetRevision(),
-            initiatorMutations,
-            recipientMutations);
+        BeginApplication(
+            session,
+            std::move(planResult.Plan),
+            currentTick);
+        return;
     }
 
     spdlog::info(
@@ -499,6 +603,131 @@ void TradeService::OnTradeCancelRequest(const PacketEvent<TradeCancelRequest>& a
     RemoveSession(session.GetId());
 }
 
+void TradeService::OnTradeApplyResultRequest(
+    const PacketEvent<TradeApplyResultRequest>& acPacket) noexcept
+{
+    Player* const pPlayer = acPacket.pPlayer;
+    if (!pPlayer)
+        return;
+
+    const TradeApplyResultRequest& message = acPacket.Packet;
+    const Trade::PlayerId playerId = pPlayer->GetId();
+
+    Trade::Session* const pSession = FindSession(message.SessionId);
+    const auto applicationIt = m_applications.find(message.SessionId);
+
+    if (!pSession || applicationIt == m_applications.end())
+    {
+        spdlog::warn(
+            "[trade={}][apply={}][player={}] apply_result_rejected reason=session_not_found",
+            message.SessionId,
+            message.ApplyId,
+            playerId);
+        return;
+    }
+
+    Trade::Session& session = *pSession;
+    Trade::Application& application = applicationIt->second;
+
+    if (!session.IsParticipant(playerId) ||
+        application.GetId() != message.ApplyId ||
+        application.GetRevision() != message.Revision)
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][apply={}][player={}] apply_result_rejected reason=identity_mismatch",
+            message.SessionId,
+            message.Revision,
+            message.ApplyId,
+            playerId);
+        SendState(session, pPlayer);
+        return;
+    }
+
+    const TradeApplyResultCode resultCode =
+        message.Valid
+            ? message.Result
+            : TradeApplyResultCode::MalformedPlan;
+
+    const Trade::Result recordResult = application.RecordResult(
+        playerId,
+        ToApplyOutcome(resultCode),
+        GameServer::Get()->GetTick());
+
+    if (!recordResult.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][apply={}][player={}] apply_result_rejected error={}",
+            session.GetId(),
+            session.GetRevision(),
+            application.GetId(),
+            playerId,
+            static_cast<std::uint32_t>(recordResult.ErrorCode));
+        SendState(session, pPlayer);
+        return;
+    }
+
+    spdlog::info(
+        "[trade={}][revision={}][apply={}][player={}] apply_result={} changed={}",
+        session.GetId(),
+        session.GetRevision(),
+        application.GetId(),
+        playerId,
+        static_cast<std::uint32_t>(resultCode),
+        recordResult.Changed ? 1 : 0);
+
+    const Trade::Tick currentTick = GameServer::Get()->GetTick();
+
+    if (session.IsTerminal())
+    {
+        SendState(session, pPlayer);
+
+        if (application.IsSettled())
+            ScheduleTerminalCleanup(session.GetId(), currentTick);
+
+        return;
+    }
+
+    if (application.HasFailed())
+    {
+        session.Fail(Trade::Error::ApplyFailed, currentTick);
+        SendState(session);
+
+        if (application.IsSettled())
+            ScheduleTerminalCleanup(session.GetId(), currentTick);
+
+        return;
+    }
+
+    if (!application.AllSucceeded())
+        return;
+
+    if (!CommitMutationPlan(application.GetPlan()))
+    {
+        session.Fail(Trade::Error::ServerCommitFailed, currentTick);
+
+        spdlog::error(
+            "[trade={}][revision={}][apply={}] server_commit_failed",
+            session.GetId(),
+            session.GetRevision(),
+            application.GetId());
+
+        SendState(session);
+        ScheduleTerminalCleanup(session.GetId(), currentTick);
+        return;
+    }
+
+    session.Complete(currentTick);
+
+    spdlog::info(
+        "[trade={}][revision={}][apply={}] completed",
+        session.GetId(),
+        session.GetRevision(),
+        application.GetId());
+
+    SendState(session);
+    ScheduleTerminalCleanup(session.GetId(), currentTick);
+}
+
 void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
 {
     Player* const pPlayer = acEvent.pPlayer;
@@ -519,8 +748,41 @@ void TradeService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
     }
 
     const Trade::Tick currentTick = GameServer::Get()->GetTick();
-    pSession->Cancel(playerId, currentTick);
-    SendCancelled(*pSession, TradeCancelReason::PlayerDisconnected, playerId, pPlayer);
+
+    if (pSession->GetState() == Trade::State::Applying)
+    {
+        pSession->Fail(
+            Trade::Error::ParticipantDisconnected,
+            currentTick);
+        SendState(*pSession);
+
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] failed reason=participant_disconnected",
+            pSession->GetId(),
+            pSession->GetRevision(),
+            playerId);
+
+        ScheduleTerminalCleanup(sessionId, currentTick);
+        return;
+    }
+
+    const Trade::Result result = pSession->Cancel(playerId, currentTick);
+    if (!result.Succeeded())
+    {
+        spdlog::warn(
+            "[trade={}][revision={}][player={}] disconnect_cancel_failed error={}",
+            pSession->GetId(),
+            pSession->GetRevision(),
+            playerId,
+            static_cast<std::uint32_t>(result.ErrorCode));
+        return;
+    }
+
+    SendCancelled(
+        *pSession,
+        TradeCancelReason::PlayerDisconnected,
+        playerId,
+        pPlayer);
 
     spdlog::info(
         "[trade={}][revision={}][player={}] cancelled reason=player_disconnected",
@@ -541,19 +803,36 @@ void TradeService::OnUpdate(const UpdateEvent& acEvent) noexcept
 
     m_nextExpirySweepTick = currentTick + kExpirySweepIntervalMs;
 
-    std::vector<Trade::SessionId> expiredSessions;
-    expiredSessions.reserve(m_sessions.size());
+    std::vector<Trade::SessionId> expiredInvitations;
+    std::vector<Trade::SessionId> timedOutApplications;
+    std::vector<Trade::SessionId> cleanupSessions;
+
+    expiredInvitations.reserve(m_sessions.size());
+    timedOutApplications.reserve(m_applications.size());
+    cleanupSessions.reserve(m_terminalCleanupTicks.size());
 
     for (const auto& [sessionId, session] : m_sessions)
     {
         if (session.GetState() == Trade::State::PendingAcceptance &&
             currentTick >= session.GetExpiryTick())
         {
-            expiredSessions.push_back(sessionId);
+            expiredInvitations.push_back(sessionId);
         }
     }
 
-    for (const Trade::SessionId sessionId : expiredSessions)
+    for (const auto& [sessionId, application] : m_applications)
+    {
+        if (application.IsTimedOut(currentTick))
+            timedOutApplications.push_back(sessionId);
+    }
+
+    for (const auto& [sessionId, cleanupTick] : m_terminalCleanupTicks)
+    {
+        if (currentTick >= cleanupTick)
+            cleanupSessions.push_back(sessionId);
+    }
+
+    for (const Trade::SessionId sessionId : expiredInvitations)
     {
         Trade::Session* const pSession = FindSession(sessionId);
         if (!pSession)
@@ -571,6 +850,29 @@ void TradeService::OnUpdate(const UpdateEvent& acEvent) noexcept
 
         RemoveSession(sessionId);
     }
+
+    for (const Trade::SessionId sessionId : timedOutApplications)
+    {
+        Trade::Session* const pSession = FindSession(sessionId);
+        if (!pSession)
+            continue;
+
+        if (!pSession->IsTerminal())
+        {
+            pSession->Fail(Trade::Error::ApplyTimedOut, currentTick);
+            SendState(*pSession);
+
+            spdlog::warn(
+                "[trade={}][revision={}] failed reason=apply_timeout",
+                pSession->GetId(),
+                pSession->GetRevision());
+        }
+
+        ScheduleTerminalCleanup(sessionId, currentTick);
+    }
+
+    for (const Trade::SessionId sessionId : cleanupSessions)
+        RemoveSession(sessionId);
 }
 
 Trade::SessionId TradeService::AllocateSessionId() noexcept
@@ -583,6 +885,32 @@ Trade::SessionId TradeService::AllocateSessionId() noexcept
             m_nextSessionId = 1;
 
         if (candidate != 0 && m_sessions.find(candidate) == m_sessions.end())
+            return candidate;
+    }
+}
+
+Trade::ApplyId TradeService::AllocateApplyId() noexcept
+{
+    for (;;)
+    {
+        const Trade::ApplyId candidate = m_nextApplyId++;
+
+        if (m_nextApplyId == 0)
+            m_nextApplyId = 1;
+
+        bool alreadyUsed = false;
+        for (const auto& [sessionId, application] : m_applications)
+        {
+            TP_UNUSED(sessionId);
+
+            if (application.GetId() == candidate)
+            {
+                alreadyUsed = true;
+                break;
+            }
+        }
+
+        if (candidate != 0 && !alreadyUsed)
             return candidate;
     }
 }
@@ -699,6 +1027,100 @@ Trade::MutationPlanResult TradeService::ValidateAndBuildMutationPlan(
         recipientInventory);
 }
 
+bool TradeService::CommitMutationPlan(
+    const Trade::MutationPlan& acPlan) noexcept
+{
+    InventoryTarget initiatorTarget;
+    InventoryTarget recipientTarget;
+
+    if (!TryGetInventoryTarget(
+            m_world,
+            acPlan.Initiator.Player,
+            initiatorTarget) ||
+        !TryGetInventoryTarget(
+            m_world,
+            acPlan.Recipient.Player,
+            recipientTarget))
+    {
+        return false;
+    }
+
+    Inventory initiatorInventory =
+        initiatorTarget.pComponent->Content;
+    Inventory recipientInventory =
+        recipientTarget.pComponent->Content;
+
+    if (!ApplyMutationsToInventory(
+            initiatorInventory,
+            acPlan.Initiator) ||
+        !ApplyMutationsToInventory(
+            recipientInventory,
+            acPlan.Recipient))
+    {
+        return false;
+    }
+
+    initiatorTarget.pComponent->Content =
+        std::move(initiatorInventory);
+    recipientTarget.pComponent->Content =
+        std::move(recipientInventory);
+
+    return true;
+}
+
+void TradeService::BeginApplication(
+    Trade::Session& aSession,
+    Trade::MutationPlan aPlan,
+    Trade::Tick aCurrentTick) noexcept
+{
+    const Trade::ApplyId applyId = AllocateApplyId();
+
+    const Trade::Result startResult =
+        aSession.StartApplying(aCurrentTick);
+
+    if (!startResult.Succeeded())
+    {
+        aSession.Fail(
+            Trade::Error::ApplyFailed,
+            aCurrentTick);
+        SendState(aSession);
+        RemoveSession(aSession.GetId());
+        return;
+    }
+
+    const auto [applicationIt, inserted] =
+        m_applications.try_emplace(
+            aSession.GetId(),
+            applyId,
+            std::move(aPlan),
+            aCurrentTick,
+            aCurrentTick + kApplyTimeoutMs);
+
+    if (!inserted)
+    {
+        aSession.Fail(
+            Trade::Error::ApplyFailed,
+            aCurrentTick);
+        SendState(aSession);
+        RemoveSession(aSession.GetId());
+        return;
+    }
+
+    const Trade::Application& application =
+        applicationIt->second;
+
+    spdlog::info(
+        "[trade={}][revision={}][apply={}] applying initiator_mutations={} recipient_mutations={}",
+        aSession.GetId(),
+        aSession.GetRevision(),
+        application.GetId(),
+        application.GetPlan().Initiator.Mutations.size(),
+        application.GetPlan().Recipient.Mutations.size());
+
+    SendState(aSession);
+    SendApply(aSession, application);
+}
+
 void TradeService::SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept
 {
     NotifyTradeInvite notify;
@@ -761,6 +1183,38 @@ void TradeService::SendState(const Trade::Session& acSession, Player* apRecipien
         pRecipient->Send(notify);
 }
 
+void TradeService::SendApply(
+    const Trade::Session& acSession,
+    const Trade::Application& acApplication) const noexcept
+{
+    NotifyTradeApply initiatorNotify;
+    initiatorNotify.SessionId = acSession.GetId();
+    initiatorNotify.Revision = acSession.GetRevision();
+    initiatorNotify.ApplyId = acApplication.GetId();
+    initiatorNotify.Plan =
+        ToNetworkPlan(acApplication.GetPlan().Initiator);
+
+    NotifyTradeApply recipientNotify;
+    recipientNotify.SessionId = acSession.GetId();
+    recipientNotify.Revision = acSession.GetRevision();
+    recipientNotify.ApplyId = acApplication.GetId();
+    recipientNotify.Plan =
+        ToNetworkPlan(acApplication.GetPlan().Recipient);
+
+    Player* const pInitiator =
+        m_world.GetPlayerManager().GetById(
+            acSession.GetInitiator().Id);
+    Player* const pRecipient =
+        m_world.GetPlayerManager().GetById(
+            acSession.GetRecipient().Id);
+
+    if (pInitiator)
+        pInitiator->Send(initiatorNotify);
+
+    if (pRecipient)
+        pRecipient->Send(recipientNotify);
+}
+
 void TradeService::SendCancelled(
     const Trade::Session& acSession,
     TradeCancelReason aReason,
@@ -782,14 +1236,50 @@ void TradeService::SendCancelled(
         pRecipient->Send(notify);
 }
 
-void TradeService::RemoveSession(Trade::SessionId aSessionId) noexcept
+void TradeService::ReleaseSessionParticipants(
+    Trade::SessionId aSessionId) noexcept
 {
     const auto sessionIt = m_sessions.find(aSessionId);
     if (sessionIt == m_sessions.end())
         return;
 
-    m_playerSessions.erase(sessionIt->second.GetInitiator().Id);
-    m_playerSessions.erase(sessionIt->second.GetRecipient().Id);
-    m_mutationPlans.erase(aSessionId);
-    m_sessions.erase(sessionIt);
+    const Trade::PlayerId initiatorId =
+        sessionIt->second.GetInitiator().Id;
+    const Trade::PlayerId recipientId =
+        sessionIt->second.GetRecipient().Id;
+
+    const auto initiatorIndexIt =
+        m_playerSessions.find(initiatorId);
+    if (initiatorIndexIt != m_playerSessions.end() &&
+        initiatorIndexIt->second == aSessionId)
+    {
+        m_playerSessions.erase(initiatorIndexIt);
+    }
+
+    const auto recipientIndexIt =
+        m_playerSessions.find(recipientId);
+    if (recipientIndexIt != m_playerSessions.end() &&
+        recipientIndexIt->second == aSessionId)
+    {
+        m_playerSessions.erase(recipientIndexIt);
+    }
+}
+
+void TradeService::ScheduleTerminalCleanup(
+    Trade::SessionId aSessionId,
+    Trade::Tick aCurrentTick) noexcept
+{
+    ReleaseSessionParticipants(aSessionId);
+    m_terminalCleanupTicks.insert_or_assign(
+        aSessionId,
+        aCurrentTick + kTerminalRetentionMs);
+}
+
+void TradeService::RemoveSession(
+    Trade::SessionId aSessionId) noexcept
+{
+    ReleaseSessionParticipants(aSessionId);
+    m_applications.erase(aSessionId);
+    m_terminalCleanupTicks.erase(aSessionId);
+    m_sessions.erase(aSessionId);
 }

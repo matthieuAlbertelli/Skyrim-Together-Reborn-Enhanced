@@ -4,7 +4,9 @@
 #include <Trade/TradeTypes.h>
 
 #include <cstdint>
+#include <deque>
 #include <optional>
+#include <unordered_map>
 
 struct World;
 struct TransportService;
@@ -12,6 +14,8 @@ struct NotifyTradeInvite;
 struct NotifyTradeStarted;
 struct NotifyTradeCancelled;
 struct NotifyTradeState;
+struct NotifyTradeApply;
+enum class TradeApplyResultCode : std::uint8_t;
 
 struct ClientTradeSessionState
 {
@@ -21,6 +25,13 @@ struct ClientTradeSessionState
     Trade::Error TerminalError{Trade::Error::None};
     Trade::Participant Initiator{};
     Trade::Participant Recipient{};
+};
+
+struct ClientTradeApplyRecord
+{
+    Trade::SessionId SessionId{};
+    Trade::Revision Revision{};
+    std::uint8_t ResultCode{};
 };
 
 struct TradeService
@@ -58,9 +69,18 @@ protected:
     void OnNotifyTradeStarted(const NotifyTradeStarted& acTradeStarted) noexcept;
     void OnNotifyTradeCancelled(const NotifyTradeCancelled& acTradeCancelled) noexcept;
     void OnNotifyTradeState(const NotifyTradeState& acTradeState) noexcept;
+    void OnNotifyTradeApply(const NotifyTradeApply& acTradeApply) noexcept;
 
 private:
     void RespondToInvite(std::uint64_t aSessionId, bool aAccepted) const noexcept;
+    [[nodiscard]] TradeApplyResultCode ApplyMutationPlan(
+        const NotifyTradeApply& acTradeApply) noexcept;
+    void SendApplyResult(
+        const NotifyTradeApply& acTradeApply,
+        TradeApplyResultCode aResult) const noexcept;
+    void RememberApplyResult(
+        const NotifyTradeApply& acTradeApply,
+        TradeApplyResultCode aResult) noexcept;
 
     World& m_world;
     TransportService& m_transport;
@@ -69,8 +89,12 @@ private:
     std::optional<std::uint64_t> m_activeSession;
     std::optional<ClientTradeSessionState> m_sessionState;
 
+    std::unordered_map<Trade::ApplyId, ClientTradeApplyRecord> m_applyJournal;
+    std::deque<Trade::ApplyId> m_applyJournalOrder;
+
     entt::scoped_connection m_tradeInviteConnection;
     entt::scoped_connection m_tradeStartedConnection;
     entt::scoped_connection m_tradeCancelledConnection;
     entt::scoped_connection m_tradeStateConnection;
+    entt::scoped_connection m_tradeApplyConnection;
 };

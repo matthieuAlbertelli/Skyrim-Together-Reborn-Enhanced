@@ -23,7 +23,12 @@ enum class Error : std::uint8_t
     InsufficientQuantity,
     ItemNotTransferable,
     AmbiguousItem,
-    QuantityOverflow
+    QuantityOverflow,
+    ApplyResultConflict,
+    ApplyFailed,
+    ApplyTimedOut,
+    ParticipantDisconnected,
+    ServerCommitFailed
 };
 
 struct Result

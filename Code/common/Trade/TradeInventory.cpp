@@ -107,9 +107,28 @@ Error AddMutation(
     return Error::None;
 }
 
+Error ValidateIncomingItem(
+    const InventorySnapshot& acInventory,
+    ItemId aItem) noexcept
+{
+    const ItemLookupResult lookup = FindInventoryItem(acInventory, aItem);
+
+    if (!lookup.pItem)
+        return Error::None;
+
+    if (lookup.Duplicate || lookup.pItem->Ambiguous)
+        return Error::AmbiguousItem;
+
+    if (!lookup.pItem->Transferable)
+        return Error::ItemNotTransferable;
+
+    return Error::None;
+}
+
 Error AddOfferToPlan(
     const Offer& acOffer,
     const InventorySnapshot& acOwnerInventory,
+    const InventorySnapshot& acRecipientInventory,
     PlayerMutationPlan& aOwnerPlan,
     PlayerMutationPlan& aRecipientPlan) noexcept
 {
@@ -118,6 +137,11 @@ Error AddOfferToPlan(
         const Error validationError = ValidateOfferedItem(acOwnerInventory, line);
         if (validationError != Error::None)
             return validationError;
+
+        const Error recipientValidationError =
+            ValidateIncomingItem(acRecipientInventory, line.Item);
+        if (recipientValidationError != Error::None)
+            return recipientValidationError;
 
         const std::int64_t quantity = line.Quantity;
 
@@ -170,6 +194,7 @@ MutationPlanResult BuildMutationPlan(
     Error error = AddOfferToPlan(
         acSession.GetInitiator().CurrentOffer,
         acInitiatorInventory,
+        acRecipientInventory,
         plan.Initiator,
         plan.Recipient);
 
@@ -179,6 +204,7 @@ MutationPlanResult BuildMutationPlan(
     error = AddOfferToPlan(
         acSession.GetRecipient().CurrentOffer,
         acRecipientInventory,
+        acInitiatorInventory,
         plan.Recipient,
         plan.Initiator);
 

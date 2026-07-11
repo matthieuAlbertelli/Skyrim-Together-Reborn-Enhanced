@@ -6,6 +6,7 @@
 namespace Trade
 {
 using SessionId = std::uint64_t;
+using ApplyId = std::uint64_t;
 using Revision = std::uint64_t;
 using PlayerId = std::uint32_t;
 using ItemId = std::uint64_t;
