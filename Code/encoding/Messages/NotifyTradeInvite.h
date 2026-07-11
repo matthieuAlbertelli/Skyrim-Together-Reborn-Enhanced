@@ -2,6 +2,8 @@
 
 #include "Message.h"
 
+#include <cstdint>
+
 struct NotifyTradeInvite final : ServerMessage
 {
     static constexpr ServerOpcode Opcode = kNotifyTradeInvite;
@@ -22,7 +24,7 @@ struct NotifyTradeInvite final : ServerMessage
                ExpiryTick == acRhs.ExpiryTick;
     }
 
-    uint32_t SessionId{};
+    uint64_t SessionId{};
     uint32_t InviterId{};
     uint64_t ExpiryTick{};
 };

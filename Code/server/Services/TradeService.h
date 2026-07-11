@@ -2,6 +2,8 @@
 
 #include <Events/PacketEvent.h>
 
+#include <cstdint>
+
 struct World;
 struct TradeInviteRequest;
 
@@ -15,7 +17,7 @@ public:
 private:
     World& m_world;
 
-    uint32_t m_nextSessionId{1};
+    uint64_t m_nextSessionId{1};
 
     entt::scoped_connection m_tradeInviteConnection;
 };

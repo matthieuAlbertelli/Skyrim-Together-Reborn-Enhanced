@@ -12,7 +12,7 @@ void NotifyTradeInvite::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) n
 {
     ServerMessage::DeserializeRaw(aReader);
 
-    SessionId = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
+    SessionId = Serialization::ReadVarInt(aReader);
     InviterId = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
     ExpiryTick = Serialization::ReadVarInt(aReader);
 }
