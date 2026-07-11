@@ -17,7 +17,13 @@ enum class Error : std::uint8_t
     EmptyQuantity,
     DuplicateItem,
     RevisionOverflow,
-    SessionExpired
+    SessionExpired,
+    InventoryUnavailable,
+    ItemUnavailable,
+    InsufficientQuantity,
+    ItemNotTransferable,
+    AmbiguousItem,
+    QuantityOverflow
 };
 
 struct Result

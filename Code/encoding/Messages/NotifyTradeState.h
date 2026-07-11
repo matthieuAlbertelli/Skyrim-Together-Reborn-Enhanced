@@ -24,6 +24,7 @@ struct NotifyTradeState final : ServerMessage
                SessionId == acRhs.SessionId &&
                Revision == acRhs.Revision &&
                State == acRhs.State &&
+               TerminalError == acRhs.TerminalError &&
                InitiatorId == acRhs.InitiatorId &&
                RecipientId == acRhs.RecipientId &&
                InitiatorOffer == acRhs.InitiatorOffer &&
@@ -37,6 +38,7 @@ struct NotifyTradeState final : ServerMessage
     std::uint64_t SessionId{};
     std::uint64_t Revision{};
     std::uint8_t State{};
+    std::uint8_t TerminalError{};
 
     std::uint32_t InitiatorId{};
     std::uint32_t RecipientId{};

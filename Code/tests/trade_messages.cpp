@@ -183,6 +183,7 @@ TEST_CASE("Authoritative trade state round-trips through the server factory", "[
     notification.SessionId = 77;
     notification.Revision = 5;
     notification.State = 1;
+    notification.TerminalError = 0;
     notification.InitiatorId = 12;
     notification.RecipientId = 24;
     notification.InitiatorOffer.Items = {

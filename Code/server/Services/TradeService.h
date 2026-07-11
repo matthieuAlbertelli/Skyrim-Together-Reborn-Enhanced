@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Events/PacketEvent.h>
+#include <Trade/TradeInventory.h>
 #include <Trade/TradeSession.h>
 
 #include <cstdint>
@@ -39,6 +40,12 @@ private:
         Trade::PlayerId aPlayerId,
         Trade::SessionId aSessionId) const noexcept;
 
+    [[nodiscard]] bool TryBuildInventorySnapshot(
+        Trade::PlayerId aPlayerId,
+        Trade::InventorySnapshot& aSnapshot) const noexcept;
+    [[nodiscard]] Trade::MutationPlanResult ValidateAndBuildMutationPlan(
+        const Trade::Session& acSession) const noexcept;
+
     void SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept;
     void SendStarted(const Trade::Session& acSession) const noexcept;
     void SendState(const Trade::Session& acSession, Player* apRecipient = nullptr) const noexcept;
@@ -53,6 +60,7 @@ private:
 
     std::unordered_map<Trade::SessionId, Trade::Session> m_sessions;
     std::unordered_map<Trade::PlayerId, Trade::SessionId> m_playerSessions;
+    std::unordered_map<Trade::SessionId, Trade::MutationPlan> m_mutationPlans;
 
     Trade::SessionId m_nextSessionId{1};
     Trade::Tick m_nextExpirySweepTick{};

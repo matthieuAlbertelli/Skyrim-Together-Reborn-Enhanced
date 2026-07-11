@@ -3,6 +3,9 @@
 #include <GameServer.h>
 #include <World.h>
 
+#include <Components.h>
+#include <Game/Player.h>
+
 #include <Events/PlayerLeaveEvent.h>
 #include <Events/UpdateEvent.h>
 
@@ -18,6 +21,10 @@
 
 #include <Structs/TradeOffer.h>
 
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -45,6 +52,29 @@ TradeOfferData ToNetworkOffer(const Trade::Offer& acOffer)
         result.Items.push_back({line.Item, line.Quantity});
 
     return result;
+}
+
+Trade::ItemId ToTradeItemId(const GameId& acGameId) noexcept
+{
+    return (static_cast<Trade::ItemId>(acGameId.ModId) << 32) |
+           static_cast<Trade::ItemId>(acGameId.BaseId);
+}
+
+bool IsMvpTransferable(const Inventory::Entry& acEntry) noexcept
+{
+    return acEntry.Count > 0 &&
+           !acEntry.IsQuestItem &&
+           !acEntry.IsWorn() &&
+           acEntry.ExtraCharge == 0.0f &&
+           !acEntry.ExtraEnchantId &&
+           acEntry.ExtraEnchantCharge == 0 &&
+           acEntry.EnchantData.Effects.empty() &&
+           !acEntry.EnchantData.IsWeapon &&
+           acEntry.ExtraHealth == 0.0f &&
+           !acEntry.ExtraPoisonId &&
+           acEntry.ExtraPoisonCount == 0 &&
+           acEntry.ExtraSoulLevel == 0 &&
+           !acEntry.ExtraEnchantRemoveUnequip;
 }
 }
 
@@ -354,10 +384,13 @@ void TradeService::OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>&
     }
 
     Trade::Session& session = *pSession;
+    const Trade::State previousState = session.GetState();
+    const Trade::Tick currentTick = GameServer::Get()->GetTick();
+
     const Trade::Result result = session.Confirm(
         playerId,
         message.Revision,
-        GameServer::Get()->GetTick());
+        currentTick);
 
     if (!result.Succeeded())
     {
@@ -369,6 +402,44 @@ void TradeService::OnTradeConfirmRequest(const PacketEvent<TradeConfirmRequest>&
             static_cast<std::uint32_t>(result.ErrorCode));
         SendState(session, pPlayer);
         return;
+    }
+
+    if (previousState != Trade::State::Locked &&
+        session.GetState() == Trade::State::Locked)
+    {
+        Trade::MutationPlanResult planResult =
+            ValidateAndBuildMutationPlan(session);
+
+        if (!planResult.Succeeded())
+        {
+            session.Fail(planResult.ErrorCode, currentTick);
+
+            spdlog::warn(
+                "[trade={}][revision={}] validation_failed error={}",
+                session.GetId(),
+                session.GetRevision(),
+                static_cast<std::uint32_t>(planResult.ErrorCode));
+
+            SendState(session);
+            RemoveSession(session.GetId());
+            return;
+        }
+
+        const std::size_t initiatorMutations =
+            planResult.Plan.Initiator.Mutations.size();
+        const std::size_t recipientMutations =
+            planResult.Plan.Recipient.Mutations.size();
+
+        m_mutationPlans.insert_or_assign(
+            session.GetId(),
+            std::move(planResult.Plan));
+
+        spdlog::info(
+            "[trade={}][revision={}] mutation_plan_created initiator_mutations={} recipient_mutations={}",
+            session.GetId(),
+            session.GetRevision(),
+            initiatorMutations,
+            recipientMutations);
     }
 
     spdlog::info(
@@ -542,6 +613,92 @@ bool TradeService::IsIndexedParticipant(
            playerSessionIt->second == aSessionId;
 }
 
+bool TradeService::TryBuildInventorySnapshot(
+    Trade::PlayerId aPlayerId,
+    Trade::InventorySnapshot& aSnapshot) const noexcept
+{
+    Player* const pPlayer = m_world.GetPlayerManager().GetById(aPlayerId);
+    if (!pPlayer)
+        return false;
+
+    const std::optional<entt::entity> character = pPlayer->GetCharacter();
+    if (!character)
+        return false;
+
+    auto inventoryView = m_world.view<InventoryComponent>();
+    const auto inventoryIt = inventoryView.find(*character);
+    if (inventoryIt == inventoryView.end())
+        return false;
+
+    const Inventory& inventory =
+        inventoryView.get<InventoryComponent>(*inventoryIt).Content;
+
+    aSnapshot = {};
+    aSnapshot.Owner = aPlayerId;
+    aSnapshot.Items.reserve(inventory.Entries.size());
+
+    for (const Inventory::Entry& entry : inventory.Entries)
+    {
+        if (!entry.BaseId || entry.Count <= 0)
+            continue;
+
+        const Trade::ItemId itemId = ToTradeItemId(entry.BaseId);
+
+        auto snapshotIt = std::find_if(
+            aSnapshot.Items.begin(),
+            aSnapshot.Items.end(),
+            [itemId](const Trade::InventoryItemState& acItem) noexcept
+            {
+                return acItem.Item == itemId;
+            });
+
+        if (snapshotIt == aSnapshot.Items.end())
+        {
+            aSnapshot.Items.push_back(
+                Trade::InventoryItemState{
+                    itemId,
+                    static_cast<std::uint64_t>(entry.Count),
+                    IsMvpTransferable(entry),
+                    false});
+            continue;
+        }
+
+        snapshotIt->Ambiguous = true;
+        snapshotIt->Transferable = false;
+
+        const std::uint64_t count = static_cast<std::uint64_t>(entry.Count);
+        if (snapshotIt->Quantity > std::numeric_limits<std::uint64_t>::max() - count)
+            snapshotIt->Quantity = std::numeric_limits<std::uint64_t>::max();
+        else
+            snapshotIt->Quantity += count;
+    }
+
+    return true;
+}
+
+Trade::MutationPlanResult TradeService::ValidateAndBuildMutationPlan(
+    const Trade::Session& acSession) const noexcept
+{
+    Trade::InventorySnapshot initiatorInventory;
+    Trade::InventorySnapshot recipientInventory;
+
+    if (!TryBuildInventorySnapshot(
+            acSession.GetInitiator().Id,
+            initiatorInventory) ||
+        !TryBuildInventorySnapshot(
+            acSession.GetRecipient().Id,
+            recipientInventory))
+    {
+        return Trade::MutationPlanResult::Failure(
+            Trade::Error::InventoryUnavailable);
+    }
+
+    return Trade::BuildMutationPlan(
+        acSession,
+        initiatorInventory,
+        recipientInventory);
+}
+
 void TradeService::SendInvite(Player& aInvitee, const Trade::Session& acSession) const noexcept
 {
     NotifyTradeInvite notify;
@@ -575,6 +732,7 @@ void TradeService::SendState(const Trade::Session& acSession, Player* apRecipien
     notify.SessionId = acSession.GetId();
     notify.Revision = acSession.GetRevision();
     notify.State = static_cast<std::uint8_t>(acSession.GetState());
+    notify.TerminalError = static_cast<std::uint8_t>(acSession.GetTerminalError());
 
     notify.InitiatorId = acSession.GetInitiator().Id;
     notify.RecipientId = acSession.GetRecipient().Id;
@@ -632,5 +790,6 @@ void TradeService::RemoveSession(Trade::SessionId aSessionId) noexcept
 
     m_playerSessions.erase(sessionIt->second.GetInitiator().Id);
     m_playerSessions.erase(sessionIt->second.GetRecipient().Id);
+    m_mutationPlans.erase(aSessionId);
     m_sessions.erase(sessionIt);
 }

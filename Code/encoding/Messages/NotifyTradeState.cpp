@@ -7,6 +7,7 @@ void NotifyTradeState::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) cons
     Serialization::WriteVarInt(aWriter, SessionId);
     Serialization::WriteVarInt(aWriter, Revision);
     Serialization::WriteVarInt(aWriter, State);
+    Serialization::WriteVarInt(aWriter, TerminalError);
 
     Serialization::WriteVarInt(aWriter, InitiatorId);
     Serialization::WriteVarInt(aWriter, RecipientId);
@@ -28,6 +29,7 @@ void NotifyTradeState::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) no
     SessionId = Serialization::ReadVarInt(aReader);
     Revision = Serialization::ReadVarInt(aReader);
     State = static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader));
+    TerminalError = static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader));
 
     InitiatorId = static_cast<std::uint32_t>(Serialization::ReadVarInt(aReader));
     RecipientId = static_cast<std::uint32_t>(Serialization::ReadVarInt(aReader));

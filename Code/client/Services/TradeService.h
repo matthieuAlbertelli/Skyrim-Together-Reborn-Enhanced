@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Trade/TradeError.h>
 #include <Trade/TradeTypes.h>
 
 #include <cstdint>
@@ -17,6 +18,7 @@ struct ClientTradeSessionState
     Trade::SessionId SessionId{};
     Trade::Revision Revision{};
     Trade::State State{Trade::State::PendingAcceptance};
+    Trade::Error TerminalError{Trade::Error::None};
     Trade::Participant Initiator{};
     Trade::Participant Recipient{};
 };

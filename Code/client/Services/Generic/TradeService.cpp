@@ -251,9 +251,20 @@ void TradeService::OnNotifyTradeState(const NotifyTradeState& acTradeState) noex
     }
 
     ClientTradeSessionState state;
+    if (acTradeState.TerminalError >
+        static_cast<std::uint8_t>(Trade::Error::QuantityOverflow))
+    {
+        spdlog::error(
+            "[TradeService]: rejected state snapshot with invalid terminal error {} for session {}",
+            acTradeState.TerminalError,
+            acTradeState.SessionId);
+        return;
+    }
+
     state.SessionId = acTradeState.SessionId;
     state.Revision = acTradeState.Revision;
     state.State = static_cast<Trade::State>(acTradeState.State);
+    state.TerminalError = static_cast<Trade::Error>(acTradeState.TerminalError);
 
     state.Initiator.Id = acTradeState.InitiatorId;
     state.Initiator.CurrentOffer = ToDomainOffer(acTradeState.InitiatorOffer);
@@ -265,14 +276,24 @@ void TradeService::OnNotifyTradeState(const NotifyTradeState& acTradeState) noex
     state.Recipient.Confirmed = acTradeState.RecipientConfirmed;
     state.Recipient.ConfirmedRevision = acTradeState.RecipientConfirmedRevision;
 
-    m_activeSession = state.SessionId;
+    const bool terminal =
+        state.State == Trade::State::Completed ||
+        state.State == Trade::State::Cancelled ||
+        state.State == Trade::State::Failed;
+
+    if (terminal)
+        m_activeSession.reset();
+    else
+        m_activeSession = state.SessionId;
+
     m_sessionState = std::move(state);
 
     spdlog::info(
-        "[TradeService]: synchronized session {} revision {} state={} initiator_confirmed={} recipient_confirmed={}",
+        "[TradeService]: synchronized session {} revision {} state={} terminal_error={} initiator_confirmed={} recipient_confirmed={}",
         acTradeState.SessionId,
         acTradeState.Revision,
         acTradeState.State,
+        acTradeState.TerminalError,
         acTradeState.InitiatorConfirmed,
         acTradeState.RecipientConfirmed);
 }
