@@ -227,7 +227,7 @@ void TradeService::RespondToInvite(std::uint64_t aSessionId, bool aAccepted) con
         return;
     }
 
-    if (!m_pendingInvite || *m_pendingInvite != aSessionId)
+    if (!m_pendingInvite || m_pendingInvite->SessionId != aSessionId)
     {
         spdlog::warn(
             "[TradeService]: cannot respond to unknown trade invite session {}",
@@ -257,7 +257,10 @@ void TradeService::RespondToInvite(std::uint64_t aSessionId, bool aAccepted) con
 
 void TradeService::OnNotifyTradeInvite(const NotifyTradeInvite& acTradeInvite) noexcept
 {
-    m_pendingInvite = acTradeInvite.SessionId;
+    m_pendingInvite = ClientPendingTradeInviteState{
+        acTradeInvite.SessionId,
+        acTradeInvite.InviterId,
+        acTradeInvite.ExpiryTick};
 
     spdlog::info(
         "[TradeService]: received trade invite session {} from player {}, expires at tick {}",
@@ -268,7 +271,7 @@ void TradeService::OnNotifyTradeInvite(const NotifyTradeInvite& acTradeInvite) n
 
 void TradeService::OnNotifyTradeStarted(const NotifyTradeStarted& acTradeStarted) noexcept
 {
-    if (m_pendingInvite && *m_pendingInvite == acTradeStarted.SessionId)
+    if (m_pendingInvite && m_pendingInvite->SessionId == acTradeStarted.SessionId)
         m_pendingInvite.reset();
 
     m_activeSession = acTradeStarted.SessionId;
@@ -283,7 +286,7 @@ void TradeService::OnNotifyTradeStarted(const NotifyTradeStarted& acTradeStarted
 
 void TradeService::OnNotifyTradeCancelled(const NotifyTradeCancelled& acTradeCancelled) noexcept
 {
-    if (m_pendingInvite && *m_pendingInvite == acTradeCancelled.SessionId)
+    if (m_pendingInvite && m_pendingInvite->SessionId == acTradeCancelled.SessionId)
         m_pendingInvite.reset();
 
     if (m_activeSession && *m_activeSession == acTradeCancelled.SessionId)

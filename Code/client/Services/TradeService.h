@@ -19,6 +19,13 @@ struct NotifyTradeReconcile;
 enum class TradeApplyResultCode : std::uint8_t;
 enum class TradeReconcileResultCode : std::uint8_t;
 
+struct ClientPendingTradeInviteState
+{
+    Trade::SessionId SessionId{};
+    Trade::PlayerId InviterId{};
+    Trade::Tick ExpiryTick{};
+};
+
 struct ClientTradeSessionState
 {
     Trade::SessionId SessionId{};
@@ -60,6 +67,14 @@ struct TradeService
     void CancelTrade() const noexcept;
 
     [[nodiscard]] std::optional<std::uint64_t> GetPendingInvite() const noexcept
+    {
+        if (!m_pendingInvite)
+            return std::nullopt;
+
+        return m_pendingInvite->SessionId;
+    }
+
+    [[nodiscard]] const std::optional<ClientPendingTradeInviteState>& GetPendingInviteState() const noexcept
     {
         return m_pendingInvite;
     }
@@ -106,7 +121,7 @@ private:
     World& m_world;
     TransportService& m_transport;
 
-    std::optional<std::uint64_t> m_pendingInvite;
+    std::optional<ClientPendingTradeInviteState> m_pendingInvite;
     std::optional<std::uint64_t> m_activeSession;
     std::optional<ClientTradeSessionState> m_sessionState;
 

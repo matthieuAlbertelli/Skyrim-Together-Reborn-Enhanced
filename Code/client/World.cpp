@@ -1,4 +1,4 @@
-﻿#include <TiltedOnlinePCH.h>
+#include <TiltedOnlinePCH.h>
 
 #include "World.h"
 
@@ -14,6 +14,8 @@
 #include <Services/ActorValueService.h>
 #include <Services/InventoryService.h>
 #include <Services/TradeService.h>
+#include <Services/TradeMenuService.h>
+#include <Services/TradeDebugService.h>
 #include <Services/MagicService.h>
 #include <Services/CommandService.h>
 #include <Services/CalendarService.h>
@@ -47,6 +49,16 @@ World::World()
     ctx().emplace<QuestService>(*this, m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeService>(*this, m_dispatcher, m_transport);
+    ctx().emplace<TradeMenuService>(
+        *this,
+        m_transport,
+        ctx().at<TradeService>(),
+        ctx().at<ImguiService>());
+    ctx().emplace<TradeDebugService>(
+        *this,
+        m_transport,
+        ctx().at<TradeService>(),
+        ctx().at<ImguiService>());
     ctx().emplace<ActorValueService>(*this, m_dispatcher, m_transport);
     ctx().emplace<InventoryService>(*this, m_dispatcher, m_transport);
     ctx().emplace<MagicService>(*this, m_dispatcher, m_transport);
