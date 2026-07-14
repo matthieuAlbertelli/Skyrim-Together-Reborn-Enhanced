@@ -58,13 +58,24 @@ struct TradeService
 
     TP_NOCOPYMOVE(TradeService);
 
-    void InvitePlayer(std::uint32_t aPlayerId) const noexcept;
+    void InvitePlayer(std::uint32_t aPlayerId) noexcept;
     void AcceptInvite(std::uint64_t aSessionId) const noexcept;
     void RejectInvite(std::uint64_t aSessionId) const noexcept;
 
     void UpdateOffer(Trade::Offer aOffer) const noexcept;
     void ConfirmTrade() const noexcept;
     void CancelTrade() const noexcept;
+
+
+    [[nodiscard]] std::optional<std::uint32_t> GetOutgoingInviteTarget() const noexcept
+    {
+        return m_outgoingInviteTarget;
+    }
+
+    void DismissOutgoingInvite() noexcept
+    {
+        m_outgoingInviteTarget.reset();
+    }
 
     [[nodiscard]] std::optional<std::uint64_t> GetPendingInvite() const noexcept
     {
@@ -121,6 +132,7 @@ private:
     World& m_world;
     TransportService& m_transport;
 
+    std::optional<std::uint32_t> m_outgoingInviteTarget;
     std::optional<ClientPendingTradeInviteState> m_pendingInvite;
     std::optional<std::uint64_t> m_activeSession;
     std::optional<ClientTradeSessionState> m_sessionState;

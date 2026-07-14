@@ -7,6 +7,8 @@
 #include <Services/TransportService.h>
 #include <Services/RunnerService.h>
 #include <Services/ImguiService.h>
+#include <Services/OverlayService.h>
+#include <Services/UiSurfaceService.h>
 #include <Services/PapyrusService.h>
 #include <Services/DiscordService.h>
 #include <Services/ObjectService.h>
@@ -15,7 +17,6 @@
 #include <Services/InventoryService.h>
 #include <Services/TradeService.h>
 #include <Services/TradeMenuService.h>
-#include <Services/TradeDebugService.h>
 #include <Services/MagicService.h>
 #include <Services/CommandService.h>
 #include <Services/CalendarService.h>
@@ -39,7 +40,8 @@ World::World()
     ctx().emplace<ImguiService>();
     ctx().emplace<DiscoveryService>(*this, m_dispatcher);
     ctx().emplace<OverlayService>(*this, m_transport, m_dispatcher);
-    ctx().emplace<InputService>(ctx().at<OverlayService>());
+    ctx().emplace<UiSurfaceService>(ctx().at<OverlayService>());
+    ctx().emplace<InputService>(ctx().at<UiSurfaceService>());
     ctx().emplace<CharacterService>(*this, m_dispatcher, m_transport);
     ctx().emplace<DebugService>(m_dispatcher, *this, m_transport, ctx().at<ImguiService>());
     ctx().emplace<PapyrusService>(m_dispatcher);
@@ -53,12 +55,8 @@ World::World()
         *this,
         m_transport,
         ctx().at<TradeService>(),
-        ctx().at<ImguiService>());
-    ctx().emplace<TradeDebugService>(
-        *this,
-        m_transport,
-        ctx().at<TradeService>(),
-        ctx().at<ImguiService>());
+        ctx().at<UiSurfaceService>(),
+        m_dispatcher);
     ctx().emplace<ActorValueService>(*this, m_dispatcher, m_transport);
     ctx().emplace<InventoryService>(*this, m_dispatcher, m_transport);
     ctx().emplace<MagicService>(*this, m_dispatcher, m_transport);

@@ -6,6 +6,22 @@ target(name)
     add_includedirs(".","../../Libraries/")
     set_pcxxheader("TiltedOnlinePCH.h")
 
+    -- Build the CEF/Angular UI before the client so the install step always
+    -- packages the interface matching the native trade bridge.
+    before_build(function(target)
+        local uiroot = path.join(target:scriptdir(), "..", "skyrim_ui")
+        local node_modules = path.join(uiroot, "node_modules")
+
+        -- Keep the process calls directly inside the XMake callback. Local
+        -- helper closures do not inherit XMake's sandboxed os.execv binding
+        -- in the project version used here.
+        if not os.isdir(node_modules) then
+            os.execv("cmd.exe", {"/d", "/s", "/c", "pnpm.cmd install"}, {curdir = uiroot})
+        end
+
+        os.execv("cmd.exe", {"/d", "/s", "/c", "pnpm.cmd run deploy:production"}, {curdir = uiroot})
+    end)
+
     -- exclude game specifc stuff
     add_headerfiles("**.h|Games/Skyrim/**|Services/Vivox/**")
     add_files("**.cpp|Games/Skyrim/**|Services/Vivox/**")
@@ -17,11 +33,27 @@ target(name)
             local bindir = path.join(linkdir, "..", "bin")
             os.cp(bindir, target:installdir())
         end
-        -- copy ui
-        local uidir = path.join(target:scriptdir(), "..", "skyrim_ui", "src")
-        os.cp(path.join(uidir, "assets", "images", "cursor.dds"), path.join(target:installdir(), "bin", "assets", "images", "cursor.dds"))
-        os.cp(path.join(uidir, "assets", "images", "cursor.png"), path.join(target:installdir(), "bin", "assets", "images", "cursor.png"))
-        os.rm(path.join(target:installdir(), "bin", "**Tests.exe"))
+
+        -- Install the Angular output at the exact path expected by CEF:
+        -- <runtime>/UI/index.html. Remove stale hashed bundles first.
+        local uiroot = path.join(target:scriptdir(), "..", "skyrim_ui")
+        local uidist = path.join(uiroot, "dist", "UI")
+        local installbin = path.join(target:installdir(), "bin")
+        local installui = path.join(installbin, "UI")
+
+        if not os.isdir(uidist) then
+            raise("Compiled Skyrim Together UI not found: " .. uidist)
+        end
+
+        os.rm(installui)
+        os.mkdir(installui)
+        os.cp(path.join(uidist, "*"), installui)
+
+        -- retain cursor resources even when the Angular build is skipped
+        local uisrc = path.join(uiroot, "src")
+        os.cp(path.join(uisrc, "assets", "images", "cursor.dds"), path.join(installbin, "assets", "images", "cursor.dds"))
+        os.cp(path.join(uisrc, "assets", "images", "cursor.png"), path.join(installbin, "assets", "images", "cursor.png"))
+        os.rm(path.join(installbin, "**Tests.exe"))
     end)
 
     add_files("Games/Skyrim/**.cpp")

@@ -1,10 +1,11 @@
 #include <TiltedOnlinePCH.h>
 
 #include <OverlayRenderHandler.hpp>
-#include <DInputHook.hpp>
 
 #include <Services/OverlayClient.h>
 #include <Services/TransportService.h>
+#include <Services/TradeMenuService.h>
+#include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
 #include <Messages/TeleportRequest.h>
@@ -12,6 +13,32 @@
 #include <Events/SetTimeCommandEvent.h>
 
 #include <World.h>
+
+#include <charconv>
+#include <optional>
+#include <string_view>
+
+namespace
+{
+std::optional<std::uint64_t> ParseUnsigned64(
+    const std::string& acValue) noexcept
+{
+    std::uint64_t result{};
+    const char* const pBegin = acValue.data();
+    const char* const pEnd = pBegin + acValue.size();
+
+    const auto parseResult =
+        std::from_chars(pBegin, pEnd, result);
+
+    if (parseResult.ec != std::errc{} ||
+        parseResult.ptr != pEnd)
+    {
+        return std::nullopt;
+    }
+
+    return result;
+}
+}
 
 OverlayClient::OverlayClient(TransportService& aTransport, TiltedPhoques::OverlayRenderHandler* apHandler)
     : TiltedPhoques::OverlayClient(apHandler)
@@ -31,11 +58,6 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
 
         auto eventName = pArguments->GetString(0).ToString();
         auto eventArgs = pArguments->GetList(1);
-
-        spdlog::info(eventName);
-        spdlog::info(eventArgs->GetString(0).ToString());
-        spdlog::info(std::to_string(eventArgs->GetInt(1)));
-        spdlog::info(eventArgs->GetString(2).ToString());
 
 #ifndef PUBLIC_BUILD
         LOG(INFO) << "event=ui_event name=" << eventName;
@@ -79,7 +101,101 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
         else if (eventName == "teleportToPlayer")
             ProcessTeleportMessage(eventArgs);
         else if (eventName == "toggleDebugUI")
-            ProcessToggleDebugUI();
+        {
+            const bool isTradeAction =
+                eventArgs &&
+                eventArgs->GetSize() >= 2 &&
+                eventArgs->GetString(0).ToString() == "__trade__";
+
+            if (!isTradeAction)
+            {
+                // The legacy web debug toggle is intentionally disabled for
+                // the production trade UI.
+                return true;
+            }
+
+            const std::string action =
+                eventArgs->GetString(1).ToString();
+
+            if (action == "accept")
+            {
+                const auto sessionId = ParseUnsigned64(
+                    eventArgs->GetString(2).ToString());
+
+                if (sessionId)
+                {
+                    World::Get().GetRunner().Queue(
+                        [sessionId = *sessionId]()
+                        {
+                            World::Get().ctx().at<TradeMenuService>().AcceptInvite(sessionId);
+                        });
+                }
+            }
+            else if (action == "reject")
+            {
+                const auto sessionId = ParseUnsigned64(
+                    eventArgs->GetString(2).ToString());
+
+                if (sessionId)
+                {
+                    World::Get().GetRunner().Queue(
+                        [sessionId = *sessionId]()
+                        {
+                            World::Get().ctx().at<TradeMenuService>().RejectInvite(sessionId);
+                        });
+                }
+            }
+            else if (action == "setOffer")
+            {
+                const auto itemId = ParseUnsigned64(
+                    eventArgs->GetString(2).ToString());
+                const int quantity = eventArgs->GetInt(3);
+
+                if (itemId && quantity >= 0)
+                {
+                    World::Get().GetRunner().Queue(
+                        [itemId = *itemId,
+                         quantity = static_cast<std::uint32_t>(quantity)]()
+                        {
+                            World::Get().ctx().at<TradeMenuService>().SetOfferedQuantity(
+                                itemId,
+                                quantity);
+                        });
+                }
+            }
+            else if (action == "confirm")
+            {
+                World::Get().GetRunner().Queue(
+                    []()
+                    {
+                        World::Get().ctx().at<TradeMenuService>().ConfirmTrade();
+                    });
+            }
+            else if (action == "cancel")
+            {
+                World::Get().GetRunner().Queue(
+                    []()
+                    {
+                        World::Get().ctx().at<TradeMenuService>().CancelTrade();
+                    });
+            }
+            else if (action == "dismiss")
+            {
+                World::Get().GetRunner().Queue(
+                    []()
+                    {
+                        World::Get().ctx().at<TradeMenuService>().DismissTerminalState();
+                    });
+            }
+            else if (action == "dismissOutgoing")
+            {
+                World::Get().GetRunner().Queue(
+                    []()
+                    {
+                        World::Get().ctx().at<TradeMenuService>().DismissOutgoingInvite();
+                    });
+            }
+        }
 
         return true;
     }
@@ -152,11 +268,9 @@ void OverlayClient::ProcessToggleDebugUI()
 
 void OverlayClient::SetUIVisible(bool aVisible) noexcept
 {
-    auto pRenderer = GetOverlayRenderHandler();
-    if (!pRenderer)
-        return;
-
-    TiltedPhoques::DInputHook::Get().SetEnabled(aVisible);
-    World::Get().GetOverlayService().SetActive(aVisible);
-    pRenderer->SetCursorVisible(aVisible);
+    auto& uiSurface = World::Get().ctx().at<UiSurfaceService>();
+    uiSurface.SetSurface(
+        aVisible
+            ? UiSurface::SkyrimTogether
+            : UiSurface::None);
 }

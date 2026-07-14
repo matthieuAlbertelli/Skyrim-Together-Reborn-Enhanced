@@ -121,7 +121,7 @@ TradeService::TradeService(World& aWorld, entt::dispatcher& aDispatcher, Transpo
 {
 }
 
-void TradeService::InvitePlayer(std::uint32_t aPlayerId) const noexcept
+void TradeService::InvitePlayer(std::uint32_t aPlayerId) noexcept
 {
     if (!m_transport.IsConnected())
     {
@@ -133,9 +133,14 @@ void TradeService::InvitePlayer(std::uint32_t aPlayerId) const noexcept
     request.TargetPlayerId = aPlayerId;
 
     if (m_transport.Send(request))
+    {
+        m_outgoingInviteTarget = aPlayerId;
         spdlog::info("[TradeService]: sent trade invite request to player {}", aPlayerId);
+    }
     else
+    {
         spdlog::warn("[TradeService]: failed to send trade invite request to player {}", aPlayerId);
+    }
 }
 
 void TradeService::AcceptInvite(std::uint64_t aSessionId) const noexcept
@@ -271,6 +276,7 @@ void TradeService::OnNotifyTradeInvite(const NotifyTradeInvite& acTradeInvite) n
 
 void TradeService::OnNotifyTradeStarted(const NotifyTradeStarted& acTradeStarted) noexcept
 {
+    m_outgoingInviteTarget.reset();
     if (m_pendingInvite && m_pendingInvite->SessionId == acTradeStarted.SessionId)
         m_pendingInvite.reset();
 
@@ -286,6 +292,7 @@ void TradeService::OnNotifyTradeStarted(const NotifyTradeStarted& acTradeStarted
 
 void TradeService::OnNotifyTradeCancelled(const NotifyTradeCancelled& acTradeCancelled) noexcept
 {
+    m_outgoingInviteTarget.reset();
     if (m_pendingInvite && m_pendingInvite->SessionId == acTradeCancelled.SessionId)
         m_pendingInvite.reset();
 

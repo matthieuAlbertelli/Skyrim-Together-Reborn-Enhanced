@@ -2,6 +2,7 @@
 
 #include <Services/InputService.h>
 #include <Services/OverlayService.h>
+#include <Services/UiSurfaceService.h>
 
 #include <OverlayApp.hpp>
 
@@ -15,7 +16,7 @@
 
 #include "Games/Skyrim/Interface/MenuControls.h"
 
-static OverlayService* s_pOverlay = nullptr;
+static UiSurfaceService* s_pUiSurface = nullptr;
 static UINT s_currentACP = CP_ACP;
 
 void ForceKillAllInput()
@@ -97,22 +98,6 @@ bool IsDisableKey(int aKey) noexcept
     return aKey == VK_ESCAPE;
 }
 
-void SetUIActive(OverlayService& aOverlay, auto apRenderer, bool aActive)
-{
-    TiltedPhoques::DInputHook::Get().SetEnabled(aActive);
-    aOverlay.SetActive(aActive);
-
-    // Ensures the game is actually loaded, in case the initial event was sent too early
-    aOverlay.SetVersion(BUILD_COMMIT);
-    aOverlay.GetOverlayApp()->ExecuteAsync("enterGame");
-
-    apRenderer->SetCursorVisible(aActive);
-
-    // This is to disable the Windows cursor
-    while (ShowCursor(FALSE) >= 0)
-        ;
-}
-
 void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aType, bool aE0, bool aE1)
 {
     if (aType != KEYEVENT_CHAR)
@@ -173,25 +158,32 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
         }
     }
 
-    auto& overlay = *s_pOverlay;
+    if (!s_pUiSurface)
+        return;
+
+    auto& uiSurface = *s_pUiSurface;
+    auto& overlay = uiSurface.GetOverlayService();
 
     const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
         return;
 
-    const auto pClient = pApp->GetClient();
-    if (!pClient)
-        return;
+    const UiSurface surface = uiSurface.GetSurface();
+    const bool active = surface != UiSurface::None;
+    const bool toggleSkyrimTogether =
+        IsToggleKey(aKey) && surface != UiSurface::Trade;
+    const bool closeSkyrimTogether =
+        IsDisableKey(aKey) && surface == UiSurface::SkyrimTogether;
 
-    const auto pRenderer = pClient->GetOverlayRenderHandler();
-    if (!pRenderer)
-        return;
+    spdlog::debug(
+        "ProcessKey, type: {}, key: {}, active: {}, surface: {}",
+        aType,
+        aKey,
+        active,
+        static_cast<std::uint32_t>(surface));
 
-    const auto active = overlay.GetActive();
-
-    spdlog::debug("ProcessKey, type: {}, key: {}, active: {}", aType, aKey, active);
-
-    if (aType != KEYEVENT_CHAR && (IsToggleKey(aKey) || (IsDisableKey(aKey) && active)))
+    if (aType != KEYEVENT_CHAR &&
+        (toggleSkyrimTogether || closeSkyrimTogether))
     {
         if (!overlay.GetInGame())
         {
@@ -199,7 +191,10 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
         }
         else if (aType == KEYEVENT_KEYUP)
         {
-            SetUIActive(overlay, pRenderer, !active);
+            if (closeSkyrimTogether)
+                uiSurface.SetSurface(UiSurface::None);
+            else
+                uiSurface.ToggleSkyrimTogether();
         }
     }
     else if (active)
@@ -210,23 +205,17 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
 
 void ProcessMouseMove(uint16_t aX, uint16_t aY)
 {
-    auto& overlay = *s_pOverlay;
+    if (!s_pUiSurface)
+        return;
+
+    auto& uiSurface = *s_pUiSurface;
+    auto& overlay = uiSurface.GetOverlayService();
 
     const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
         return;
 
-    const auto pClient = pApp->GetClient();
-    if (!pClient)
-        return;
-
-    const auto pRenderer = pClient->GetOverlayRenderHandler();
-    if (!pRenderer)
-        return;
-
-    const auto active = overlay.GetActive();
-
-    if (active)
+    if (uiSurface.IsInteractive())
     {
         pApp->InjectMouseMove(aX, aY, GetCefModifiers(0));
     }
@@ -234,23 +223,17 @@ void ProcessMouseMove(uint16_t aX, uint16_t aY)
 
 void ProcessMouseButton(uint16_t aX, uint16_t aY, cef_mouse_button_type_t aButton, bool aDown)
 {
-    auto& overlay = *s_pOverlay;
+    if (!s_pUiSurface)
+        return;
+
+    auto& uiSurface = *s_pUiSurface;
+    auto& overlay = uiSurface.GetOverlayService();
 
     const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
         return;
 
-    const auto pClient = pApp->GetClient();
-    if (!pClient)
-        return;
-
-    const auto pRenderer = pClient->GetOverlayRenderHandler();
-    if (!pRenderer)
-        return;
-
-    const auto active = overlay.GetActive();
-
-    if (active)
+    if (uiSurface.IsInteractive())
     {
         pApp->InjectMouseButton(aX, aY, aButton, !aDown, GetCefModifiers(0));
     }
@@ -258,23 +241,17 @@ void ProcessMouseButton(uint16_t aX, uint16_t aY, cef_mouse_button_type_t aButto
 
 void ProcessMouseWheel(uint16_t aX, uint16_t aY, int16_t aZ)
 {
-    auto& overlay = *s_pOverlay;
+    if (!s_pUiSurface)
+        return;
+
+    auto& uiSurface = *s_pUiSurface;
+    auto& overlay = uiSurface.GetOverlayService();
 
     const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
         return;
 
-    const auto pClient = pApp->GetClient();
-    if (!pClient)
-        return;
-
-    const auto pRenderer = pClient->GetOverlayRenderHandler();
-    if (!pRenderer)
-        return;
-
-    const auto active = overlay.GetActive();
-
-    if (active)
+    if (uiSurface.IsInteractive())
     {
         pApp->InjectMouseWheel(aX, aY, aZ, GetCefModifiers(0));
     }
@@ -300,22 +277,20 @@ UINT GetRealACP()
 
 LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    const auto pApp = s_pOverlay->GetOverlayApp();
+    if (!s_pUiSurface)
+        return 0;
+
+    auto& uiSurface = *s_pUiSurface;
+    auto& overlay = uiSurface.GetOverlayService();
+
+    const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
-        return 0;
-
-    const auto pClient = pApp->GetClient();
-    if (!pClient)
-        return 0;
-
-    const auto pRenderer = pClient->GetOverlayRenderHandler();
-    if (!pRenderer)
         return 0;
 
     auto& discord = World::Get().ctx().at<DiscordService>();
     discord.WndProcHandler(hwnd, uMsg, wParam, lParam);
 
-    const bool active = s_pOverlay->GetActive();
+    const bool active = uiSurface.IsInteractive();
     if (active)
     {
         auto& imgui = World::Get().ctx().at<ImguiService>();
@@ -401,12 +376,10 @@ LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
         ProcessKeyboard(virtualKey, scancode, KEYEVENT_CHAR, false, false);
     }
     // If the player tabs out/in with UI visible, this WndProc doesn't run during mouse or keyboard events.
-    // When player tabs in, force the UI state
-    else if (uMsg == WM_SETFOCUS && s_pOverlay->GetActive())
+    // When player tabs in, force the UI state without changing the selected surface.
+    else if (uMsg == WM_SETFOCUS && uiSurface.IsInteractive())
     {
-        TiltedPhoques::DInputHook::Get().SetEnabled(true);
-        s_pOverlay->SetActive(true);
-        pRenderer->SetCursorVisible(true);
+        uiSurface.RefreshInputCapture();
     }
     else if (uMsg == WM_INPUTLANGCHANGE)
     {
@@ -417,13 +390,13 @@ LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
     return 0;
 }
 
-InputService::InputService(OverlayService& aOverlay) noexcept
+InputService::InputService(UiSurfaceService& aUiSurfaceService) noexcept
 {
-    s_pOverlay = &aOverlay;
+    s_pUiSurface = &aUiSurfaceService;
     s_currentACP = GetRealACP();
 }
 
 InputService::~InputService() noexcept
 {
-    s_pOverlay = nullptr;
+    s_pUiSurface = nullptr;
 }

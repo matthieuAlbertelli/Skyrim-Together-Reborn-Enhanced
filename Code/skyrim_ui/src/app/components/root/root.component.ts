@@ -12,6 +12,7 @@ import {
   fontSizeToPixels,
 } from '../../services/setting.service';
 import { Sound, SoundService } from '../../services/sound.service';
+import { UiSurfaceService } from '../../services/ui-surface.service';
 import { UiRepository } from '../../store/ui.repository';
 import { ChatComponent } from '../chat/chat.component';
 import { GroupComponent } from '../group/group.component';
@@ -19,7 +20,7 @@ import { controlsAnimation } from './controls.animation';
 import { notificationsAnimation } from './notifications.animation';
 import { map } from 'rxjs/operators';
 
-const REVEAL_EFFECT_DURATION_MS = 10000 // todo: pass value from C++?
+const REVEAL_EFFECT_DURATION_MS = 10000; // todo: pass value from C++?
 
 @Component({
   selector: 'app-root',
@@ -43,6 +44,7 @@ export class RootComponent implements OnInit {
   menuOpen$ = this.client.openingMenuChange.asObservable();
   inGame$ = this.client.inGameStateChange.asObservable();
   active$ = this.client.activationStateChange.asObservable();
+  surface$ = this.uiSurface.surfaceChange.asObservable();
   connectionInProgress$ = this.client.isConnectionInProgressChange.asObservable();
   revealingInProgress$ = false;
 
@@ -56,6 +58,7 @@ export class RootComponent implements OnInit {
     private readonly uiRepository: UiRepository,
     private readonly translocoService: TranslocoService,
     private readonly settingService: SettingService,
+    private readonly uiSurface: UiSurfaceService,
     public readonly overlay: Overlay, // used for mockup
   ) {
     this.translocoService.setActiveLang(
@@ -88,7 +91,7 @@ export class RootComponent implements OnInit {
           state &&
           !this.uiRepository.isViewOpen()
         ) {
-          setTimeout(() => this.chatComp.focus(), 100);
+          setTimeout(() => this.chatComp?.focus(), 100);
         }
         if (!state) {
           this.closeView();
@@ -126,11 +129,14 @@ export class RootComponent implements OnInit {
   }
 
   public revealPlayers(): void {
-    if (this.revealingInProgress$)
+    if (this.revealingInProgress$) {
       return;
+    }
 
     this.revealingInProgress$ = true;
-    setTimeout(() => { this.revealingInProgress$ = false }, REVEAL_EFFECT_DURATION_MS);
+    setTimeout(() => {
+      this.revealingInProgress$ = false;
+    }, REVEAL_EFFECT_DURATION_MS);
 
     this.sound.play(Sound.Focus);
     this.client.revealPlayers();
