@@ -5,6 +5,7 @@
 #include <Services/OverlayClient.h>
 #include <Services/TransportService.h>
 #include <Services/TradeMenuService.h>
+#include <Services/TradeItemPreviewService.h>
 #include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
@@ -193,6 +194,28 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
                     []()
                     {
                         World::Get().ctx().at<TradeMenuService>().DismissOutgoingInvite();
+                    });
+            }
+            else if (action == "preview")
+            {
+                const auto itemId = ParseUnsigned64(
+                    eventArgs->GetString(2).ToString());
+
+                if (itemId)
+                {
+                    World::Get().GetRunner().Queue(
+                        [itemId = *itemId]()
+                        {
+                            World::Get().ctx().at<TradeItemPreviewService>().SelectItem(itemId);
+                        });
+                }
+            }
+            else if (action == "clearPreview")
+            {
+                World::Get().GetRunner().Queue(
+                    []()
+                    {
+                        World::Get().ctx().at<TradeItemPreviewService>().Clear();
                     });
             }
         }

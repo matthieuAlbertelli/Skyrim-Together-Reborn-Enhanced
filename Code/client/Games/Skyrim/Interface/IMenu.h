@@ -174,3 +174,4 @@ struct IMenu : FxDelegateHandler
 constexpr auto x = offsetof(IMenu, IMenu::uiMenuFlags);
 
 static_assert(offsetof(IMenu, IMenu::uiMenuFlags) == 0x1C);
+static_assert(sizeof(IMenu) == 0x30);

@@ -94,6 +94,7 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
         if (!this.isSession(state)) {
           this.previewSelection = null;
           this.selectedQuantity = 1;
+          this.trade.clearPreview();
           this.clearCompletedDismissTimer();
           return;
         }
@@ -126,6 +127,7 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.trade.clearPreview();
     this.clearCompletedDismissTimer();
     this.subscription.unsubscribe();
   }
@@ -216,6 +218,12 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
 
   public selectPreview(item: TradeItem | null, source: PreviewSource): void {
     this.previewSelection = item ? { source, itemId: item.id } : null;
+
+    if (item) {
+      this.trade.previewItem(item.id);
+    } else {
+      this.trade.clearPreview();
+    }
 
     const inventoryItem = item
       ? this.session?.inventory.find(entry => entry.id === item.id) ?? null

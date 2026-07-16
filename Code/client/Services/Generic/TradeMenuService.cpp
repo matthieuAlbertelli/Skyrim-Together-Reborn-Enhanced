@@ -5,6 +5,7 @@
 #include <Services/OverlayService.h>
 #include <Services/UiSurfaceService.h>
 #include <Services/TradeService.h>
+#include <Services/TradeItemPreviewService.h>
 #include <Services/TransportService.h>
 
 #include <Events/UpdateEvent.h>
@@ -521,6 +522,8 @@ void TradeMenuService::SetVisible(bool aVisible) noexcept
         m_uiSurfaceService.SetSurface(UiSurface::Trade);
         return;
     }
+
+    m_world.ctx().at<TradeItemPreviewService>().Clear();
 
     if (m_uiSurfaceService.GetSurface() == UiSurface::Trade)
     {

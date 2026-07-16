@@ -1,0 +1,913 @@
+#include <TiltedOnlinePCH.h>
+
+#include <Interface/Menus/TradePreviewHostMenu.h>
+
+#include <Interface/Inventory3DManager.h>
+
+#include <BSGraphics/BSGraphicsRenderer.h>
+#include <Systems/RenderSystemD3D11.h>
+
+#include <d3d11.h>
+
+#include <Services/TradeItemPreviewService.h>
+#include <World.h>
+
+namespace
+{
+constexpr const char* kTradePreviewHostMenuName =
+    "STRETradePreviewHostMenu";
+constexpr const char* kHostScaleformMovieName = "CraftingMenu";
+constexpr std::uint32_t kGFxScaleModeExactFit = 2;
+constexpr std::size_t kGFxMovieViewAdvanceVtableIndex = 0x25;
+constexpr std::size_t kGFxMovieViewDisplayVtableIndex = 0x26;
+constexpr std::size_t kGFxMovieViewDisplayPrePassVtableIndex = 0x27;
+constexpr std::size_t kGFxMovieViewReleaseVtableIndex = 0x45;
+
+using TLoadScaleformMovie = bool(__fastcall)(
+    void*,
+    IMenu*,
+    void**,
+    const char*,
+    std::uint32_t,
+    float);
+
+void* GetScaleformManager() noexcept
+{
+    POINTER_SKYRIMSE(void*, scaleformManagerSingleton, 402775);
+    void** const ppManager = scaleformManagerSingleton.Get();
+    return ppManager ? *ppManager : nullptr;
+}
+
+bool LoadHostScaleformMovie(IMenu* apMenu) noexcept
+{
+    if (!apMenu)
+        return false;
+
+    void* const pManager = GetScaleformManager();
+    if (!pManager)
+        return false;
+
+    POINTER_SKYRIMSE(TLoadScaleformMovie, loadMovie, 82325);
+    auto* const pLoadMovie = loadMovie.Get();
+    if (!pLoadMovie)
+        return false;
+
+    return pLoadMovie(
+        pManager,
+        apMenu,
+        &apMenu->uiMovie,
+        kHostScaleformMovieName,
+        kGFxScaleModeExactFit,
+        0.0F);
+}
+
+void** GetScaleformMovieVtable(void* apMovie) noexcept
+{
+    return apMovie ? *reinterpret_cast<void***>(apMovie) : nullptr;
+}
+
+bool AdvanceScaleformMovie(
+    void* apMovie,
+    float aInterval,
+    std::uint32_t aCurrentTime) noexcept
+{
+    void** const pVtable = GetScaleformMovieVtable(apMovie);
+    if (!pVtable)
+        return false;
+
+    using TAdvance = float(__fastcall)(void*, float, std::uint32_t);
+    auto* const pAdvance = reinterpret_cast<TAdvance*>(
+        pVtable[kGFxMovieViewAdvanceVtableIndex]);
+    if (!pAdvance)
+        return false;
+
+    pAdvance(apMovie, aInterval, aCurrentTime);
+    return true;
+}
+
+[[maybe_unused]] bool DisplayScaleformMovie(void* apMovie) noexcept
+{
+    void** const pVtable = GetScaleformMovieVtable(apMovie);
+    if (!pVtable)
+        return false;
+
+    using TDisplay = void(__fastcall)(void*);
+    auto* const pDisplay = reinterpret_cast<TDisplay*>(
+        pVtable[kGFxMovieViewDisplayVtableIndex]);
+    if (!pDisplay)
+        return false;
+
+    pDisplay(apMovie);
+    return true;
+}
+
+bool DisplayScaleformMoviePrePass(void* apMovie) noexcept
+{
+    void** const pVtable = GetScaleformMovieVtable(apMovie);
+    if (!pVtable)
+        return false;
+
+    using TDisplayPrePass = void(__fastcall)(void*);
+    auto* const pDisplayPrePass = reinterpret_cast<TDisplayPrePass*>(
+        pVtable[kGFxMovieViewDisplayPrePassVtableIndex]);
+    if (!pDisplayPrePass)
+        return false;
+
+    pDisplayPrePass(apMovie);
+    return true;
+}
+
+void ReleaseScaleformMovie(void*& arpMovie) noexcept
+{
+    void* const pMovie = arpMovie;
+    arpMovie = nullptr;
+
+    void** const pVtable = GetScaleformMovieVtable(pMovie);
+    if (!pVtable)
+        return;
+
+    using TRelease = void(__fastcall)(void*);
+    auto* const pRelease = reinterpret_cast<TRelease*>(
+        pVtable[kGFxMovieViewReleaseVtableIndex]);
+    if (pRelease)
+        pRelease(pMovie);
+}
+
+void ReleaseScaleformDelegate(void*& arpDelegate) noexcept
+{
+    void* const pDelegate = arpDelegate;
+    arpDelegate = nullptr;
+    if (!pDelegate)
+        return;
+
+    auto* const pRefCount = reinterpret_cast<std::uint32_t*>(
+        reinterpret_cast<std::byte*>(pDelegate) + 0x8);
+    std::atomic_ref<std::uint32_t> refCount{*pRefCount};
+    if (refCount.fetch_sub(1, std::memory_order_acq_rel) == 1)
+        delete reinterpret_cast<GRefCountImpl*>(pDelegate);
+}
+
+template <class T>
+void SafeRelease(T*& apObject) noexcept
+{
+    if (!apObject)
+        return;
+
+    apObject->Release();
+    apObject = nullptr;
+}
+
+struct D3DRenderStateSnapshot
+{
+    std::uintptr_t renderTargetView{};
+    std::uintptr_t renderTargetResource{};
+    std::uintptr_t depthStencilView{};
+    std::uintptr_t swapChainRenderTargetView{};
+    std::uintptr_t swapChainTexture{};
+    bool matchesSwapChainView{};
+    bool matchesSwapChainTexture{};
+    bool hasTargetDescription{};
+    std::uint32_t targetWidth{};
+    std::uint32_t targetHeight{};
+    std::uint32_t targetFormat{};
+    std::uint32_t targetSampleCount{};
+    std::uint32_t targetSampleQuality{};
+    std::uint32_t windowWidth{};
+    std::uint32_t windowHeight{};
+    std::uint32_t viewportCount{};
+    float viewportX{};
+    float viewportY{};
+    float viewportWidth{};
+    float viewportHeight{};
+    float viewportMinDepth{};
+    float viewportMaxDepth{};
+    std::uint32_t scissorCount{};
+    long scissorLeft{};
+    long scissorTop{};
+    long scissorRight{};
+    long scissorBottom{};
+};
+
+D3DRenderStateSnapshot CaptureRenderState(
+    ID3D11DeviceContext* apContext) noexcept
+{
+    D3DRenderStateSnapshot state{};
+    if (!apContext)
+        return state;
+
+    ID3D11RenderTargetView* pRenderTargetView = nullptr;
+    ID3D11DepthStencilView* pDepthStencilView = nullptr;
+    apContext->OMGetRenderTargets(
+        1,
+        &pRenderTargetView,
+        &pDepthStencilView);
+
+    state.renderTargetView =
+        reinterpret_cast<std::uintptr_t>(pRenderTargetView);
+    state.depthStencilView =
+        reinterpret_cast<std::uintptr_t>(pDepthStencilView);
+
+    BSGraphics::RendererWindow* const pWindow =
+        BSGraphics::GetMainWindow();
+    if (pWindow)
+    {
+        state.swapChainRenderTargetView = reinterpret_cast<std::uintptr_t>(
+            pWindow->SwapChainRenderTarget.pRTView);
+        state.swapChainTexture = reinterpret_cast<std::uintptr_t>(
+            pWindow->SwapChainRenderTarget.pTexture);
+        state.windowWidth = static_cast<std::uint32_t>(pWindow->uiWindowWidth);
+        state.windowHeight = static_cast<std::uint32_t>(pWindow->uiWindowHeight);
+        state.matchesSwapChainView =
+            pRenderTargetView == pWindow->SwapChainRenderTarget.pRTView;
+    }
+
+    ID3D11Resource* pRenderTargetResource = nullptr;
+    if (pRenderTargetView)
+        pRenderTargetView->GetResource(&pRenderTargetResource);
+
+    state.renderTargetResource =
+        reinterpret_cast<std::uintptr_t>(pRenderTargetResource);
+    if (pWindow)
+    {
+        state.matchesSwapChainTexture =
+            pRenderTargetResource == pWindow->SwapChainRenderTarget.pTexture;
+    }
+
+    if (pRenderTargetResource)
+    {
+        D3D11_RESOURCE_DIMENSION dimension = D3D11_RESOURCE_DIMENSION_UNKNOWN;
+        pRenderTargetResource->GetType(&dimension);
+        if (dimension == D3D11_RESOURCE_DIMENSION_TEXTURE2D)
+        {
+            ID3D11Texture2D* pTexture = nullptr;
+            const HRESULT queryResult = pRenderTargetResource->QueryInterface(
+                __uuidof(ID3D11Texture2D),
+                reinterpret_cast<void**>(&pTexture));
+            if (SUCCEEDED(queryResult) && pTexture)
+            {
+                D3D11_TEXTURE2D_DESC description{};
+                pTexture->GetDesc(&description);
+                state.hasTargetDescription = true;
+                state.targetWidth = description.Width;
+                state.targetHeight = description.Height;
+                state.targetFormat =
+                    static_cast<std::uint32_t>(description.Format);
+                state.targetSampleCount = description.SampleDesc.Count;
+                state.targetSampleQuality = description.SampleDesc.Quality;
+            }
+
+            SafeRelease(pTexture);
+        }
+    }
+
+    D3D11_VIEWPORT viewports[
+        D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE]{};
+    UINT viewportCount =
+        D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    apContext->RSGetViewports(&viewportCount, viewports);
+    state.viewportCount = viewportCount;
+    if (viewportCount > 0)
+    {
+        state.viewportX = viewports[0].TopLeftX;
+        state.viewportY = viewports[0].TopLeftY;
+        state.viewportWidth = viewports[0].Width;
+        state.viewportHeight = viewports[0].Height;
+        state.viewportMinDepth = viewports[0].MinDepth;
+        state.viewportMaxDepth = viewports[0].MaxDepth;
+    }
+
+    D3D11_RECT scissorRects[
+        D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE]{};
+    UINT scissorCount =
+        D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+    apContext->RSGetScissorRects(&scissorCount, scissorRects);
+    state.scissorCount = scissorCount;
+    if (scissorCount > 0)
+    {
+        state.scissorLeft = scissorRects[0].left;
+        state.scissorTop = scissorRects[0].top;
+        state.scissorRight = scissorRects[0].right;
+        state.scissorBottom = scissorRects[0].bottom;
+    }
+
+    SafeRelease(pRenderTargetResource);
+    SafeRelease(pDepthStencilView);
+    SafeRelease(pRenderTargetView);
+    return state;
+}
+
+void LogRenderState(
+    const char* apPhase,
+    ID3D11DeviceContext* apContext) noexcept
+{
+    const D3DRenderStateSnapshot state =
+        CaptureRenderState(apContext);
+
+    spdlog::info(
+        "Trade preview D3D state phase={} targetProbe=true context={:p} rtv={:p} resource={:p} dsv={:p} swapRtv={:p} swapTexture={:p} matchesSwapRtv={} matchesSwapTexture={} targetDesc={} target={}x{} format={} samples={}:{} window={}x{} viewportCount={} viewport0=({:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f}) scissorCount={} scissor0=({},{},{},{})",
+        apPhase,
+        static_cast<void*>(apContext),
+        reinterpret_cast<void*>(state.renderTargetView),
+        reinterpret_cast<void*>(state.renderTargetResource),
+        reinterpret_cast<void*>(state.depthStencilView),
+        reinterpret_cast<void*>(state.swapChainRenderTargetView),
+        reinterpret_cast<void*>(state.swapChainTexture),
+        state.matchesSwapChainView,
+        state.matchesSwapChainTexture,
+        state.hasTargetDescription,
+        state.targetWidth,
+        state.targetHeight,
+        state.targetFormat,
+        state.targetSampleCount,
+        state.targetSampleQuality,
+        state.windowWidth,
+        state.windowHeight,
+        state.viewportCount,
+        state.viewportX,
+        state.viewportY,
+        state.viewportWidth,
+        state.viewportHeight,
+        state.viewportMinDepth,
+        state.viewportMaxDepth,
+        state.scissorCount,
+        state.scissorLeft,
+        state.scissorTop,
+        state.scissorRight,
+        state.scissorBottom);
+}
+
+bool ShouldLogManagerState(std::uint32_t aRenderCall) noexcept
+{
+    switch (aRenderCall)
+    {
+    case 1:
+    case 2:
+    case 5:
+    case 15:
+    case 30:
+    case 60:
+    case 120:
+    case 300:
+    case 600:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void LogManagerState(
+    const char* apPhase,
+    const Inventory3DManager* apManager,
+    std::uint32_t aRenderCall) noexcept
+{
+    if (!apManager)
+        return;
+
+    const Inventory3DManagerDebugState state =
+        apManager->CaptureDebugState();
+
+    spdlog::info(
+        "Trade preview Inventory3D state phase={} loadStateProbe=true layout=AE1170 frame={} manager={:p} posCopy=({:.3f},{:.3f},{:.3f}) pos=({:.3f},{:.3f},{:.3f}) scaleCopy={:.3f} scale={:.3f} light={} tempRef={:p} loadedCapacityFlags={:08X} loadedCapacity={} loadedLocal={} loadedSize={} loadedData={:p} firstItemBase={:p} firstModelObject={:p} firstSceneObject={:p} zoom={:.3f} loadTask={:p} stateFlags={:08X} tailFlags={:08X}",
+        apPhase,
+        aRenderCall,
+        static_cast<const void*>(apManager),
+        state.itemPosCopyX,
+        state.itemPosCopyY,
+        state.itemPosCopyZ,
+        state.itemPosX,
+        state.itemPosY,
+        state.itemPosZ,
+        state.itemScaleCopy,
+        state.itemScale,
+        state.lightScheme,
+        reinterpret_cast<void*>(state.tempRef),
+        state.loadedModelsCapacityFlags,
+        state.loadedModelsCapacity,
+        state.loadedModelsLocal,
+        state.loadedModelsSize,
+        reinterpret_cast<void*>(state.loadedModelsData),
+        reinterpret_cast<void*>(state.firstItemBase),
+        reinterpret_cast<void*>(state.firstModelObject),
+        reinterpret_cast<void*>(state.firstSceneObject),
+        state.zoomProgress,
+        reinterpret_cast<void*>(state.loadTask),
+        state.stateFlags,
+        state.tailFlags);
+}
+}
+
+const BSFixedString& TradePreviewHostMenu::GetName() noexcept
+{
+    static BSFixedString s_name{kTradePreviewHostMenuName};
+    return s_name;
+}
+
+bool TradePreviewHostMenu::Register() noexcept
+{
+    UI* const pUI = UI::Get();
+    if (!pUI)
+    {
+        spdlog::warn(
+            "Trade preview host menu registration deferred: UI unavailable");
+        return false;
+    }
+
+    const bool registered =
+        pUI->RegisterMenu(GetName(), &TradePreviewHostMenu::Create);
+
+    spdlog::info(
+        "Trade preview host menu registration attempt result={}",
+        registered);
+
+    return registered;
+}
+
+void TradePreviewHostMenu::Show() noexcept
+{
+    UI* const pUI = UI::Get();
+    if (!pUI)
+    {
+        spdlog::warn(
+            "Trade preview host menu show skipped: UI unavailable");
+        return;
+    }
+
+    if (!pUI->HasMenuRegistration(GetName()) && !Register())
+    {
+        spdlog::error(
+            "Trade preview host menu show aborted: registration unavailable");
+        return;
+    }
+
+    spdlog::info("Trade preview host menu show requested");
+    pUI->QueueMessage(GetName(), UIMessage::kShow);
+}
+
+void TradePreviewHostMenu::Hide() noexcept
+{
+    UI* const pUI = UI::Get();
+    if (!pUI || !pUI->HasMenuRegistration(GetName()))
+        return;
+
+    spdlog::info("Trade preview host menu hide requested");
+    pUI->QueueMessage(GetName(), UIMessage::kHide);
+}
+
+TradePreviewHostMenu::TradePreviewHostMenu() noexcept
+{
+    uiMovie = nullptr;
+    depthPriority = 0;
+    eInputContext = 0;
+
+    uiMenuFlags =
+        kDontHideCursorWhenTopmost |
+        kInventoryItemMenu |
+        kUpdateUsesCursor |
+        kDisablePauseMenu |
+        kUsesMenuContext;
+
+    m_hostMovieLoaded = LoadHostScaleformMovie(this);
+
+    spdlog::info(
+        "Trade preview host menu constructed lifecycleProbe=true hostMovieProbe=true menuFlagProbe=true flags={:08X} movieName={} movieLoaded={} movie={:p} fxDelegate={:p}",
+        uiMenuFlags,
+        kHostScaleformMovieName,
+        m_hostMovieLoaded,
+        uiMovie,
+        fxDelegate);
+}
+
+TradePreviewHostMenu::~TradePreviewHostMenu()
+{
+    const bool wasStarted = m_started;
+    StopPreview();
+    ResetRenderQueries();
+
+    void* const pMovie = uiMovie;
+    void* const pDelegate = fxDelegate;
+    ReleaseScaleformDelegate(fxDelegate);
+    ReleaseScaleformMovie(uiMovie);
+
+    spdlog::info(
+        "Trade preview host menu destroyed lifecycleProbe=true hostMovieProbe=true wasStarted={} movieLoaded={} releasedMovie={:p} releasedDelegate={:p}",
+        wasStarted,
+        m_hostMovieLoaded,
+        pMovie,
+        pDelegate);
+}
+
+void TradePreviewHostMenu::Accept(CallbackProcessor*)
+{
+}
+
+void TradePreviewHostMenu::PostCreate()
+{
+}
+
+void TradePreviewHostMenu::Unk_03()
+{
+}
+
+UI_MESSAGE_RESULTS TradePreviewHostMenu::ProcessMessage(
+    UIMessage& aMessage)
+{
+    switch (aMessage.eType)
+    {
+    case UIMessage::kUpdate:
+        ++m_updateMessageCount;
+        if (!m_updateMessageLogged)
+        {
+            m_updateMessageLogged = true;
+            spdlog::info(
+                "Trade preview host menu ProcessMessage firstUpdate lifecycleProbe=true");
+        }
+        return UI_MESSAGE_RESULTS::kPassOn;
+
+    case UIMessage::kShow:
+    case UIMessage::kReshow:
+        spdlog::info(
+            "Trade preview host menu ProcessMessage type={} lifecycleProbe=true",
+            static_cast<std::uint32_t>(aMessage.eType));
+        StartPreview();
+        return UI_MESSAGE_RESULTS::kHandled;
+
+    case UIMessage::kHide:
+    case UIMessage::kForceHide:
+        spdlog::info(
+            "Trade preview host menu ProcessMessage type={} lifecycleProbe=true",
+            static_cast<std::uint32_t>(aMessage.eType));
+        StopPreview();
+        return UI_MESSAGE_RESULTS::kHandled;
+
+    default:
+        return UI_MESSAGE_RESULTS::kPassOn;
+    }
+}
+
+void TradePreviewHostMenu::AdvanceMovie(
+    float aInterval,
+    std::uint32_t)
+{
+    if (uiMovie)
+        AdvanceScaleformMovie(uiMovie, aInterval, 2);
+}
+
+void TradePreviewHostMenu::PostDisplay()
+{
+    if (!m_started)
+        return;
+
+    if (!m_postDisplayLogged)
+    {
+        m_postDisplayLogged = true;
+        spdlog::info(
+            "Trade preview host menu PostDisplay first frame renderProbe=true hostMovieProbe=true movieLoaded={} movie={:p}",
+            m_hostMovieLoaded,
+            uiMovie);
+    }
+
+    if (!m_begin3DInvoked)
+        return;
+
+    Inventory3DManager* const pManager =
+        Inventory3DManager::GetSingleton();
+    if (!pManager)
+    {
+        if (!m_renderUnavailableLogged)
+        {
+            m_renderUnavailableLogged = true;
+            spdlog::warn(
+                "Trade preview host menu Render skipped renderProbe=true managerUnavailable=true");
+        }
+        return;
+    }
+
+    RenderSystemD3D11& renderSystem =
+        World::Get().ctx().at<RenderSystemD3D11>();
+    ID3D11Device* const pDevice = renderSystem.GetDevice();
+    ID3D11DeviceContext* const pContext =
+        renderSystem.GetDeviceContext();
+
+    PollRenderQueries(pContext);
+
+    const bool firstRenderProbe = m_renderCallCount == 0;
+    if (firstRenderProbe)
+    {
+        LogRenderState("before-render", pContext);
+        BeginRenderQueries(pDevice, pContext);
+    }
+
+    const std::uint32_t renderResult = pManager->Render();
+
+    // v23.10: keep the host-owned movie loaded so this remains a genuine
+    // inventory-style menu, but deliberately suppress its 2D Display pass.
+    // This isolates the native 3D renderer and prevents CraftingMenu.swf from
+    // drawing its incomplete inventory panel and item-card shell.
+    if (!m_hostMovieDisplayLogged)
+    {
+        m_hostMovieDisplayLogged = true;
+        spdlog::info(
+            "Trade preview host movie Display suppressed modelOnlyProbe=true hostMovieProbe=true movieName={} movieLoaded={} movie={:p}",
+            kHostScaleformMovieName,
+            m_hostMovieLoaded,
+            uiMovie);
+    }
+
+    if (firstRenderProbe)
+    {
+        EndRenderQueries(pContext);
+        LogRenderState("after-model-only-render", pContext);
+    }
+
+    ++m_renderCallCount;
+    if (renderResult != 0)
+        ++m_renderNonZeroCount;
+
+    if (ShouldLogManagerState(m_renderCallCount))
+    {
+        LogManagerState(
+            "post-render",
+            pManager,
+            m_renderCallCount);
+    }
+
+    if (!m_firstRenderLogged)
+    {
+        m_firstRenderLogged = true;
+        m_firstRenderResult = renderResult;
+        spdlog::info(
+            "Trade preview host menu Render first call renderProbe=true modelOnlyProbe=true hostMovieProbe=true manager={:p} result={} movieDisplaySuppressed=true",
+            static_cast<void*>(pManager),
+            renderResult);
+    }
+}
+
+void TradePreviewHostMenu::PreDisplay()
+{
+    if (!m_started || !uiMovie)
+        return;
+
+    const bool displayed = DisplayScaleformMoviePrePass(uiMovie);
+    if (!m_hostMoviePrePassLogged)
+    {
+        m_hostMoviePrePassLogged = true;
+        spdlog::info(
+            "Trade preview host movie DisplayPrePass hostMovieProbe=true movieName={} movie={:p} result={} vtableIndex={:02X}",
+            kHostScaleformMovieName,
+            uiMovie,
+            displayed,
+            kGFxMovieViewDisplayPrePassVtableIndex);
+    }
+}
+
+void TradePreviewHostMenu::RefreshPlatform()
+{
+}
+
+IMenu* TradePreviewHostMenu::Create(UIMessage*)
+{
+    spdlog::info("Trade preview host menu factory called");
+    return new TradePreviewHostMenu();
+}
+
+void TradePreviewHostMenu::StartPreview() noexcept
+{
+    if (m_started)
+        return;
+
+    m_started = true;
+    m_postDisplayLogged = false;
+    m_updateMessageLogged = false;
+    m_updateMessageCount = 0;
+    m_begin3DInvoked = false;
+    m_firstRenderLogged = false;
+    m_renderUnavailableLogged = false;
+    m_hostMovieDisplayLogged = false;
+    m_hostMovieDisplayReturnedLogged = false;
+    m_hostMovieUnavailableLogged = false;
+    m_hostMoviePrePassLogged = false;
+    m_hostMovieDisplayCalls = 0;
+    m_renderCallCount = 0;
+    m_renderNonZeroCount = 0;
+    m_firstRenderResult = 0;
+    ResetRenderQueries();
+
+    Inventory3DManager* const pManager =
+        Inventory3DManager::GetSingleton();
+    if (pManager)
+    {
+        spdlog::info(
+            "Trade preview host menu Begin3D calling beginEndProbe=true manager={:p} lightScheme=1",
+            static_cast<void*>(pManager));
+        pManager->Begin3D(1);
+        m_begin3DInvoked = true;
+        spdlog::info(
+            "Trade preview host menu Begin3D returned beginEndProbe=true");
+    }
+    else
+    {
+        spdlog::warn(
+            "Trade preview host menu Begin3D skipped beginEndProbe=true managerUnavailable=true");
+    }
+
+    World::Get()
+        .ctx()
+        .at<TradeItemPreviewService>()
+        .OnHostMenuShown(true);
+
+    spdlog::info(
+        "Trade preview host menu started lifecycleProbe=true beginEndProbe=true begin3DInvoked={}",
+        m_begin3DInvoked);
+}
+
+void TradePreviewHostMenu::StopPreview() noexcept
+{
+    if (!m_started)
+        return;
+
+    if (m_begin3DInvoked)
+    {
+        RenderSystemD3D11& renderSystem =
+            World::Get().ctx().at<RenderSystemD3D11>();
+        PollRenderQueries(renderSystem.GetDeviceContext());
+
+        Inventory3DManager* const pManager =
+            Inventory3DManager::GetSingleton();
+        if (pManager)
+        {
+            spdlog::info(
+                "Trade preview host menu End3D calling beginEndProbe=true manager={:p}",
+                static_cast<void*>(pManager));
+            pManager->End3D();
+            spdlog::info(
+                "Trade preview host menu End3D returned beginEndProbe=true");
+        }
+        else
+        {
+            spdlog::warn(
+                "Trade preview host menu End3D skipped beginEndProbe=true managerUnavailable=true");
+        }
+
+        m_begin3DInvoked = false;
+    }
+
+    World::Get()
+        .ctx()
+        .at<TradeItemPreviewService>()
+        .OnHostMenuHidden();
+
+    m_started = false;
+    spdlog::info(
+        "Trade preview host menu stopped renderProbe=true targetProbe=true modelOnlyProbe=true hostMovieProbe=true beginEndProbe=true movieLoaded={} updateMessages={} renderCalls={} renderNonZero={} firstRenderResult={} hostMovieDisplayCalls={} queryPolls={} pipelineStatsLogged={} occlusionLogged={}",
+        m_hostMovieLoaded,
+        m_updateMessageCount,
+        m_renderCallCount,
+        m_renderNonZeroCount,
+        m_firstRenderResult,
+        m_hostMovieDisplayCalls,
+        m_queryPollCount,
+        m_pipelineStatsLogged,
+        m_occlusionLogged);
+
+    ResetRenderQueries();
+}
+
+void TradePreviewHostMenu::ResetRenderQueries() noexcept
+{
+    SafeRelease(m_pipelineQuery);
+    SafeRelease(m_occlusionQuery);
+    m_renderQueriesIssued = false;
+    m_pipelineStatsLogged = false;
+    m_occlusionLogged = false;
+    m_pipelineQueryFailed = false;
+    m_occlusionQueryFailed = false;
+    m_queryPollCount = 0;
+}
+
+void TradePreviewHostMenu::BeginRenderQueries(
+    ID3D11Device* apDevice,
+    ID3D11DeviceContext* apContext) noexcept
+{
+    if (!apDevice || !apContext || m_renderQueriesIssued)
+        return;
+
+    D3D11_QUERY_DESC description{};
+    description.Query = D3D11_QUERY_PIPELINE_STATISTICS;
+    HRESULT result = apDevice->CreateQuery(
+        &description,
+        &m_pipelineQuery);
+    if (FAILED(result))
+    {
+        m_pipelineQueryFailed = true;
+        spdlog::warn(
+            "Trade preview pipeline query creation failed targetProbe=true hr={:08X}",
+            static_cast<std::uint32_t>(result));
+    }
+
+    description.Query = D3D11_QUERY_OCCLUSION;
+    result = apDevice->CreateQuery(
+        &description,
+        &m_occlusionQuery);
+    if (FAILED(result))
+    {
+        m_occlusionQueryFailed = true;
+        spdlog::warn(
+            "Trade preview occlusion query creation failed targetProbe=true hr={:08X}",
+            static_cast<std::uint32_t>(result));
+    }
+
+    if (m_pipelineQuery)
+        apContext->Begin(m_pipelineQuery);
+    if (m_occlusionQuery)
+        apContext->Begin(m_occlusionQuery);
+
+    m_renderQueriesIssued =
+        m_pipelineQuery != nullptr || m_occlusionQuery != nullptr;
+
+    spdlog::info(
+        "Trade preview GPU queries begun targetProbe=true pipelineQuery={:p} occlusionQuery={:p}",
+        static_cast<void*>(m_pipelineQuery),
+        static_cast<void*>(m_occlusionQuery));
+}
+
+void TradePreviewHostMenu::EndRenderQueries(
+    ID3D11DeviceContext* apContext) noexcept
+{
+    if (!apContext || !m_renderQueriesIssued)
+        return;
+
+    if (m_pipelineQuery)
+        apContext->End(m_pipelineQuery);
+    if (m_occlusionQuery)
+        apContext->End(m_occlusionQuery);
+
+    spdlog::info(
+        "Trade preview GPU queries ended targetProbe=true");
+}
+
+void TradePreviewHostMenu::PollRenderQueries(
+    ID3D11DeviceContext* apContext) noexcept
+{
+    if (!apContext || !m_renderQueriesIssued)
+        return;
+
+    ++m_queryPollCount;
+
+    if (m_pipelineQuery && !m_pipelineStatsLogged)
+    {
+        D3D11_QUERY_DATA_PIPELINE_STATISTICS statistics{};
+        const HRESULT result = apContext->GetData(
+            m_pipelineQuery,
+            &statistics,
+            sizeof(statistics),
+            D3D11_ASYNC_GETDATA_DONOTFLUSH);
+        if (result == S_OK)
+        {
+            m_pipelineStatsLogged = true;
+            spdlog::info(
+                "Trade preview GPU pipeline statistics targetProbe=true polls={} iaVertices={} iaPrimitives={} vsInvocations={} gsInvocations={} gsPrimitives={} clipInvocations={} clipPrimitives={} psInvocations={}",
+                m_queryPollCount,
+                statistics.IAVertices,
+                statistics.IAPrimitives,
+                statistics.VSInvocations,
+                statistics.GSInvocations,
+                statistics.GSPrimitives,
+                statistics.CInvocations,
+                statistics.CPrimitives,
+                statistics.PSInvocations);
+        }
+        else if (FAILED(result) && !m_pipelineQueryFailed)
+        {
+            m_pipelineQueryFailed = true;
+            spdlog::warn(
+                "Trade preview pipeline query read failed targetProbe=true hr={:08X}",
+                static_cast<std::uint32_t>(result));
+        }
+    }
+
+    if (m_occlusionQuery && !m_occlusionLogged)
+    {
+        std::uint64_t samplesPassed = 0;
+        const HRESULT result = apContext->GetData(
+            m_occlusionQuery,
+            &samplesPassed,
+            sizeof(samplesPassed),
+            D3D11_ASYNC_GETDATA_DONOTFLUSH);
+        if (result == S_OK)
+        {
+            m_occlusionLogged = true;
+            spdlog::info(
+                "Trade preview GPU occlusion result targetProbe=true polls={} samplesPassed={}",
+                m_queryPollCount,
+                samplesPassed);
+        }
+        else if (FAILED(result) && !m_occlusionQueryFailed)
+        {
+            m_occlusionQueryFailed = true;
+            spdlog::warn(
+                "Trade preview occlusion query read failed targetProbe=true hr={:08X}",
+                static_cast<std::uint32_t>(result));
+        }
+    }
+}
+

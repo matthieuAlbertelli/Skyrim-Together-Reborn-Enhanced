@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BSCore/BSCRC32.h"
+#include "Misc/BSFixedString.h"
 
 namespace creation
 {
@@ -20,6 +21,30 @@ template <class Key> struct BSTScatterTableDefaultHashPolicy
     }
 
     inline static bool is_key_equal(const Key& a, const Key& b) { return a == b; }
+};
+
+template <> struct BSTScatterTableDefaultHashPolicy<BSFixedString>
+{
+    typedef uint32_t hash_type;
+
+    inline static hash_type get_hash(const BSFixedString& key)
+    {
+        const auto pointerValue =
+            static_cast<uint32_t>(
+                reinterpret_cast<uintptr_t>(key.data) & 0xFFFFFFFFu);
+
+        uint32_t crc = 0;
+        BSCRC32 calculator;
+        calculator.GenerateCRC(crc, pointerValue, 0);
+        return crc;
+    }
+
+    inline static bool is_key_equal(
+        const BSFixedString& a,
+        const BSFixedString& b)
+    {
+        return a.data == b.data;
+    }
 };
 
 template <class Key, class Value> struct BSTScatterTableDefaultKVStorage
@@ -655,12 +680,12 @@ protected:
                 if (!from->empty())
                 {
                     hash_type hash = hash_policy::get_hash(from->key);
-                    _insert_move(m_entries, hash, from);
+                    this->_insert_move(m_entries, hash, from);
                 }
                 ++from;
             }
 
-            Heap_Free(oldEntries);
+            this->Free(oldEntries);
         }
     }
 
@@ -818,10 +843,10 @@ public:
 
     bool insert(const key_type& key, const value_type& lvalue)
     {
-        hash_type hash = get_hash(key);
+        hash_type hash = this->get_hash(key);
         entry_type* p = nullptr;
 
-        while (!(p = _insert(m_entries, hash, key)))
+        while (!(p = this->_insert(m_entries, hash, key)))
         {
             this->_grow_table();
             if (!m_entries || !m_freeCount)
@@ -833,17 +858,17 @@ public:
     }
     bool insert(const key_type& key, value_type&& rvalue)
     {
-        hash_type hash = get_hash(key);
+        hash_type hash = this->get_hash(key);
         entry_type* p = nullptr;
 
-        while (!(p = _insert(m_entries, hash, key)))
+        while (!(p = this->_insert(m_entries, hash, key)))
         {
             this->_grow_table();
             if (!m_entries || !m_freeCount)
                 return false;
         }
 
-        new (&p->value) value_type(rvalue);
+        new (&p->value) value_type(std::move(rvalue));
         return true;
     }
     // original implementation

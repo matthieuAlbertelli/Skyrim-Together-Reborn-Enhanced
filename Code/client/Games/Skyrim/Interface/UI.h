@@ -38,6 +38,8 @@ struct UIMessage
 class UI
 {
 public:
+    using TCreate = IMenu*(UIMessage*);
+
     static UI* Get();
 
     bool GetMenuOpen(const BSFixedString& acName) const;
@@ -47,9 +49,11 @@ public:
     IMenu* FindMenuByName(const BSFixedString& acName);
     BSFixedString* LookupMenuNameByInstance(IMenu* apMenu);
 
-public:
-    using TCreate = IMenu*(UIMessage*);
+    bool RegisterMenu(const BSFixedString& acName, TCreate* apCreate);
+    bool HasMenuRegistration(const BSFixedString& acName) const;
+    void QueueMessage(const BSFixedString& acName, UIMessage::UI_MESSAGE_TYPE aType, void* apData = nullptr);
 
+public:
     struct UIMenuEntry
     {
         IMenu* spMenu; // Actually a scaleform ptr TODO: reverse that stuff.
@@ -88,5 +92,11 @@ public:
 };
 
 // intellisense is too dumb but the compiler knows.
-static_assert(sizeof(UI) == 0x1C8);
+static_assert(sizeof(UIMessage) == 0x20);
+static_assert(sizeof(UI::UIMenuEntry) == 0x10);
+static_assert(sizeof(decltype(UI::menuMap)) == 0x30);
+static_assert(offsetof(UI, UI::menuStack) == 0x110);
+static_assert(offsetof(UI, UI::menuMap) == 0x128);
 static_assert(offsetof(UI, UI::numPausesGame) == 0x160);
+static_assert(offsetof(UI, UI::numItemMenus) == 0x164);
+static_assert(sizeof(UI) == 0x1C8);

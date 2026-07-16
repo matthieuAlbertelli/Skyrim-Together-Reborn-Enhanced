@@ -1,6 +1,10 @@
 
 #include <Games/Skyrim/Interface/IMenu.h>
 
+void IMenu::Accept(CallbackProcessor*)
+{
+}
+
 void IMenu::SetFlag(uint32_t auiFlag)
 {
     uiMenuFlags |= auiFlag;

@@ -74,6 +74,14 @@ export class TradeUiService implements OnDestroy {
     this.sendAction('dismiss');
   }
 
+  public previewItem(itemId: string): void {
+    this.sendAction('preview', itemId);
+  }
+
+  public clearPreview(): void {
+    this.sendAction('clearPreview');
+  }
+
   private sendAction(
     action: string,
     ...args: TradeBridgeArgument[]

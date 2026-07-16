@@ -1,5 +1,5 @@
 <section class="trade-shell" *ngIf="state.visible && (surface$ | async) === 'trade'">
-  <div class="trade-frame" [class.compact]="state.mode !== 'session'">
+  <div class="trade-frame" [class.compact]="state.mode !== 'session'" [class.native-preview-active]="state.mode === 'session' && !!previewItem">
     <header class="trade-header">
       <div class="title-block"><span class="sigil"><fa-icon [icon]="exchangeIcon"></fa-icon></span><div><p>ÉCHANGE ENTRE COMPAGNONS</p><h1>TROC</h1><small *ngIf="session as s">Avec le joueur {{ s.remotePlayerId }}</small><small *ngIf="invite as i">Proposition du joueur {{ i.inviterId }}</small><small *ngIf="outgoing as o">Proposition au joueur {{ o.targetPlayerId }}</small></div></div>
       <div class="phase" *ngIf="session"><fa-icon [icon]="session.mutable ? exchangeIcon : lockIcon"></fa-icon>{{ phaseLabel }}</div>

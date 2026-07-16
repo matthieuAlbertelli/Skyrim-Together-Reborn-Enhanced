@@ -17,6 +17,7 @@
 #include <Services/InventoryService.h>
 #include <Services/TradeService.h>
 #include <Services/TradeMenuService.h>
+#include <Services/TradeItemPreviewService.h>
 #include <Services/MagicService.h>
 #include <Services/CommandService.h>
 #include <Services/CalendarService.h>
@@ -51,6 +52,7 @@ World::World()
     ctx().emplace<QuestService>(*this, m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeService>(*this, m_dispatcher, m_transport);
+    ctx().emplace<TradeItemPreviewService>(*this, m_dispatcher);
     ctx().emplace<TradeMenuService>(
         *this,
         m_transport,
