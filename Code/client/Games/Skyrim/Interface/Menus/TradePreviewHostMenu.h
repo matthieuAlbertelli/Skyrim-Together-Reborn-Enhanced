@@ -55,12 +55,17 @@ private:
     bool m_occlusionLogged{};
     bool m_pipelineQueryFailed{};
     bool m_occlusionQueryFailed{};
+    bool m_hudMenuWasOpen{};
+    bool m_hudHideQueued{};
     std::uint32_t m_updateMessageCount{};
     std::uint32_t m_renderCallCount{};
     std::uint32_t m_renderNonZeroCount{};
     std::uint32_t m_firstRenderResult{};
     std::uint32_t m_hostMovieDisplayCalls{};
     std::uint32_t m_queryPollCount{};
+    std::uint64_t m_projectionTelemetrySelectionRevision{};
+    std::uint64_t m_projectionTelemetryRegionRevision{};
+    std::uint64_t m_projectionTelemetrySolverRevision{};
     ID3D11Query* m_pipelineQuery{};
     ID3D11Query* m_occlusionQuery{};
 };

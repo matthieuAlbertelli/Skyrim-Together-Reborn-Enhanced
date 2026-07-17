@@ -1,70 +1,291 @@
 <section class="trade-shell" *ngIf="state.visible && (surface$ | async) === 'trade'">
-  <div class="trade-frame" [class.compact]="state.mode !== 'session'" [class.native-preview-active]="state.mode === 'session' && !!previewItem">
+  <div
+    class="trade-frame"
+    [class.compact]="state.mode !== 'session'"
+    [class.native-preview-active]="state.mode === 'session' && !!previewItem"
+  >
     <header class="trade-header">
-      <div class="title-block"><span class="sigil"><fa-icon [icon]="exchangeIcon"></fa-icon></span><div><p>ÉCHANGE ENTRE COMPAGNONS</p><h1>TROC</h1><small *ngIf="session as s">Avec le joueur {{ s.remotePlayerId }}</small><small *ngIf="invite as i">Proposition du joueur {{ i.inviterId }}</small><small *ngIf="outgoing as o">Proposition au joueur {{ o.targetPlayerId }}</small></div></div>
-      <div class="phase" *ngIf="session"><fa-icon [icon]="session.mutable ? exchangeIcon : lockIcon"></fa-icon>{{ phaseLabel }}</div>
-      <button class="close" (click)="closeCurrentState()" aria-label="Fermer"><fa-icon [icon]="closeIcon"></fa-icon></button>
+      <div class="title-block">
+        <span class="sigil"><fa-icon [icon]="exchangeIcon"></fa-icon></span>
+        <div>
+          <p>ÉCHANGE ENTRE COMPAGNONS</p>
+          <h1>TROC</h1>
+          <small *ngIf="session as s">Avec le joueur {{ s.remotePlayerId }}</small>
+          <small *ngIf="invite as i">Proposition du joueur {{ i.inviterId }}</small>
+          <small *ngIf="outgoing as o">Proposition au joueur {{ o.targetPlayerId }}</small>
+        </div>
+      </div>
+
+      <div class="phase" *ngIf="session">
+        <fa-icon [icon]="session.mutable ? exchangeIcon : lockIcon"></fa-icon>
+        {{ phaseLabel }}
+      </div>
+
+      <button class="close" (click)="closeCurrentState()" aria-label="Fermer">
+        <fa-icon [icon]="closeIcon"></fa-icon>
+      </button>
     </header>
 
     <ng-container [ngSwitch]="state.mode">
       <ng-container *ngSwitchCase="'invite'">
         <main class="simple-state" *ngIf="invite as i">
-          <fa-icon [icon]="exchangeIcon"></fa-icon><h2>Le joueur {{ i.inviterId }} souhaite échanger</h2><p>Les objets ne seront transférés qu'après confirmation des deux joueurs.</p><div><button (click)="rejectInvite()">Refuser</button><button class="gold" (click)="acceptInvite()">Accepter</button></div>
+          <fa-icon [icon]="exchangeIcon"></fa-icon>
+          <h2>Le joueur {{ i.inviterId }} souhaite échanger</h2>
+          <p>Les objets ne seront transférés qu'après confirmation des deux joueurs.</p>
+          <div>
+            <button (click)="rejectInvite()">Refuser</button>
+            <button class="gold" (click)="acceptInvite()">Accepter</button>
+          </div>
         </main>
       </ng-container>
+
       <ng-container *ngSwitchCase="'outgoing'">
         <main class="simple-state" *ngIf="outgoing as o">
-          <fa-icon [icon]="waitIcon"></fa-icon><h2>En attente du joueur {{ o.targetPlayerId }}</h2><button (click)="closeCurrentState()">Annuler</button>
+          <fa-icon [icon]="waitIcon"></fa-icon>
+          <h2>En attente du joueur {{ o.targetPlayerId }}</h2>
+          <button (click)="closeCurrentState()">Annuler</button>
         </main>
       </ng-container>
-      <main class="simple-state" *ngSwitchCase="'syncing'"><fa-icon [icon]="waitIcon"></fa-icon><h2>Synchronisation…</h2></main>
-      <main class="simple-state error" *ngSwitchCase="'error'"><fa-icon [icon]="warningIcon"></fa-icon><h2>Échange indisponible</h2><p>{{ simpleError }}</p><button (click)="closeCurrentState()">Fermer</button></main>
+
+      <main class="simple-state" *ngSwitchCase="'syncing'">
+        <fa-icon [icon]="waitIcon"></fa-icon>
+        <h2>Synchronisation…</h2>
+      </main>
+
+      <main class="simple-state error" *ngSwitchCase="'error'">
+        <fa-icon [icon]="warningIcon"></fa-icon>
+        <h2>Échange indisponible</h2>
+        <p>{{ simpleError }}</p>
+        <button (click)="closeCurrentState()">Fermer</button>
+      </main>
 
       <ng-container *ngSwitchCase="'session'">
-      <div class="session-layout" *ngIf="session as s">
-        <aside class="categories panel">
-          <button *ngFor="let c of categories" [class.active]="activeCategory === c.id" (click)="selectCategory(c.id)"><fa-icon [icon]="c.icon"></fa-icon><span>{{ c.label }}</span></button>
-        </aside>
+        <div class="session-layout" *ngIf="session as s">
+          <section class="inventory-workspace panel">
+            <nav class="category-tabs" aria-label="Catégories d'inventaire">
+              <button
+                *ngFor="let c of categories"
+                [class.active]="activeCategory === c.id"
+                (click)="selectCategory(c.id)"
+                [attr.aria-label]="c.label"
+                [attr.title]="c.label"
+              >
+                <fa-icon [icon]="c.icon"></fa-icon>
+                <span>{{ c.label }}</span>
+              </button>
+            </nav>
 
-        <section class="inventory panel">
-          <div class="panel-title"><span>VOTRE INVENTAIRE</span><small>{{ filteredInventory.length }} objets</small></div>
-          <div class="columns"><span>Objet</span><span>Type</span><span>Qté</span></div>
-          <div class="scroll-list">
-            <button *ngFor="let item of filteredInventory; trackBy: trackByItemId" class="item-row" [ngClass]="itemColorClass(item)" [class.selected]="isPreviewed(item, 'inventory')" (click)="selectPreview(item, 'inventory')" (dblclick)="addOneToOffer(item)">
-              <span class="name"><fa-icon [icon]="itemIcon(item)"></fa-icon><b>{{ item.name }}</b><em *ngIf="item.offered">{{ item.offered }} offert</em></span><span>{{ item.typeLabel }}</span><strong>{{ item.quantity }}</strong>
-            </button>
-            <p class="empty" *ngIf="filteredInventory.length === 0">Aucun objet dans cette catégorie.</p>
-          </div>
-          <div class="inventory-actions" *ngIf="previewItem as p">
-            <div class="qty"><button (click)="decreaseQuantity()">−</button><output>{{ selectedQuantity }}</output><button (click)="increaseQuantity()">+</button></div>
-            <button class="gold" [disabled]="!s.mutable" (click)="addSelectedItem()">Ajouter à l'offre</button>
-          </div>
-        </section>
+            <div class="inventory-heading">
+              <div>
+                <p>INVENTAIRE DU JOUEUR</p>
+                <h2>{{ filteredInventory.length }} objets</h2>
+              </div>
+              <small>Double-clic : ajouter une unité</small>
+            </div>
 
-        <section class="preview panel" *ngIf="previewItem as item; else emptyPreview">
-          <div class="panel-title"><span>OBJET SÉLECTIONNÉ</span><small>{{ item.typeLabel }}</small></div>
-          <div class="preview-stage" [ngClass]="itemColorClass(item)"><div class="rune-ring"></div><fa-icon [icon]="itemIcon(item)"></fa-icon><span>APERÇU 3D NATIF</span></div>
-          <h2 [ngClass]="itemColorClass(item)">{{ item.name }}</h2>
-          <dl class="stats"><div><dt>Dégâts</dt><dd>—</dd></div><div><dt>Armure</dt><dd>—</dd></div><div><dt>Poids</dt><dd>—</dd></div><div><dt>Valeur</dt><dd>—</dd></div><div><dt>Disponible</dt><dd>{{ item.quantity }}</dd></div><div><dt>Offert</dt><dd>{{ item.offered || 0 }}</dd></div></dl>
-          <div class="enchant"><span>PROPRIÉTÉS</span><p>Les caractéristiques natives et l'enchantement seront affichés ici dès leur exposition par le service de preview.</p></div>
-        </section>
-        <ng-template #emptyPreview><section class="preview panel empty-preview"><fa-icon [icon]="exchangeIcon"></fa-icon><p>Sélectionnez un objet.</p></section></ng-template>
+            <div class="inventory-columns">
+              <span>Objet</span>
+              <span>Type</span>
+              <span>Qté</span>
+              <span>Offre</span>
+            </div>
 
-        <aside class="partner panel">
-          <div class="panel-title"><span>COMPAGNON</span><small>Joueur {{ s.remotePlayerId }}</small></div>
-          <div class="portrait"><fa-icon [icon]="lockIcon"></fa-icon></div>
-          <div class="readiness" [class.ready]="s.remoteConfirmed"><fa-icon [icon]="s.remoteConfirmed ? acceptIcon : waitIcon"></fa-icon>{{ s.remoteConfirmed ? 'Prêt à échanger' : 'Prépare son offre' }}</div>
-          <p>{{ s.remoteConfirmed ? 'Le compagnon a verrouillé son offre.' : 'Toute modification annule les validations.' }}</p>
-        </aside>
+            <div class="inventory-list">
+              <button
+                *ngFor="let item of filteredInventory; trackBy: trackByItemId"
+                class="inventory-row"
+                [ngClass]="itemColorClass(item)"
+                [class.selected]="isPreviewed(item, 'inventory')"
+                (click)="selectPreview(item, 'inventory')"
+                (dblclick)="addOneToOffer(item)"
+              >
+                <span class="item-name">
+                  <fa-icon [icon]="itemIcon(item)"></fa-icon>
+                  <b>{{ item.name }}</b>
+                </span>
+                <span class="item-type">{{ item.typeLabel }}</span>
+                <strong>{{ item.quantity }}</strong>
+                <em>{{ item.offered || '—' }}</em>
+              </button>
 
-        <section class="offers panel">
-          <article><header><span>VOTRE OFFRE</span><b [class.ready]="s.localConfirmed">{{ s.localConfirmed ? 'VALIDÉE' : 'EN ATTENTE' }}</b></header><div class="offer-list"><button *ngFor="let item of s.localOffer; trackBy: trackByItemId" [ngClass]="itemColorClass(item)" [class.selected]="isPreviewed(item, 'local-offer')" (click)="selectPreview(item, 'local-offer')"><fa-icon [icon]="itemIcon(item)"></fa-icon><span>{{ item.name }}</span><strong>x{{ item.quantity }}</strong><i *ngIf="s.mutable" (click)="$event.stopPropagation(); removeFromOffer(item.id)">×</i></button><p class="empty" *ngIf="!s.localOffer.length">Aucun objet proposé.</p></div></article>
-          <div class="exchange-mark"><fa-icon [icon]="exchangeIcon"></fa-icon></div>
-          <article><header><span>OFFRE DU COMPAGNON</span><b [class.ready]="s.remoteConfirmed">{{ s.remoteConfirmed ? 'VALIDÉE' : 'EN ATTENTE' }}</b></header><div class="offer-list"><button *ngFor="let item of s.remoteOffer; trackBy: trackByItemId" [ngClass]="itemColorClass(item)" [class.selected]="isPreviewed(item, 'remote-offer')" (click)="selectPreview(item, 'remote-offer')"><fa-icon [icon]="itemIcon(item)"></fa-icon><span>{{ item.name }}</span><strong>x{{ item.quantity }}</strong></button><p class="empty" *ngIf="!s.remoteOffer.length">Le compagnon n'a rien proposé.</p></div></article>
-        </section>
+              <p class="empty" *ngIf="filteredInventory.length === 0">
+                Aucun objet dans cette catégorie.
+              </p>
+            </div>
 
-        <footer class="trade-footer"><div class="status"><fa-icon [icon]="s.phase === 'failed' ? warningIcon : lockIcon"></fa-icon><span *ngIf="s.phase === 'negotiating'">Toute modification réinitialise les confirmations.</span><span *ngIf="s.phase === 'locked'">Vérification des inventaires…</span><span *ngIf="s.phase === 'applying'">Application sécurisée du transfert…</span><span *ngIf="s.phase === 'completed'">Échange terminé.</span><span *ngIf="s.phase === 'cancelled'">Échange annulé.</span><span *ngIf="s.phase === 'failed'">{{ s.error || "L'échange a échoué." }}</span></div><div class="footer-buttons"><button *ngIf="!isTerminal" (click)="cancelTrade()">Annuler</button><button *ngIf="s.phase === 'negotiating'" class="gold" [disabled]="!canConfirm" (click)="confirmTrade()"><fa-icon [icon]="s.localConfirmed ? acceptIcon : lockIcon"></fa-icon>{{ s.localConfirmed ? 'Offre validée' : "Valider l'offre" }}</button><button *ngIf="isTerminal && s.phase !== 'completed'" class="gold" (click)="closeCurrentState()">Fermer</button></div></footer>
-      </div>
+            <div class="inventory-actions" *ngIf="previewItem as item">
+              <div class="selected-summary">
+                <span>SÉLECTION</span>
+                <b>{{ item.name }}</b>
+              </div>
+
+              <div class="quantity-control">
+                <button (click)="decreaseQuantity()" aria-label="Diminuer">−</button>
+                <output>{{ selectedQuantity }}</output>
+                <button (click)="increaseQuantity()" aria-label="Augmenter">+</button>
+              </div>
+
+              <button class="gold add-button" [disabled]="!s.mutable" (click)="addSelectedItem()">
+                Ajouter à mon offre
+              </button>
+            </div>
+          </section>
+
+          <section class="preview-workspace" [class.empty]="!previewItem">
+            <ng-container *ngIf="previewItem as item; else noPreview">
+              <div #previewViewport class="preview-viewport" [ngClass]="itemColorClass(item)">
+                <span class="preview-label">APERÇU 3D</span>
+                <i class="corner corner-tl"></i>
+                <i class="corner corner-tr"></i>
+                <i class="corner corner-bl"></i>
+                <i class="corner corner-br"></i>
+              </div>
+
+              <article class="item-card" [ngClass]="itemColorClass(item)">
+                <header>
+                  <small>{{ item.typeLabel }}</small>
+                  <h2>{{ item.name }}</h2>
+                </header>
+
+                <dl>
+                  <div>
+                    <dt>Disponible</dt>
+                    <dd>{{ item.quantity }}</dd>
+                  </div>
+                  <div>
+                    <dt>Dans mon offre</dt>
+                    <dd>{{ item.offered || 0 }}</dd>
+                  </div>
+                  <div>
+                    <dt>Quantité choisie</dt>
+                    <dd>{{ selectedQuantity }}</dd>
+                  </div>
+                </dl>
+              </article>
+            </ng-container>
+
+            <ng-template #noPreview>
+              <div class="preview-empty-state">
+                <fa-icon [icon]="exchangeIcon"></fa-icon>
+                <span>Sélectionnez un objet</span>
+              </div>
+            </ng-template>
+          </section>
+
+          <aside class="exchange-workspace panel">
+            <header class="exchange-heading">
+              <div>
+                <p>ZONE D'ÉCHANGE</p>
+                <h2>Joueur {{ s.remotePlayerId }}</h2>
+              </div>
+              <div class="partner-state" [class.ready]="s.remoteConfirmed">
+                <fa-icon [icon]="s.remoteConfirmed ? acceptIcon : waitIcon"></fa-icon>
+                {{ s.remoteConfirmed ? 'Compagnon prêt' : 'En préparation' }}
+              </div>
+            </header>
+
+            <div class="offer-columns">
+              <article class="offer-column local-offer">
+                <header>
+                  <span>JE DONNE</span>
+                  <b [class.ready]="s.localConfirmed">
+                    {{ s.localConfirmed ? 'VALIDÉE' : 'EN ATTENTE' }}
+                  </b>
+                </header>
+
+                <div class="offer-list">
+                  <button
+                    *ngFor="let item of s.localOffer; trackBy: trackByItemId"
+                    [ngClass]="itemColorClass(item)"
+                    [class.selected]="isPreviewed(item, 'local-offer')"
+                    (click)="selectPreview(item, 'local-offer')"
+                  >
+                    <fa-icon [icon]="itemIcon(item)"></fa-icon>
+                    <span>{{ item.name }}</span>
+                    <strong>x{{ item.quantity }}</strong>
+                    <i
+                      *ngIf="s.mutable"
+                      (click)="$event.stopPropagation(); removeFromOffer(item.id)"
+                      title="Retirer de l'offre"
+                    >×</i>
+                  </button>
+
+                  <p class="empty" *ngIf="!s.localOffer.length">Aucun objet proposé.</p>
+                </div>
+              </article>
+
+              <article class="offer-column remote-offer">
+                <header>
+                  <span>JE REÇOIS</span>
+                  <b [class.ready]="s.remoteConfirmed">
+                    {{ s.remoteConfirmed ? 'VALIDÉE' : 'EN ATTENTE' }}
+                  </b>
+                </header>
+
+                <div class="offer-list">
+                  <button
+                    *ngFor="let item of s.remoteOffer; trackBy: trackByItemId"
+                    [ngClass]="itemColorClass(item)"
+                    [class.selected]="isPreviewed(item, 'remote-offer')"
+                    (click)="selectPreview(item, 'remote-offer')"
+                  >
+                    <fa-icon [icon]="itemIcon(item)"></fa-icon>
+                    <span>{{ item.name }}</span>
+                    <strong>x{{ item.quantity }}</strong>
+                  </button>
+
+                  <p class="empty" *ngIf="!s.remoteOffer.length">
+                    Le compagnon n'a rien proposé.
+                  </p>
+                </div>
+              </article>
+            </div>
+
+            <div class="exchange-summary">
+              <div>
+                <span>MON OFFRE</span>
+                <b>{{ s.localOffer.length }} ligne{{ s.localOffer.length > 1 ? 's' : '' }}</b>
+              </div>
+              <fa-icon [icon]="exchangeIcon"></fa-icon>
+              <div>
+                <span>OFFRE REÇUE</span>
+                <b>{{ s.remoteOffer.length }} ligne{{ s.remoteOffer.length > 1 ? 's' : '' }}</b>
+              </div>
+            </div>
+          </aside>
+
+          <footer class="trade-footer">
+            <div class="status">
+              <fa-icon [icon]="s.phase === 'failed' ? warningIcon : lockIcon"></fa-icon>
+              <span *ngIf="s.phase === 'negotiating'">Toute modification réinitialise les confirmations.</span>
+              <span *ngIf="s.phase === 'locked'">Vérification des inventaires…</span>
+              <span *ngIf="s.phase === 'applying'">Application sécurisée du transfert…</span>
+              <span *ngIf="s.phase === 'completed'">Échange terminé.</span>
+              <span *ngIf="s.phase === 'cancelled'">Échange annulé.</span>
+              <span *ngIf="s.phase === 'failed'">{{ s.error || "L'échange a échoué." }}</span>
+            </div>
+
+            <div class="footer-buttons">
+              <button *ngIf="!isTerminal" (click)="cancelTrade()">Annuler</button>
+              <button
+                *ngIf="s.phase === 'negotiating'"
+                class="gold"
+                [disabled]="!canConfirm"
+                (click)="confirmTrade()"
+              >
+                <fa-icon [icon]="s.localConfirmed ? acceptIcon : lockIcon"></fa-icon>
+                {{ s.localConfirmed ? 'Offre validée' : "Valider l'offre" }}
+              </button>
+              <button
+                *ngIf="isTerminal && s.phase !== 'completed'"
+                class="gold"
+                (click)="closeCurrentState()"
+              >
+                Fermer
+              </button>
+            </div>
+          </footer>
+        </div>
       </ng-container>
     </ng-container>
   </div>

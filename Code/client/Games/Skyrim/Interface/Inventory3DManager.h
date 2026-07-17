@@ -4,6 +4,23 @@
 
 struct InventoryEntry;
 
+struct Inventory3DManagerPreviewModelBounds
+{
+    bool valid{};
+    bool matchedExpectedModel{};
+    std::uintptr_t itemBase{};
+    std::uintptr_t modelObject{};
+    std::uintptr_t sceneObject{};
+    float centerX{};
+    float centerY{};
+    float centerZ{};
+    float radius{};
+    float rootWorldX{};
+    float rootWorldY{};
+    float rootWorldZ{};
+    float rootWorldScale{};
+};
+
 struct Inventory3DManagerDebugState
 {
     float itemPosCopyX{};
@@ -40,6 +57,13 @@ struct Inventory3DManager
     void UpdateItem3D(InventoryEntry* apEntry) noexcept;
     void Clear3D() noexcept;
     std::uint32_t Render() noexcept;
+    void SetPreviewTransform(
+        float aX,
+        float aY,
+        float aZ,
+        float aScale) noexcept;
 
     [[nodiscard]] Inventory3DManagerDebugState CaptureDebugState() const noexcept;
+    [[nodiscard]] Inventory3DManagerPreviewModelBounds CaptureModelBounds(
+        std::uintptr_t aExpectedModelObject) const noexcept;
 };

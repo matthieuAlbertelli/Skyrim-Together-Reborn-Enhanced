@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
+  ElementRef,
   HostListener,
   OnDestroy,
   OnInit,
+  ViewChild,
 } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
@@ -78,11 +80,36 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
 
   private readonly subscription = new Subscription();
   private completedDismissTimer: ReturnType<typeof setTimeout> | null = null;
+  private previewViewportElement: HTMLElement | null = null;
+  private previewResizeObserver: ResizeObserver | null = null;
+  private previewRegionFrame: number | null = null;
+  private lastPreviewRegionSignature = '';
 
   public constructor(
     private readonly trade: TradeUiService,
     private readonly uiSurface: UiSurfaceService,
   ) {}
+
+  @ViewChild('previewViewport')
+  public set previewViewport(
+    viewport: ElementRef<HTMLElement> | undefined,
+  ) {
+    this.previewResizeObserver?.disconnect();
+    this.previewResizeObserver = null;
+    this.previewViewportElement = viewport?.nativeElement ?? null;
+
+    if (
+      this.previewViewportElement &&
+      typeof ResizeObserver !== 'undefined'
+    ) {
+      this.previewResizeObserver = new ResizeObserver(() => {
+        this.queuePreviewRegionUpdate();
+      });
+      this.previewResizeObserver.observe(this.previewViewportElement);
+    }
+
+    this.queuePreviewRegionUpdate();
+  }
 
   public ngOnInit(): void {
     this.subscription.add(
@@ -90,6 +117,7 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
         const previousSessionId = this.session?.sessionId;
         const previousPhase = this.session?.phase;
         this.state = state;
+        this.queuePreviewRegionUpdate();
 
         if (!this.isSession(state)) {
           this.previewSelection = null;
@@ -128,6 +156,14 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.trade.clearPreview();
+    this.trade.setPreviewRegion(0, 0, 0, 0);
+    this.previewResizeObserver?.disconnect();
+    this.previewResizeObserver = null;
+    this.previewViewportElement = null;
+    if (this.previewRegionFrame !== null) {
+      window.cancelAnimationFrame(this.previewRegionFrame);
+      this.previewRegionFrame = null;
+    }
     this.clearCompletedDismissTimer();
     this.subscription.unsubscribe();
   }
@@ -405,6 +441,64 @@ export class TradeMenuComponent implements OnInit, OnDestroy {
     }
 
     return session.inventory.find(item => item.id === selection.itemId) ?? null;
+  }
+
+  private queuePreviewRegionUpdate(): void {
+    if (this.previewRegionFrame !== null) {
+      return;
+    }
+
+    this.previewRegionFrame = window.requestAnimationFrame(() => {
+      this.previewRegionFrame = null;
+      this.publishPreviewRegion();
+    });
+  }
+
+  private publishPreviewRegion(): void {
+    const element = this.previewViewportElement;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    if (
+      !this.session ||
+      !element ||
+      viewportWidth <= 0 ||
+      viewportHeight <= 0
+    ) {
+      this.publishPreviewRegionValues(0, 0, 0, 0);
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 1 || rect.height <= 1) {
+      this.publishPreviewRegionValues(0, 0, 0, 0);
+      return;
+    }
+
+    this.publishPreviewRegionValues(
+      rect.left / viewportWidth,
+      rect.top / viewportHeight,
+      rect.width / viewportWidth,
+      rect.height / viewportHeight,
+    );
+  }
+
+  private publishPreviewRegionValues(
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+  ): void {
+    const signature = [left, top, width, height]
+      .map(value => value.toFixed(6))
+      .join(':');
+
+    if (signature === this.lastPreviewRegionSignature) {
+      return;
+    }
+
+    this.lastPreviewRegionSignature = signature;
+    this.trade.setPreviewRegion(left, top, width, height);
   }
 
   private scheduleCompletedDismiss(): void {

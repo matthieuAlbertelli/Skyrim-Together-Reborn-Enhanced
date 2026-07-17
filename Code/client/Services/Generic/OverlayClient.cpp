@@ -16,6 +16,7 @@
 #include <World.h>
 
 #include <charconv>
+#include <cmath>
 #include <optional>
 #include <string_view>
 
@@ -208,6 +209,34 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
                         {
                             World::Get().ctx().at<TradeItemPreviewService>().SelectItem(itemId);
                         });
+                }
+            }
+            else if (action == "previewRegion")
+            {
+                if (eventArgs->GetSize() >= 6)
+                {
+                    const double left = eventArgs->GetDouble(2);
+                    const double top = eventArgs->GetDouble(3);
+                    const double width = eventArgs->GetDouble(4);
+                    const double height = eventArgs->GetDouble(5);
+
+                    if (std::isfinite(left) &&
+                        std::isfinite(top) &&
+                        std::isfinite(width) &&
+                        std::isfinite(height))
+                    {
+                        World::Get().GetRunner().Queue(
+                            [left = static_cast<float>(left),
+                             top = static_cast<float>(top),
+                             width = static_cast<float>(width),
+                             height = static_cast<float>(height)]()
+                            {
+                                World::Get()
+                                    .ctx()
+                                    .at<TradeItemPreviewService>()
+                                    .SetPreviewRegion(left, top, width, height);
+                            });
+                    }
                 }
             }
             else if (action == "clearPreview")

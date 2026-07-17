@@ -82,6 +82,15 @@ export class TradeUiService implements OnDestroy {
     this.sendAction('clearPreview');
   }
 
+  public setPreviewRegion(
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+  ): void {
+    this.sendAction('previewRegion', left, top, width, height);
+  }
+
   private sendAction(
     action: string,
     ...args: TradeBridgeArgument[]

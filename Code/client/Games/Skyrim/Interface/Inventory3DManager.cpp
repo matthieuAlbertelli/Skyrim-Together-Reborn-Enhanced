@@ -1,6 +1,7 @@
 #include <TiltedOnlinePCH.h>
 
 #include <cstddef>
+#include <cmath>
 #include <cstring>
 
 #include <Interface/Inventory3DManager.h>
@@ -15,12 +16,37 @@ using TClear3D = void(__fastcall)(Inventory3DManager*);
 using TRender = std::uint32_t(__fastcall)(Inventory3DManager*);
 
 template <class T>
+void WriteMember(
+    Inventory3DManager* apManager,
+    std::size_t aOffset,
+    const T& aValue) noexcept
+{
+    auto* const pBase =
+        reinterpret_cast<std::uint8_t*>(apManager);
+    std::memcpy(pBase + aOffset, &aValue, sizeof(T));
+}
+
+template <class T>
 T ReadMember(const Inventory3DManager* apManager, std::size_t aOffset) noexcept
 {
     T value{};
     const auto* const pBase =
         reinterpret_cast<const std::uint8_t*>(apManager);
     std::memcpy(&value, pBase + aOffset, sizeof(T));
+    return value;
+}
+
+template <class T>
+T ReadAddress(std::uintptr_t aAddress) noexcept
+{
+    T value{};
+    if (aAddress == 0)
+        return value;
+
+    std::memcpy(
+        &value,
+        reinterpret_cast<const void*>(aAddress),
+        sizeof(T));
     return value;
 }
 }
@@ -70,6 +96,30 @@ std::uint32_t Inventory3DManager::Render() noexcept
         return pFunction(this);
 
     return 0;
+}
+
+void Inventory3DManager::SetPreviewTransform(
+    float aX,
+    float aY,
+    float aZ,
+    float aScale) noexcept
+{
+    // Skyrim AE 1.6.1170, post-1.6.629 layout. Both the copy and
+    // current values are kept in sync because the renderer interpolates
+    // between them during zoom and item changes.
+    constexpr std::size_t kItemPosCopyOffset = 0x14;
+    constexpr std::size_t kItemPosOffset = 0x20;
+    constexpr std::size_t kItemScaleCopyOffset = 0x2C;
+    constexpr std::size_t kItemScaleOffset = 0x30;
+
+    WriteMember(this, kItemPosCopyOffset + 0x0, aX);
+    WriteMember(this, kItemPosCopyOffset + 0x4, aY);
+    WriteMember(this, kItemPosCopyOffset + 0x8, aZ);
+    WriteMember(this, kItemPosOffset + 0x0, aX);
+    WriteMember(this, kItemPosOffset + 0x4, aY);
+    WriteMember(this, kItemPosOffset + 0x8, aZ);
+    WriteMember(this, kItemScaleCopyOffset, aScale);
+    WriteMember(this, kItemScaleOffset, aScale);
 }
 
 Inventory3DManagerDebugState
@@ -136,4 +186,111 @@ Inventory3DManager::CaptureDebugState() const noexcept
     state.stateFlags = ReadMember<std::uint32_t>(this, kStateFlagsOffset);
     state.tailFlags = ReadMember<std::uint32_t>(this, kTailFlagsOffset);
     return state;
+}
+
+Inventory3DManagerPreviewModelBounds
+Inventory3DManager::CaptureModelBounds(
+    std::uintptr_t aExpectedModelObject) const noexcept
+{
+    // Skyrim AE 1.6.1170, post-1.6.629 layout. Resolve the active preview by
+    // matching the selected TESBoundObject instead of assuming that the last
+    // cached entry is active: Inventory3DManager reuses earlier cached models.
+    constexpr std::size_t kLoadedModelsOffset = 0x60;
+    constexpr std::size_t kLoadedModelsDataOffset = 0x68;
+    constexpr std::size_t kLoadedModelsSizeOffset = 0x148;
+    constexpr std::size_t kLoadedInventoryModelSize = 0x20;
+    constexpr std::size_t kLoadedInventoryModelItemBaseOffset = 0x00;
+    constexpr std::size_t kLoadedInventoryModelObjectOffset = 0x08;
+    constexpr std::size_t kLoadedInventoryModelSceneOffset = 0x10;
+    constexpr std::size_t kNiAVObjectWorldTransformOffset = 0x7C;
+    constexpr std::size_t kNiTransformTranslateOffset = 0x24;
+    constexpr std::size_t kNiTransformScaleOffset = 0x30;
+    constexpr std::size_t kNiAVObjectWorldBoundOffset = 0xE4;
+
+    Inventory3DManagerPreviewModelBounds bounds{};
+
+    const std::uint32_t capacityFlags =
+        ReadMember<std::uint32_t>(this, kLoadedModelsOffset);
+    const bool usesLocalStorage =
+        (capacityFlags & 0x80000000u) != 0;
+    const std::uint32_t size =
+        ReadMember<std::uint32_t>(this, kLoadedModelsSizeOffset);
+    if (size == 0)
+        return bounds;
+
+    const auto* const pManagerBase =
+        reinterpret_cast<const std::uint8_t*>(this);
+    const std::uintptr_t data = usesLocalStorage
+        ? reinterpret_cast<std::uintptr_t>(
+              pManagerBase + kLoadedModelsDataOffset)
+        : ReadMember<std::uintptr_t>(
+              this, kLoadedModelsDataOffset);
+    if (data == 0)
+        return bounds;
+
+    std::uintptr_t selectedModel = 0;
+    for (std::uint32_t reverseIndex = 0; reverseIndex < size; ++reverseIndex)
+    {
+        const std::uint32_t index = size - 1 - reverseIndex;
+        const std::uintptr_t candidate =
+            data +
+            static_cast<std::uintptr_t>(index) *
+                kLoadedInventoryModelSize;
+        const std::uintptr_t itemBase = ReadAddress<std::uintptr_t>(
+            candidate + kLoadedInventoryModelItemBaseOffset);
+        const std::uintptr_t modelObject = ReadAddress<std::uintptr_t>(
+            candidate + kLoadedInventoryModelObjectOffset);
+
+        if (aExpectedModelObject == 0 ||
+            itemBase == aExpectedModelObject ||
+            modelObject == aExpectedModelObject)
+        {
+            selectedModel = candidate;
+            bounds.matchedExpectedModel =
+                aExpectedModelObject != 0;
+            bounds.itemBase = itemBase;
+            bounds.modelObject = modelObject;
+            break;
+        }
+    }
+
+    if (selectedModel == 0)
+        return bounds;
+
+    bounds.sceneObject = ReadAddress<std::uintptr_t>(
+        selectedModel + kLoadedInventoryModelSceneOffset);
+    if (bounds.sceneObject == 0)
+        return bounds;
+
+    const std::uintptr_t worldTransform =
+        bounds.sceneObject + kNiAVObjectWorldTransformOffset;
+    bounds.rootWorldX = ReadAddress<float>(
+        worldTransform + kNiTransformTranslateOffset + 0x0);
+    bounds.rootWorldY = ReadAddress<float>(
+        worldTransform + kNiTransformTranslateOffset + 0x4);
+    bounds.rootWorldZ = ReadAddress<float>(
+        worldTransform + kNiTransformTranslateOffset + 0x8);
+    bounds.rootWorldScale = ReadAddress<float>(
+        worldTransform + kNiTransformScaleOffset);
+
+    const std::uintptr_t worldBound =
+        bounds.sceneObject + kNiAVObjectWorldBoundOffset;
+    bounds.centerX = ReadAddress<float>(worldBound + 0x0);
+    bounds.centerY = ReadAddress<float>(worldBound + 0x4);
+    bounds.centerZ = ReadAddress<float>(worldBound + 0x8);
+    bounds.radius = ReadAddress<float>(worldBound + 0xC);
+
+    bounds.valid =
+        std::isfinite(bounds.centerX) &&
+        std::isfinite(bounds.centerY) &&
+        std::isfinite(bounds.centerZ) &&
+        std::isfinite(bounds.radius) &&
+        std::isfinite(bounds.rootWorldX) &&
+        std::isfinite(bounds.rootWorldY) &&
+        std::isfinite(bounds.rootWorldZ) &&
+        std::isfinite(bounds.rootWorldScale) &&
+        bounds.radius > 0.001F &&
+        bounds.radius < 1000000.0F &&
+        std::abs(bounds.rootWorldScale) > 0.0001F;
+    return bounds;
 }
