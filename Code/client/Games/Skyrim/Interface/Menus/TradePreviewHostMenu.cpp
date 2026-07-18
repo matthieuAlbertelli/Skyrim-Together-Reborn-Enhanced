@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include <Services/TradeItemPreviewService.h>
+#include <Services/ItemPreview/ItemPreviewHostBridge.h>
 #include <Services/ItemPreview/ItemPreviewRasterMeasurer.h>
 #include <World.h>
 
@@ -547,10 +547,7 @@ UI_MESSAGE_RESULTS TradePreviewHostMenu::ProcessMessage(
         }
         if (m_started && m_begin3DInvoked)
         {
-            World::Get()
-                .ctx()
-                .at<TradeItemPreviewService>()
-                .ProcessPendingFitReloadOnUiThread();
+            ItemPreviewHostBridge::Get().ProcessPendingReloadOnUiThread();
         }
         return UI_MESSAGE_RESULTS::kPassOn;
 
@@ -590,10 +587,7 @@ void TradePreviewHostMenu::AdvanceMovie(
 
     if (m_started && m_begin3DInvoked)
     {
-        World::Get()
-            .ctx()
-            .at<TradeItemPreviewService>()
-            .ProcessPendingFitReloadOnUiThread();
+        ItemPreviewHostBridge::Get().ProcessPendingReloadOnUiThread();
     }
 
     if (uiMovie)
@@ -630,11 +624,11 @@ void TradePreviewHostMenu::PostDisplay()
         return;
     }
 
-    TradeItemPreviewService& previewService =
-        World::Get().ctx().at<TradeItemPreviewService>();
-    previewService.UpdatePreviewPlacement();
+    ItemPreviewHostBridge& previewBridge =
+        ItemPreviewHostBridge::Get();
+    previewBridge.UpdatePreviewPlacement();
     const ItemPreviewRasterCaptureRequest projectionTelemetry =
-        previewService.CaptureProjectionTelemetryState();
+        previewBridge.CaptureRasterRequest();
 
     RenderSystemD3D11& renderSystem =
         World::Get().ctx().at<RenderSystemD3D11>();
@@ -681,7 +675,7 @@ void TradePreviewHostMenu::PostDisplay()
                 projectionTelemetry.solverRevision;
             measurement.selectedItem =
                 projectionTelemetry.selectedItem;
-            previewService.SubmitProjectionMeasurement(measurement);
+            previewBridge.SubmitRasterMeasurement(measurement);
         }
     }
 
@@ -703,7 +697,7 @@ void TradePreviewHostMenu::PostDisplay()
             pContext,
             projectionCapture,
             measurement);
-        previewService.SubmitProjectionMeasurement(measurement);
+        previewBridge.SubmitRasterMeasurement(measurement);
     }
 
     // v23.10: keep the host-owned movie loaded so this remains a genuine
@@ -821,12 +815,12 @@ void TradePreviewHostMenu::StartPreview() noexcept
             m_hudHideQueued);
     }
 
-    TradeItemPreviewService& previewService =
-        World::Get().ctx().at<TradeItemPreviewService>();
+    ItemPreviewHostBridge& previewBridge =
+        ItemPreviewHostBridge::Get();
     spdlog::info(
         "Trade preview host menu Begin3D calling beginEndProbe=true lightScheme=1");
     m_begin3DInvoked =
-        previewService.BeginNativePreviewSession(1);
+        previewBridge.BeginNativeSession(1);
     if (m_begin3DInvoked)
     {
         spdlog::info(
@@ -838,7 +832,7 @@ void TradePreviewHostMenu::StartPreview() noexcept
             "Trade preview host menu Begin3D skipped beginEndProbe=true managerUnavailable=true");
     }
 
-    previewService.OnHostMenuShown(true);
+    previewBridge.OnHostShown(true);
 
     spdlog::info(
         "Trade preview host menu started lifecycleProbe=true beginEndProbe=true begin3DInvoked={}",
@@ -858,20 +852,14 @@ void TradePreviewHostMenu::StopPreview() noexcept
 
         spdlog::info(
             "Trade preview host menu End3D calling beginEndProbe=true");
-        World::Get()
-            .ctx()
-            .at<TradeItemPreviewService>()
-            .EndNativePreviewSession();
+        ItemPreviewHostBridge::Get().EndNativeSession();
         spdlog::info(
             "Trade preview host menu End3D returned beginEndProbe=true");
 
         m_begin3DInvoked = false;
     }
 
-    World::Get()
-        .ctx()
-        .at<TradeItemPreviewService>()
-        .OnHostMenuHidden();
+    ItemPreviewHostBridge::Get().OnHostHidden();
 
     if (m_hudMenuWasOpen)
     {

@@ -1,119 +1,55 @@
 #pragma once
 
 #include <Trade/TradeTypes.h>
-#include <Services/ItemPreview/ItemPreviewRasterTypes.h>
-#include <Services/ItemPreview/ItemPreviewNativeSession.h>
-#include <Misc/InventoryEntry.h>
+#include <Services/ItemPreview/ItemPreviewController.h>
+#include <Services/ItemPreview/ItemPreviewHostSession.h>
+#include <Services/ItemPreview/ItemPreviewHostBridge.h>
 
-#include <atomic>
 #include <cstdint>
-#include <mutex>
-#include <optional>
 
 struct World;
 
 using TradePreviewProjectionTelemetryState = ItemPreviewRasterCaptureRequest;
 using TradePreviewRasterMeasurement = ItemPreviewRasterMeasurement;
 
-class TradeItemPreviewService
+class TradeItemPreviewService final : public ItemPreviewHostClient
 {
 public:
-    TradeItemPreviewService(
-        World& aWorld,
-        entt::dispatcher& aDispatcher) noexcept;
+    TradeItemPreviewService(World& aWorld, entt::dispatcher& aDispatcher) noexcept;
     ~TradeItemPreviewService() noexcept;
 
     TP_NOCOPYMOVE(TradeItemPreviewService);
 
     void SelectItem(Trade::ItemId aItemId) noexcept;
     void Clear() noexcept;
-    void SetPreviewRegion(
-        float aLeft,
-        float aTop,
-        float aWidth,
-        float aHeight) noexcept;
-    void UpdatePreviewPlacement() noexcept;
-    [[nodiscard]] ItemPreviewRasterCaptureRequest
-    CaptureProjectionTelemetryState() noexcept;
-    void SubmitProjectionMeasurement(
-        const ItemPreviewRasterMeasurement& aMeasurement) noexcept;
+    void SetPreviewRegion(float aLeft, float aTop, float aWidth, float aHeight) noexcept;
+    void UpdatePreviewPlacement() noexcept override;
+    [[nodiscard]] ItemPreviewRasterCaptureRequest CaptureProjectionTelemetryState() noexcept;
+    [[nodiscard]] ItemPreviewRasterCaptureRequest CaptureRasterRequest() noexcept override;
+    void SubmitProjectionMeasurement(const ItemPreviewRasterMeasurement& aMeasurement) noexcept;
+    void SubmitRasterMeasurement(const ItemPreviewRasterMeasurement& aMeasurement) noexcept override;
     void ProcessPendingFitReloadOnUiThread() noexcept;
+    void ProcessPendingReloadOnUiThread() noexcept override;
 
-    [[nodiscard]] bool BeginNativePreviewSession(
-        std::uint32_t aLightScheme = 1) noexcept;
+    [[nodiscard]] bool BeginNativePreviewSession(std::uint32_t aLightScheme = 1) noexcept;
+    [[nodiscard]] bool BeginNativeSession(std::uint32_t aLightScheme) noexcept override;
     void EndNativePreviewSession() noexcept;
-
-    // Called by TradePreviewHostMenu on Skyrim's UI thread.
+    void EndNativeSession() noexcept override;
     void OnHostMenuShown(bool aApplySelection = true) noexcept;
+    void OnHostShown(bool aApplySelection) noexcept override;
     void OnHostMenuHidden() noexcept;
+    void OnHostHidden() noexcept override;
 
     [[nodiscard]] bool IsActive() const noexcept
     {
-        return m_active.load(std::memory_order_acquire);
+        return m_controller.IsActive();
     }
 
 private:
-    enum class PreviewFitStage : std::uint8_t
-    {
-        kApplyBase,
-        kMeasureBase,
-        kMeasureFit,
-        kAwaitUiReload,
-        kAwaitReloadedModel,
-        kDone,
-        kFailed
-    };
-
-    void QueueHostShow() noexcept;
-    void QueueHostHide() noexcept;
-    void ApplySelectionLocked() noexcept;
-    void ResetFitLocked() noexcept;
-    void RequestMeasurementLocked(PreviewFitStage aStage) noexcept;
+    static void ExecuteHostCommand(ItemPreviewHostSession::Command aCommand) noexcept;
 
     World& m_world;
-    ItemPreviewNativeSession m_nativeSession;
-    InventoryEntry m_entry{};
-    std::optional<Trade::ItemId> m_selectedItem;
-
-    std::mutex m_managerMutex;
-    std::atomic_bool m_active{};
-    std::atomic_bool m_hostOpen{};
-    std::atomic_bool m_hostMessagePending{};
-    std::atomic_bool m_wantsHost{};
-    bool m_hostAllows3D{};
-
-    bool m_previewRegionValid{};
-    float m_previewRegionLeft{};
-    float m_previewRegionTop{};
-    float m_previewRegionWidth{};
-    float m_previewRegionHeight{};
-    std::uint64_t m_previewRegionRevision{};
-    std::uint64_t m_selectionRevision{};
-    std::uint64_t m_appliedRegionRevision{};
-    std::uint64_t m_appliedSelectionRevision{};
-
-    bool m_baseTransformValid{};
-    float m_baseTransformX{};
-    float m_baseTransformY{};
-    float m_baseTransformZ{};
-    float m_baseTransformScale{1.0F};
-
-    PreviewFitStage m_fitStage{PreviewFitStage::kApplyBase};
-    std::uintptr_t m_fitSceneObject{};
-    std::uint64_t m_fitSolverRevision{};
-    float m_fitWorkingX{};
-    float m_fitWorkingY{};
-    float m_fitWorkingZ{};
-    float m_fitWorkingScale{1.0F};
-    std::uint32_t m_fitMeasurementFailures{};
-    std::uint8_t m_fitRefinementCount{};
-
-    bool m_fitReloadPending{};
-    std::uint64_t m_fitReloadSelectionRevision{};
-    std::uint64_t m_fitReloadRegionRevision{};
-    std::uintptr_t m_fitReloadPreviousSceneObject{};
-    float m_fitReloadX{};
-    float m_fitReloadY{};
-    float m_fitReloadZ{};
-    float m_fitReloadScale{1.0F};
+    ItemPreviewController m_controller;
+    ItemPreviewHostSession m_hostSession;
+    ItemPreviewHostBinding m_hostBinding;
 };
