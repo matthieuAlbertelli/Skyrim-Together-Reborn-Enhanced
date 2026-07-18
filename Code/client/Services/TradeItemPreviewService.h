@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Trade/TradeTypes.h>
+#include <Services/ItemPreview/ItemPreviewRasterTypes.h>
 #include <Misc/InventoryEntry.h>
 
 #include <atomic>
@@ -10,51 +11,8 @@
 
 struct World;
 
-struct TradePreviewProjectionTelemetryState
-{
-    bool valid{};
-    bool captureRequested{};
-    float left{};
-    float top{};
-    float width{};
-    float height{};
-    std::uint64_t selectionRevision{};
-    std::uint64_t regionRevision{};
-    std::uint64_t solverRevision{};
-    std::uint64_t selectedItem{};
-};
-
-struct TradePreviewRasterMeasurement
-{
-    bool valid{};
-    std::uint64_t selectionRevision{};
-    std::uint64_t regionRevision{};
-    std::uint64_t solverRevision{};
-    std::uint64_t selectedItem{};
-
-    std::uint32_t targetWidth{};
-    std::uint32_t targetHeight{};
-    std::uint32_t modelLeft{};
-    std::uint32_t modelTop{};
-    std::uint32_t modelRight{};
-    std::uint32_t modelBottom{};
-    std::uint32_t safeLeft{};
-    std::uint32_t safeTop{};
-    std::uint32_t safeRight{};
-    std::uint32_t safeBottom{};
-    std::uint32_t safeOverflowLeft{};
-    std::uint32_t safeOverflowTop{};
-    std::uint32_t safeOverflowRight{};
-    std::uint32_t safeOverflowBottom{};
-
-    float modelCenterX{};
-    float modelCenterY{};
-    float safeCenterX{};
-    float safeCenterY{};
-    float containScale{};
-    bool insideSafeTarget{};
-    bool touchesScreenEdge{};
-};
+using TradePreviewProjectionTelemetryState = ItemPreviewRasterCaptureRequest;
+using TradePreviewRasterMeasurement = ItemPreviewRasterMeasurement;
 
 class TradeItemPreviewService
 {
@@ -74,10 +32,10 @@ public:
         float aWidth,
         float aHeight) noexcept;
     void UpdatePreviewPlacement() noexcept;
-    [[nodiscard]] TradePreviewProjectionTelemetryState
+    [[nodiscard]] ItemPreviewRasterCaptureRequest
     CaptureProjectionTelemetryState() noexcept;
     void SubmitProjectionMeasurement(
-        const TradePreviewRasterMeasurement& aMeasurement) noexcept;
+        const ItemPreviewRasterMeasurement& aMeasurement) noexcept;
     void ProcessPendingFitReloadOnUiThread() noexcept;
 
     // Called by TradePreviewHostMenu on Skyrim's UI thread.
@@ -94,9 +52,6 @@ private:
     {
         kApplyBase,
         kMeasureBase,
-        kMeasureScaled,
-        kMeasureXProbe,
-        kMeasureZProbe,
         kMeasureFit,
         kAwaitUiReload,
         kAwaitReloadedModel,
@@ -144,14 +99,6 @@ private:
     float m_fitWorkingY{};
     float m_fitWorkingZ{};
     float m_fitWorkingScale{1.0F};
-    float m_fitBaseCenterX{};
-    float m_fitBaseCenterY{};
-    float m_fitResponseXX{};
-    float m_fitResponseXY{};
-    float m_fitResponseZX{};
-    float m_fitResponseZY{};
-    std::uint32_t m_fitScaleIteration{};
-    std::uint32_t m_fitRefinementCount{};
     std::uint32_t m_fitMeasurementFailures{};
 
     bool m_fitReloadPending{};

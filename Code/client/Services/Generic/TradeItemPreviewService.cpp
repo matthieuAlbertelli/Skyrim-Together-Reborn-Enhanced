@@ -1,6 +1,7 @@
 #include <TiltedOnlinePCH.h>
 
 #include <Services/TradeItemPreviewService.h>
+#include <Services/ItemPreview/ItemPreviewFitSolver.h>
 
 #include <Forms/TESBoundObject.h>
 #include <Forms/TESForm.h>
@@ -78,14 +79,6 @@ void TradeItemPreviewService::ResetFitLocked() noexcept
     m_fitWorkingY = 0.0F;
     m_fitWorkingZ = 0.0F;
     m_fitWorkingScale = 1.0F;
-    m_fitBaseCenterX = 0.0F;
-    m_fitBaseCenterY = 0.0F;
-    m_fitResponseXX = 0.0F;
-    m_fitResponseXY = 0.0F;
-    m_fitResponseZX = 0.0F;
-    m_fitResponseZY = 0.0F;
-    m_fitScaleIteration = 0;
-    m_fitRefinementCount = 0;
     m_fitMeasurementFailures = 0;
     m_fitReloadPending = false;
     m_fitReloadSelectionRevision = 0;
@@ -255,19 +248,16 @@ void TradeItemPreviewService::SetPreviewRegion(
         top + height * 0.5F);
 }
 
-TradePreviewProjectionTelemetryState
+ItemPreviewRasterCaptureRequest
 TradeItemPreviewService::CaptureProjectionTelemetryState() noexcept
 {
     std::scoped_lock lock(m_managerMutex);
 
     const bool measurementStage =
         m_fitStage == PreviewFitStage::kMeasureBase ||
-        m_fitStage == PreviewFitStage::kMeasureScaled ||
-        m_fitStage == PreviewFitStage::kMeasureXProbe ||
-        m_fitStage == PreviewFitStage::kMeasureZProbe ||
         m_fitStage == PreviewFitStage::kMeasureFit;
 
-    TradePreviewProjectionTelemetryState state{};
+    ItemPreviewRasterCaptureRequest state{};
     state.valid =
         m_previewRegionValid &&
         m_active.load(std::memory_order_relaxed) &&
@@ -377,7 +367,7 @@ void TradeItemPreviewService::UpdatePreviewPlacement() noexcept
         reinterpret_cast<void*>(m_fitSceneObject));
 }
 void TradeItemPreviewService::SubmitProjectionMeasurement(
-    const TradePreviewRasterMeasurement& aMeasurement) noexcept
+    const ItemPreviewRasterMeasurement& aMeasurement) noexcept
 {
     std::scoped_lock lock(m_managerMutex);
 
@@ -414,50 +404,35 @@ void TradeItemPreviewService::SubmitProjectionMeasurement(
 
     m_fitMeasurementFailures = 0;
 
-    constexpr float kItemXPerScreenHeight = -0.0111472801F;
-    constexpr float kItemZPerScreenHeight = -0.0111111111F;
-    constexpr float kInitialFill = 0.94F;
-    constexpr float kMinimumScale = 0.15F;
-    constexpr float kMaximumScale = 8.0F;
-
-    const float renderHeight =
-        static_cast<float>(aMeasurement.targetHeight);
-    if (!std::isfinite(renderHeight) || renderHeight <= 1.0F)
-    {
-        m_fitStage = PreviewFitStage::kFailed;
-        return;
-    }
-
     if (m_fitStage == PreviewFitStage::kMeasureBase)
     {
-        const float pixelsPerItemX =
-            kItemXPerScreenHeight * renderHeight;
-        const float pixelsPerItemZ =
-            kItemZPerScreenHeight * renderHeight;
-        const float desiredPixelsX =
-            aMeasurement.safeCenterX - aMeasurement.modelCenterX;
-        const float desiredPixelsY =
-            aMeasurement.safeCenterY - aMeasurement.modelCenterY;
+        const ItemPreviewFitResult fit = SolveItemPreviewFit(
+            ItemPreviewTransform{
+                m_baseTransformX,
+                m_baseTransformY,
+                m_baseTransformZ,
+                m_baseTransformScale},
+            ItemPreviewRasterBounds{
+                aMeasurement.targetHeight,
+                aMeasurement.modelCenterX,
+                aMeasurement.modelCenterY,
+                aMeasurement.safeCenterX,
+                aMeasurement.safeCenterY,
+                aMeasurement.containScale,
+                aMeasurement.touchesScreenEdge});
+        if (!fit.valid)
+        {
+            m_fitStage = PreviewFitStage::kFailed;
+            spdlog::warn(
+                "Trade preview deterministic fit solve rejected deterministicFit=true item={:016X}",
+                m_selectedItem.value_or(0));
+            return;
+        }
 
-        float scaleFactor =
-            aMeasurement.containScale * kInitialFill;
-        if (aMeasurement.touchesScreenEdge)
-            scaleFactor = std::min(scaleFactor, 0.60F);
-        scaleFactor = std::clamp(scaleFactor, 0.20F, 6.0F);
-
-        m_fitWorkingX = std::clamp(
-            m_baseTransformX + desiredPixelsX / pixelsPerItemX,
-            -256.0F,
-            256.0F);
-        m_fitWorkingY = m_baseTransformY;
-        m_fitWorkingZ = std::clamp(
-            m_baseTransformZ + desiredPixelsY / pixelsPerItemZ,
-            -256.0F,
-            256.0F);
-        m_fitWorkingScale = std::clamp(
-            m_baseTransformScale * scaleFactor,
-            kMinimumScale,
-            kMaximumScale);
+        m_fitWorkingX = fit.transform.x;
+        m_fitWorkingY = fit.transform.y;
+        m_fitWorkingZ = fit.transform.z;
+        m_fitWorkingScale = fit.transform.scale;
 
         m_fitReloadPending = true;
         m_fitReloadSelectionRevision = m_selectionRevision;
@@ -467,8 +442,6 @@ void TradeItemPreviewService::SubmitProjectionMeasurement(
         m_fitReloadY = m_fitWorkingY;
         m_fitReloadZ = m_fitWorkingZ;
         m_fitReloadScale = m_fitWorkingScale;
-        m_fitScaleIteration = 1;
-        m_fitRefinementCount = 0;
         m_fitStage = PreviewFitStage::kAwaitUiReload;
         ++m_fitSolverRevision;
 
@@ -482,8 +455,8 @@ void TradeItemPreviewService::SubmitProjectionMeasurement(
             aMeasurement.modelCenterY,
             aMeasurement.safeCenterX,
             aMeasurement.safeCenterY,
-            desiredPixelsX,
-            desiredPixelsY,
+            fit.desiredPixelsX,
+            fit.desiredPixelsY,
             aMeasurement.containScale,
             aMeasurement.touchesScreenEdge,
             m_fitReloadX,
