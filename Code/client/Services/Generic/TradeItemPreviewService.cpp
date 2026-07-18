@@ -5,7 +5,6 @@
 
 #include <Forms/TESBoundObject.h>
 #include <Forms/TESForm.h>
-#include <Interface/Inventory3DManager.h>
 #include <Interface/Menus/TradePreviewHostMenu.h>
 #include <World.h>
 
@@ -16,20 +15,20 @@ namespace
 {
 void LogManagerState(
     const char* apPhase,
-    const Inventory3DManager* apManager,
+    const ItemPreviewNativeSession& aSession,
     std::uint64_t aSelectedItem) noexcept
 {
-    if (!apManager)
-        return;
-
     const Inventory3DManagerDebugState state =
-        apManager->CaptureDebugState();
+        aSession.CaptureDebugState();
+    void* const pManagerAddress = aSession.GetManagerAddress();
+    if (!pManagerAddress)
+        return;
 
     spdlog::info(
         "Trade preview Inventory3D state phase={} loadStateProbe=true layout=AE1170 item={:016X} manager={:p} posCopy=({:.3f},{:.3f},{:.3f}) pos=({:.3f},{:.3f},{:.3f}) scaleCopy={:.3f} scale={:.3f} light={} tempRef={:p} loadedCapacityFlags={:08X} loadedCapacity={} loadedLocal={} loadedSize={} loadedData={:p} firstItemBase={:p} firstModelObject={:p} firstSceneObject={:p} zoom={:.3f} loadTask={:p} stateFlags={:08X} tailFlags={:08X}",
         apPhase,
         aSelectedItem,
-        static_cast<const void*>(apManager),
+        pManagerAddress,
         state.itemPosCopyX,
         state.itemPosCopyY,
         state.itemPosCopyZ,
@@ -80,6 +79,7 @@ void TradeItemPreviewService::ResetFitLocked() noexcept
     m_fitWorkingZ = 0.0F;
     m_fitWorkingScale = 1.0F;
     m_fitMeasurementFailures = 0;
+    m_fitRefinementCount = 0;
     m_fitReloadPending = false;
     m_fitReloadSelectionRevision = 0;
     m_fitReloadRegionRevision = 0;
@@ -165,11 +165,7 @@ void TradeItemPreviewService::Clear() noexcept
     if (m_hostOpen.load(std::memory_order_acquire) &&
         m_hostAllows3D)
     {
-        if (Inventory3DManager* const pManager =
-                Inventory3DManager::GetSingleton())
-        {
-            pManager->Clear3D();
-        }
+        (void)m_nativeSession.Clear();
     }
 
     m_entry = {};
@@ -291,20 +287,18 @@ void TradeItemPreviewService::UpdatePreviewPlacement() noexcept
         return;
     }
 
-    Inventory3DManager* const pManager =
-        Inventory3DManager::GetSingleton();
-    if (!pManager)
+    if (!m_nativeSession.IsOpen())
         return;
 
     const Inventory3DManagerDebugState state =
-        pManager->CaptureDebugState();
+        m_nativeSession.CaptureDebugState();
     if (state.loadTask != 0 || state.loadedModelsSize == 0)
         return;
 
     const std::uintptr_t expectedModel =
         reinterpret_cast<std::uintptr_t>(m_entry.pObject);
     const Inventory3DManagerPreviewModelBounds bounds =
-        pManager->CaptureModelBounds(expectedModel);
+        m_nativeSession.CaptureModelBounds(expectedModel);
     if (!bounds.valid || !bounds.matchedExpectedModel)
         return;
 
@@ -470,6 +464,65 @@ void TradeItemPreviewService::SubmitProjectionMeasurement(
     if (m_fitStage != PreviewFitStage::kMeasureFit)
         return;
 
+    constexpr std::uint8_t kMaximumRefinementCount = 1;
+    if (!aMeasurement.insideSafeTarget &&
+        !aMeasurement.touchesScreenEdge &&
+        m_fitRefinementCount < kMaximumRefinementCount)
+    {
+        const ItemPreviewFitResult refinement = SolveItemPreviewFit(
+            ItemPreviewTransform{
+                m_fitWorkingX,
+                m_fitWorkingY,
+                m_fitWorkingZ,
+                m_fitWorkingScale},
+            ItemPreviewRasterBounds{
+                aMeasurement.targetHeight,
+                aMeasurement.modelCenterX,
+                aMeasurement.modelCenterY,
+                aMeasurement.safeCenterX,
+                aMeasurement.safeCenterY,
+                aMeasurement.containScale,
+                aMeasurement.touchesScreenEdge});
+        if (refinement.valid)
+        {
+            m_fitWorkingX = refinement.transform.x;
+            m_fitWorkingY = refinement.transform.y;
+            m_fitWorkingZ = refinement.transform.z;
+            m_fitWorkingScale = refinement.transform.scale;
+
+            ++m_fitRefinementCount;
+            m_fitReloadPending = true;
+            m_fitReloadSelectionRevision = m_selectionRevision;
+            m_fitReloadRegionRevision = m_previewRegionRevision;
+            m_fitReloadPreviousSceneObject = m_fitSceneObject;
+            m_fitReloadX = m_fitWorkingX;
+            m_fitReloadY = m_fitWorkingY;
+            m_fitReloadZ = m_fitWorkingZ;
+            m_fitReloadScale = m_fitWorkingScale;
+            m_fitStage = PreviewFitStage::kAwaitUiReload;
+            ++m_fitSolverRevision;
+
+            spdlog::info(
+                "Trade preview deterministic fit refinement queued deterministicFit=true item={:016X} refinement={}/{} centerError=({:.3f},{:.3f}) safeOverflow=({},{},{},{}) containScale={:.6f} queuedTransform=({:.3f},{:.3f},{:.3f},{:.3f}) solverRevision={}",
+                m_selectedItem.value_or(0),
+                m_fitRefinementCount,
+                kMaximumRefinementCount,
+                aMeasurement.modelCenterX - aMeasurement.safeCenterX,
+                aMeasurement.modelCenterY - aMeasurement.safeCenterY,
+                aMeasurement.safeOverflowLeft,
+                aMeasurement.safeOverflowTop,
+                aMeasurement.safeOverflowRight,
+                aMeasurement.safeOverflowBottom,
+                aMeasurement.containScale,
+                m_fitReloadX,
+                m_fitReloadY,
+                m_fitReloadZ,
+                m_fitReloadScale,
+                m_fitSolverRevision);
+            return;
+        }
+    }
+
     m_fitStage = PreviewFitStage::kDone;
     m_appliedSelectionRevision = m_selectionRevision;
     m_appliedRegionRevision = m_previewRegionRevision;
@@ -530,9 +583,8 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
         return;
     }
 
-    Inventory3DManager* const pManager =
-        Inventory3DManager::GetSingleton();
-    if (!pManager)
+    if (!m_nativeSession.IsOpen() ||
+        !m_nativeSession.GetManagerAddress())
     {
         spdlog::warn(
             "Trade preview UI reload deferred uiThreadReloadProbe=true deterministicFit=true reason=managerUnavailable item={:016X}",
@@ -543,9 +595,9 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
     const std::uintptr_t expectedModel =
         reinterpret_cast<std::uintptr_t>(m_entry.pObject);
     const Inventory3DManagerDebugState beforeState =
-        pManager->CaptureDebugState();
+        m_nativeSession.CaptureDebugState();
     const Inventory3DManagerPreviewModelBounds beforeBounds =
-        pManager->CaptureModelBounds(expectedModel);
+        m_nativeSession.CaptureModelBounds(expectedModel);
     const std::uintptr_t previousScene =
         beforeBounds.valid && beforeBounds.matchedExpectedModel
             ? beforeBounds.sceneObject
@@ -574,9 +626,9 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
             ? beforeState.lightScheme
             : 1;
 
-    pManager->End3D();
+    m_nativeSession.End();
     const Inventory3DManagerDebugState afterEndState =
-        pManager->CaptureDebugState();
+        m_nativeSession.CaptureDebugState();
     spdlog::info(
         "Trade preview UI reload executing uiThreadReloadProbe=true managerRestartProbe=true deterministicFit=true phase=after-end item={:016X} lightScheme={} loadedSize={} loadTask={:p} managerTransform=({:.3f},{:.3f},{:.3f},{:.3f})",
         selectedItem,
@@ -588,9 +640,9 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
         afterEndState.itemPosZ,
         afterEndState.itemScale);
 
-    pManager->Begin3D(lightScheme);
+    const bool restarted = m_nativeSession.Begin(lightScheme);
     const Inventory3DManagerDebugState afterBeginState =
-        pManager->CaptureDebugState();
+        m_nativeSession.CaptureDebugState();
     spdlog::info(
         "Trade preview UI reload executing uiThreadReloadProbe=true managerRestartProbe=true deterministicFit=true phase=after-begin item={:016X} lightScheme={} loadedSize={} loadTask={:p} managerTransform=({:.3f},{:.3f},{:.3f},{:.3f})",
         selectedItem,
@@ -602,25 +654,26 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
         afterBeginState.itemPosZ,
         afterBeginState.itemScale);
 
-    pManager->SetPreviewTransform(
+    const ItemPreviewTransform reloadTransform{
         m_fitReloadX,
         m_fitReloadY,
         m_fitReloadZ,
-        m_fitReloadScale);
+        m_fitReloadScale};
     LogManagerState(
         "before-update-manager-restart-reload",
-        pManager,
+        m_nativeSession,
         selectedItem);
-    pManager->UpdateItem3D(&m_entry);
+    const bool loaded = restarted &&
+        m_nativeSession.Load(m_entry, &reloadTransform);
     LogManagerState(
         "after-update-manager-restart-reload",
-        pManager,
+        m_nativeSession,
         selectedItem);
 
     const Inventory3DManagerDebugState afterState =
-        pManager->CaptureDebugState();
+        m_nativeSession.CaptureDebugState();
     const Inventory3DManagerPreviewModelBounds afterBounds =
-        pManager->CaptureModelBounds(expectedModel);
+        m_nativeSession.CaptureModelBounds(expectedModel);
 
     m_fitReloadPending = false;
     m_fitStage = PreviewFitStage::kAwaitReloadedModel;
@@ -631,7 +684,7 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
         selectedItem,
         reinterpret_cast<void*>(previousScene),
         reinterpret_cast<void*>(afterBounds.sceneObject),
-        afterBounds.valid && afterBounds.sceneObject != previousScene,
+        loaded && afterBounds.valid && afterBounds.sceneObject != previousScene,
         afterState.itemPosX,
         afterState.itemPosY,
         afterState.itemPosZ,
@@ -640,6 +693,19 @@ void TradeItemPreviewService::ProcessPendingFitReloadOnUiThread() noexcept
         afterState.loadedModelsSize,
         m_fitSolverRevision);
 }
+bool TradeItemPreviewService::BeginNativePreviewSession(
+    std::uint32_t aLightScheme) noexcept
+{
+    std::scoped_lock lock(m_managerMutex);
+    return m_nativeSession.Begin(aLightScheme);
+}
+
+void TradeItemPreviewService::EndNativePreviewSession() noexcept
+{
+    std::scoped_lock lock(m_managerMutex);
+    m_nativeSession.End();
+}
+
 void TradeItemPreviewService::OnHostMenuShown(
     bool aApplySelection) noexcept
 {
@@ -651,11 +717,10 @@ void TradeItemPreviewService::OnHostMenuShown(
     m_baseTransformValid = false;
     ResetFitLocked();
 
-    if (Inventory3DManager* const pManager =
-            Inventory3DManager::GetSingleton())
+    if (m_nativeSession.IsOpen())
     {
         const Inventory3DManagerDebugState state =
-            pManager->CaptureDebugState();
+            m_nativeSession.CaptureDebugState();
         if (std::isfinite(state.itemPosX) &&
             std::isfinite(state.itemPosY) &&
             std::isfinite(state.itemPosZ) &&
@@ -744,9 +809,8 @@ void TradeItemPreviewService::ApplySelectionLocked() noexcept
         return;
     }
 
-    Inventory3DManager* const pManager =
-        Inventory3DManager::GetSingleton();
-    if (!pManager)
+    if (!m_nativeSession.IsOpen() ||
+        !m_nativeSession.GetManagerAddress())
     {
         spdlog::warn(
             "Trade preview could not apply selection: Inventory3DManager unavailable");
@@ -756,17 +820,20 @@ void TradeItemPreviewService::ApplySelectionLocked() noexcept
     const std::uint64_t selectedItem =
         m_selectedItem.value_or(0);
 
-    LogManagerState("before-clear", pManager, selectedItem);
-    pManager->Clear3D();
-    LogManagerState("after-clear", pManager, selectedItem);
+    LogManagerState("before-clear", m_nativeSession, selectedItem);
+    (void)m_nativeSession.Clear();
+    LogManagerState("after-clear", m_nativeSession, selectedItem);
 
+    ItemPreviewTransform baseTransform{};
+    const ItemPreviewTransform* pBaseTransform = nullptr;
     if (m_baseTransformValid)
     {
-        pManager->SetPreviewTransform(
+        baseTransform = ItemPreviewTransform{
             m_baseTransformX,
             m_baseTransformY,
             m_baseTransformZ,
-            m_baseTransformScale);
+            m_baseTransformScale};
+        pBaseTransform = &baseTransform;
         spdlog::info(
             "Trade preview deterministic fit base applied deterministicFit=true item={:016X} transform=({:.3f},{:.3f},{:.3f},{:.3f})",
             selectedItem,
@@ -784,12 +851,12 @@ void TradeItemPreviewService::ApplySelectionLocked() noexcept
 
     LogManagerState(
         "before-update-deterministic-base",
-        pManager,
+        m_nativeSession,
         selectedItem);
-    pManager->UpdateItem3D(&m_entry);
+    (void)m_nativeSession.Load(m_entry, pBaseTransform);
     LogManagerState(
         "after-update-deterministic-base",
-        pManager,
+        m_nativeSession,
         selectedItem);
 
     ResetFitLocked();

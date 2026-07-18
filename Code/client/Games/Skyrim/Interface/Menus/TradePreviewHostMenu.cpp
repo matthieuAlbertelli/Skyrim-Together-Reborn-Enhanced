@@ -821,15 +821,14 @@ void TradePreviewHostMenu::StartPreview() noexcept
             m_hudHideQueued);
     }
 
-    Inventory3DManager* const pManager =
-        Inventory3DManager::GetSingleton();
-    if (pManager)
+    TradeItemPreviewService& previewService =
+        World::Get().ctx().at<TradeItemPreviewService>();
+    spdlog::info(
+        "Trade preview host menu Begin3D calling beginEndProbe=true lightScheme=1");
+    m_begin3DInvoked =
+        previewService.BeginNativePreviewSession(1);
+    if (m_begin3DInvoked)
     {
-        spdlog::info(
-            "Trade preview host menu Begin3D calling beginEndProbe=true manager={:p} lightScheme=1",
-            static_cast<void*>(pManager));
-        pManager->Begin3D(1);
-        m_begin3DInvoked = true;
         spdlog::info(
             "Trade preview host menu Begin3D returned beginEndProbe=true");
     }
@@ -839,10 +838,7 @@ void TradePreviewHostMenu::StartPreview() noexcept
             "Trade preview host menu Begin3D skipped beginEndProbe=true managerUnavailable=true");
     }
 
-    World::Get()
-        .ctx()
-        .at<TradeItemPreviewService>()
-        .OnHostMenuShown(true);
+    previewService.OnHostMenuShown(true);
 
     spdlog::info(
         "Trade preview host menu started lifecycleProbe=true beginEndProbe=true begin3DInvoked={}",
@@ -860,22 +856,14 @@ void TradePreviewHostMenu::StopPreview() noexcept
             World::Get().ctx().at<RenderSystemD3D11>();
         PollRenderQueries(renderSystem.GetDeviceContext());
 
-        Inventory3DManager* const pManager =
-            Inventory3DManager::GetSingleton();
-        if (pManager)
-        {
-            spdlog::info(
-                "Trade preview host menu End3D calling beginEndProbe=true manager={:p}",
-                static_cast<void*>(pManager));
-            pManager->End3D();
-            spdlog::info(
-                "Trade preview host menu End3D returned beginEndProbe=true");
-        }
-        else
-        {
-            spdlog::warn(
-                "Trade preview host menu End3D skipped beginEndProbe=true managerUnavailable=true");
-        }
+        spdlog::info(
+            "Trade preview host menu End3D calling beginEndProbe=true");
+        World::Get()
+            .ctx()
+            .at<TradeItemPreviewService>()
+            .EndNativePreviewSession();
+        spdlog::info(
+            "Trade preview host menu End3D returned beginEndProbe=true");
 
         m_begin3DInvoked = false;
     }

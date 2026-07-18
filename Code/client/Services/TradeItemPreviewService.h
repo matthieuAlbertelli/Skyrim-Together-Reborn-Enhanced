@@ -2,6 +2,7 @@
 
 #include <Trade/TradeTypes.h>
 #include <Services/ItemPreview/ItemPreviewRasterTypes.h>
+#include <Services/ItemPreview/ItemPreviewNativeSession.h>
 #include <Misc/InventoryEntry.h>
 
 #include <atomic>
@@ -38,6 +39,10 @@ public:
         const ItemPreviewRasterMeasurement& aMeasurement) noexcept;
     void ProcessPendingFitReloadOnUiThread() noexcept;
 
+    [[nodiscard]] bool BeginNativePreviewSession(
+        std::uint32_t aLightScheme = 1) noexcept;
+    void EndNativePreviewSession() noexcept;
+
     // Called by TradePreviewHostMenu on Skyrim's UI thread.
     void OnHostMenuShown(bool aApplySelection = true) noexcept;
     void OnHostMenuHidden() noexcept;
@@ -66,6 +71,7 @@ private:
     void RequestMeasurementLocked(PreviewFitStage aStage) noexcept;
 
     World& m_world;
+    ItemPreviewNativeSession m_nativeSession;
     InventoryEntry m_entry{};
     std::optional<Trade::ItemId> m_selectedItem;
 
@@ -100,6 +106,7 @@ private:
     float m_fitWorkingZ{};
     float m_fitWorkingScale{1.0F};
     std::uint32_t m_fitMeasurementFailures{};
+    std::uint8_t m_fitRefinementCount{};
 
     bool m_fitReloadPending{};
     std::uint64_t m_fitReloadSelectionRevision{};
