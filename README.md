@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="docs/banner.png" alt="Skyrim Together Reborn Enhanced">
+</p>
+
 # Skyrim Together Reborn Enhanced
 
 <p align="center">
