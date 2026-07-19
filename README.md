@@ -1,93 +1,142 @@
 # Skyrim Together Reborn Enhanced
 
-An immersive cooperative fork of Skyrim Together Reborn.
+<p align="center">
 
-# Changelog
+![Version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)
+![Status](https://img.shields.io/badge/status-Alpha-red)
+![License](https://img.shields.io/badge/license-GPLv3-blue)
 
-## [Unreleased]
+</p>
 
-## Upstream base
+> An immersive cooperative fork of Skyrim Together Reborn.
 
-Skyrim Together Reborn Enhanced is based on the official TiltedEvolution project.
+Skyrim Together Reborn Enhanced (STRE) is an open-source community project dedicated to improving the cooperative experience of **Skyrim Together Reborn** while remaining faithful to the original game.
 
-The exact upstream commit used for each release is documented in `UPSTREAM.md`.
+Rather than turning Skyrim into an MMO, STRE focuses on immersive mechanics designed for small groups of players, making cooperative play deeper, more natural and more rewarding.
 
-## Project status
+---
 
-Current version: **0.1.0-alpha.1**
+# Highlights
 
-This is an experimental alpha release. Features and compatibility may change.
+- 🤝 Player-to-player trading
+- 🎮 Native 3D item preview
+- 📦 Automatic preview framing
+- 🧩 Modular and maintainable architecture
+- ⚡ Built directly on Skyrim Together Reborn
 
-### Added
+---
 
-- Player-to-player item trading
-- Native 3D preview for traded items
-- Automatic preview framing and raster-based refinement
-- Modular preview architecture
-- Initial project documentation
+# Trading
 
-### Changed
+The first major feature introduced by STRE is a complete player-to-player trading system.
 
-- Refactored the item preview subsystem into dedicated components
-- Decoupled trade preview hosting from the trade service
+Players can securely exchange equipment through a dedicated interface with native real-time 3D previews.
 
-### Known limitations
+<p align="center">
+    <img src="docs/trade/trade-demo-ui.jpg" alt="Trading Interface" width="900">
+</p>
 
-- The trading system is still experimental
-- Stack splitting is not yet finalized
-- Gold trading is not yet available
-- Transaction hardening and edge-case handling remain in development
+<p align="center">
+    <img src="docs/trade/trade-demo.gif" alt="Trading Demonstration" width="900">
+</p>
 
-## Vision
+More screenshots and technical details are available in:
 
-STRE aims to transform Skyrim Together into a richer cooperative RPG experience while remaining faithful to the original game.
+- `docs/features/trading.md`
 
-Rather than turning Skyrim into an MMO, STRE focuses on:
+---
 
-- immersive cooperative gameplay;
-- meaningful player interactions;
-- improved trading;
-- downed-state mechanics;
-- long-term progression;
-- maintainable architecture.
+# Current Status
 
-## Features
+**Current version**
 
-### Available
+> **0.1.0-alpha.1**
 
-- Player-to-player item trading
-- Native 3D preview of offered items
-- Automatic item framing and refinement
-- Integrated trade interface
-- Refactored and modular preview subsystem
+⚠️ STRE is currently in active development.
 
-### In development
+This first public alpha focuses on validating the architecture and the new trading system before introducing larger gameplay changes.
 
-- Transaction hardening and edge-case handling
-- Stack splitting
+---
+
+# Roadmap
+
+Planned features include:
+
+- Secure trade validation
 - Gold trading
-- Improved trade confirmation workflow
-- Downed-state and cooperative recovery system
+- Item stack splitting
+- Downed state system
+- Cooperative revival
+- Persistent injuries
+- Additional immersive cooperative systems
 
-## Build
+See **ROADMAP.md** for more information.
 
-STRE uses the same build process as the official Skyrim Together Reborn project.
+---
 
-Refer to the official build documentation.
+# Vision
 
-## Documentation
+The objective of STRE is to create the cooperative Skyrim experience many players have always imagined.
 
-- Architecture
-- Roadmap
-- Changelog
-- ADR
+Core design principles:
 
-## Credits
+- Preserve Skyrim's original gameplay.
+- Encourage cooperation rather than punishment.
+- Replace artificial mechanics with believable gameplay.
+- Keep the codebase modular and maintainable.
+- Stay compatible with upstream Skyrim Together Reborn whenever practical.
 
-Based on Skyrim Together Reborn by The Tilted Phoques Team.
+---
 
-STRE is an independent community fork.
+# Building
 
-## License
+STRE uses **exactly the same build process** as the official Skyrim Together Reborn project.
 
-GPL v3 (same as upstream).
+Simply follow the upstream build instructions.
+
+---
+
+# Project Structure
+
+```
+docs/
+├── architecture/
+├── decisions/
+├── features/
+└── trade/
+
+CHANGELOG.md
+LICENSE
+README.md
+ROADMAP.md
+UPSTREAM.md
+VERSION
+```
+
+---
+
+# Documentation
+
+Project documentation includes:
+
+- **CHANGELOG.md** — Project history
+- **ROADMAP.md** — Planned features
+- **docs/architecture/** — Technical architecture
+- **docs/features/** — Feature documentation
+- **docs/decisions/** — Architecture Decision Records (ADR)
+
+---
+
+# Credits
+
+Skyrim Together Reborn Enhanced is based on the outstanding work of the **Tilted Phoques Team** and every contributor to **Skyrim Together Reborn**.
+
+This repository is an independent community fork and is **not affiliated with or endorsed by** the original development team, Bethesda Game Studios or ZeniMax Media.
+
+---
+
+# License
+
+This project is distributed under the **GNU General Public License v3.0**, consistent with the upstream project.
+
+See the **LICENSE** file for details.
