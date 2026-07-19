@@ -1,4 +1,8 @@
-# Skyrim Together Reborn for Modded Animations
+# Animation Mod Compatibility Notes
+
+> **Status:** inherited upstream-specialist documentation, retained for compatibility context.
+>
+> This document was moved from the repository root to reduce clutter. Its claims and support boundaries originate from the animation compatibility work inherited by the fork; they are not part of the new STRE Mod Integration Framework contract.
 
 _The Tilted Phoques Development Team only supports strictly required mods, no others._ See their disclaimers on their wiki, [here](https://wiki.tiltedphoques.com/tilted-online)
 and [here](https://wiki.tiltedphoques.com/tilted-online/guides/getting-started#readme-before-installing). If you can't reproduce an issue with nothing but the required mods installed, 

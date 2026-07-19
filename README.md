@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="docs/banner.png" alt="Skyrim Together Reborn Enhanced">
+  <img src="docs/banner.png" alt="Skyrim Together Reborn Enhanced">
 </p>
 
 # Skyrim Together Reborn Enhanced
@@ -12,135 +12,82 @@
 
 </p>
 
-> An immersive cooperative fork of Skyrim Together Reborn.
+> An immersive, systems-driven cooperative fork of Skyrim Together Reborn.
 
-Skyrim Together Reborn Enhanced (STRE) is an open-source community project dedicated to improving the cooperative experience of **Skyrim Together Reborn** while remaining faithful to the original game.
+**Skyrim Together Reborn Enhanced (STRE)** extends Skyrim Together Reborn with cooperative mechanics, authoritative multiplayer workflows and a modular foundation for adapting solo Skyrim mods to multiplayer.
 
-Rather than turning Skyrim into an MMO, STRE focuses on immersive mechanics designed for small groups of players, making cooperative play deeper, more natural and more rewarding.
+STRE is not intended to turn Skyrim into an MMO. The project targets coherent campaigns for small groups, with explicit authority, recovery after disconnects and gameplay systems that remain faithful to Skyrim.
 
----
+## Implemented today
 
-# Highlights
+The first production vertical slice is player-to-player trading:
 
-- 🤝 Player-to-player trading
-- 🎮 Native 3D item preview
-- 📦 Automatic preview framing
-- 🧩 Modular and maintainable architecture
-- ⚡ Built directly on Skyrim Together Reborn
-
----
-
-# Trading
-
-The first major feature introduced by STRE is a complete player-to-player trading system.
-
-Players can securely exchange equipment through a dedicated interface with native real-time 3D previews.
+- authoritative trade sessions on the server;
+- revisioned offers, confirmations and bounded protocol messages;
+- inventory validation and deterministic mutation plans;
+- idempotent client application;
+- reconciliation to absolute quantities after uncertain outcomes;
+- Angular/CEF trade interface;
+- native 3D item preview with automatic framing;
+- modular internal preview components;
+- dedicated domain, protocol and reconciliation tests.
 
 <p align="center">
-    <img src="docs/trade/trade-demo-ui.jpg" alt="Trading Interface" width="900">
+  <img src="docs/trade/trade-demo-ui.jpg" alt="STRE trading interface" width="900">
 </p>
 
 <p align="center">
-    <img src="docs/trade/trade-demo.gif" alt="Trading Demonstration" width="900">
+  <img src="docs/trade/trade-demo.gif" alt="STRE trading demonstration" width="900">
 </p>
 
-More screenshots and technical details are available in:
+The current preview layer is a reusable **internal C++ foundation**. It is not yet a stable third-party mod SDK. See [Current-state audit](docs/audit/CURRENT_STATE_AUDIT.md).
 
-- `docs/features/trading.md`
+## Next structural vertical slice
 
----
+**Alternate Start** is planned as the first reference integration for the STRE Mod Integration Framework:
 
-# Current Status
+- create campaign-bound characters together;
+- skip Helgen and start in a shared inn;
+- meet Valen and form the company;
+- select cooperative classes;
+- keep the plugin fully playable in solo mode;
+- describe its multiplayer semantics through a first-party STRE adapter.
 
-**Current version**
+Alternate Start, Valen and Campaign State are specified in this repository but were not present in the audited source archive.
 
-> **0.1.0-alpha.1**
+## Architecture direction
 
-⚠️ STRE is currently in active development.
+The target model combines a **microkernel/plugin architecture** with **Ports and Adapters**:
 
-This first public alpha focuses on validating the architecture and the new trading system before introducing larger gameplay changes.
+- Skyrim mods keep their solo behavior;
+- a `STRE Mod Adapter` declares capabilities, observed state, intents, authority and reconciliation rules;
+- STRE owns canonical cooperative state, replication, snapshots and recovery;
+- Creation Kit and Papyrus project validated outcomes into the local game.
 
----
+Read [Mod Integration Framework](docs/architecture/MOD_INTEGRATION_FRAMEWORK.md) and [System overview](docs/architecture/SYSTEM_OVERVIEW.md).
 
-# Roadmap
+## Documentation
 
-Planned features include:
+- [Documentation portal](docs/README.md)
+- [Executive summary](docs/project/EXECUTIVE_SUMMARY.md)
+- [Vision](docs/project/VISION.md)
+- [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Open contributor missions](docs/production/OPEN_ROLES.md)
+- [Technical audit](docs/audit/CURRENT_STATE_AUDIT.md)
 
-- Secure trade validation
-- Gold trading
-- Item stack splitting
-- Downed state system
-- Cooperative revival
-- Persistent injuries
-- Additional immersive cooperative systems
+Detailed design documentation is currently written primarily in French. Code identifiers, commit messages and public issue titles should remain in English.
 
-See **ROADMAP.md** for more information.
+## Build and development
 
----
+See [Building STRE](docs/development/BUILDING.md), [Contributing](CONTRIBUTING.md) and [Code guidelines](CODE_GUIDELINES.md).
 
-# Vision
+## Upstream relationship
 
-The objective of STRE is to create the cooperative Skyrim experience many players have always imagined.
+STRE is maintained as an independent community fork of `tiltedphoques/TiltedEvolution`. The exact audited base and integration policy are recorded in [UPSTREAM.md](UPSTREAM.md) and [Upstream strategy](docs/architecture/UPSTREAM_STRATEGY.md).
 
-Core design principles:
+## Credits and license
 
-- Preserve Skyrim's original gameplay.
-- Encourage cooperation rather than punishment.
-- Replace artificial mechanics with believable gameplay.
-- Keep the codebase modular and maintainable.
-- Stay compatible with upstream Skyrim Together Reborn whenever practical.
+Skyrim Together Reborn Enhanced builds on the work of the Tilted Phoques team and all Skyrim Together Reborn contributors. It is not affiliated with or endorsed by the original team, Bethesda Game Studios or ZeniMax Media.
 
----
-
-# Building
-
-STRE uses **exactly the same build process** as the official Skyrim Together Reborn project.
-
-Simply follow the upstream build instructions.
-
----
-
-# Project Structure
-
-```
-docs/
-├── architecture/
-├── decisions/
-├── features/
-└── trade/
-
-CHANGELOG.md
-LICENSE
-README.md
-ROADMAP.md
-UPSTREAM.md
-VERSION
-```
-
----
-
-# Documentation
-
-Project documentation includes:
-
-- **CHANGELOG.md** — Project history
-- **ROADMAP.md** — Planned features
-- **docs/architecture/** — Technical architecture
-- **docs/features/** — Feature documentation
-- **docs/decisions/** — Architecture Decision Records (ADR)
-
----
-
-# Credits
-
-Skyrim Together Reborn Enhanced is based on the outstanding work of the **Tilted Phoques Team** and every contributor to **Skyrim Together Reborn**.
-
-This repository is an independent community fork and is **not affiliated with or endorsed by** the original development team, Bethesda Game Studios or ZeniMax Media.
-
----
-
-# License
-
-This project is distributed under the **GNU General Public License v3.0**, consistent with the upstream project.
-
-See the **LICENSE** file for details.
+The project is distributed under the GNU General Public License v3.0. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
