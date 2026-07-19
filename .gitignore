@@ -90,3 +90,4 @@ new_addresses.txt
 packaged/*
 
 build-and-deploy-dev.ps1
+/Export-STRE-Source-For-Audit.ps1
