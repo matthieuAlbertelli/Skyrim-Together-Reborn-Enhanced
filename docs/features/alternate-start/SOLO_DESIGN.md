@@ -37,6 +37,7 @@ Chaque classe définit :
 
 Pour respecter la vision, le contenu principal du don reste conçu pour la coopération. En solo, une variante minimale ou un effet inactif clairement expliqué est préférable à une refonte divergente.
 
+Les paquetages de départ associés aux compétences sont définis dans [`SKILL_LOADOUTS.md`](SKILL_LOADOUTS.md).
 ## Sortie
 
 La porte ne s’active qu’après validation locale des étapes. Elle mène vers un emplacement extérieur STRE sûr. La reprise vanilla doit être testée sur :

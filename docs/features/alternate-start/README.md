@@ -15,6 +15,7 @@ Une nouvelle partie commence dans l’auberge, saute Helgen, crée les personnag
 - `STATE_MODEL.md` — sous-état de l’adapter ;
 - `TEST_PLAN.md` — validation ;
 - `OPEN_QUESTIONS.md` — décisions restantes.
+- `SKILL_LOADOUTS.md` — matériel, sorts et choix d’orientation associés aux compétences ;
 
 ## Dépendances
 
