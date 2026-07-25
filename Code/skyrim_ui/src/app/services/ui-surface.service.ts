@@ -2,7 +2,11 @@ import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type UiSurface = 'none' | 'str' | 'trade';
+export type UiSurface =
+  | 'none'
+  | 'str'
+  | 'trade'
+  | 'characterCreation';
 
 type NativeEventArgument = string | number | boolean | unknown[] | null;
 
@@ -28,7 +32,12 @@ export class UiSurfaceService implements OnDestroy {
   private readonly surfaceHandler = (
     value: NativeEventArgument,
   ): void => {
-    if (value !== 'none' && value !== 'str' && value !== 'trade') {
+    if (
+      value !== 'none' &&
+      value !== 'str' &&
+      value !== 'trade' &&
+      value !== 'characterCreation'
+    ) {
       return;
     }
 

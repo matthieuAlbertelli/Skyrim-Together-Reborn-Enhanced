@@ -6,6 +6,7 @@
 #include <Services/TransportService.h>
 #include <Services/TradeMenuService.h>
 #include <Services/TradeItemPreviewService.h>
+#include <Services/CharacterCreationService.h>
 #include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
@@ -102,6 +103,60 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
         }
         else if (eventName == "teleportToPlayer")
             ProcessTeleportMessage(eventArgs);
+        else if (eventName == "characterCreationAction")
+        {
+            if (!eventArgs || eventArgs->GetSize() < 1)
+                return true;
+
+            const std::string action =
+                eventArgs->GetString(0).ToString();
+            const std::string payload =
+                eventArgs->GetSize() >= 2
+                    ? eventArgs->GetString(1).ToString()
+                    : std::string{};
+
+            World::Get().GetRunner().Queue(
+                [action, payload]()
+                {
+                    auto& service =
+                        World::Get()
+                            .ctx()
+                            .at<CharacterCreationService>();
+
+                    if (action == "modifyRace")
+                        service.ModifyRace();
+                    else if (action == "confirmRace")
+                        service.ConfirmRace();
+                    else if (action == "selectClass")
+                        service.SelectClass(payload);
+                    else if (action == "confirmClass")
+                        service.ConfirmClass();
+                    else if (action == "reopenClassSelection")
+                        service.ReopenClassSelection();
+                    else if (action == "selectLoadoutOption")
+                        service.SelectLoadoutOption(payload);
+                    else if (action == "confirmLoadout")
+                        service.ConfirmLoadout();
+                    else if (action == "reopenLoadoutSelection")
+                        service.ReopenLoadoutSelection();
+                    else if (action == "confirmBuild")
+                        service.ConfirmBuild();
+                    else if (action == "previewLoadoutItem")
+                        service.PreviewLoadoutItem(payload);
+                    else if (action == "loadoutPreviewRegion")
+                        service.SetLoadoutPreviewRegion(payload);
+                    else if (action == "clearLoadoutPreview")
+                        service.ClearLoadoutPreview();
+                    else if (action == "retryRaceMenu")
+                        service.RetryRaceMenu();
+                    else if (action == "recoverControls")
+                        service.RecoverControls();
+                    else
+                        spdlog::warn(
+                            "Unknown character creation action: {}",
+                            action);
+                });
+        }
         else if (eventName == "toggleDebugUI")
         {
             const bool isTradeAction =

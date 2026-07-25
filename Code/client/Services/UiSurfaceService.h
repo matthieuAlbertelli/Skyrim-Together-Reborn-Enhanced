@@ -8,7 +8,8 @@ enum class UiSurface : std::uint8_t
 {
     None,
     SkyrimTogether,
-    Trade
+    Trade,
+    CharacterCreation
 };
 
 /**

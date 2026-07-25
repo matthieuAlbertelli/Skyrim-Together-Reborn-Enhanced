@@ -17,6 +17,8 @@ const char* SurfaceName(UiSurface aSurface) noexcept
         return "str";
     case UiSurface::Trade:
         return "trade";
+    case UiSurface::CharacterCreation:
+        return "characterCreation";
     case UiSurface::None:
     default:
         return "none";
@@ -63,8 +65,11 @@ void UiSurfaceService::SetSurface(UiSurface aSurface) noexcept
 
 void UiSurfaceService::ToggleSkyrimTogether() noexcept
 {
-    if (m_surface == UiSurface::Trade)
+    if (m_surface != UiSurface::None &&
+        m_surface != UiSurface::SkyrimTogether)
+    {
         return;
+    }
 
     SetSurface(
         m_surface == UiSurface::SkyrimTogether

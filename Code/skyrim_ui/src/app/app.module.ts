@@ -31,6 +31,7 @@ import { ServerListComponent } from './components/server-list/server-list.compon
 import { SettingsComponent } from './components/settings/settings.component';
 import { ToggleComponent } from './components/toggle/toggle.component';
 import { TradeMenuComponent } from './components/trade-menu/trade-menu.component';
+import { CharacterCreationComponent } from './components/character-creation/character-creation.component';
 import { WindowComponent } from './components/window/window.component';
 import { HealthDirective } from './directives/health.directive';
 import { RadioDirective } from './directives/radio.directive';
@@ -90,6 +91,7 @@ import { TranslocoRootModule } from './transloco-root.module';
     TranslocoRootModule,
     OverlayModule,
     TradeMenuComponent,
+    CharacterCreationComponent,
   ],
   providers: [
     ClientService,

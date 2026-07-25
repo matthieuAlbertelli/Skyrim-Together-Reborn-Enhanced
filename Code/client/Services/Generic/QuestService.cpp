@@ -218,6 +218,18 @@ static constexpr std::array kNonSyncableQuestIds = std::to_array<uint32_t>({
 
 bool QuestService::IsNonSyncableQuest(TESQuest* apQuest)
 {
+    if (!apQuest)
+        return true;
+
+    const char* const pEditorId = apQuest->idName.AsAscii();
+    if (pEditorId &&
+        std::strcmp(pEditorId, "STRE_QUEST_AlternateStart") == 0)
+    {
+        // Character creation is a local per-player flow. Synchronizing the CK
+        // stage would make one player's RaceMenu drive every party member.
+        return true;
+    }
+
     // Quests with no quest stages are never synced. Most TESQues::Type:: quests should
     // be synced, including Type::None and Type::Miscellaneous, but there are a few
     // known exceptions that should be excluded that are in the table.

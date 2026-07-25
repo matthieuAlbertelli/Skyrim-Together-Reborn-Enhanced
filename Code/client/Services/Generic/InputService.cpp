@@ -171,7 +171,9 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
     const UiSurface surface = uiSurface.GetSurface();
     const bool active = surface != UiSurface::None;
     const bool toggleSkyrimTogether =
-        IsToggleKey(aKey) && surface != UiSurface::Trade;
+        IsToggleKey(aKey) &&
+        (surface == UiSurface::None ||
+         surface == UiSurface::SkyrimTogether);
     const bool closeSkyrimTogether =
         IsDisableKey(aKey) && surface == UiSurface::SkyrimTogether;
 

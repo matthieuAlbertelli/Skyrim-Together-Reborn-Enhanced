@@ -1,7 +1,13 @@
 <ng-container *ngIf="inGame$ | async">
   <app-trade-menu></app-trade-menu>
+  <app-character-creation></app-character-creation>
 
-  <ng-container *ngIf="(surface$ | async) !== 'trade'">
+  <ng-container
+    *ngIf="
+      (surface$ | async) !== 'trade' &&
+      (surface$ | async) !== 'characterCreation'
+    "
+  >
     <ng-container *ngIf="!(menuOpen$ | async)">
       <app-debug></app-debug>
 
