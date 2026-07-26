@@ -2,6 +2,7 @@
 #include <Components.h>
 
 #include <Services/CharacterService.h>
+#include <Services/CharacterBuildService.h>
 #include <Services/ObjectService.h>
 #include <Services/QuestService.h>
 #include <Services/ServerListService.h>
@@ -26,6 +27,7 @@ World::World()
     spdlog::default_logger()->sinks().push_back(std::static_pointer_cast<spdlog::sinks::sink>(m_spAdminService));
 
     ctx().emplace<CharacterService>(*this, m_dispatcher);
+    ctx().emplace<CharacterBuildService>(*this, m_dispatcher);
     ctx().emplace<PlayerService>(*this, m_dispatcher);
     ctx().emplace<CalendarService>(*this, m_dispatcher);
     ctx().emplace<ObjectService>(*this, m_dispatcher);

@@ -476,7 +476,11 @@
     </aside>
 
     <footer class="destiny-actions">
-      <button class="secondary" (click)="reopenLoadoutSelection()">
+      <button
+        class="secondary"
+        [disabled]="state.serverPending"
+        (click)="reopenLoadoutSelection()"
+      >
         <fa-icon [icon]="backIcon"></fa-icon>
         Recomposer l'équipement
       </button>
@@ -485,7 +489,11 @@
         <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
         <span></span>
       </div>
-      <button class="primary" (click)="confirmBuild()">
+      <button
+        class="primary"
+        [disabled]="state.serverPending"
+        (click)="confirmBuild()"
+      >
         <fa-icon [icon]="confirmIcon"></fa-icon>
         Sceller la destinée
       </button>

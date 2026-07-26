@@ -2,6 +2,7 @@
 
 #include <Events/EventDispatcher.h>
 #include <Games/Events.h>
+#include <Structs/CharacterBuild.h>
 
 #include <array>
 #include <cstddef>
@@ -11,6 +12,10 @@
 #include <vector>
 
 struct Actor;
+struct CharacterBuildResponse;
+struct DisconnectedEvent;
+struct NotifyCharacterBuildState;
+struct PlayerCharacter;
 struct TESQuest;
 struct UiSurfaceService;
 struct UpdateEvent;
@@ -98,6 +103,9 @@ private:
         const EventDispatcher<TESQuestStageEvent>* apSender) override;
 
     void OnUpdate(const UpdateEvent& acEvent) noexcept;
+    void OnCharacterBuildResponse(const CharacterBuildResponse& acMessage) noexcept;
+    void OnNotifyCharacterBuildState(const NotifyCharacterBuildState& acMessage) noexcept;
+    void OnDisconnected(const DisconnectedEvent& acEvent) noexcept;
     void BeginFromStage20(TESQuest* apQuest) noexcept;
     void OpenRaceMenu() noexcept;
     void ShowRaceReview() noexcept;
@@ -113,6 +121,14 @@ private:
     [[nodiscard]] bool CaptureInventoryWipePass(Actor* apPlayer) noexcept;
     void ResetBuildApplicationState() noexcept;
     [[nodiscard]] bool ApplyBuild() noexcept;
+    [[nodiscard]] bool ApplyCanonicalServerInventory(Actor* apPlayer) noexcept;
+    [[nodiscard]] bool EquipCanonicalInventory(Actor* apPlayer, const Inventory& acInventory) noexcept;
+    [[nodiscard]] bool EquipLocalBuild(PlayerCharacter* apPlayer) noexcept;
+    [[nodiscard]] bool ResetPlayerProgression(PlayerCharacter* apPlayer) noexcept;
+    [[nodiscard]] bool SendAuthoritativeBuildRequest() noexcept;
+    [[nodiscard]] bool SendBuildAppliedAcknowledgement(Actor* apPlayer) noexcept;
+    void ResetNetworkBuildState() noexcept;
+    void ApplyRemoteCanonicalInventory(const NotifyCharacterBuildState& acMessage) noexcept;
     void RemoveVanillaStartingSpells(Actor* apPlayer) noexcept;
     void RemoveImportedShoutsAndStandingStonePowers(
         Actor* apPlayer) noexcept;
@@ -155,6 +171,9 @@ private:
     UiSurfaceService& m_uiSurfaceService;
 
     entt::scoped_connection m_updateConnection;
+    entt::scoped_connection m_buildResponseConnection;
+    entt::scoped_connection m_buildStateConnection;
+    entt::scoped_connection m_disconnectedConnection;
 
     TESQuest* m_pQuest{};
     CharacterCreationPhase m_phase{CharacterCreationPhase::Inactive};
@@ -164,7 +183,11 @@ private:
     bool m_loadoutConfirmed{};
     bool m_buildConfirmed{};
     bool m_buildApplicationPending{};
+    bool m_preGrantCharacterResetApplied{};
     bool m_inventoryWipeInitialized{};
+    bool m_serverBuildRequestPending{};
+    bool m_serverBuildAccepted{};
+    bool m_waitingForServerFinalization{};
     bool m_suppressStageRecovery{};
     bool m_inputSnapshotValid{};
     std::array<InputHandlerSnapshot, kLockedInputHandlerCount>
@@ -173,6 +196,9 @@ private:
     double m_recoveryAccumulator{};
     std::uint8_t m_inventoryWipePass{};
     std::size_t m_inventoryWipeIndex{};
+    std::uint64_t m_serverBuildRevision{};
+    std::uint32_t m_serverCharacterId{};
+    Inventory m_serverCanonicalInventory{};
     std::vector<std::uint32_t> m_inventoryWipeFormIds;
     std::string m_selectedClassId;
     std::map<std::string, std::string> m_selectedLoadoutOptions;

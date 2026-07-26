@@ -88,6 +88,8 @@ export class CharacterCreationComponent implements OnInit, OnDestroy {
     selectedLoadoutOptions: {},
     loadoutConfirmed: false,
     buildConfirmed: false,
+    serverPending: false,
+    serverAuthoritative: false,
     error: '',
   };
 
@@ -590,6 +592,11 @@ export class CharacterCreationComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   public handleKeyboard(event: KeyboardEvent): void {
     if (this.uiSurface.surfaceChange.getValue() !== 'characterCreation') {
+      return;
+    }
+
+    if (this.state.serverPending) {
+      event.preventDefault();
       return;
     }
 

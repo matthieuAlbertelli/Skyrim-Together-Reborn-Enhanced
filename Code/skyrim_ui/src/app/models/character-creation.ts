@@ -89,5 +89,7 @@ export interface CharacterCreationViewState {
   selectedLoadoutOptions: Readonly<Record<string, string>>;
   loadoutConfirmed: boolean;
   buildConfirmed: boolean;
+  serverPending: boolean;
+  serverAuthoritative: boolean;
   error: string;
 }

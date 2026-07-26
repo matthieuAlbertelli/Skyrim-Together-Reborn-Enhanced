@@ -34,6 +34,8 @@ const DEFAULT_STATE: CharacterCreationViewState = {
   selectedLoadoutOptions: {},
   loadoutConfirmed: false,
   buildConfirmed: false,
+  serverPending: false,
+  serverAuthoritative: false,
   error: '',
 };
 
