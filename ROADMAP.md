@@ -1,6 +1,6 @@
 # STRE Roadmap
 
-> **Status:** proposed sequencing based on the source audit of 19 July 2026.
+> **Status:** updated on 27 July 2026 from the repository state and in-game M7 validation.
 
 The roadmap is organized around demonstrable outcomes. A milestone is complete only when its user flow, failure cases and recovery behavior can be shown in game.
 
@@ -8,66 +8,78 @@ The roadmap is organized around demonstrable outcomes. A milestone is complete o
 
 **Outcome:** a new contributor can understand, build and test STRE from a clean checkout.
 
-- [ ] verify and document the supported toolchain;
-- [ ] keep the exact upstream base recorded for every release;
-- [ ] add CI coverage for trading tests and the Angular UI;
-- [ ] correct inherited package/repository metadata;
+- [x] record the audited upstream baseline;
+- [x] document current build entry points;
+- [x] version CK-authored Alternate Start files;
+- [ ] validate a clean-machine prerequisite matrix;
+- [ ] add CI coverage for native tests and the Angular UI;
 - [ ] publish the supported Skyrim/STRE version matrix;
-- [ ] separate source, distribution and local deployment outputs.
+- [ ] establish one canonical automated test command.
 
 ## R1 — Trading 0.2
 
 **Outcome:** trading is reliable enough for real campaign play.
 
+- [x] authoritative trade protocol and reconciliation model;
+- [x] dedicated domain/protocol tests;
 - [ ] client/server integration tests;
 - [ ] telemetry for application and reconciliation failures;
 - [ ] explicit disconnect/reconnect policy during a trade;
 - [ ] stack splitting;
 - [ ] gold exchange;
-- [ ] player-facing error and recovery UX;
-- [ ] documented transferability rules and known limitations.
+- [ ] player-facing error and recovery UX.
 
 ## R2 — Item Preview Platform
 
 **Outcome:** multiple STRE features can use the same internal preview runtime safely.
 
+- [x] modular native session, controller, bridge, solver and raster measurement;
+- [x] automatic fitting of real Skyrim objects;
+- [x] demonstrate a second first-party consumer in Character Creation;
 - [ ] replace the single-client bridge with leases and owner tokens;
 - [ ] formalize request, priority and lifecycle contracts;
-- [ ] isolate the CEF/native host bridge;
 - [ ] add solver and lifecycle tests;
-- [ ] define arbitration with native Skyrim menus;
-- [ ] demonstrate a second consumer outside trading.
+- [ ] define arbitration with native Skyrim menus.
 
-## R3 — Alternate Start Solo
+## R3 — Alternate Start character bootstrap
 
-**Outcome:** a new game can skip Helgen and start in the inn without STRE running.
+**Outcome:** a player can create a clean campaign character in the custom inn, in solo or through an authoritative server session.
 
-- [ ] controlled new-game flow;
-- [ ] character creation at the campaign table;
-- [ ] Valen and a minimal introduction quest;
-- [ ] class selection and starter loadouts;
-- [ ] coherent departure into Skyrim;
-- [ ] verified vanilla main-quest continuation.
+- [x] version the ESP, PSC and PEX files;
+- [x] custom inn cell, quest aliases, seats and stages `0/10/20`;
+- [x] RaceMenu and Angular character-creation flow;
+- [x] Warrior, Mage and Thief class/loadout selection;
+- [x] anti-import cleanup, level reset and canonical equipment application;
+- [x] offline/local fallback without a connected server;
+- [x] Destruction and Alteration starter spells;
+- [x] targeted cooperative buffs validated between two PCs;
+- [ ] automatic new-game interception and complete Helgen bypass;
+- [ ] Valen and minimal introduction quest;
+- [ ] coherent departure into Skyrim and verified vanilla quest continuation.
 
-## R4 — Mod Integration Framework MVP
+## R4 — Authoritative character builds and first-party integration
 
-**Outcome:** Alternate Start works in a group through a first-party adapter.
+**Outcome:** client choices become a validated canonical character build without trusting arbitrary FormIDs.
 
-- [ ] `Capability`, `Intent`, `CanonicalState`, `Event` and `Snapshot` contracts;
-- [ ] compiled adapter registry;
-- [ ] Creation Kit/Papyrus bridge;
-- [ ] versioned Campaign State;
-- [ ] synchronized ready check;
-- [ ] reconnect snapshot and idempotent replay;
-- [ ] typed errors and structured logs.
+- [x] logical class/loadout selections;
+- [x] shared catalog at `BuildVersion = 5`;
+- [x] canonical inventory and inventory hash;
+- [x] canonical spells and spell hash;
+- [x] applied acknowledgement and server state broadcast;
+- [x] strict ESP/catalog audits;
+- [ ] durable build persistence;
+- [ ] restoration after reconnect/server restart;
+- [ ] remaining skill kits and magic schools;
+- [ ] generic adapter registry and version negotiation.
 
 ## R5 — Playable cooperative campaign start
 
 **Outcome:** 2–10 players create campaign characters and leave the inn together.
 
 - [ ] campaign roster and character binding;
+- [ ] shared phase and ready check;
+- [ ] synchronized Valen introduction;
 - [ ] secret Dragonborn assignment;
-- [ ] synchronized introduction;
 - [ ] late-join policy;
 - [ ] persistence between sessions;
 - [ ] functional 2-, 4- and 10-player validation.
@@ -80,7 +92,8 @@ The roadmap is organized around demonstrable outcomes. A milestone is complete o
 - [ ] adapter manifest and validation tooling;
 - [ ] permissions/sandbox model;
 - [ ] Papyrus and C++ examples;
-- [ ] compatibility and deprecation policy.
+- [ ] compatibility and deprecation policy;
+- [ ] at least one additional first-party integration before freezing contracts.
 
 ## R7 — Additional cooperative systems
 

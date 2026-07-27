@@ -1,6 +1,6 @@
-# Protocole réseau : existant et évolution
+# Protocole réseau : état actuel et évolution
 
-> **Statut : Implémenté pour Trading / Proposé pour Mod Integration**
+> **Statut : Implémenté pour Trading et Character Build / Proposé pour Mod Integration générique**
 
 ## Trading actuel
 
@@ -25,30 +25,93 @@
 
 Les listes sont bornées à 64 entrées pour offres, mutations et targets.
 
-## Sémantique
+### Modèle transactionnel
 
-- `SessionId` identifie le trade.
-- `Revision` change à chaque modification réelle d’offre.
-- les confirmations portent sur une révision précise ;
-- `ApplyId` identifie une tentative d’application ;
-- `ReconcileId` identifie une correction absolue ;
-- les clients journalisent les résultats pour répondre identiquement aux doublons.
+Le trading est une **saga autoritaire** : validation serveur, application locale, collecte des résultats puis commit ou réconciliation absolue.
 
-## Modèle transactionnel réel
+## Character Build actuel
 
-Le trading n’est pas une transaction ACID distribuée. C’est une **saga autoritaire** :
+### Messages
 
-1. le serveur valide et produit un plan ;
-2. chaque client applique sa part ;
-3. le serveur collecte les résultats ;
-4. il commit son état si tous réussissent ;
-5. en cas d’incertitude, il envoie une cible absolue de réconciliation.
+Client vers serveur :
 
-Cette formulation doit être utilisée dans la documentation publique afin de ne pas surpromettre une atomicité impossible entre deux processus de jeu.
+1. `CharacterBuildRequest`
+2. `CharacterBuildAppliedRequest`
+
+Serveur vers client :
+
+1. `CharacterBuildResponse`
+2. `NotifyCharacterBuildState`
+
+### Requête logique
+
+Le client transmet :
+
+- `BuildVersion` ;
+- `RaceId` ;
+- `ClassId` ;
+- une liste bornée de couples `GroupId` / `OptionId`.
+
+Il ne transmet ni l’inventaire final ni une liste arbitraire de sorts.
+
+### Snapshot canonique
+
+`CharacterBuildSnapshotData` contient :
+
+```text
+BuildVersion
+RaceId
+ClassId
+Selections
+CanonicalInventory
+InventoryHash
+CanonicalSpells
+SpellHash
+```
+
+Le catalogue courant utilise `BuildVersion = 5`.
+
+### Validation et accusé
+
+Le serveur :
+
+1. valide la version, la race, la classe et les sélections ;
+2. résout les plugins et FormIDs locaux ;
+3. construit, trie et déduplique les récompenses ;
+4. calcule les hashes d’inventaire et de sorts ;
+5. remplace l’inventaire serveur par le snapshot canonique ;
+6. envoie l’état `Accepted`.
+
+Le client nettoie puis applique le snapshot. Il envoie ensuite :
+
+```text
+Revision
+InventoryHash
+SpellHash
+```
+
+Le serveur refuse notamment :
+
+- `RejectedVersion` ;
+- `RejectedInvalidRace` ;
+- `RejectedInvalidBuild` ;
+- `RejectedMissingPlugin` ;
+- `RejectedRevision` ;
+- `RejectedInventoryHash` ;
+- `RejectedSpellHash`.
+
+Un accusé valide place le build à l’état `Applied` et le niveau serveur à 1.
+
+### Limites
+
+- état en mémoire pendant la session ;
+- pas de persistance/reconnexion durable ;
+- protocole spécifique Character Build, pas encore une enveloppe générique d’adapter ;
+- compatibilité réseau requiert la même `BuildVersion` et le même catalogue/plugin sur les clients.
 
 ## Évolution pour Mod Integration
 
-Éviter un nouveau type statique pour chaque champ de chaque mod. Ajouter une enveloppe versionnée :
+Éviter un type statique par champ de chaque mod. Une future enveloppe versionnée peut prendre la forme :
 
 ```cpp
 struct ModCommandEnvelope
@@ -62,17 +125,17 @@ struct ModCommandEnvelope
 };
 ```
 
-Notifications :
+Notifications proposées :
 
 - `NotifyAdapterManifest`
 - `NotifyAdapterSnapshot`
 - `NotifyAdapterEvent`
 - `NotifyAdapterCommandRejected`
 
-## Compatibilité
+## Compatibilité future
 
 - négociation des versions d’adapter à la connexion ;
 - refus explicite si une capability obligatoire manque ;
 - migration de snapshot côté serveur ;
 - jamais de désérialisation non bornée ;
-- opcodes génériques stables, schemas de payload versionnés.
+- opcodes génériques stables et schémas de payload versionnés.

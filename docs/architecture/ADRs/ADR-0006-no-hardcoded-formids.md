@@ -16,3 +16,7 @@ Utiliser propriétés Papyrus, références configurées, Editor IDs contrôlés
 - installation plus robuste ;
 - configuration initiale plus explicite ;
 - besoin d’outils de validation des propriétés.
+
+## État d’implémentation
+
+Le catalogue M7 résout `PluginName + LocalFormId`, les aliases CK fournissent les références de siège et les audits recoupent les IDs locaux. Aucun préfixe de load order chargé n’est utilisé pour les records STRE.

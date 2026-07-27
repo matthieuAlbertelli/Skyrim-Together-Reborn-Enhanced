@@ -16,3 +16,7 @@ Implémenter Alternate Start comme adapter compilé dans STRE. Stabiliser les co
 - apprentissage rapide et liberté de refactor ;
 - ouverture externe retardée ;
 - les interfaces internes doivent néanmoins être documentées et testées.
+
+## État d’implémentation
+
+Character Build/Alternate Start constitue la première intégration first-party dédiée. Les contrats génériques et le SDK tiers restent volontairement non figés.

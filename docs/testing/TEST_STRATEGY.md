@@ -1,6 +1,6 @@
 # Stratégie de test
 
-> **Statut : Proposition fondée sur les tests existants**
+> **Statut : Mise à jour avec les tests Character Build M7**
 
 ## Pyramide
 
@@ -8,10 +8,11 @@
 
 - automates de domaine ;
 - validation et canonicalisation ;
+- catalogues de récompenses ;
 - plans de mutation/réconciliation ;
+- hashes déterministes ;
 - solver de preview ;
-- transitions Campaign State ;
-- policies d’autorité.
+- futures transitions Campaign State.
 
 ### Tests de sérialisation
 
@@ -19,18 +20,19 @@
 - tailles maximales ;
 - payloads tronqués ;
 - enums inconnus ;
-- versions incompatibles.
+- versions incompatibles ;
+- snapshot Character Build avec inventaire et sorts ;
+- accusé avec inventory/spell hashes.
 
 ### Tests de services
 
-Avec doubles de transport/inventaire :
-
-- invitations ;
+- validation des requêtes ;
+- plugins/FormIDs locaux manquants ;
+- build Pending remplacé avant application ;
+- build Applied non remplaçable ;
+- mismatch de révision/hash ;
 - retransmissions ;
-- timeouts ;
-- déconnexion ;
-- snapshot/replay ;
-- commit failure.
+- déconnexion et future restauration.
 
 ### Tests client/serveur
 
@@ -38,32 +40,51 @@ Deux processus automatisés ou harness :
 
 - ordre et perte de messages ;
 - duplicate delivery ;
-- reconnect ;
 - version mismatch ;
+- catalogues/plugin différents ;
+- reconnect ;
 - latence.
 
 ### Tests en jeu
 
-- Skyrim réel ;
-- CK plugin ;
+- Skyrim 1.6.1170 ;
+- plugin CK ;
 - UI/preview ;
+- magie ciblée ;
 - sauvegarde/chargement ;
-- 2, 4, 10 joueurs.
+- 1 puis 2 joueurs, ensuite 4/10.
 
-## Trading existant
+## Trading
 
-44 tests couvrent session, application, inventory planning, protocole et réconciliation. Ajouter :
+Les tests existants couvrent session, application, inventory planning, protocole et réconciliation. Restent : intégration serveur/client, commit failure, disconnect à chaque étape, stress et UI e2e.
 
-- intégration serveur/client ;
-- commit failure ;
-- disconnect à chaque étape ;
-- stress de changements d’offre ;
-- tests de journal capacity/eviction ;
-- UI e2e.
+## Character Build
 
-## Alternate Start
+`Code/tests/character_build.cpp` couvre :
 
-Matrice par phase : nouvelle partie, save/load, disconnect/reconnect, late join, player absent, class conflict, scene completion, departure.
+- validation des classes/options ;
+- neuf combinaisons Mage ;
+- quantité/unicité des sorts ;
+- kit simplifié du Thief et 10 crochets ;
+- hash de sorts normalisé ;
+- sérialisation du snapshot et de l’accusé.
+
+Scripts statiques :
+
+- `audit_stre_plugin_records.py` ;
+- `audit_character_build_catalog.py`.
+
+À ajouter :
+
+- tests de service serveur dédiés aux rejets ;
+- harness client/serveur pour les hashes ;
+- tests de persistance/reconnexion ;
+- test extensible de classification des buffs ;
+- matrice en jeu de toutes les classes/options.
+
+## Alternate Start complet
+
+Matrice future : nouveau jeu, skip Helgen, save/load, Valen, disconnect/reconnect, late join, player absent, class conflict, scene completion et departure.
 
 ## Preview
 
@@ -73,8 +94,9 @@ Matrice par phase : nouvelle partie, save/load, disconnect/reconnect, late join,
 - acquire/release ;
 - perte de host ;
 - edge clipping ;
-- conflits de surface.
+- conflits de surface ;
+- concurrence Trading/Character Creation.
 
 ## Données de test
 
-Les scénarios multi doivent produire : timestamp, player ids, campaign/session ids, versions, logs client/serveur et load order.
+Chaque scénario multi doit produire : timestamp, player IDs, build/campaign/session IDs, revisions, BuildVersion, hashes, logs client/serveur, load order et SHA de l’ESP déployé.

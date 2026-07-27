@@ -1,22 +1,37 @@
 # Observabilité et journalisation
 
-> **Statut : Proposition fondée sur les logs existants**
+> **Statut : Patterns partiellement implémentés ; cible structurée à poursuivre**
 
-## Format commun
+## Logs actuels utiles
 
-Chaque transition critique doit inclure :
+Character Build journalise notamment :
+
+```text
+[STRE][CharacterBuild][Server] Build accepted ... revision=... inventoryHash=... spellHash=...
+[STRE][CharacterCreation] Spell grant applied form=...
+[STRE][CharacterBuild][Client] Canonical spells applied ... count=... spellHash=...
+[STRE][CharacterBuild][Client] Applied acknowledgement sent ...
+[STRE][CharacterBuild][Server] Build applied ... level=1
+```
+
+Trading possède ses propres IDs de session, révision, apply et reconcile. La preview journalise session native, région et fitting.
+
+## Format commun cible
+
+Chaque transition critique doit inclure selon le subsystem :
 
 - subsystem ;
-- campaign/session id ;
-- player id ;
-- adapter/capability ;
-- ancienne et nouvelle version ;
-- ancienne et nouvelle phase ;
-- request/apply/reconcile id ;
+- session/campaign/build ID ;
+- player/server ID ;
+- class/capability ;
+- revision/version ;
+- request/apply/reconcile ID ;
+- inventory/spell hash lorsque pertinent ;
+- plugin/FormID local pour les résolutions ;
 - résultat ou code de rejet ;
-- durée lorsque pertinent.
+- durée.
 
-Exemple :
+Exemple futur :
 
 ```text
 [adapter=stre.alternate-start][campaign=42][capability=group.ready-check]
@@ -25,16 +40,24 @@ command_accepted request=918 player=7 version=12->13 ready=true
 
 ## Événements minimum
 
+Implémentés ou partiels :
+
+- trade state/apply/reconcile ;
+- Character Build request/accepted/applied/rejected ;
+- nettoyage et application d’inventaire/sorts ;
+- résolution de plugin/FormID ;
+- événements de magie distante ;
+- preview session/fitting.
+
+Futurs :
+
 - adapter registration/compatibility ;
-- command requested/accepted/rejected ;
-- snapshot created/applied/rejected ;
-- event applied/duplicate/stale ;
+- snapshot persistant créé/appliqué/rejeté ;
 - campaign transition ;
 - player binding ;
 - disconnect/reconnect ;
-- CK bridge callback ;
-- preview lease acquire/preempt/release ;
-- trade state/apply/reconcile.
+- CK bridge callback générique ;
+- preview lease acquire/preempt/release.
 
 ## Niveaux
 
@@ -43,8 +66,8 @@ command_accepted request=918 player=7 version=12->13 ready=true
 - `error` : invariant brisé, snapshot invalide, application impossible ;
 - `debug/trace` : détails raster, inventory et rendering lourds.
 
-Les logs de diagnostic D3D très verbeux observés dans le host menu doivent être contrôlables par catégorie pour éviter de saturer les fichiers en production.
+Les logs D3D et signatures de créatures doivent pouvoir être filtrés pour ne pas masquer les lignes Character Build/MagicService.
 
 ## Bundle de support
 
-Outil recommandé : exporter automatiquement versions, load order, adapters, derniers logs, état de campagne anonymisé et hash de configuration.
+Exporter : versions, BuildVersion, SHA de l’ESP, load order, dernier log client de chaque joueur, log serveur, choix de classe/kits, hashes, runtime Skyrim et étapes de reproduction. Les données narratives secrètes futures doivent être anonymisées/filtrées.

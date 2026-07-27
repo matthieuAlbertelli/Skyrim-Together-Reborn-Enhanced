@@ -1,6 +1,6 @@
 # ADR-0013 — Refactor de la preview en composants dédiés
 
-> **Statut : Implemented**  
+> **Statut : Implemented**
 > **Origine :** migration et enrichissement de l’ancien `docs/decisions/ADR-0001-preview-refactor.md`
 
 ## Contexte
@@ -39,3 +39,7 @@ Le service de trading devient un adaptateur consommateur de ces composants plut�
 ## Relation avec les autres décisions
 
 ADR-0013 décrit le refactor **déjà implémenté**. ADR-0008 décrit l’évolution **proposée** vers un runtime multi-consommateurs à leases.
+
+## État d’implémentation complémentaire
+
+Character Creation est désormais un second consommateur first-party du cœur de preview. La limite mono-client du bridge et l’absence de leases restent inchangées.

@@ -1,6 +1,6 @@
 # Charte du projet
 
-> **Statut : Proposition à ratifier**
+> **Statut : Charte active — progression mise à jour le 27 juillet 2026**
 
 ## Mission
 
@@ -27,14 +27,14 @@ Développer et maintenir un fork open source de Skyrim Together Reborn qui renfo
 - support garanti de toutes les versions de Skyrim et tous les load orders ;
 - redistribution d’assets propriétaires sans autorisation.
 
-## Livrables MVP
+## Livrables MVP et progression
 
-1. **Trading alpha stabilisé** avec documentation et critères de sécurité explicites.
-2. **Item Preview API interne** nettoyée, testable et avec une trajectoire vers un SDK tiers.
-3. **Alternate Start solo** capable de sauter Helgen et de rejoindre Skyrim vanilla proprement.
-4. **Alternate Start STRE** avec création de campagne, roster, ready check, phases partagées et reconnexion.
-5. **Premier Mod Adapter** servant d’exemple de référence.
-6. **Documentation de contribution** permettant l’arrivée de spécialistes non C++.
+1. **Trading alpha** — implémenté ; stabilisation et tests d’intégration à poursuivre.
+2. **Item Preview interne** — architecture modulaire et second consommateur Character Creation implémentés ; lease manager à faire.
+3. **Alternate Start / Character Build** — bootstrap en auberge, RaceMenu, classes, kits, inventaire et sorts canoniques implémentés ; skip Helgen et départ vanilla à faire.
+4. **Alternate Start STRE de campagne** — roster, ready check, phases partagées, persistence et reconnexion à faire.
+5. **Première intégration first-party** — Character Build démontre un service autoritaire dédié ; adapter générique non stabilisé.
+6. **Documentation de contribution** — portail et guides présents ; parcours clean-machine et CI à compléter.
 
 ## Gouvernance
 

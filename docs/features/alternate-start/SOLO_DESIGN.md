@@ -1,53 +1,64 @@
 # Alternate Start — Design solo
 
-> **Statut : Spécification proposée**
+> **Statut : Fallback de build local implémenté / bootstrap complet du nouveau jeu proposé**
 
 ## Principe
 
-Le plugin CK est autonome. STRE est détecté comme une extension facultative. Le chemin solo ne doit appeler aucune API réseau obligatoire.
+Le plugin CK et Character Creation doivent rester utilisables sans serveur STRE. Le même catalogue de classes, objets et sorts est appliqué localement.
 
-## Bootstrap
+## Implémenté
+
+- quête et cellule Alternate Start ;
+- déplacement vers la table ;
+- RaceMenu ;
+- UI de classe et loadouts ;
+- nettoyage du personnage ;
+- application locale de l’inventaire, des sorts et de l’équipement ;
+- niveau 1 ;
+- aucun appel serveur obligatoire quand STRE n’est pas connecté.
+
+## À implémenter pour un vrai nouveau jeu solo
 
 - intercepter le démarrage avant la séquence du convoi ;
-- placer le joueur dans `STRE_CELL_AlternateStart` ;
-- déclencher la création de personnage à la table ;
-- initialiser la quête d’introduction ;
 - neutraliser ou avancer proprement les états vanilla liés à Helgen ;
-- conserver une route vers la quête principale.
+- initialiser l’introduction ;
+- ouvrir la porte de sortie après validation ;
+- garantir la route vers la quête principale.
 
-## État local suggéré
+## État local
 
-- `STRE_QUEST_AlternateStart`
-- `STRE_GLOBAL_AlternateStartPhase`
-- alias joueur ;
+Éléments actuels :
+
+- `STRE_QUEST_AlternateStart` ;
+- aliases joueur/siège ;
+- état local de Character Creation dans le service client.
+
+Éléments futurs possibles :
+
+- global de phase ;
 - alias Valen ;
-- classe choisie ;
 - introduction terminée ;
 - départ effectué.
 
-## Classes
+## Classes et paquetages
 
-Chaque classe définit :
+Le comportement réellement appliqué est défini par :
 
-- équipement de départ ;
-- statistiques ou compétences de départ ;
-- don unique ;
-- description ;
-- éventuelle variante solo du don coopératif.
+- `CharacterBuildCatalog.*` ;
+- `character-loadouts.ts` ;
+- `CK_RECORDS_M7_IMPLEMENTED.json`.
 
-Pour respecter la vision, le contenu principal du don reste conçu pour la coopération. En solo, une variante minimale ou un effet inactif clairement expliqué est préférable à une refonte divergente.
+La conception élargie reste dans [`KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx`](KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx). [`SKILL_LOADOUTS_fr.md`](SKILL_LOADOUTS_fr.md) est une archive V0.1 et ne doit pas remplacer le catalogue courant.
 
-Les paquetages de départ associés aux compétences sont définis dans [`SKILL_LOADOUTS.md`](SKILL_LOADOUTS.md).
-## Sortie
+## Sortie et reprise vanilla
 
-La porte ne s’active qu’après validation locale des étapes. Elle mène vers un emplacement extérieur STRE sûr. La reprise vanilla doit être testée sur :
+La porte future ne devra s’activer qu’après validation locale du build. La reprise doit être testée sur :
 
-- quêtes principales ;
-- dragons ;
-- cris ;
+- quête principale ;
+- dragons et cris ;
 - progression vers Blanche-Rive ;
-- civil war/quests sensibles au passage de Helgen.
+- guerre civile et quêtes sensibles au passage de Helgen.
 
 ## Sauvegarde
 
-Tous les états solo restent dans la sauvegarde Skyrim. Aucun blocage ne doit apparaître si STRE est installé puis absent lors d’un chargement ultérieur.
+Les états solo doivent rester dans la sauvegarde Skyrim. Aucun blocage ne doit apparaître si STRE est installé puis indisponible lors d’un chargement ultérieur.

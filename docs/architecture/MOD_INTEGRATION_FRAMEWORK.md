@@ -1,6 +1,6 @@
 # STRE Mod Integration Framework
 
-> **Statut : Spécification proposée**  
+> **Statut : Architecture proposée, avec premier pattern first-party validé par Character Build**
 > **Patterns :** Microkernel / Plugin Architecture, Ports and Adapters, Adapter, Observer/Event Bus, Command, Strategy, Anti-Corruption Layer
 
 ## Objectif
@@ -76,7 +76,7 @@ public:
 };
 ```
 
-Ce contrat est directionnel. L’ABI exacte ne doit pas être figée avant le vertical slice Alternate Start.
+Ce contrat reste directionnel. Le vertical slice Character Build a validé les concepts de sélection logique, snapshot canonique, hash et application locale, mais pas encore un adapter registry ni une ABI publique. L’ABI exacte ne doit pas être figée avant une seconde intégration first-party et la persistance/reconnexion.
 
 ## Runtime proposé
 
@@ -134,9 +134,9 @@ Avant activation :
 
 ## Phasage recommandé
 
-### Phase 1 — First-party compile-time
+### Phase 1 — First-party compile-time — en cours
 
-Adapters C++ compilés dans STRE. Messages dédiés ou première enveloppe générique. Alternate Start est le premier exemple.
+Services C++ compilés dans STRE avec messages dédiés. Character Build/Alternate Start constitue le premier exemple livré : catalogue partagé, inventaire et sorts canoniques, hashes et fallback local. Il ne fournit pas encore le registry générique décrit ci-dessus.
 
 ### Phase 2 — Data-driven
 
@@ -184,7 +184,11 @@ state:
 - logs sans exposer les secrets narratifs aux clients non autorisés ;
 - le serveur ne fait pas confiance aux stages Papyrus déclarés par un client.
 
-## Définition de réussite MVP
+## Preuve first-party actuelle
+
+Deux clients peuvent déjà créer des builds différents, recevoir un inventaire et des sorts canoniques, puis appliquer des buffs ciblés. Cette preuve couvre l’autorité d’un build, pas encore l’état de campagne.
+
+## Définition de réussite du framework MVP
 
 Deux clients avec Alternate Start :
 

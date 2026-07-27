@@ -1,155 +1,161 @@
 # Audit de l’état actuel
 
-> **Statut : Implémenté / constaté dans l’archive**  
-> **Archive auditée :** `Skyrim_Together_Reborn_Enhanced_source_audit_20260719_233710.zip`  
+> **Statut : État courant au 27 juillet 2026**
+> **Baseline historique :** audit source du 19 juillet 2026
 > **Version déclarée :** `0.1.0-alpha.1`
 
 ## Résumé exécutif
 
-Le dépôt est un fork fonctionnel de Skyrim Together Reborn dont la première verticale majeure est un système de trading joueur-à-joueur. Le code dépasse nettement la documentation actuelle : il comporte un domaine métier indépendant, un service serveur autoritaire, un protocole dédié, des journaux d’idempotence client, une réconciliation après état incertain, une UI Angular et une preview 3D native modulaire.
+STRE possède désormais deux verticales techniques actives :
 
-La base est prometteuse pour le futur Mod Integration Framework, car elle montre déjà une séparation entre :
+1. un système de trading joueur-à-joueur autoritaire avec saga de réconciliation ;
+2. un bootstrap de personnage Alternate Start combinant plugin Creation Kit, UI Angular/CEF, catalogue partagé et validation serveur.
 
-- domaine pur ;
-- protocole ;
-- autorité serveur ;
-- adaptation client/Skyrim ;
-- UI ;
-- composant technique réutilisable de preview.
+Le second point n’était pas présent dans l’archive du 19 juillet. Il a depuis été intégré au dépôt, compilé sous Windows et smoke-testé dans Skyrim, notamment pour les buffs ciblés entre deux PC.
 
-## Métriques de la verticale Trading/Preview
+## Trading
 
-| Sous-système | Fichiers | Lignes approximatives |
-|---|---:|---:|
-| Domaine `Code/common/Trade` | 10 | 1 368 |
-| Service serveur | 2 | 1 969 |
-| Services client trading/menu/preview | 6 | 2 084 |
-| Cœur Item Preview + host menu | 15 | 3 090 |
-| Protocole et structs | 32 | 1 082 |
-| Tests trading | 5 | 1 240 |
-| UI Angular liée au trading | 6 | 1 856 |
+Le trading comprend toujours :
 
-Le dépôt contient **44 cas de test** trading et **13 messages réseau dédiés** : 7 requêtes client et 6 notifications serveur.
+- un domaine métier indépendant ;
+- un service serveur autoritaire ;
+- un protocole dédié et borné ;
+- des plans de mutation déterministes ;
+- une application client idempotente ;
+- une réconciliation vers des quantités absolues ;
+- une UI Angular/CEF ;
+- une preview 3D native modulaire ;
+- des tests de domaine et de sérialisation.
 
-## Architecture actuelle du trading
+Le modèle doit être décrit comme une **saga autoritaire compensée**, pas comme une transaction ACID distribuée.
 
-### Domaine pur
+### Limites Trading
 
-`Code/common/Trade/` contient :
+- état de session non persisté à travers un redémarrage serveur ;
+- reconnect en cours d’échange encore à valider complètement ;
+- pas de stack splitting ni d’échange d’or ;
+- preview toujours non publiée comme SDK tiers stable.
 
-- `Session` : automate de négociation ;
-- `BuildMutationPlan` : validation et calcul des deltas ;
-- `Application` : suivi des résultats d’application par participant ;
-- `BuildReconciliationPlan` et `Reconciliation` : retour vers des quantités absolues ;
-- types, erreurs et structures indépendants de Skyrim et du transport.
+## Item Preview
 
-### Serveur autoritaire
+Les composants internes incluent notamment :
 
-`Code/server/Services/TradeService.cpp` :
+- `ItemPreviewController` ;
+- `ItemPreviewNativeSession` ;
+- `ItemPreviewHostSession` ;
+- `ItemPreviewHostBridge` ;
+- `ItemPreviewFitSolver` ;
+- `ItemPreviewRasterMeasurer` ;
+- `TradePreviewHostMenu`.
 
-- alloue les sessions ;
-- empêche un joueur d’être dans plusieurs trades ;
-- accepte/rejette les invitations ;
-- valide les révisions ;
-- construit des snapshots d’inventaire ;
-- génère les plans de mutation ;
-- suit les résultats clients ;
-- commit les mutations côté état serveur ;
-- déclenche une réconciliation en cas d’incertitude ;
-- gère expiration, déconnexion et nettoyage.
+La plateforme a désormais un second consommateur first-party dans l’écran Character Creation. Cela valide sa réutilisabilité interne, sans résoudre encore le besoin d’un lease manager multi-consommateurs ni d’une API tierce stable.
 
-Constantes observées : invitation 30 s, sweep 1 s, application 15 s, réconciliation 30 s, rétention terminale 5 s.
+## Alternate Start — état implémenté
 
-### Client
+### Plugin Creation Kit
 
-`Code/client/Services/Generic/TradeService.cpp` :
+Les fichiers authored sont versionnés sous `GameFiles/Skyrim` :
 
-- envoie les intentions ;
-- conserve l’état de session reçu ;
-- applique les plans de mutation ;
-- journalise les résultats par `ApplyId` et `ReconcileId` ;
-- répond de façon idempotente aux retransmissions.
+- `STRE_AlternateStart.esp` ;
+- `Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc` ;
+- `Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.pex`.
 
-`TradeMenuService` convertit l’état natif en JSON et publie `tradeState` vers CEF.
+Éléments confirmés :
 
-### UI
+- cellules `STRE_CELL_AlternateStart` et `STRE_CELL_DevSandbox` ;
+- quête `STRE_QUEST_AlternateStart` ;
+- étapes `0`, `10` et `20` ;
+- aliases joueur et sièges ;
+- déplacement puis assise du joueur ;
+- déclenchement de RaceMenu et de Character Creation ;
+- records custom d’équipement, enchantements, sorts et effets magiques.
 
-L’UI Angular possède :
+Le manifest strict `CK_RECORDS_M7_IMPLEMENTED.json` valide 47 records attendus. L’audit catalogue/ESP valide 41 références utilisées par le code.
 
-- états invitation, outgoing, session et erreur ;
-- catégories d’inventaire ;
-- quantité offerte ;
-- confirmations ;
-- preview d’objets ;
-- observation de la région de preview avec `ResizeObserver`.
+### Character Creation
 
-### Preview 3D
+Le client expose `UiSurface::CharacterCreation` et un `CharacterCreationService` qui orchestre :
 
-Le refactor a extrait :
+- RaceMenu ;
+- choix Warrior, Mage ou Thief ;
+- groupes de loadouts ;
+- preview 3D d’objets Skyrim réels ;
+- résumé ;
+- soumission finale ;
+- chemin local hors ligne ou chemin serveur autoritaire.
 
-- `ItemPreviewController` : orchestration et état du fitting ;
-- `ItemPreviewNativeSession` : cycle de vie `Inventory3DManager` ;
-- `ItemPreviewHostSession` : ouverture/fermeture idempotente du host menu ;
-- `ItemPreviewHostBridge` : pont singleton vers un client ;
-- `ItemPreviewFitSolver` : calcul de transformation ;
-- `ItemPreviewRasterMeasurer` : mesure D3D11 ;
-- `TradePreviewHostMenu` : menu Scaleform non visible servant de host natif.
+### Build autoritaire
 
-## Forces
+Le catalogue courant est :
 
-1. **Domaine testable et indépendant.**
-2. **Révisions et snapshots complets**, qui rendent les retransmissions sûres.
-3. **Validation côté serveur** avant verrouillage et application.
-4. **Réconciliation absolue**, plus robuste que de simples deltas rejoués.
-5. **Collections bornées** à la désérialisation (`MaxLines`, `MaxMutations`, `MaxTargets`).
-6. **Tests de protocole round-trip** et cas de données surdimensionnées.
-7. **Refactor de preview réellement séparé du domaine trading.**
-8. **Arbitrage de surface CEF** via `UiSurfaceService`.
+```text
+BuildVersion = 5
+```
 
-## Limites et dette technique
+Le serveur dérive depuis les identifiants logiques :
 
-### API UI provisoire
+- l’inventaire canonique ;
+- le hash d’inventaire ;
+- la liste canonique de sorts ;
+- le hash de sorts ;
+- les métadonnées d’équipement.
 
-Le frontend appelle `toggleDebugUI('__trade__', ...)`. Le code précise que l’ancienne commande debug est détournée. Cette interface ne doit pas devenir le contrat public d’un SDK.
+Le client nettoie le personnage importé, applique le snapshot canonique, vérifie les objets et sorts réellement présents, puis envoie `CharacterBuildAppliedRequest`. Le serveur valide les deux hashes avant de marquer le build `Applied` et de fixer le niveau serveur à 1.
 
-### Preview encore mono-consommateur
+Le même catalogue est utilisé en mode hors ligne sans dépendance obligatoire au serveur.
 
-`ItemPreviewHostBridge` conserve un seul pointeur `ItemPreviewHostClient`. Un deuxième consommateur ne peut pas se binder. Cela prépare la réutilisation interne, mais pas encore une plateforme multi-mods.
+### Sorts Mage
 
-### Couplage nominal au trading
+Les choix Destruction et Altération sont matérialisés :
 
-Le host menu s’appelle `TradePreviewHostMenu` et de nombreux logs commencent par `Trade preview`. La mécanique interne est générique, mais ses frontières publiques restent spécifiques.
+- 3 branches de Destruction, 3 sorts chacune ;
+- 3 branches d’Altération, 4 sorts chacune ;
+- 7 sorts canoniques pour chaque combinaison Mage.
 
-### Pas d’API externe stable
+Les buffs suivants sont explicitement reconnus par le hook magie STRE et ont été smoke-testés sur un joueur distant :
 
-Aucun manifeste de capability, ABI de plugin, binding Papyrus ou protocole générique de preview n’est présent. La « brique d’API » est à ce stade une **API C++ interne au client STRE**.
+- Égide minérale ;
+- Souffle aquatique partagé ;
+- Allègement.
 
-### Persistance serveur limitée
+### Nettoyage anti-import
 
-Les maps de sessions/applications sont en mémoire. Le code audité ne montre pas de persistance de transactions à travers un redémarrage serveur.
+Le flux actuel retire l’inventaire et la magie importés, dissipe les effets temporaires, remet le niveau à 1 et applique le build canonique. Il ne remet pas encore à zéro :
 
-### Reconnexion pendant une transaction
+- les niveaux/XP des 18 compétences ;
+- les perks et points de perk ;
+- l’historique d’augmentation Santé/Magie/Vigueur.
 
-La déconnexion est gérée, mais il n’existe pas encore de snapshot de trade restaurable après reconnexion au sens d’une campagne persistante.
+## Limites Alternate Start
 
-### Documentation historique insuffisante au moment de l’audit
+- le nouveau jeu n’est pas encore automatiquement redirigé de bout en bout vers l’auberge ;
+- le skip Helgen et la reprise exhaustive des quêtes vanilla restent à implémenter/tester ;
+- Valen, la scène d’introduction et la sortie narrative ne sont pas terminés ;
+- roster, ready check, Campaign State, late join et Dragonborn secret ne sont pas implémentés ;
+- les builds ne sont pas persistés durablement après reconnexion ou redémarrage serveur ;
+- Invocation, Illusion et Restauration restent visibles dans l’UI mais sans récompenses canoniques ;
+- les kits d’Enchantement et plusieurs kits de compétences restent à matérialiser ;
+- les tests en jeu réalisés sont des smoke tests, pas encore une validation exhaustive des neuf combinaisons Mage et de toutes les classes.
 
-L’archive auditée contenait des résumés trop courts (`docs/features/trading.md`, `docs/architecture/preview-system.md`) et un placeholder dans `UPSTREAM.md`. La consolidation documentaire corrige ces points, sans modifier le constat sur l’état du code au moment de l’audit.
+## Architecture réellement validée
 
-### Export d’audit incomplet sur les dossiers nommés Debug
+Le dépôt démontre aujourd’hui deux patrons first-party autoritaires :
 
-Le script source-only a exclu tout segment appelé `Debug`, ce qui a également retiré des fichiers source comme `Code/client/Services/Debug/TradeDebugService.cpp`. Le cœur fonctionnel est présent, mais le prochain export doit limiter l’exclusion aux configurations de build, pas aux répertoires source nommés `Debug`.
+- saga de trading avec réconciliation ;
+- build de personnage avec snapshot canonique et accusé d’application.
 
-## Alternate Start
-
-Aucun code spécifique à Alternate Start, Valen, Campaign State ou Mod Adapter n’a été trouvé dans l’archive. Le plugin CK est donc un chantier séparé qui devra être ajouté ou versionné dans un dépôt associé.
+Le Mod Integration Framework générique, le bridge Papyrus public et Campaign State restent des architectures proposées. Il ne faut pas présenter le service Character Build comme un SDK générique déjà stabilisé.
 
 ## Recommandations immédiates
 
-1. Corriger `UPSTREAM.md` et les métadonnées héritées.
-2. Publier une architecture Trading complète.
-3. Remplacer le bridge `toggleDebugUI` par un canal typé dédié.
-4. Faire évoluer la preview vers un gestionnaire de leases.
-5. Ajouter des tests du solver et des tests d’intégration réseau.
-6. Versionner le plugin Alternate Start et ses sources Papyrus dans une structure traçable.
-7. Utiliser Alternate Start comme premier adaptateur first-party avant d’ouvrir un SDK tiers.
+1. Automatiser le test des neuf combinaisons Mage dans le build natif et compléter les tests en jeu.
+2. Implémenter la persistance/reconnexion des builds avant d’étendre l’autorité à la campagne complète.
+3. Terminer les kits restants à partir du catalogue et du tableur V2.
+4. Mettre en place le skip Helgen et la reprise vanilla avant d’annoncer un Alternate Start complet.
+5. Ajouter Valen, le départ et le Campaign State par petits jalons testables.
+6. Remplacer l’allowlist nominale des buffs par une classification plus extensible avant un SDK tiers.
+7. Continuer l’évolution de la preview vers un gestionnaire de leases.
+
+## Traçabilité historique
+
+L’audit du 19 juillet 2026 constatait uniquement Trading/Preview et l’absence d’Alternate Start dans l’archive. Ce constat reste valable pour cette archive historique, mais il est superseded par l’état décrit ci-dessus. Les détails de la baseline upstream restent dans `UPSTREAM.md`.

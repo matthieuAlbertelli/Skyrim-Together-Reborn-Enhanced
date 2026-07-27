@@ -16,3 +16,7 @@ La phase de campagne reste dans STRE. La scène CK rend localement cette phase e
 - reprise après reconnexion ;
 - nécessité de scènes idempotentes et skip/resume ;
 - coordination explicite entre phase et stage local.
+
+## État d’implémentation
+
+Le build multijoueur est canonique côté serveur et le stage CK déclenche seulement l’UI/application locale. Les futures scènes Valen et phases de campagne ne sont pas encore implémentées.

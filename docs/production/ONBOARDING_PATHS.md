@@ -1,28 +1,30 @@
 # Parcours d’onboarding par profil
 
-> **Statut : Proposition**
+> **Statut : Parcours maintenus — mise à jour M7**
 
 ## Développeur STRE Core
 
 1. [`docs/project/VISION.md`](../project/VISION.md)
 2. [`docs/audit/CURRENT_STATE_AUDIT.md`](../audit/CURRENT_STATE_AUDIT.md)
-3. [`docs/architecture/SYSTEM_OVERVIEW.md`](../architecture/SYSTEM_OVERVIEW.md)
-4. [`docs/features/trading/TECHNICAL_DESIGN.md`](../features/trading/TECHNICAL_DESIGN.md)
-5. [`docs/architecture/MOD_INTEGRATION_FRAMEWORK.md`](../architecture/MOD_INTEGRATION_FRAMEWORK.md)
-6. ADRs 0001, 0002, 0004, 0007 et 0009.
+3. [`docs/features/alternate-start/M7_CK_CODE_INTEGRATION.md`](../features/alternate-start/M7_CK_CODE_INTEGRATION.md)
+4. [`docs/architecture/SYSTEM_OVERVIEW.md`](../architecture/SYSTEM_OVERVIEW.md)
+5. [`docs/features/trading/TECHNICAL_DESIGN.md`](../features/trading/TECHNICAL_DESIGN.md)
+6. [`docs/architecture/MOD_INTEGRATION_FRAMEWORK.md`](../architecture/MOD_INTEGRATION_FRAMEWORK.md)
+7. ADRs 0001, 0002, 0004, 0007 et 0009.
 
 **Premier exercice :** ajouter un test de panne ou extraire une policy testable.
 
 ## Moddeur Creation Kit
 
-1. Alternate Start Product Spec
-2. Solo Design
+1. Alternate Start README et Product Spec
+2. M7 CK/Code Integration
 3. CK Implementation
-4. CK/STRE Bridge
-5. Campaign State
-6. ADRs 0003, 0006 et 0012.
+4. Solo Design
+5. CK/STRE Bridge
+6. Campaign State
+7. ADRs 0003, 0006 et 0012.
 
-**Premier exercice :** scène solo minimale avec logs et propriétés configurées.
+**Premier exercice :** ajouter ou corriger un record CK, passer les deux scripts d’audit, compiler et fournir un test en jeu.
 
 ## Développeur UI
 
@@ -70,4 +72,4 @@
 4. Multiplayer Runbook
 5. Compatibility Matrix.
 
-**Premier exercice :** reproduire un scénario Trading avec bundle complet.
+**Premier exercice :** reproduire un build Mage et un buff ciblé à deux PC avec logs, hashes et SHA de l’ESP.

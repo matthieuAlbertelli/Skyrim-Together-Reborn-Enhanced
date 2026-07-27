@@ -1,28 +1,28 @@
 # Vue d’ensemble du système
 
-> **Statut : Implémenté pour Trading / Proposé pour Campaign & Mod Integration**
+> **Statut : Implémenté pour Trading et Character Build / Proposé pour Campaign State et SDK générique**
 
 ## Couches
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │ Contenu Skyrim                                               │
-│ Cellules, PNJ, quêtes, scènes, Papyrus, objets, animations   │
+│ Cellules, quêtes, Papyrus, objets, sorts, animations         │
 └───────────────────────────────┬──────────────────────────────┘
-                                │ intentions / effets locaux
+                                │ événements / application locale
 ┌───────────────────────────────▼──────────────────────────────┐
 │ Bridges client                                               │
-│ CK/Papyrus Bridge · CEF Bridge · Skyrim native adapters      │
+│ TES events · CEF/V8 bridge · Skyrim native adapters          │
 └───────────────────────────────┬──────────────────────────────┘
-                                │ commands / events
+                                │ intentions / résultats
 ┌───────────────────────────────▼──────────────────────────────┐
 │ STRE Client                                                  │
-│ Services · Mod Adapter Runtime · UI Surface · Local appliers │
+│ Services · UI Surface · local appliers · verification        │
 └───────────────────────────────┬──────────────────────────────┘
                                 │ protocole versionné
 ┌───────────────────────────────▼──────────────────────────────┐
-│ STRE Server / Campaign Authority                             │
-│ Validation · Canonical State · Snapshots · Persistence       │
+│ STRE Server                                                  │
+│ Validation · canonical inventory/spells · state broadcasts   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -30,11 +30,10 @@
 
 Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu. Les messages sont des types statiques enregistrés dans les factories de protocole.
 
-Le trading illustre le chemin complet :
+### Trading
 
 ```text
 Angular action
-→ OverlayClient
 → TradeMenuService / TradeService client
 → ClientMessage
 → TradeService serveur
@@ -43,62 +42,83 @@ Angular action
 → application locale / UI
 ```
 
+### Alternate Start / Character Build
+
+```text
+Stage de quête CK 20
+→ CharacterCreationService
+→ RaceMenu + Angular loadouts
+→ sélection logique race/classe/kits
+→ CharacterBuildRequest
+→ CharacterBuildService serveur
+→ inventaire + sorts canoniques + hashes
+→ CharacterBuildResponse
+→ nettoyage et application locale
+→ CharacterBuildAppliedRequest
+→ validation des hashes
+→ NotifyCharacterBuildState(Applied)
+```
+
+En mode hors ligne, `CharacterCreationService` utilise le même catalogue partagé et applique le build localement sans connexion au serveur.
+
+## Frontières de responsabilité actuelles
+
+### Creation Kit / plugin Alternate Start
+
+- cellule, quête, aliases, sièges et records de gameplay ;
+- déclenchement local de Character Creation ;
+- modèles, noms, enchantements, sorts et effets ;
+- fallback solo au niveau du flux de création.
+
+Le plugin n’est pas la source de vérité du build multijoueur.
+
+### Catalogue partagé
+
+- classes/options autorisées ;
+- activation conditionnelle des groupes ;
+- objets, quantités, équipement et sorts dérivés ;
+- version de build.
+
+### STRE Client
+
+- UI et collecte des choix ;
+- transport des intentions ;
+- nettoyage anti-import ;
+- application de l’inventaire et des sorts ;
+- vérification locale et accusé d’application ;
+- synchronisation des buffs distants reconnus.
+
+### STRE Server
+
+- validation de version, race, classe et options ;
+- résolution plugin/FormID local ;
+- construction des snapshots canoniques ;
+- calcul des hashes ;
+- état Pending/Applied pendant la session ;
+- niveau serveur à 1 après accusé valide.
+
 ## Architecture cible
 
-Le Mod Integration Runtime ajoute un niveau générique :
+Le Mod Integration Runtime générique ajoutera :
 
 ```text
 Mod solo
 → Adapter local
-→ Intent
+→ Intent versionnée
 → Capability Runtime
-→ Command autoritaire
-→ Canonical State
-→ Event
+→ Canonical State persistant
+→ Snapshot / Event
 → Adapter local
 → conséquence Skyrim
 ```
 
-## Frontières de responsabilité
-
-### Creation Kit / mod solo
-
-- contenu, présentation et progression locale ;
-- lecture/écriture d’éléments Skyrim ;
-- fallback solo ;
-- application des conséquences validées.
-
-### Mod Adapter
-
-- traduction entre concepts du mod et concepts STRE ;
-- déclaration des capabilities ;
-- observation des signaux ;
-- validation locale de forme ;
-- capture/application de snapshot ;
-- gestion des erreurs de compatibilité.
-
-### STRE Client
-
-- transport d’intentions ;
-- cache local de l’état canonique ;
-- bridge UI et Skyrim ;
-- journaux idempotents ;
-- application ordonnée des événements.
-
-### STRE Server
-
-- autorité ;
-- invariants ;
-- versionnement ;
-- conflits ;
-- diffusion ;
-- persistance ;
-- reconnexion.
+Campaign State, adapter registry, persistance et reconnexion ne sont pas encore fournis par le service Character Build actuel.
 
 ## Principes transverses
 
-- Aucun état critique n’est défini uniquement par l’affichage d’un menu ou d’une scène.
-- Toute commande possède un identifiant ou une version permettant de détecter les doublons.
-- Les snapshots sont complets ; les événements sont incrémentaux.
-- Les adapters ne doivent pas appeler directement des services internes non contractuels.
-- Les APIs externes sont versionnées et bornées en taille.
+- Aucun état critique n’est défini uniquement par un menu, une scène ou un stage de quête.
+- Le client n’envoie pas de liste arbitraire de FormIDs d’objets ou de sorts.
+- Les snapshots canoniques sont validés avant application.
+- Les accusés d’application portent des hashes déterministes.
+- Les FormIDs chargés ne sont jamais codés en dur ; le code résout plugin + FormID local.
+- Les APIs tierces restent proposées tant qu’elles n’ont pas été validées par plusieurs intégrations first-party.

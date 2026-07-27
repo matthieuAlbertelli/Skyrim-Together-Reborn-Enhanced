@@ -1,45 +1,51 @@
 # Jalons de production
 
-> **Statut : Proposition**
+> **Statut : Progression mise à jour le 27 juillet 2026**
 
-## M0 — Repository Ready
+## M0 — Repository Ready — En cours
 
-**Démo :** un nouveau contributeur compile et lance les tests depuis un environnement documenté.
+**Démo :** un contributeur compile et lance les tests depuis un environnement documenté.
 
-**Exit criteria :** upstream hash, build guide, CI verte, metadata corrigées, issues templates, owners.
+**Acquis :** baseline upstream, documentation, build local xmake, fichiers CK versionnés.
+**Restant :** clean-machine matrix, CI, commande de test canonique, versions exactes.
 
-## M1 — Trading Stabilized
+## M1 — Trading Stabilized — Partiellement implémenté
 
-**Démo :** échange complet entre deux clients avec cas de déconnexion simulé.
+**Acquis :** domaine, protocole, service serveur, application idempotente, réconciliation, UI et tests.
+**Restant :** tests d’intégration, UX d’erreur, reconnect, piles et or.
 
-**Exit criteria :** tests d’intégration, logs, erreurs UX, limites documentées, aucune duplication sur retransmission.
+## M2 — Preview Reusable — Partiellement implémenté
 
-## M2 — Preview Reusable
+**Acquis :** composants modulaires, fitting automatique, consommateurs Trading et Character Creation.
+**Restant :** leases, arbitrage, tests solver/lifecycle et API interne stable.
 
-**Démo :** Trading et un second écran affichent une preview via le même runtime.
+## M3 — Alternate Start Character Bootstrap — Implémenté en alpha
 
-**Exit criteria :** leases, arbitrage, tests solver, API interne documentée.
+**Démo réalisée :** auberge → RaceMenu → classe/kits → build canonique ; buffs ciblés entre deux joueurs.
 
-## M3 — Alternate Start Solo
+**Exit criteria validés :** ESP/PSC/PEX versionnés, fallback local, catalogue partagé, inventaire/sorts canoniques, audits conformes.
+**Restant avant « Solo complet » :** nouveau jeu automatique, skip Helgen, Valen, sortie et reprise vanilla.
 
-**Démo :** nouvelle partie → auberge → Valen → classe → sortie, sans Helgen et sans STRE.
+## M4 — Build Persistence and Recovery — Prochain jalon structurel
 
-**Exit criteria :** sauvegarde/chargement, reprise vanilla, CK audit, aucune dépendance réseau.
+**Démo :** un build Applied est restauré après reconnexion sans réimporter un personnage arbitraire.
 
-## M4 — Adapter MVP
+**Exit criteria :** stockage versionné, binding joueur/personnage, migration BuildVersion, snapshot, application idempotente et logs.
 
-**Démo :** deux joueurs partagent ready state et phase d’introduction, puis l’un reconnecte.
-
-**Exit criteria :** adapter registry, bridge, snapshot, versionnement, logs.
-
-## M5 — Group Campaign Start
+## M5 — Group Campaign Start — Futur
 
 **Démo :** 2, 4 puis 10 joueurs créent leur personnage et quittent l’auberge ensemble.
 
-**Exit criteria :** roster, binding, classes, Dragonborn secret, départ, performance acceptable.
+**Exit criteria :** roster, ready check, phases, Valen, Dragonborn secret, départ, late join et performance acceptable.
 
-## M6 — Contributor Alpha
+## M6 — Remaining Character Kits — En cours fonctionnel
 
-**Démo :** un contributeur externe réalise un petit adapter ou asset en suivant uniquement la documentation.
+**Démo :** toutes les compétences/classes exposées produisent des récompenses réelles et testées.
 
-**Exit criteria :** SDK expérimental, exemples, open roles, pipeline reviews, release package.
+**Exit criteria :** Invocation, Illusion, Restauration, Enchantement et autres kits matérialisés, équilibrage, previews et tests combinatoires.
+
+## M7 — Contributor Alpha / SDK — Futur
+
+**Démo :** un contributeur externe réalise une petite intégration ou un asset en suivant uniquement la documentation.
+
+**Exit criteria :** runtime générique stabilisé par plusieurs intégrations first-party, exemples, manifests, open roles, reviews et release package.

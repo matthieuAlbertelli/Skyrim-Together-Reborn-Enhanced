@@ -1,37 +1,50 @@
 # Carte des dépendances
 
-> **Statut : Proposition**
+> **Statut : Mise à jour après Character Build M7**
 
-## Chaîne Alternate Start
+## Chaîne implémentée Character Build
 
 ```text
-Vision produit
-  └─ Narrative Bible
-      ├─ Valen Character Bible
-      │   ├─ Valen Art Brief → modèle/texture → intégration CK
-      │   └─ Valen Voice Brief → casting → enregistrement → lipsync
-      └─ Alternate Start Product Spec
-          ├─ Solo Design → CK Implementation
-          └─ STRE Adapter Spec
-              ├─ Mod Integration Framework
-              ├─ CK/STRE Bridge
-              └─ Campaign State
+Quête CK + RaceMenu
+  → Character Creation Angular
+  → sélections logiques
+  → CharacterBuildCatalog v5
+  → CharacterBuildService serveur ou fallback local
+  → inventaire + sorts canoniques
+  → application client + hashes
+  → état Applied
+```
+
+Dépendances de cohérence :
+
+```text
+STRE_AlternateStart.esp
+  ↔ CK_RECORDS_M7_IMPLEMENTED.json
+  ↔ CharacterBuildCatalog.cpp
+  ↔ character-loadouts.ts
+  ↔ tests/audits
+```
+
+## Chaîne Alternate Start complète
+
+```text
+Character Build M7 (acquis)
+  → persistance et character binding
+  → Campaign State minimal
+  → roster et ready check
+  → Valen / introduction
+  → départ et reprise vanilla
+  → late join / reconnexion
 ```
 
 ## Chaîne Preview
 
 ```text
-ItemPreviewNativeSession
-  + ItemPreviewController
-  + ItemPreviewFitSolver
-  + ItemPreviewRasterMeasurer
-  + Host Menu
-        ↓
-Preview Runtime / Lease Manager
-        ↓
-Trade consumer + futurs consommateurs
-        ↓
-SDK tiers expérimental
+NativeSession + Controller + Solver + RasterMeasurer + Host
+  → consommateurs Trading et Character Creation
+  → futur Lease Manager
+  → API interne stable
+  → SDK tiers expérimental
 ```
 
 ## Chaîne Trading
@@ -41,8 +54,8 @@ Trade Session Domain
   → Protocol Messages
   → Server TradeService
   → Client TradeService
-  → TradeMenuService / Angular UI
-  → Item Preview consumer
+  → Angular UI
+  → Item Preview
 
 Inventory snapshots
   → Mutation plan
@@ -51,9 +64,11 @@ Inventory snapshots
   → Absolute reconciliation when uncertain
 ```
 
-## Gates de démarrage
+## Gates
 
-- Le modèle de Valen ne commence pas avant validation de la bible personnage et du brief art.
-- L’enregistrement principal ne commence pas avant verrouillage du script et test de prononciation.
-- L’adaptateur Alternate Start ne commence pas avant définition du Campaign State minimal et du bridge.
-- Le SDK tiers ne commence pas avant validation du runtime first-party avec Alternate Start.
+- Persistance/character binding avant Campaign State complet.
+- Skip Helgen testé avant d’annoncer Alternate Start comme remplacement du nouveau jeu.
+- Script Valen verrouillé avant voix/lipsync.
+- Lease manager avant SDK preview tiers.
+- Au moins une intégration first-party supplémentaire avant de stabiliser le SDK d’adapters.
+- Les nouveaux records CK doivent passer les audits manifest et catalogue avant intégration.

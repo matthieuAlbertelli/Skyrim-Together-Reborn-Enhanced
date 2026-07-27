@@ -1,8 +1,12 @@
 # Item Preview — Proposition de SDK
 
-> **Statut : Proposition**
+> **Statut : Proposition ; démonstrateur Character Creation réalisé sans SDK public**
 
-## Capability
+## Preuve actuelle
+
+Character Creation affiche déjà les équipements de départ via le même cœur natif que Trading. Cette preuve valide la réutilisation interne, mais utilise encore les services first-party et le bridge mono-client.
+
+## Capability cible
 
 `stre.item-preview/1`
 
@@ -18,24 +22,22 @@
 }
 ```
 
-Les coordonnées publiques doivent être normalisées ou clairement définies en pixels CSS + device scale.
-
-## Cycle de vie
+## Cycle de vie cible
 
 1. `AcquirePreview` → token ;
 2. `UpdatePreview` → item/région ;
 3. `PreviewSuspended` si préempté ;
-4. `PreviewResumed` si ressource récupérée ;
+4. `PreviewResumed` ;
 5. `ReleasePreview` ;
 6. release automatique à la destruction ou timeout.
 
 ## Permissions
 
-- capability présente et version compatible ;
+- capability/version compatibles ;
 - item résolu localement ;
 - surface UI autorisée ;
-- rate limit sur changements d’item/région ;
-- pas d’accès aux pointeurs ou textures natives.
+- rate limit ;
+- aucun accès à un pointeur ou une texture native.
 
 ## Erreurs
 
@@ -48,6 +50,6 @@ Les coordonnées publiques doivent être normalisées ou clairement définies en
 - `HOST_MENU_FAILURE`
 - `DEVICE_FAILURE`
 
-## Démonstrateur requis
+## Prochain démonstrateur
 
-Une fonctionnalité non Trading — par exemple le choix de classe — affiche l’équipement de départ via la même API sans inclure de header spécifique au trading.
+Faire fonctionner Trading et Character Creation avec de vrais leases, puis provoquer et vérifier une préemption contrôlée. Ce test doit précéder toute annonce de SDK tiers.

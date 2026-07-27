@@ -1,16 +1,16 @@
 # Item Preview — API interne actuelle
 
-> **Statut : Implémenté, non stable pour tiers**
+> **Statut : Implémenté pour Trading et Character Creation, non stable pour tiers**
 
-## Entrée consommateur
+## Consommateurs
 
-`TradeItemPreviewService` expose :
+### Trading
 
-- `SelectItem(Trade::ItemId)` ;
-- `Clear()` ;
-- `SetPreviewRegion(left, top, width, height)` ;
-- capture/soumission de mesures raster ;
-- cycle de vie de session native et host menu.
+`TradeItemPreviewService` résout un `Trade::ItemId`, construit l’entrée native et pilote la preview.
+
+### Character Creation
+
+`CharacterCreationService` associe des `previewKey` à des formulaires vanilla ou `STRE_AlternateStart.esp`, puis transmet la sélection et la région au pipeline de preview.
 
 ## Cœur générique
 
@@ -28,7 +28,7 @@ Automate atomique de show/hide qui absorbe les messages concurrents.
 
 ### `ItemPreviewHostBridge`
 
-Singleton thread-safe auquel un seul `ItemPreviewHostClient` peut être lié. `ItemPreviewHostBinding` gère le bind/unbind en RAII.
+Singleton thread-safe auquel un seul `ItemPreviewHostClient` peut être lié. `ItemPreviewHostBinding` gère bind/unbind en RAII.
 
 ### `ItemPreviewFitSolver`
 
@@ -40,18 +40,20 @@ Capture D3D11 avant/après et mesure le modèle dans la région cible.
 
 ## Ce que cette API permet déjà
 
-- extraire la preview du service de trading ;
-- réutiliser le contrôleur depuis un autre service C++ interne ;
+- partager le pipeline entre deux fonctionnalités first-party ;
+- afficher des objets Skyrim réels dans une région Angular ;
+- recalculer le cadrage après resize ou changement rapide ;
 - tester le solver indépendamment ;
 - isoler le host menu du consommateur.
 
 ## Ce qu’elle ne garantit pas
 
-- coexistence de plusieurs consommateurs ;
+- coexistence concurrente de plusieurs consommateurs ;
+- leases, ownership ou priorité ;
 - ABI stable ;
 - appel depuis Papyrus ou un mod externe ;
-- ownership et priorité ;
 - compatibilité inter-version ;
-- sécurité d’un payload venant du réseau.
+- sécurité d’un payload réseau tiers ;
+- preview 3D appropriée pour tous les `MagicItem`.
 
-La communication publique doit donc employer : **« fondation d’API réutilisable »**, pas encore **« SDK de mods tiers »**.
+La communication publique doit employer **« fondation d’API interne réutilisable »**, pas **« SDK de mods tiers »**.

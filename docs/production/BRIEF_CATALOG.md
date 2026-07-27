@@ -4,9 +4,12 @@
 
 | Besoin | Document principal | Validation |
 |---|---|---|
+| État courant | [`CURRENT_STATE_AUDIT.md`](../audit/CURRENT_STATE_AUDIT.md) | Architecture + Produit |
+| Character Build M7 | [`M7_CK_CODE_INTEGRATION.md`](../features/alternate-start/M7_CK_CODE_INTEGRATION.md) | C++ + CK + QA |
+| Records CK M7 | [`CK_RECORDS_M7_IMPLEMENTED.json`](../features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json) | CK + C++ |
 | Ingénierie Framework | [`MOD_INTEGRATION_FRAMEWORK.md`](../architecture/MOD_INTEGRATION_FRAMEWORK.md) | Architecture + STRE Core |
 | Bridge CK | [`CK_STRE_BRIDGE.md`](../architecture/CK_STRE_BRIDGE.md) | Mod Integration + CK |
-| État campagne | [`CAMPAIGN_STATE.md`](../architecture/CAMPAIGN_STATE.md) | Architecture + Narrative |
+| État campagne futur | [`CAMPAIGN_STATE.md`](../architecture/CAMPAIGN_STATE.md) | Architecture + Narrative |
 | Alternate Start | [`Alternate Start Product Spec`](../features/alternate-start/PRODUCT_SPEC.md) | Produit |
 | Implémentation CK | [`Alternate Start CK Implementation`](../features/alternate-start/CK_IMPLEMENTATION.md) | CK Lead |
 | Valen écriture | [`Valen Character Bible`](../narrative/VALEN_CHARACTER_BIBLE.md) | Narrative Lead |

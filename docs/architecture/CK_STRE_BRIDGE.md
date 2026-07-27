@@ -1,12 +1,24 @@
 # Bridge Creation Kit / Papyrus ↔ STRE
 
-> **Statut : Spécification proposée**
+> **Statut : Intégration first-party partielle implémentée / API générique proposée**
 
-## But
+## État actuel
 
-Offrir au contenu CK un petit port stable permettant d’émettre des intentions et de recevoir des résultats sans faire de Papyrus l’autorité réseau.
+Alternate Start utilise aujourd’hui une intégration dédiée :
 
-## Règle de flux
+```text
+Quête CK et TESQuestStageEvent
+→ CharacterCreationService natif
+→ UI Character Creation
+→ application locale ou CharacterBuildRequest
+→ résultat canonique appliqué dans Skyrim
+```
+
+Le stage `20` de `STRE_QUEST_AlternateStart` déclenche le flux natif/Angular. Les objets, sorts et effets sont authored dans `STRE_AlternateStart.esp`. Le catalogue et le serveur restent la source de vérité des récompenses multijoueur.
+
+Cette intégration valide les principes du bridge, mais **n’expose pas encore** une API Papyrus générique `STREBridge` utilisable par des mods tiers.
+
+## Règle de flux cible
 
 ```text
 Papyrus observe une interaction
@@ -28,7 +40,7 @@ Int Function GetCanonicalVersion(String adapterId) Global
 String Function GetSnapshotJson(String adapterId) Global
 ```
 
-Événements :
+Événements proposés :
 
 ```papyrus
 Event OnSTREAdapterReady(String adapterId, Int version)
@@ -37,13 +49,13 @@ Event OnSTREIntentRejected(String requestId, String errorCode, String details)
 Event OnSTRESnapshotApplied(String adapterId, Int version)
 ```
 
-Le JSON est utile pour prototyper, mais une représentation plus compacte pourra être nécessaire. Les payloads doivent rester bornés et validés.
+Le JSON peut servir au prototypage, mais les payloads doivent rester bornés et validés.
 
 ## Mode solo
 
-`IsAvailable()` retourne faux. Le mod exécute son flux solo. Les scripts ne doivent jamais attendre indéfiniment un callback STRE absent.
+Le plugin Alternate Start doit continuer à fonctionner sans serveur. Le flux M7 utilise le même catalogue localement ; un futur bridge générique devra retourner un état indisponible sans bloquer Papyrus.
 
-Patron recommandé :
+Patron cible :
 
 ```papyrus
 If STREBridge.IsAvailable()
@@ -55,29 +67,16 @@ EndIf
 
 ## Threading et cadence
 
-- Les callbacks Papyrus sont planifiés sur le contexte sûr du jeu.
-- Aucune lecture fréquente par polling à chaque frame.
-- Les observations sont événementielles ou périodiques à cadence limitée.
-- Les appels réseau ne bloquent jamais Papyrus.
-
-## Erreurs
-
-Codes minimaux :
-
-- `ADAPTER_UNAVAILABLE`
-- `CAPABILITY_UNSUPPORTED`
-- `INVALID_PAYLOAD`
-- `NOT_AUTHORIZED`
-- `STALE_VERSION`
-- `INVALID_PHASE`
-- `PLAYER_NOT_IN_CAMPAIGN`
-- `RATE_LIMITED`
-- `SERVER_UNAVAILABLE`
+- callbacks Papyrus planifiés sur le contexte sûr du jeu ;
+- aucun polling par frame ;
+- observations événementielles ou périodiques limitées ;
+- aucun appel réseau bloquant Papyrus.
 
 ## Références CK
 
-- propriétés de scripts pour Form/Quest/Global ;
-- Editor IDs préfixés `STRE_` ;
-- aucun FormID codé en dur ;
-- les objets de conséquence doivent être idempotents ;
-- les stages de quête locaux sont des rendus de l’état canonique, pas sa source.
+- EditorID préfixés `STRE_` ;
+- propriétés/aliases pour les références de quête ;
+- plugin + FormID local stable pour le catalogue natif ;
+- aucun préfixe de load order codé en dur ;
+- PSC et PEX versionnés tant que la compilation Papyrus n’est pas automatisée ;
+- stages de quête locaux considérés comme déclencheurs/projections, pas comme état canonique de campagne.
