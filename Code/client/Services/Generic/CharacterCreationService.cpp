@@ -46,6 +46,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -85,11 +86,12 @@ struct RuntimeConsoleScript : TESForm
 static_assert(offsetof(RuntimeConsoleScript, text) == 0x38);
 static_assert(sizeof(RuntimeConsoleScript) == 0x80);
 
-[[nodiscard]] bool ExecutePlayerSetLevelCommand(
+[[nodiscard]] bool ExecutePlayerConsoleCommand(
     PlayerCharacter* apPlayer,
-    std::uint16_t aLevel) noexcept
+    std::string_view aCommand,
+    const char* apContext) noexcept
 {
-    if (!apPlayer)
+    if (!apPlayer || aCommand.empty())
         return false;
 
     IFormFactory* const pFactory =
@@ -97,7 +99,8 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
     if (!pFactory)
     {
         spdlog::error(
-            "[STRE][CharacterCreation] Player level console bridge unavailable reason=scriptFactory");
+            "[STRE][CharacterCreation] Console bridge unavailable context={} reason=scriptFactory",
+            apContext ? apContext : "unknown");
         return false;
     }
 
@@ -106,22 +109,23 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
     if (!pScript)
     {
         spdlog::error(
-            "[STRE][CharacterCreation] Player level console bridge unavailable reason=scriptAllocation");
+            "[STRE][CharacterCreation] Console bridge unavailable context={} reason=scriptAllocation",
+            apContext ? apContext : "unknown");
         return false;
     }
 
-    const std::string command =
-        fmt::format("player.setlevel {}", aLevel);
     char* const pCommand =
-        static_cast<char*>(Memory::Allocate(command.size() + 1));
+        static_cast<char*>(Memory::Allocate(aCommand.size() + 1));
     if (!pCommand)
     {
         spdlog::error(
-            "[STRE][CharacterCreation] Player level console bridge unavailable reason=commandAllocation");
+            "[STRE][CharacterCreation] Console bridge unavailable context={} reason=commandAllocation",
+            apContext ? apContext : "unknown");
         return false;
     }
 
-    std::memcpy(pCommand, command.c_str(), command.size() + 1);
+    std::memcpy(pCommand, aCommand.data(), aCommand.size());
+    pCommand[aCommand.size()] = '\0';
     pScript->text = pCommand;
 
     TP_THIS_FUNCTION(
@@ -131,10 +135,6 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
         void*,
         std::uint32_t,
         TESObjectREFR*);
-    // Bethesda moved Script::CompileAndRun to a new Address Library ID in
-    // 1.6.1130 and later. Skyrim 1.6.1170 therefore resolves 441582, while
-    // older AE runtimes still use 21890. Prefer the current ID and retain the
-    // legacy fallback so the character creator does not depend on one runtime.
     POINTER_SKYRIMSE(
         TCompileAndRun,
         s_compileAndRunCurrent,
@@ -156,14 +156,15 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
     if (!pCompileAndRun)
     {
         spdlog::error(
-            "[STRE][CharacterCreation] Player level console bridge unavailable reason=compileAndRun currentAddressId={} legacyAddressId={}",
+            "[STRE][CharacterCreation] Console bridge unavailable context={} reason=compileAndRun currentAddressId={} legacyAddressId={}",
+            apContext ? apContext : "unknown",
             kScriptCompileAndRunAddressIdCurrent,
             kScriptCompileAndRunAddressIdLegacy);
+        pScript->text = nullptr;
+        Memory::Free(pCommand);
         return false;
     }
 
-    // ScriptCompiler is an empty one-byte runtime type. The system-window
-    // compiler accepts ordinary console syntax, including player.setlevel.
     std::uint8_t compilerStorage = 0;
     TiltedPhoques::ThisCall(
         pCompileAndRun,
@@ -173,16 +174,27 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
         static_cast<TESObjectREFR*>(apPlayer));
 
     spdlog::info(
-        "[STRE][CharacterCreation] Player level command executed path=Script.CompileAndRun addressId={} command={}",
+        "[STRE][CharacterCreation] Console command executed context={} path=Script.CompileAndRun addressId={} command={}",
+        apContext ? apContext : "unknown",
         resolvedAddressId,
-        command);
+        aCommand);
 
     // CompileAndRun consumes the command synchronously. Keep the tiny SCPT
-    // form allocated for the lifetime of the process rather than guessing its
-    // private destruction path across Skyrim runtimes.
+    // form allocated for the process lifetime rather than guessing its private
+    // destruction path across Skyrim runtimes.
     pScript->text = nullptr;
     Memory::Free(pCommand);
     return true;
+}
+
+[[nodiscard]] bool ExecutePlayerSetLevelCommand(
+    PlayerCharacter* apPlayer,
+    std::uint16_t aLevel) noexcept
+{
+    return ExecutePlayerConsoleCommand(
+        apPlayer,
+        fmt::format("player.setlevel {}", aLevel),
+        "setLevel");
 }
 
 [[nodiscard]] MagicSystem::SpellType GetSpellType(
@@ -210,6 +222,63 @@ static_assert(sizeof(RuntimeConsoleScript) == 0x80);
     default:
         return false;
     }
+}
+
+[[nodiscard]] bool HasPlayerSpell(
+    PlayerCharacter* apPlayer,
+    std::uint32_t aFormId) noexcept
+{
+    if (!apPlayer || aFormId == 0)
+        return false;
+
+    if (TESActorBase* const pActorBase =
+            Cast<TESActorBase>(apPlayer->baseForm);
+        pActorBase && pActorBase->spellList.lists &&
+        pActorBase->spellList.lists->spells)
+    {
+        TESSpellList::Lists* const pLists =
+            pActorBase->spellList.lists;
+        for (std::uint32_t i = 0; i < pLists->spellCount; ++i)
+        {
+            SpellItem* const pSpell = pLists->spells[i];
+            if (pSpell && pSpell->formID == aFormId)
+                return true;
+        }
+    }
+
+    auto& addedSpells = apPlayer->addedSpells;
+    TESForm** pAddedForms = nullptr;
+    if (addedSpells.capacity >= 0)
+    {
+        pAddedForms = reinterpret_cast<TESForm**>(
+            addedSpells.data);
+    }
+    else
+    {
+        pAddedForms = reinterpret_cast<TESForm**>(
+            &addedSpells.data);
+    }
+
+    if (pAddedForms)
+    {
+        for (std::uint32_t i = 0; i < addedSpells.size; ++i)
+        {
+            TESForm* const pForm = pAddedForms[i];
+            if (pForm && pForm->formID == aFormId)
+                return true;
+        }
+    }
+
+    std::size_t spellEntryGuard = 0;
+    for (const Actor::SpellItemEntry* pEntry = apPlayer->spellItemHead;
+         pEntry && spellEntryGuard < 4096;
+         pEntry = pEntry->pNext, ++spellEntryGuard)
+    {
+        if (pEntry->pItem && pEntry->pItem->formID == aFormId)
+            return true;
+    }
+
+    return false;
 }
 
 
@@ -270,6 +339,13 @@ constexpr std::array kPreviewForms{
     PreviewFormRule{"preview.iron_ingot", "Skyrim.esm", 0x0005ACE4},
     PreviewFormRule{"preview.steel_ingot", "Skyrim.esm", 0x0005ACE5},
     PreviewFormRule{"preview.corundum_ingot", "Skyrim.esm", 0x0005AD93},
+    PreviewFormRule{"preview.stre_guard_pendant", "STRE_AlternateStart.esp", 0x00003B41},
+    PreviewFormRule{"preview.stre_sneak_clothes", "STRE_AlternateStart.esp", 0x00003B43},
+    PreviewFormRule{"preview.stre_speech_clothes", "STRE_AlternateStart.esp", 0x00003B4F},
+    PreviewFormRule{"preview.stre_pickpocket_clothes", "STRE_AlternateStart.esp", 0x00003B57},
+    PreviewFormRule{"preview.stre_smithing_clothes", "STRE_AlternateStart.esp", 0x00003B5D},
+    PreviewFormRule{"preview.stre_alchemy_clothes", "STRE_AlternateStart.esp", 0x00003B66},
+    PreviewFormRule{"preview.stre_enchanting_clothes", "STRE_AlternateStart.esp", 0x00003B6E},
 };
 
 const char* PhaseName(CharacterCreationPhase aPhase) noexcept
@@ -545,7 +621,10 @@ void CharacterCreationService::OnCharacterBuildResponse(
         acceptedSelections != m_selectedLoadoutOptions ||
         acMessage.Build.InventoryHash !=
             ComputeCharacterBuildInventoryHash(
-                acMessage.Build.CanonicalInventory))
+                acMessage.Build.CanonicalInventory) ||
+        acMessage.Build.SpellHash !=
+            ComputeCharacterBuildSpellHash(
+                acMessage.Build.CanonicalSpells))
     {
         ResetNetworkBuildState();
         Fail("La réponse du serveur ne correspond pas au build soumis.");
@@ -558,18 +637,22 @@ void CharacterCreationService::OnCharacterBuildResponse(
     m_serverBuildRevision = acMessage.Revision;
     m_serverCharacterId = acMessage.ServerId;
     m_serverCanonicalInventory = acMessage.Build.CanonicalInventory;
+    m_serverCanonicalSpells = acMessage.Build.CanonicalSpells;
+    m_serverSpellHash = acMessage.Build.SpellHash;
 
     ResetBuildApplicationState();
     m_buildApplicationPending = true;
     m_phaseElapsed = 0.0;
 
     spdlog::info(
-        "[STRE][CharacterBuild][Client] Server accepted build revision={} serverId={:X} classId={} inventoryEntries={} inventoryHash={:016X}",
+        "[STRE][CharacterBuild][Client] Server accepted build revision={} serverId={:X} classId={} inventoryEntries={} inventoryHash={:016X} spellCount={} spellHash={:016X}",
         m_serverBuildRevision,
         m_serverCharacterId,
         m_selectedClassId,
         m_serverCanonicalInventory.Entries.size(),
-        acMessage.Build.InventoryHash);
+        acMessage.Build.InventoryHash,
+        m_serverCanonicalSpells.size(),
+        m_serverSpellHash);
 
     PushState(true);
 }
@@ -578,13 +661,14 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
     const NotifyCharacterBuildState& acMessage) noexcept
 {
     spdlog::info(
-        "[STRE][CharacterBuild][Client] State received player={} serverId={:X} revision={} state={} classId={} inventoryEntries={}",
+        "[STRE][CharacterBuild][Client] State received player={} serverId={:X} revision={} state={} classId={} inventoryEntries={} spellCount={}",
         acMessage.PlayerId,
         acMessage.ServerId,
         acMessage.Revision,
         static_cast<std::uint32_t>(acMessage.State),
         acMessage.Build.ClassId.c_str(),
-        acMessage.Build.CanonicalInventory.Entries.size());
+        acMessage.Build.CanonicalInventory.Entries.size(),
+        acMessage.Build.CanonicalSpells.size());
 
     const bool isLocalPlayer =
         acMessage.PlayerId ==
@@ -1299,6 +1383,129 @@ bool CharacterCreationService::ApplyCanonicalServerInventory(
     return false;
 }
 
+bool CharacterCreationService::EnsurePlayerSpell(
+    PlayerCharacter* apPlayer,
+    std::uint32_t aFormId) noexcept
+{
+    if (!apPlayer || aFormId == 0)
+        return false;
+
+    SpellItem* const pSpell =
+        Cast<SpellItem>(TESForm::GetById(aFormId));
+    if (!pSpell || GetSpellType(pSpell) != MagicSystem::SPELL)
+    {
+        spdlog::error(
+            "[STRE][CharacterCreation] Spell grant resolution failed form={:08X} resolved={} spellType={}",
+            aFormId,
+            pSpell != nullptr,
+            pSpell
+                ? static_cast<std::int32_t>(GetSpellType(pSpell))
+                : -1);
+        return false;
+    }
+
+    if (HasPlayerSpell(apPlayer, aFormId))
+        return true;
+
+    if (!ExecutePlayerConsoleCommand(
+            apPlayer,
+            fmt::format("player.addspell {:08X}", aFormId),
+            "addSpell"))
+    {
+        return false;
+    }
+
+    if (!HasPlayerSpell(apPlayer, aFormId))
+    {
+        spdlog::error(
+            "[STRE][CharacterCreation] Spell grant verification failed form={:08X}",
+            aFormId);
+        return false;
+    }
+
+    spdlog::info(
+        "[STRE][CharacterCreation] Spell grant applied form={:08X}",
+        aFormId);
+    return true;
+}
+
+bool CharacterCreationService::ApplyCanonicalServerSpells(
+    PlayerCharacter* apPlayer) noexcept
+{
+    if (!apPlayer || !m_serverBuildAccepted)
+        return false;
+
+    std::vector<std::uint32_t> resolvedFormIds;
+    resolvedFormIds.reserve(m_serverCanonicalSpells.size());
+
+    for (const GameId& spellId : m_serverCanonicalSpells)
+    {
+        const std::uint32_t formId =
+            m_world.GetModSystem().GetGameId(spellId);
+        if (formId == 0 ||
+            std::find(
+                resolvedFormIds.begin(),
+                resolvedFormIds.end(),
+                formId) != resolvedFormIds.end())
+        {
+            spdlog::error(
+                "[STRE][CharacterBuild][Client] Canonical spell resolution failed mod={} base={:08X} gameForm={:08X}",
+                spellId.ModId,
+                spellId.BaseId,
+                formId);
+            return false;
+        }
+
+        resolvedFormIds.push_back(formId);
+        if (!EnsurePlayerSpell(apPlayer, formId))
+            return false;
+    }
+
+    spdlog::info(
+        "[STRE][CharacterBuild][Client] Canonical spells applied revision={} count={} spellHash={:016X}",
+        m_serverBuildRevision,
+        resolvedFormIds.size(),
+        m_serverSpellHash);
+    return true;
+}
+
+bool CharacterCreationService::ApplyLocalBuildSpells(
+    PlayerCharacter* apPlayer) noexcept
+{
+    if (!apPlayer)
+        return false;
+
+    const std::vector<STRE::CharacterCreation::SpellGrant> grants =
+        STRE::CharacterCreation::BuildSpellGrants(
+            m_selectedClassId,
+            m_selectedLoadoutOptions);
+
+    std::size_t appliedSpellCount = 0;
+    for (const STRE::CharacterCreation::SpellGrant& grant : grants)
+    {
+        const std::uint32_t formId = ResolvePluginFormId(
+            grant.PluginName,
+            grant.LocalFormId);
+        if (!EnsurePlayerSpell(apPlayer, formId))
+        {
+            spdlog::error(
+                "[STRE][CharacterCreation] Local spell grant failed plugin={} localForm={:08X} gameForm={:08X}",
+                grant.PluginName,
+                grant.LocalFormId,
+                formId);
+            return false;
+        }
+
+        ++appliedSpellCount;
+    }
+
+    spdlog::info(
+        "[STRE][CharacterCreation] Local spell grants applied classId={} count={}",
+        m_selectedClassId,
+        appliedSpellCount);
+    return true;
+}
+
 bool CharacterCreationService::EquipCanonicalInventory(
     Actor* apPlayer,
     const Inventory& acInventory) noexcept
@@ -1371,7 +1578,7 @@ bool CharacterCreationService::EquipCanonicalInventory(
 
 
 bool CharacterCreationService::SendBuildAppliedAcknowledgement(
-    Actor* apPlayer) noexcept
+    PlayerCharacter* apPlayer) noexcept
 {
     if (!apPlayer ||
         !m_serverBuildAccepted ||
@@ -1514,9 +1721,29 @@ bool CharacterCreationService::SendBuildAppliedAcknowledgement(
         ComputeCharacterBuildInventoryHash(
             m_serverCanonicalInventory);
 
+    for (const GameId& spellId : m_serverCanonicalSpells)
+    {
+        const std::uint32_t formId =
+            m_world.GetModSystem().GetGameId(spellId);
+        if (!HasPlayerSpell(apPlayer, formId))
+        {
+            spdlog::error(
+                "[STRE][CharacterBuild][Client] Live canonical verification failed reason=missingSpell mod={} base={:08X} gameForm={:08X}",
+                spellId.ModId,
+                spellId.BaseId,
+                formId);
+            return false;
+        }
+    }
+
+    const std::uint64_t canonicalSpellHash =
+        ComputeCharacterBuildSpellHash(
+            m_serverCanonicalSpells);
+
     CharacterBuildAppliedRequest request;
     request.Revision = m_serverBuildRevision;
     request.InventoryHash = canonicalHash;
+    request.SpellHash = canonicalSpellHash;
     if (!m_world.GetTransport().Send(request))
         return false;
 
@@ -1527,9 +1754,10 @@ bool CharacterCreationService::SendBuildAppliedAcknowledgement(
         positiveLiveForms,
         request.InventoryHash);
     spdlog::info(
-        "[STRE][CharacterBuild][Client] Applied acknowledgement sent revision={} inventoryHash={:016X}",
+        "[STRE][CharacterBuild][Client] Applied acknowledgement sent revision={} inventoryHash={:016X} spellHash={:016X}",
         request.Revision,
-        request.InventoryHash);
+        request.InventoryHash,
+        request.SpellHash);
     return true;
 }
 
@@ -1541,6 +1769,8 @@ void CharacterCreationService::ResetNetworkBuildState() noexcept
     m_serverBuildRevision = 0;
     m_serverCharacterId = 0;
     m_serverCanonicalInventory = {};
+    m_serverCanonicalSpells.clear();
+    m_serverSpellHash = 0;
 }
 
 void CharacterCreationService::ApplyRemoteCanonicalInventory(
@@ -1744,9 +1974,10 @@ bool CharacterCreationService::ApplyBuild() noexcept
     if (m_serverBuildAccepted)
     {
         spdlog::info(
-            "[STRE][CharacterBuild][Client] Build application phase=applyCanonicalServerInventory revision={}",
+            "[STRE][CharacterBuild][Client] Build application phase=applyCanonicalServerBuild revision={}",
             m_serverBuildRevision);
-        return ApplyCanonicalServerInventory(pPlayer);
+        return ApplyCanonicalServerInventory(pPlayer) &&
+            ApplyCanonicalServerSpells(pPlayer);
     }
 
     spdlog::info(
@@ -1805,11 +2036,14 @@ bool CharacterCreationService::ApplyBuild() noexcept
             grant.Count);
     }
 
-    if (!EquipLocalBuild(pPlayer))
+    if (!EquipLocalBuild(pPlayer) ||
+        !ApplyLocalBuildSpells(pPlayer))
+    {
         return false;
+    }
 
     spdlog::info(
-        "[STRE][CharacterCreation] Build application completed classId={} resolvedItemGrants={} equipped=true level={} unresolvedStreContent=deferred",
+        "[STRE][CharacterCreation] Build application completed classId={} resolvedItemGrants={} equipped=true spellsApplied=true level={} unresolvedStreContent=deferred",
         m_selectedClassId,
         appliedGrantCount,
         pPlayer->GetLevel());

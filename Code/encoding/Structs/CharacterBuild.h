@@ -20,7 +20,8 @@ enum class CharacterBuildResult : std::uint8_t
     RejectedAlreadyPending,
     RejectedAlreadyApplied,
     RejectedRevision,
-    RejectedInventoryHash
+    RejectedInventoryHash,
+    RejectedSpellHash
 };
 
 enum class CharacterBuildNetworkState : std::uint8_t
@@ -51,6 +52,8 @@ struct CharacterBuildSnapshotData
     Vector<CharacterBuildSelectionData> Selections{};
     Inventory CanonicalInventory{};
     std::uint64_t InventoryHash{};
+    Vector<GameId> CanonicalSpells{};
+    std::uint64_t SpellHash{};
 
     void Serialize(Buffer::Writer& aWriter) const noexcept;
     void Deserialize(Buffer::Reader& aReader) noexcept;
@@ -62,9 +65,14 @@ struct CharacterBuildSnapshotData
             ClassId == acRhs.ClassId &&
             Selections == acRhs.Selections &&
             CanonicalInventory == acRhs.CanonicalInventory &&
-            InventoryHash == acRhs.InventoryHash;
+            InventoryHash == acRhs.InventoryHash &&
+            CanonicalSpells == acRhs.CanonicalSpells &&
+            SpellHash == acRhs.SpellHash;
     }
 };
 
 [[nodiscard]] std::uint64_t ComputeCharacterBuildInventoryHash(
     const Inventory& acInventory) noexcept;
+
+[[nodiscard]] std::uint64_t ComputeCharacterBuildSpellHash(
+    const Vector<GameId>& acSpells) noexcept;

@@ -7,6 +7,7 @@ void CharacterBuildAppliedRequest::SerializeRaw(
 {
     Serialization::WriteVarInt(aWriter, Revision);
     Serialization::WriteVarInt(aWriter, InventoryHash);
+    Serialization::WriteVarInt(aWriter, SpellHash);
 }
 
 void CharacterBuildAppliedRequest::DeserializeRaw(
@@ -15,4 +16,5 @@ void CharacterBuildAppliedRequest::DeserializeRaw(
     ClientMessage::DeserializeRaw(aReader);
     Revision = Serialization::ReadVarInt(aReader);
     InventoryHash = Serialization::ReadVarInt(aReader);
+    SpellHash = Serialization::ReadVarInt(aReader);
 }

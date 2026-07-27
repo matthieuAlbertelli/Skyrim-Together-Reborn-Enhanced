@@ -279,6 +279,59 @@ bool TryBuildCanonicalInventory(
     return true;
 }
 
+bool TryBuildCanonicalSpells(
+    World& aWorld,
+    std::string_view aClassId,
+    const SelectionMap& acSelections,
+    Vector<GameId>& aSpells) noexcept
+{
+    aSpells.clear();
+
+    const std::vector<STRE::CharacterCreation::SpellGrant> grants =
+        STRE::CharacterCreation::BuildSpellGrants(
+            aClassId,
+            acSelections);
+
+    aSpells.reserve(grants.size());
+    for (const STRE::CharacterCreation::SpellGrant& grant : grants)
+    {
+        std::uint32_t modId = 0;
+        if (!TryResolveServerModId(
+                aWorld,
+                grant.PluginName,
+                modId))
+        {
+            spdlog::error(
+                "[STRE][CharacterBuild][Server] Missing plugin while building canonical spells plugin={} localForm={:08X}",
+                grant.PluginName,
+                grant.LocalFormId);
+            return false;
+        }
+
+        aSpells.emplace_back(modId, grant.LocalFormId);
+    }
+
+    std::sort(
+        aSpells.begin(),
+        aSpells.end(),
+        [](const GameId& acLeft, const GameId& acRight)
+        {
+            if (acLeft.ModId != acRight.ModId)
+                return acLeft.ModId < acRight.ModId;
+            return acLeft.BaseId < acRight.BaseId;
+        });
+
+    const auto uniqueEnd = std::unique(
+        aSpells.begin(),
+        aSpells.end(),
+        [](const GameId& acLeft, const GameId& acRight)
+        {
+            return acLeft == acRight;
+        });
+    aSpells.erase(uniqueEnd, aSpells.end());
+    return true;
+}
+
 bool IsSameSubmittedBuild(
     const CharacterBuildSnapshotData& acBuild,
     const CharacterBuildRequest& acRequest,
@@ -387,6 +440,17 @@ void CharacterBuildService::OnCharacterBuildRequest(
         return;
     }
 
+    Vector<GameId> canonicalSpells;
+    if (!TryBuildCanonicalSpells(
+            m_world,
+            request.ClassId.c_str(),
+            selections,
+            canonicalSpells))
+    {
+        SendRejected(*pPlayer, CharacterBuildResult::RejectedMissingPlugin);
+        return;
+    }
+
     InventoryComponent* const pInventory =
         m_world.try_get<InventoryComponent>(*character);
     if (!pInventory)
@@ -442,6 +506,9 @@ void CharacterBuildService::OnCharacterBuildRequest(
         pExisting->Build.CanonicalInventory = canonicalInventory;
         pExisting->Build.InventoryHash =
             ComputeCharacterBuildInventoryHash(canonicalInventory);
+        pExisting->Build.CanonicalSpells = canonicalSpells;
+        pExisting->Build.SpellHash =
+            ComputeCharacterBuildSpellHash(canonicalSpells);
         pExisting->Applied = false;
 
         pInventory->Content = pExisting->Build.CanonicalInventory;
@@ -461,13 +528,15 @@ void CharacterBuildService::OnCharacterBuildRequest(
             true);
 
         spdlog::info(
-            "[STRE][CharacterBuild][Server] Pending build replaced player={} serverId={:X} revision={} classId={} inventoryEntries={} inventoryHash={:016X}",
+            "[STRE][CharacterBuild][Server] Pending build replaced player={} serverId={:X} revision={} classId={} inventoryEntries={} inventoryHash={:016X} spellCount={} spellHash={:016X}",
             pPlayer->GetId(),
             World::ToInteger(*character),
             pExisting->Revision,
             pExisting->Build.ClassId.c_str(),
             pExisting->Build.CanonicalInventory.Entries.size(),
-            pExisting->Build.InventoryHash);
+            pExisting->Build.InventoryHash,
+            pExisting->Build.CanonicalSpells.size(),
+            pExisting->Build.SpellHash);
         return;
     }
 
@@ -480,6 +549,9 @@ void CharacterBuildService::OnCharacterBuildRequest(
     component.Build.CanonicalInventory = canonicalInventory;
     component.Build.InventoryHash =
         ComputeCharacterBuildInventoryHash(canonicalInventory);
+    component.Build.CanonicalSpells = canonicalSpells;
+    component.Build.SpellHash =
+        ComputeCharacterBuildSpellHash(canonicalSpells);
     component.Applied = false;
 
     // The old imported inventory is discarded atomically on the authority.
@@ -507,13 +579,15 @@ void CharacterBuildService::OnCharacterBuildRequest(
         true);
 
     spdlog::info(
-        "[STRE][CharacterBuild][Server] Build accepted player={} serverId={:X} revision={} classId={} inventoryEntries={} inventoryHash={:016X}",
+        "[STRE][CharacterBuild][Server] Build accepted player={} serverId={:X} revision={} classId={} inventoryEntries={} inventoryHash={:016X} spellCount={} spellHash={:016X}",
         pPlayer->GetId(),
         World::ToInteger(*character),
         stored.Revision,
         stored.Build.ClassId.c_str(),
         stored.Build.CanonicalInventory.Entries.size(),
-        stored.Build.InventoryHash);
+        stored.Build.InventoryHash,
+        stored.Build.CanonicalSpells.size(),
+        stored.Build.SpellHash);
 }
 
 void CharacterBuildService::OnCharacterBuildAppliedRequest(
@@ -553,6 +627,20 @@ void CharacterBuildService::OnCharacterBuildAppliedRequest(
         return;
     }
 
+    if (acPacket.Packet.SpellHash != pBuild->Build.SpellHash)
+    {
+        spdlog::warn(
+            "[STRE][CharacterBuild][Server] Applied acknowledgement rejected player={} revision={} expectedSpellHash={:016X} actualSpellHash={:016X}",
+            pPlayer->GetId(),
+            pBuild->Revision,
+            pBuild->Build.SpellHash,
+            acPacket.Packet.SpellHash);
+        SendRejected(
+            *pPlayer,
+            CharacterBuildResult::RejectedSpellHash);
+        return;
+    }
+
     pBuild->Applied = true;
     pPlayer->SetLevel(1);
 
@@ -569,12 +657,13 @@ void CharacterBuildService::OnCharacterBuildAppliedRequest(
         true);
 
     spdlog::info(
-        "[STRE][CharacterBuild][Server] Build applied player={} serverId={:X} revision={} classId={} inventoryHash={:016X} level=1",
+        "[STRE][CharacterBuild][Server] Build applied player={} serverId={:X} revision={} classId={} inventoryHash={:016X} spellHash={:016X} level=1",
         pPlayer->GetId(),
         World::ToInteger(*character),
         pBuild->Revision,
         pBuild->Build.ClassId.c_str(),
-        pBuild->Build.InventoryHash);
+        pBuild->Build.InventoryHash,
+        pBuild->Build.SpellHash);
 }
 
 void CharacterBuildService::SendRejected(

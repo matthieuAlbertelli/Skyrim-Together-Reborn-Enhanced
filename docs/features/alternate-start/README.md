@@ -15,7 +15,9 @@ Une nouvelle partie commence dans l’auberge, saute Helgen, crée les personnag
 - `STATE_MODEL.md` — sous-état de l’adapter ;
 - `TEST_PLAN.md` — validation ;
 - `OPEN_QUESTIONS.md` — décisions restantes.
-- `SKILL_LOADOUTS.md` — matériel, sorts et choix d’orientation associés aux compétences ;
+- `SKILL_LOADOUTS_fr.md` — matériel, sorts et choix d’orientation associés aux compétences ;
+- `M7_CK_CODE_INTEGRATION.md` — intégration des records CK, protocole des sorts et plan de test ;
+- `CK_RECORDS_M7_IMPLEMENTED.json` — manifest strict des records et FormID locaux ;
 
 ## Dépendances
 

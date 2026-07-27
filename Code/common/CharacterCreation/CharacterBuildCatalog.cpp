@@ -67,12 +67,6 @@ constexpr std::array kLoadoutOptionRules{
     LoadoutOptionRule{kMageClassId, "mage.enchanting", "mage.enchanting.body"},
     LoadoutOptionRule{kMageClassId, "mage.enchanting", "mage.enchanting.souls"},
 
-    LoadoutOptionRule{kThiefClassId, "thief.lockpicking", "thief.lockpicking.toolkit"},
-    LoadoutOptionRule{kThiefClassId, "thief.lockpicking", "thief.lockpicking.picks"},
-    LoadoutOptionRule{kThiefClassId, "thief.lockpicking", "thief.lockpicking.wax"},
-    LoadoutOptionRule{kThiefClassId, "thief.sneak", "thief.sneak.nature"},
-    LoadoutOptionRule{kThiefClassId, "thief.sneak", "thief.sneak.urban"},
-    LoadoutOptionRule{kThiefClassId, "thief.sneak", "thief.sneak.dungeons"},
     LoadoutOptionRule{kThiefClassId, "thief.one_handed_mode", "thief.one_handed_mode.steel"},
     LoadoutOptionRule{kThiefClassId, "thief.one_handed_mode", "thief.one_handed_mode.dual_iron"},
     LoadoutOptionRule{kThiefClassId, "thief.one_handed_steel", "thief.one_handed_steel.dagger"},
@@ -112,8 +106,6 @@ constexpr std::array kRequiredLoadoutGroups{
     RequiredLoadoutGroup{kMageClassId, "mage.illusion"},
     RequiredLoadoutGroup{kMageClassId, "mage.restoration"},
     RequiredLoadoutGroup{kMageClassId, "mage.enchanting"},
-    RequiredLoadoutGroup{kThiefClassId, "thief.lockpicking"},
-    RequiredLoadoutGroup{kThiefClassId, "thief.sneak"},
     RequiredLoadoutGroup{kThiefClassId, "thief.one_handed_mode"},
     RequiredLoadoutGroup{kThiefClassId, "thief.one_handed_steel", "thief.one_handed_mode", "thief.one_handed_mode.steel"},
     RequiredLoadoutGroup{kThiefClassId, "thief.one_handed_iron_main", "thief.one_handed_mode", "thief.one_handed_mode.dual_iron"},
@@ -132,9 +124,22 @@ constexpr std::array kClassItemGrantRules{
     ClassItemGrantRule{kWarriorClassId, "Skyrim.esm", 0x00012E49, 1},
     ClassItemGrantRule{kWarriorClassId, "Skyrim.esm", 0x00012E4B, 1},
     ClassItemGrantRule{kWarriorClassId, "Skyrim.esm", 0x00012E46, 1},
+    ClassItemGrantRule{kWarriorClassId, "STRE_AlternateStart.esp", 0x00003B5D, 1},
+    ClassItemGrantRule{kWarriorClassId, "STRE_AlternateStart.esp", 0x00003B60, 1},
+
+    ClassItemGrantRule{kMageClassId, "STRE_AlternateStart.esp", 0x00003B6E, 1},
+    ClassItemGrantRule{kMageClassId, "STRE_AlternateStart.esp", 0x00003B70, 1},
+
     ClassItemGrantRule{kThiefClassId, "Skyrim.esm", 0x00013911, 1},
     ClassItemGrantRule{kThiefClassId, "Skyrim.esm", 0x00013910, 1},
     ClassItemGrantRule{kThiefClassId, "Skyrim.esm", 0x00013912, 1},
+    ClassItemGrantRule{kThiefClassId, "Skyrim.esm", 0x0000000A, 10},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B57, 1},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B59, 1},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B4F, 1},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B51, 1},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B43, 1},
+    ClassItemGrantRule{kThiefClassId, "STRE_AlternateStart.esp", 0x00003B45, 1},
 };
 
 struct OptionItemGrantRule
@@ -148,6 +153,7 @@ struct OptionItemGrantRule
 constexpr std::array kOptionItemGrantRules{
     OptionItemGrantRule{"warrior.parade.hide_shield", "Skyrim.esm", 0x00013914, 1},
     OptionItemGrantRule{"warrior.parade.iron_shield", "Skyrim.esm", 0x00012EB6, 1},
+    OptionItemGrantRule{"warrior.parade.guard_pendant", "STRE_AlternateStart.esp", 0x00003B41, 1},
     OptionItemGrantRule{"warrior.two_handed.greatsword", "Skyrim.esm", 0x0001359D, 1},
     OptionItemGrantRule{"warrior.two_handed.battleaxe", "Skyrim.esm", 0x00013980, 1},
     OptionItemGrantRule{"warrior.two_handed.warhammer", "Skyrim.esm", 0x00013981, 1},
@@ -183,9 +189,6 @@ constexpr std::array kOptionItemGrantRules{
     OptionItemGrantRule{"warrior.one_handed_iron_off.war_axe", "Skyrim.esm", 0x00013790, 1},
     OptionItemGrantRule{"warrior.one_handed_iron_off.mace", "Skyrim.esm", 0x00013982, 1},
 
-    OptionItemGrantRule{"thief.lockpicking.toolkit", "Skyrim.esm", 0x0000000A, 5},
-    OptionItemGrantRule{"thief.lockpicking.picks", "Skyrim.esm", 0x0000000A, 20},
-    OptionItemGrantRule{"thief.lockpicking.wax", "Skyrim.esm", 0x0000000A, 5},
     OptionItemGrantRule{"thief.one_handed_steel.dagger", "Skyrim.esm", 0x00013986, 1},
     OptionItemGrantRule{"thief.one_handed_steel.sword", "Skyrim.esm", 0x00013989, 1},
     OptionItemGrantRule{"thief.one_handed_steel.war_axe", "Skyrim.esm", 0x00013983, 1},
@@ -200,6 +203,37 @@ constexpr std::array kOptionItemGrantRules{
     OptionItemGrantRule{"thief.one_handed_iron_off.mace", "Skyrim.esm", 0x00013982, 1},
 };
 
+struct OptionSpellGrantRule
+{
+    const char* OptionId;
+    const char* PluginName;
+    std::uint32_t LocalFormId;
+};
+
+constexpr std::array kOptionSpellGrantRules{
+    OptionSpellGrantRule{"mage.destruction.fire", "Skyrim.esm", 0x00012FCD},
+    OptionSpellGrantRule{"mage.destruction.fire", "STRE_AlternateStart.esp", 0x000040DA},
+    OptionSpellGrantRule{"mage.destruction.fire", "STRE_AlternateStart.esp", 0x000040DE},
+    OptionSpellGrantRule{"mage.destruction.frost", "STRE_AlternateStart.esp", 0x000040E2},
+    OptionSpellGrantRule{"mage.destruction.frost", "STRE_AlternateStart.esp", 0x000040EA},
+    OptionSpellGrantRule{"mage.destruction.frost", "STRE_AlternateStart.esp", 0x000040E6},
+    OptionSpellGrantRule{"mage.destruction.shock", "STRE_AlternateStart.esp", 0x000040EE},
+    OptionSpellGrantRule{"mage.destruction.shock", "STRE_AlternateStart.esp", 0x000040FA},
+    OptionSpellGrantRule{"mage.destruction.shock", "STRE_AlternateStart.esp", 0x000040F6},
+
+    OptionSpellGrantRule{"mage.alteration.protection", "STRE_AlternateStart.esp", 0x000040FE},
+    OptionSpellGrantRule{"mage.alteration.protection", "STRE_AlternateStart.esp", 0x00004102},
+    OptionSpellGrantRule{"mage.alteration.protection", "STRE_AlternateStart.esp", 0x00006FCD},
+    OptionSpellGrantRule{"mage.alteration.protection", "STRE_AlternateStart.esp", 0x00006FD1},
+    OptionSpellGrantRule{"mage.alteration.exploration", "STRE_AlternateStart.esp", 0x00006FD8},
+    OptionSpellGrantRule{"mage.alteration.exploration", "STRE_AlternateStart.esp", 0x00006FDC},
+    OptionSpellGrantRule{"mage.alteration.exploration", "STRE_AlternateStart.esp", 0x00006FE0},
+    OptionSpellGrantRule{"mage.alteration.exploration", "STRE_AlternateStart.esp", 0x00006FE6},
+    OptionSpellGrantRule{"mage.alteration.matter", "STRE_AlternateStart.esp", 0x00006FEA},
+    OptionSpellGrantRule{"mage.alteration.matter", "STRE_AlternateStart.esp", 0x00006FEE},
+    OptionSpellGrantRule{"mage.alteration.matter", "STRE_AlternateStart.esp", 0x00006FF2},
+    OptionSpellGrantRule{"mage.alteration.matter", "STRE_AlternateStart.esp", 0x00006FF8},
+};
 
 struct OptionEquipmentRule
 {
@@ -213,6 +247,7 @@ struct OptionEquipmentRule
 constexpr std::array kOptionEquipmentRules{
     OptionEquipmentRule{"warrior.parade.hide_shield", "Skyrim.esm", 0x00013914, 1, EquipmentSide::Left},
     OptionEquipmentRule{"warrior.parade.iron_shield", "Skyrim.esm", 0x00012EB6, 1, EquipmentSide::Left},
+    OptionEquipmentRule{"warrior.parade.guard_pendant", "STRE_AlternateStart.esp", 0x00003B41, 1, EquipmentSide::Right},
     OptionEquipmentRule{"warrior.archery.bow", "Skyrim.esm", 0x0001397D, 50, EquipmentSide::Right},
     OptionEquipmentRule{"warrior.archery.crossbow", "Dawnguard.esm", 0x00000BB3, 50, EquipmentSide::Right},
     OptionEquipmentRule{"warrior.one_handed_steel.dagger", "Skyrim.esm", 0x00013986, 1, EquipmentSide::Right},
@@ -251,6 +286,11 @@ constexpr std::array kThiefEquippedApparel{
     EquipmentGrant{"Skyrim.esm", 0x00013911, 1, EquipmentSide::Right},
     EquipmentGrant{"Skyrim.esm", 0x00013910, 1, EquipmentSide::Right},
     EquipmentGrant{"Skyrim.esm", 0x00013912, 1, EquipmentSide::Right},
+};
+
+constexpr std::array kMageEquippedApparel{
+    EquipmentGrant{"STRE_AlternateStart.esp", 0x00003B6E, 1, EquipmentSide::Right},
+    EquipmentGrant{"STRE_AlternateStart.esp", 0x00003B70, 1, EquipmentSide::Right},
 };
 
 constexpr std::array kFallbackEquippedClothes{
@@ -421,16 +461,59 @@ std::vector<ItemGrant> BuildItemGrants(
         }
     }
 
-    // Current warrior and thief catalogs include a body armor set. Any class
-    // without one receives a neutral, unarmored vanilla outfit instead of
-    // completing character creation naked.
-    const bool receivesBodyArmor =
+    // Every currently supported class has an explicit body set. Keep the
+    // neutral fallback for future classes until their authored outfit exists.
+    const bool receivesExplicitBodySet =
         aClassId == kWarriorClassId ||
+        aClassId == kMageClassId ||
         aClassId == kThiefClassId;
-    if (!receivesBodyArmor)
+    if (!receivesExplicitBodySet)
     {
         appendGrant(ItemGrant{"Skyrim.esm", 0x000209A6, 1});
         appendGrant(ItemGrant{"Skyrim.esm", 0x000209A5, 1});
+    }
+
+    return grants;
+}
+
+std::vector<SpellGrant> BuildSpellGrants(
+    std::string_view aClassId,
+    const std::map<std::string, std::string>& acSelections)
+{
+    std::vector<SpellGrant> grants;
+    if (aClassId != kMageClassId)
+        return grants;
+
+    const auto appendGrant = [&grants](const SpellGrant& acGrant)
+    {
+        const auto existing = std::find_if(
+            grants.begin(),
+            grants.end(),
+            [&acGrant](const SpellGrant& acExisting)
+            {
+                return acExisting.LocalFormId == acGrant.LocalFormId &&
+                    std::strcmp(
+                        acExisting.PluginName,
+                        acGrant.PluginName) == 0;
+            });
+
+        if (existing == grants.end())
+            grants.push_back(acGrant);
+    };
+
+    for (const auto& [groupId, optionId] : acSelections)
+    {
+        (void)groupId;
+        for (const OptionSpellGrantRule& rule : kOptionSpellGrantRules)
+        {
+            if (optionId == rule.OptionId)
+            {
+                appendGrant(
+                    SpellGrant{
+                        rule.PluginName,
+                        rule.LocalFormId});
+            }
+        }
     }
 
     return grants;
@@ -452,6 +535,8 @@ std::vector<EquipmentGrant> BuildEquipmentGrants(
 
     if (aClassId == kWarriorClassId)
         appendRange(kWarriorEquippedApparel);
+    else if (aClassId == kMageClassId)
+        appendRange(kMageEquippedApparel);
     else if (aClassId == kThiefClassId)
         appendRange(kThiefEquippedApparel);
     else

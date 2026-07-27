@@ -9,7 +9,7 @@
 
 namespace STRE::CharacterCreation
 {
-inline constexpr std::uint32_t kCharacterBuildVersion = 4;
+inline constexpr std::uint32_t kCharacterBuildVersion = 5;
 inline constexpr std::size_t kMaximumSelectionCount = 32;
 
 struct ItemGrant
@@ -31,6 +31,12 @@ struct EquipmentGrant
     std::uint32_t LocalFormId{};
     std::int32_t Count{};
     EquipmentSide Side{EquipmentSide::Right};
+};
+
+struct SpellGrant
+{
+    const char* PluginName{};
+    std::uint32_t LocalFormId{};
 };
 
 
@@ -56,6 +62,10 @@ struct EquipmentGrant
     const std::map<std::string, std::string>& acSelections) noexcept;
 
 [[nodiscard]] std::vector<ItemGrant> BuildItemGrants(
+    std::string_view aClassId,
+    const std::map<std::string, std::string>& acSelections);
+
+[[nodiscard]] std::vector<SpellGrant> BuildSpellGrants(
     std::string_view aClassId,
     const std::map<std::string, std::string>& acSelections);
 

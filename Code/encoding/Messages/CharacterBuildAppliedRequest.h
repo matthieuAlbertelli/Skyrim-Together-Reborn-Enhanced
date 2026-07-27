@@ -18,4 +18,5 @@ struct CharacterBuildAppliedRequest final : ClientMessage
 
     std::uint64_t Revision{};
     std::uint64_t InventoryHash{};
+    std::uint64_t SpellHash{};
 };

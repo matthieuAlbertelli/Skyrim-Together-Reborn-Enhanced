@@ -34,6 +34,11 @@ void CharacterBuildSnapshotData::Serialize(
 
     CanonicalInventory.Serialize(aWriter);
     Serialization::WriteVarInt(aWriter, InventoryHash);
+
+    Serialization::WriteVarInt(aWriter, CanonicalSpells.size());
+    for (const GameId& spell : CanonicalSpells)
+        spell.Serialize(aWriter);
+    Serialization::WriteVarInt(aWriter, SpellHash);
 }
 
 void CharacterBuildSnapshotData::Deserialize(
@@ -62,6 +67,23 @@ void CharacterBuildSnapshotData::Deserialize(
     CanonicalInventory = {};
     CanonicalInventory.Deserialize(aReader);
     InventoryHash = Serialization::ReadVarInt(aReader);
+
+    CanonicalSpells.clear();
+    const std::uint64_t spellCount =
+        Serialization::ReadVarInt(aReader);
+    CanonicalSpells.reserve(
+        static_cast<std::size_t>(
+            std::min<std::uint64_t>(spellCount, 64)));
+
+    for (std::uint64_t i = 0; i < spellCount; ++i)
+    {
+        GameId spell;
+        spell.Deserialize(aReader);
+        if (i < 64)
+            CanonicalSpells.push_back(spell);
+    }
+
+    SpellHash = Serialization::ReadVarInt(aReader);
 }
 
 std::uint64_t ComputeCharacterBuildInventoryHash(
@@ -99,6 +121,45 @@ std::uint64_t ComputeCharacterBuildInventoryHash(
         append(key.first);
         append(key.second);
         append(count);
+    }
+
+    return hash;
+}
+
+std::uint64_t ComputeCharacterBuildSpellHash(
+    const Vector<GameId>& acSpells) noexcept
+{
+    using SpellKey = std::pair<std::uint32_t, std::uint32_t>;
+    std::map<SpellKey, bool> spells;
+
+    for (const GameId& spell : acSpells)
+    {
+        if (!spell)
+            continue;
+
+        spells[{spell.ModId, spell.BaseId}] = true;
+    }
+
+    constexpr std::uint64_t kOffset = 1469598103934665603ull;
+    std::uint64_t hash = kOffset;
+
+    const auto appendValue = [&hash](std::uint64_t aValue)
+    {
+        constexpr std::uint64_t kFnvPrime = 1099511628211ull;
+        for (std::uint32_t i = 0; i < sizeof(aValue); ++i)
+        {
+            hash ^= static_cast<std::uint8_t>(aValue & 0xFFu);
+            hash *= kFnvPrime;
+            aValue >>= 8;
+        }
+    };
+
+    appendValue(spells.size());
+    for (const auto& [key, unused] : spells)
+    {
+        (void)unused;
+        appendValue(key.first);
+        appendValue(key.second);
     }
 
     return hash;

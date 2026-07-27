@@ -91,3 +91,6 @@ packaged/*
 
 build-and-deploy-dev.ps1
 /Export-STRE-Source-For-Audit.ps1
+
+# Generated local audit reports
+_audit/

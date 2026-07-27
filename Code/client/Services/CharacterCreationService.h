@@ -122,11 +122,17 @@ private:
     void ResetBuildApplicationState() noexcept;
     [[nodiscard]] bool ApplyBuild() noexcept;
     [[nodiscard]] bool ApplyCanonicalServerInventory(Actor* apPlayer) noexcept;
+    [[nodiscard]] bool ApplyCanonicalServerSpells(PlayerCharacter* apPlayer) noexcept;
     [[nodiscard]] bool EquipCanonicalInventory(Actor* apPlayer, const Inventory& acInventory) noexcept;
+    [[nodiscard]] bool ApplyLocalBuildSpells(PlayerCharacter* apPlayer) noexcept;
+    [[nodiscard]] bool EnsurePlayerSpell(
+        PlayerCharacter* apPlayer,
+        std::uint32_t aFormId) noexcept;
     [[nodiscard]] bool EquipLocalBuild(PlayerCharacter* apPlayer) noexcept;
     [[nodiscard]] bool ResetPlayerProgression(PlayerCharacter* apPlayer) noexcept;
     [[nodiscard]] bool SendAuthoritativeBuildRequest() noexcept;
-    [[nodiscard]] bool SendBuildAppliedAcknowledgement(Actor* apPlayer) noexcept;
+    [[nodiscard]] bool SendBuildAppliedAcknowledgement(
+        PlayerCharacter* apPlayer) noexcept;
     void ResetNetworkBuildState() noexcept;
     void ApplyRemoteCanonicalInventory(const NotifyCharacterBuildState& acMessage) noexcept;
     void RemoveVanillaStartingSpells(Actor* apPlayer) noexcept;
@@ -199,6 +205,8 @@ private:
     std::uint64_t m_serverBuildRevision{};
     std::uint32_t m_serverCharacterId{};
     Inventory m_serverCanonicalInventory{};
+    Vector<GameId> m_serverCanonicalSpells{};
+    std::uint64_t m_serverSpellHash{};
     std::vector<std::uint32_t> m_inventoryWipeFormIds;
     std::string m_selectedClassId;
     std::map<std::string, std::string> m_selectedLoadoutOptions;
