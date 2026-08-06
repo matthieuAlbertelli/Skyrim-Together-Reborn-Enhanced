@@ -1111,6 +1111,11 @@ void Actor::PickUpObject(TESObjectREFR* apObject, int32_t aCount, bool aUnk1, fl
 
 void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation)
 {
+    // Outside an active multiplayer session, preserve Skyrim's native drop path exactly.
+    // Do not inspect the returned handle, emit World Sync events or install inventory overrides.
+    if (!World::Get().GetTransport().IsConnected())
+        return TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
+
     auto& modSystem = World::Get().GetModSystem();
 
     Inventory::Entry item{};
@@ -1325,7 +1330,8 @@ static TiltedPhoques::Initializer s_actorHooks(
         RealAddDeathItems = addDeathItems.Get();
         RealIsFleeing = isFleeing.Get();
 
-        TP_HOOK(&RealActorProcess, HookActorProcess);
+        spdlog::warn("[STRE][Isolation] ActorProcess hook disabled for swimming diagnostic");
+        // TP_HOOK(&RealActorProcess, HookActorProcess);
         TP_HOOK(&RealSetPosition, HookSetPosition);
         TP_HOOK(&RealRemoveSpell, HookRemoveSpell);
         TP_HOOK(&RealCharacterConstructor, HookCharacterConstructor);

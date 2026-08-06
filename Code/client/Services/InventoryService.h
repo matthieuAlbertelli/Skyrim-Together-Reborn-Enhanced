@@ -66,6 +66,7 @@ private:
     * and resets their inventory.
     */
     void RunNakedNPCBugChecks() noexcept;
+    void ResetWorldSyncState() noexcept;
     bool TryMaterializeWorldEntity(const NotifyInventoryChanges& acMessage) noexcept;
     void RunPendingWorldEntitySnapshots() noexcept;
     void RunPendingRemoteWorldEntities() noexcept;

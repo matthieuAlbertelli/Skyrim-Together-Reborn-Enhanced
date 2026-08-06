@@ -241,10 +241,12 @@ static TiltedPhoques::Initializer s_magicTargetHooks([]() {
     RealHasPerk = hasPerk.Get();
     RealGetPerkRank = getPerkRank.Get();
 
-    TP_HOOK(&RealAddTarget, HookAddTarget);
-    TP_HOOK(&RealCheckAddEffectTargetData, HookCheckAddEffectTargetData);
-    TP_HOOK(&RealFindTargets, HookFindTargets);
-    TP_HOOK(&RealAdjustForPerks, HookAdjustForPerks);
-    TP_HOOK(&RealHasPerk, HookHasPerk);
+    spdlog::warn("[STRE][Isolation] MagicTarget hooks disabled for swimming diagnostic");
+
+    // TP_HOOK(&RealAddTarget, HookAddTarget);
+    // TP_HOOK(&RealCheckAddEffectTargetData, HookCheckAddEffectTargetData);
+    // TP_HOOK(&RealFindTargets, HookFindTargets);
+    // TP_HOOK(&RealAdjustForPerks, HookAdjustForPerks);
+    // TP_HOOK(&RealHasPerk, HookHasPerk);
     //TP_HOOK(&RealGetPerkRank, HookGetPerkRank);
 });

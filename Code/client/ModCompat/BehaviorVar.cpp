@@ -56,7 +56,9 @@ BehaviorVar* BehaviorVar::Get()
 // class/struct header.
 const AnimationGraphDescriptor* BehaviorVarPatch(BSAnimationGraphManager* apManager, Actor* apActor)
 {
-    return BehaviorVar::Get()->Patch(apManager, apActor);
+    (void)apManager;
+    (void)apActor;
+    return nullptr;
 }
 
 // Utility function to convert a string to lowercase

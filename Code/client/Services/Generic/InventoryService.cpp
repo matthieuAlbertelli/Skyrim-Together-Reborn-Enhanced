@@ -43,9 +43,36 @@ void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 {
     RunWeaponStateUpdates();
     RunNakedNPCBugChecks();
+
+    if (!m_transport.IsConnected())
+    {
+        ResetWorldSyncState();
+        return;
+    }
+
     RunPendingWorldEntitySnapshots();
     RunPendingRemoteWorldEntities();
     RunPendingDropStabilization();
+}
+
+
+void InventoryService::ResetWorldSyncState() noexcept
+{
+    if (m_worldEntityToFormId.empty() && m_formIdToWorldEntity.empty() && m_retiredWorldReferences.empty() &&
+        m_pendingWorldEntitySnapshots.empty() && m_pendingRemoteWorldEntities.empty() && m_pendingDropStabilization.empty())
+    {
+        return;
+    }
+
+    spdlog::info("[STRE][WorldSync] reset reason=disconnected entities={} pendingRemote={} pendingStabilization={}",
+                 m_worldEntityToFormId.size(), m_pendingRemoteWorldEntities.size(), m_pendingDropStabilization.size());
+
+    m_worldEntityToFormId.clear();
+    m_formIdToWorldEntity.clear();
+    m_retiredWorldReferences.clear();
+    m_pendingWorldEntitySnapshots.clear();
+    m_pendingRemoteWorldEntities.clear();
+    m_pendingDropStabilization.clear();
 }
 
 void InventoryService::OnInventoryChangeEvent(const InventoryChangeEvent& acEvent) noexcept
@@ -143,6 +170,12 @@ void InventoryService::OnEquipmentChangeEvent(const EquipmentChangeEvent& acEven
 
 void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& acMessage) noexcept
 {
+    if (!m_transport.IsConnected())
+    {
+        ResetWorldSyncState();
+        return;
+    }
+
     spdlog::info("[STRE][WorldSync] notify_receive actorServerId={} item={:X}:{:X} count={} drop={} entity={} bindOnly={} originForm={:08X}",
                  acMessage.ServerId, acMessage.Item.BaseId.ModId, acMessage.Item.BaseId.BaseId, acMessage.Item.Count,
                  acMessage.Drop, acMessage.WorldEntityId, acMessage.BindOnly, acMessage.OriginFormId);
