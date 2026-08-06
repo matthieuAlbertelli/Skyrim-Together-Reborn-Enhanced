@@ -23,11 +23,12 @@ struct InventoryChangeEvent
     {
     }
 
-    InventoryChangeEvent(const uint32_t aFormId, Inventory::Entry arItem, bool aDrop, bool aUpdateClients)
+    InventoryChangeEvent(const uint32_t aFormId, Inventory::Entry arItem, bool aDrop, bool aUpdateClients, uint32_t aDroppedFormId = 0)
         : FormId(aFormId)
         , Item(std::move(arItem))
         , Drop(aDrop)
         , UpdateClients(aUpdateClients)
+        , DroppedFormId(aDroppedFormId)
     {
     }
 
@@ -35,4 +36,6 @@ struct InventoryChangeEvent
     Inventory::Entry Item{};
     bool Drop = false;
     bool UpdateClients = true;
+    /// Local temporary reference created by a drop, or consumed by a pickup.
+    uint32_t DroppedFormId{};
 };

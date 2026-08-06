@@ -43,6 +43,9 @@ void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 {
     RunWeaponStateUpdates();
     RunNakedNPCBugChecks();
+    RunPendingWorldEntitySnapshots();
+    RunPendingRemoteWorldEntities();
+    RunPendingDropStabilization();
 }
 
 void InventoryService::OnInventoryChangeEvent(const InventoryChangeEvent& acEvent) noexcept
@@ -64,11 +67,29 @@ void InventoryService::OnInventoryChangeEvent(const InventoryChangeEvent& acEven
         return;
     }
 
+    spdlog::info(
+        "[STRE][WorldSync][LegacyInventory] request_send actorForm={:08X} actorServerId={} item={:X}:{:X} count={} drop={} updateClients={} droppedForm={:08X}",
+        acEvent.FormId, serverIdRes.value(), acEvent.Item.BaseId.ModId, acEvent.Item.BaseId.BaseId, acEvent.Item.Count,
+        acEvent.Drop, acEvent.UpdateClients, acEvent.DroppedFormId);
+
     RequestInventoryChanges request;
     request.ServerId = serverIdRes.value();
     request.Item = acEvent.Item;
     request.Drop = acEvent.Drop;
     request.UpdateClients = acEvent.UpdateClients;
+    request.DroppedFormId = acEvent.DroppedFormId;
+    if (!acEvent.Drop && acEvent.DroppedFormId != 0)
+    {
+        const auto entityIt = m_formIdToWorldEntity.find(acEvent.DroppedFormId);
+        if (entityIt != m_formIdToWorldEntity.end())
+        {
+            request.WorldEntityId = entityIt->second;
+            m_pendingDropStabilization.erase(request.WorldEntityId);
+            m_worldEntityToFormId.erase(request.WorldEntityId);
+            m_formIdToWorldEntity.erase(entityIt);
+            spdlog::info("[STRE][WorldSync] pickup_request entity={} localForm={:08X}", request.WorldEntityId, acEvent.DroppedFormId);
+        }
+    }
 
     m_transport.Send(request);
 
@@ -122,29 +143,109 @@ void InventoryService::OnEquipmentChangeEvent(const EquipmentChangeEvent& acEven
 
 void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& acMessage) noexcept
 {
-    if (acMessage.Drop)
+    spdlog::info("[STRE][WorldSync] notify_receive actorServerId={} item={:X}:{:X} count={} drop={} entity={} bindOnly={} originForm={:08X}",
+                 acMessage.ServerId, acMessage.Item.BaseId.ModId, acMessage.Item.BaseId.BaseId, acMessage.Item.Count,
+                 acMessage.Drop, acMessage.WorldEntityId, acMessage.BindOnly, acMessage.OriginFormId);
+
+    if (acMessage.BindOnly)
     {
-        Actor* pActor = Utils::GetByServerId<Actor>(acMessage.ServerId);
-        if (!pActor)
+        if (acMessage.WorldEntityId == 0 || acMessage.OriginFormId == 0)
+            return;
+        m_worldEntityToFormId[acMessage.WorldEntityId] = acMessage.OriginFormId;
+        m_formIdToWorldEntity[acMessage.OriginFormId] = acMessage.WorldEntityId;
+        if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(acMessage.OriginFormId)))
         {
-            spdlog::error("{}: could not find actor server id {:X}", __FUNCTION__, acMessage.ServerId);
+            PendingDropStabilization pending;
+            pending.LocalFormId = acMessage.OriginFormId;
+            pending.StartedAt = std::chrono::steady_clock::now();
+            pending.LastSampleAt = pending.StartedAt;
+            pending.LastX = pReference->position.x;
+            pending.LastY = pReference->position.y;
+            pending.LastZ = pReference->position.z;
+            pending.Item = acMessage.Item;
+            m_pendingDropStabilization[acMessage.WorldEntityId] = pending;
+        }
+        spdlog::info("[STRE][WorldSync] bound entity={} localForm={:08X} source=origin-ack", acMessage.WorldEntityId, acMessage.OriginFormId);
+        return;
+    }
+
+    if (acMessage.TransformUpdate && acMessage.WorldEntityId != 0)
+    {
+        const auto pendingIt = m_pendingRemoteWorldEntities.find(acMessage.WorldEntityId);
+        if (pendingIt != m_pendingRemoteWorldEntities.end())
+        {
+            NotifyInventoryChanges materialization = pendingIt->second;
+            materialization.HasTransform = true;
+            materialization.PositionX = acMessage.PositionX;
+            materialization.PositionY = acMessage.PositionY;
+            materialization.PositionZ = acMessage.PositionZ;
+            materialization.RotationX = acMessage.RotationX;
+            materialization.RotationY = acMessage.RotationY;
+            materialization.RotationZ = acMessage.RotationZ;
+
+            if (TryMaterializeWorldEntity(materialization))
+            {
+                m_pendingRemoteWorldEntities.erase(pendingIt);
+                spdlog::info("[STRE][WorldSync] deferred_drop_materialized entity={} position=({:.2f},{:.2f},{:.2f})",
+                             acMessage.WorldEntityId, acMessage.PositionX, acMessage.PositionY, acMessage.PositionZ);
+            }
+            else
+            {
+                pendingIt->second = std::move(materialization);
+                spdlog::info("[STRE][WorldSync] deferred_drop_retry entity={} reason=actor-unavailable", acMessage.WorldEntityId);
+            }
             return;
         }
 
-        ScopedInventoryOverride _;
-
-        pActor->DropOrPickUpObject(acMessage.Item, nullptr, nullptr);
+        ApplyAuthoritativeTransform(acMessage.WorldEntityId, acMessage);
+        return;
     }
-    else
+
+    if (acMessage.Drop)
     {
-        TESObjectREFR* pObject = Utils::GetByServerId<TESObjectREFR>(acMessage.ServerId);
-        if (!pObject)
+        if (!acMessage.Snapshot && !acMessage.HasTransform && acMessage.WorldEntityId != 0)
+        {
+            m_pendingRemoteWorldEntities[acMessage.WorldEntityId] = acMessage;
+            spdlog::info("[STRE][WorldSync] remote_drop_deferred entity={} sourceServerId={}", acMessage.WorldEntityId, acMessage.ServerId);
             return;
+        }
 
-        ScopedInventoryOverride _;
-
-        pObject->AddOrRemoveItem(acMessage.Item);
+        if (!TryMaterializeWorldEntity(acMessage) && acMessage.Snapshot)
+        {
+            m_pendingWorldEntitySnapshots.push_back(acMessage);
+            spdlog::info("[STRE][WorldSync] session_snapshot_deferred entity={} sourceServerId={}", acMessage.WorldEntityId, acMessage.ServerId);
+        }
+        return;
     }
+
+    if (acMessage.WorldEntityId != 0)
+    {
+        m_pendingRemoteWorldEntities.erase(acMessage.WorldEntityId);
+        const auto entityIt = m_worldEntityToFormId.find(acMessage.WorldEntityId);
+        if (entityIt != m_worldEntityToFormId.end())
+        {
+            const uint32_t localFormId = entityIt->second;
+            if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(localFormId)))
+            {
+                // Do not call Delete() here. Skyrim may recycle the dynamic FormID on
+                // the next remote drop while keeping the reference permanently marked
+                // as deleted, which leaves a visible but non-activatable object.
+                pReference->Disable();
+                m_retiredWorldReferences.insert(localFormId);
+            }
+            m_pendingDropStabilization.erase(acMessage.WorldEntityId);
+            m_pendingRemoteWorldEntities.erase(acMessage.WorldEntityId);
+            m_formIdToWorldEntity.erase(localFormId);
+            m_worldEntityToFormId.erase(entityIt);
+            spdlog::info("[STRE][WorldSync] removed entity={} localForm={:08X} mode=disabled", acMessage.WorldEntityId, localFormId);
+        }
+    }
+
+    TESObjectREFR* pObject = Utils::GetByServerId<TESObjectREFR>(acMessage.ServerId);
+    if (!pObject)
+        return;
+    ScopedInventoryOverride _;
+    pObject->AddOrRemoveItem(acMessage.Item);
 }
 
 void InventoryService::OnNotifyEquipmentChanges(const NotifyEquipmentChanges& acMessage) noexcept
@@ -308,4 +409,296 @@ void InventoryService::RunNakedNPCBugChecks() noexcept
 
         pActor->ResetInventory(false);
     }
+}
+
+bool InventoryService::TryMaterializeWorldEntity(const NotifyInventoryChanges& acMessage) noexcept
+{
+    if (acMessage.WorldEntityId == 0)
+        return false;
+
+    if (m_worldEntityToFormId.find(acMessage.WorldEntityId) != m_worldEntityToFormId.end())
+        return true;
+
+    Actor* pActor = Utils::GetByServerId<Actor>(acMessage.ServerId);
+    if (!pActor)
+        return false;
+
+    NiPoint3 position{};
+    NiPoint3 rotation{};
+    NiPoint3* pPosition = nullptr;
+    NiPoint3* pRotation = nullptr;
+    if (acMessage.HasTransform)
+    {
+        position.x = acMessage.PositionX;
+        position.y = acMessage.PositionY;
+        position.z = acMessage.PositionZ + 4.0f;
+        rotation.x = acMessage.RotationX;
+        rotation.y = acMessage.RotationY;
+        rotation.z = acMessage.RotationZ;
+        pPosition = &position;
+        pRotation = &rotation;
+    }
+
+    ScopedInventoryOverride _;
+    TESObjectREFR* pDroppedObject = pActor->DropOrPickUpObject(acMessage.Item, pPosition, pRotation);
+    if (!pDroppedObject)
+        return false;
+
+    const uint32_t localFormId = pDroppedObject->formID;
+
+    // A disabled dynamic reference can legitimately be recycled by Skyrim. Re-enable
+    // it before binding it to the new logical entity. Unlike Delete(), Disable() keeps
+    // the reference activatable after it is brought back.
+    if (m_retiredWorldReferences.erase(localFormId) != 0)
+    {
+        pDroppedObject->Enable();
+        spdlog::info("[STRE][WorldSync] recycled_ref_reactivated entity={} localForm={:08X}", acMessage.WorldEntityId, localFormId);
+    }
+
+    // Keep both registry directions one-to-one even if Skyrim recycled a FormID.
+    if (const auto oldEntityIt = m_formIdToWorldEntity.find(localFormId);
+        oldEntityIt != m_formIdToWorldEntity.end())
+    {
+        m_worldEntityToFormId.erase(oldEntityIt->second);
+        m_formIdToWorldEntity.erase(oldEntityIt);
+    }
+
+    m_worldEntityToFormId[acMessage.WorldEntityId] = localFormId;
+    m_formIdToWorldEntity[localFormId] = acMessage.WorldEntityId;
+    spdlog::info("[STRE][WorldSync] bound entity={} localForm={:08X} source={} directTransform={}",
+                 acMessage.WorldEntityId, localFormId, acMessage.Snapshot ? "session-snapshot" : "remote-drop", acMessage.HasTransform);
+    return true;
+}
+
+void InventoryService::RunPendingWorldEntitySnapshots() noexcept
+{
+    constexpr size_t kMaxAttemptsPerUpdate = 8;
+    size_t attempts = 0;
+    const size_t pendingCount = m_pendingWorldEntitySnapshots.size();
+
+    while (!m_pendingWorldEntitySnapshots.empty() && attempts < kMaxAttemptsPerUpdate && attempts < pendingCount)
+    {
+        NotifyInventoryChanges snapshot = std::move(m_pendingWorldEntitySnapshots.front());
+        m_pendingWorldEntitySnapshots.pop_front();
+        if (!TryMaterializeWorldEntity(snapshot))
+            m_pendingWorldEntitySnapshots.push_back(std::move(snapshot));
+        ++attempts;
+    }
+}
+
+
+
+void InventoryService::RunPendingRemoteWorldEntities() noexcept
+{
+    constexpr size_t kMaxAttemptsPerUpdate = 8;
+    size_t attempts = 0;
+
+    for (auto it = m_pendingRemoteWorldEntities.begin();
+         it != m_pendingRemoteWorldEntities.end() && attempts < kMaxAttemptsPerUpdate;)
+    {
+        if (!it->second.HasTransform)
+        {
+            ++it;
+            continue;
+        }
+
+        const uint64_t worldEntityId = it->first;
+        if (TryMaterializeWorldEntity(it->second))
+        {
+            spdlog::info("[STRE][WorldSync] deferred_drop_materialized_retry entity={}", worldEntityId);
+            it = m_pendingRemoteWorldEntities.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+        ++attempts;
+    }
+}
+
+void InventoryService::RunPendingDropStabilization() noexcept
+{
+    using namespace std::chrono;
+    const auto now = steady_clock::now();
+    constexpr auto kSampleInterval = 100ms;
+    constexpr auto kMinimumAge = 500ms;
+    constexpr auto kMaximumAge = 4000ms;
+    constexpr float kStableDistanceSquared = 1.0f;
+
+    for (auto it = m_pendingDropStabilization.begin(); it != m_pendingDropStabilization.end();)
+    {
+        auto& pending = it->second;
+        if (now - pending.LastSampleAt < kSampleInterval)
+        {
+            ++it;
+            continue;
+        }
+
+        auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(pending.LocalFormId));
+        if (!pReference)
+        {
+            it = m_pendingDropStabilization.erase(it);
+            continue;
+        }
+
+        // A freshly dropped dynamic reference can briefly be reported near the
+        // cell origin or below the collision floor. Never repair that reference
+        // with MoveTo: doing so can leave a visible object without a valid Havok
+        // body or activation state. Instead, ask Skyrim to create a fresh drop.
+        if (auto* pPlayer = PlayerCharacter::Get())
+        {
+            const float playerDx = pReference->position.x - pPlayer->position.x;
+            const float playerDy = pReference->position.y - pPlayer->position.y;
+            const float playerDz = pReference->position.z - pPlayer->position.z;
+            constexpr float kMaximumDropDistanceSquared = 512.0f * 512.0f;
+            constexpr float kMaximumVerticalDelta = 160.0f;
+            const bool implausiblePosition =
+                playerDx * playerDx + playerDy * playerDy > kMaximumDropDistanceSquared ||
+                playerDz < -kMaximumVerticalDelta;
+
+            if (implausiblePosition)
+            {
+                if (pending.RecreationAttempts == 0)
+                {
+                    const uint32_t retiredFormId = pending.LocalFormId;
+                    Inventory::Entry restoredItem = pending.Item;
+                    restoredItem.Count = -restoredItem.Count;
+
+                    ScopedInventoryOverride inventoryOverride;
+                    pReference->Disable();
+                    m_retiredWorldReferences.insert(retiredFormId);
+                    pPlayer->AddOrRemoveItem(restoredItem);
+
+                    // Passing nullptr lets Skyrim derive the drop point from an actor/node
+                    // transform that is unreliable in some interiors. Give the native drop
+                    // routine an explicit world-space point instead. This still creates the
+                    // reference through Skyrim (valid activation + Havok); it is not a MoveTo.
+                    NiPoint3 replacementPosition = pPlayer->position;
+                    replacementPosition.z += 64.0f;
+                    NiPoint3 replacementRotation = pPlayer->rotation;
+                    TESObjectREFR* pReplacement = pPlayer->DropOrPickUpObject(
+                        pending.Item, &replacementPosition, &replacementRotation);
+                    if (pReplacement)
+                    {
+                        const uint32_t replacementFormId = pReplacement->formID;
+                        m_formIdToWorldEntity.erase(retiredFormId);
+                        if (const auto oldBinding = m_formIdToWorldEntity.find(replacementFormId);
+                            oldBinding != m_formIdToWorldEntity.end())
+                        {
+                            m_worldEntityToFormId.erase(oldBinding->second);
+                            m_formIdToWorldEntity.erase(oldBinding);
+                        }
+
+                        m_worldEntityToFormId[it->first] = replacementFormId;
+                        m_formIdToWorldEntity[replacementFormId] = it->first;
+                        pending.LocalFormId = replacementFormId;
+                        pending.LastX = pReplacement->position.x;
+                        pending.LastY = pReplacement->position.y;
+                        pending.LastZ = pReplacement->position.z;
+                        pending.StableSamples = 0;
+                        pending.RecreationAttempts = 1;
+                        pending.StartedAt = now;
+                        pending.LastSampleAt = now;
+                        spdlog::warn("[STRE][WorldSync] drop_ref_recreated entity={} retiredForm={:08X} replacementForm={:08X} position=({:.2f},{:.2f},{:.2f})",
+                                     it->first, retiredFormId, replacementFormId,
+                                     pReplacement->position.x, pReplacement->position.y, pReplacement->position.z);
+                        ++it;
+                        continue;
+                    }
+
+                    // Restore the original reference if Skyrim could not produce a
+                    // replacement, so the recovery attempt does not silently destroy
+                    // the player's item.
+                    pReference->Enable();
+                    m_retiredWorldReferences.erase(retiredFormId);
+                    Inventory::Entry removeRestoredItem = restoredItem;
+                    removeRestoredItem.Count = -removeRestoredItem.Count;
+                    pPlayer->AddOrRemoveItem(removeRestoredItem);
+                    pending.RecreationAttempts = 1;
+                    spdlog::error("[STRE][WorldSync] drop_ref_recreate_failed entity={} localForm={:08X}",
+                                  it->first, retiredFormId);
+                }
+
+                if (now - pending.StartedAt >= kMaximumAge)
+                {
+                    spdlog::warn("[STRE][WorldSync] transform_abandoned entity={} localForm={:08X} reason=invalid-local-position position=({:.2f},{:.2f},{:.2f})",
+                                 it->first, pending.LocalFormId,
+                                 pReference->position.x, pReference->position.y, pReference->position.z);
+                    it = m_pendingDropStabilization.erase(it);
+                    continue;
+                }
+
+                pending.StableSamples = 0;
+                pending.LastSampleAt = now;
+                ++it;
+                continue;
+            }
+        }
+
+        const float dx = pReference->position.x - pending.LastX;
+        const float dy = pReference->position.y - pending.LastY;
+        const float dz = pReference->position.z - pending.LastZ;
+        const float distanceSquared = dx * dx + dy * dy + dz * dz;
+        pending.StableSamples = distanceSquared <= kStableDistanceSquared ? static_cast<uint8_t>(pending.StableSamples + 1) : 0;
+        pending.LastX = pReference->position.x;
+        pending.LastY = pReference->position.y;
+        pending.LastZ = pReference->position.z;
+        pending.LastSampleAt = now;
+
+        const bool stable = now - pending.StartedAt >= kMinimumAge && pending.StableSamples >= 3;
+        const bool timedOut = now - pending.StartedAt >= kMaximumAge;
+        if (!stable && !timedOut)
+        {
+            ++it;
+            continue;
+        }
+
+        if (timedOut && !stable)
+        {
+            // A remote client waiting for deferred materialization must always
+            // receive one authoritative transform. Falling back to the latest
+            // plausible position is preferable to leaving the entity invisible.
+            spdlog::warn("[STRE][WorldSync] transform_timeout_fallback entity={} localForm={:08X} position=({:.2f},{:.2f},{:.2f})",
+                         it->first, pending.LocalFormId, pReference->position.x, pReference->position.y, pReference->position.z);
+        }
+
+        RequestInventoryChanges request;
+        request.WorldEntityId = it->first;
+        request.TransformUpdate = true;
+        request.PositionX = pReference->position.x;
+        request.PositionY = pReference->position.y;
+        request.PositionZ = pReference->position.z;
+        request.RotationX = pReference->rotation.x;
+        request.RotationY = pReference->rotation.y;
+        request.RotationZ = pReference->rotation.z;
+        m_transport.Send(request);
+        spdlog::info("[STRE][WorldSync] transform_send entity={} localForm={:08X} position=({:.2f},{:.2f},{:.2f}) stable={} timeout={}",
+                     it->first, pending.LocalFormId, request.PositionX, request.PositionY, request.PositionZ, stable, timedOut);
+        it = m_pendingDropStabilization.erase(it);
+    }
+}
+
+void InventoryService::ApplyAuthoritativeTransform(uint64_t aWorldEntityId, const NotifyInventoryChanges& acMessage) noexcept
+{
+    const auto entityIt = m_worldEntityToFormId.find(aWorldEntityId);
+    if (entityIt == m_worldEntityToFormId.end())
+        return;
+
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(entityIt->second));
+    if (!pReference)
+        return;
+
+    TESObjectCELL* pCell = pReference->GetParentCellEx();
+    if (!pCell)
+        return;
+
+    NiPoint3 position{};
+    position.x = acMessage.PositionX;
+    position.y = acMessage.PositionY;
+    position.z = acMessage.PositionZ + 4.0f;
+    pReference->MoveTo(pCell, position);
+    pReference->SetRotation(acMessage.RotationX, acMessage.RotationY, acMessage.RotationZ);
+    spdlog::info("[STRE][WorldSync] transform_apply entity={} localForm={:08X} position=({:.2f},{:.2f},{:.2f})",
+                 aWorldEntityId, entityIt->second, acMessage.PositionX, acMessage.PositionY, acMessage.PositionZ);
+
 }
