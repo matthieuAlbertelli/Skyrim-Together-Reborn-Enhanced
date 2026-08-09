@@ -74,7 +74,7 @@ World::World()
     ctx().emplace<WeatherService>(*this, m_transport, m_dispatcher);
     ctx().emplace<MapService>(*this, m_dispatcher, m_transport);
 
-    spdlog::warn("[STRE][Isolation] BehaviorVar initialization disabled for swimming diagnostic");
+    BehaviorVar::Get()->Init();
 }
 
 World::~World() = default;

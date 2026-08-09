@@ -1330,8 +1330,7 @@ static TiltedPhoques::Initializer s_actorHooks(
         RealAddDeathItems = addDeathItems.Get();
         RealIsFleeing = isFleeing.Get();
 
-        spdlog::warn("[STRE][Isolation] ActorProcess hook disabled for swimming diagnostic");
-        // TP_HOOK(&RealActorProcess, HookActorProcess);
+        TP_HOOK(&RealActorProcess, HookActorProcess);
         TP_HOOK(&RealSetPosition, HookSetPosition);
         TP_HOOK(&RealRemoveSpell, HookRemoveSpell);
         TP_HOOK(&RealCharacterConstructor, HookCharacterConstructor);
@@ -1340,7 +1339,22 @@ static TiltedPhoques::Initializer s_actorHooks(
         TP_HOOK(&RealSpawnActorInWorld, HookSpawnActorInWorld);
         TP_HOOK(&RealDamageActor, HookDamageActor);
         TP_HOOK(&RealApplyActorEffect, HookApplyActorEffect);
-        TP_HOOK(&RealRegenAttributes, HookRegenAttributes);
+        // STRE V41 swimming fix:
+        //
+        // Address Library ID 37448 currently resolves to SkyrimSE.exe
+        // RVA 0x673170, which is the native aquatic submersion-metric helper,
+        // not Actor health regeneration. Hooking it with HookRegenAttributes
+        // corrupts the aquatic-state pipeline (swimming, underwater state,
+        // drowning and clean water exit).
+        //
+        // Keep the resolver for forensic visibility, but do not install this
+        // hook until the correct regeneration relocation is identified.
+        spdlog::warn(
+            "[STRE][SwimmingFixV41] disabling RegenAttributes hook "
+            "resolvedTarget={:X}; relocation ID 37448 is invalid for this "
+            "runtime",
+            reinterpret_cast<uintptr_t>(RealRegenAttributes));
+
         TP_HOOK(&RealAddInventoryItem, HookAddInventoryItem);
         TP_HOOK(&RealPickUpObject, HookPickUpObject);
         TP_HOOK(&RealDropObject, HookDropObject);
