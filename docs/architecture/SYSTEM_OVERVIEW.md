@@ -1,104 +1,119 @@
 # Vue d’ensemble du système
 
-> **Statut : Implémenté pour Trading / Proposé pour Campaign & Mod Integration**
+> **Statut : architecture transversale courante**
 
-## Couches
+Ce document décrit les frontières générales. Les détails d’une feature appartiennent à `docs/features/<feature>/`.
+
+## Vue générale
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ Contenu Skyrim                                               │
-│ Cellules, PNJ, quêtes, scènes, Papyrus, objets, animations   │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ intentions / effets locaux
-┌───────────────────────────────▼──────────────────────────────┐
-│ Bridges client                                               │
-│ CK/Papyrus Bridge · CEF Bridge · Skyrim native adapters      │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ commands / events
-┌───────────────────────────────▼──────────────────────────────┐
-│ STRE Client                                                  │
-│ Services · Mod Adapter Runtime · UI Surface · Local appliers │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ protocole versionné
-┌───────────────────────────────▼──────────────────────────────┐
-│ STRE Server / Campaign Authority                             │
-│ Validation · Canonical State · Snapshots · Persistence       │
-└──────────────────────────────────────────────────────────────┘
+Skyrim / Creation Kit / SKSE plugins
+        │ local events + projections
+        ▼
+STRE client adapters/services
+        │ intents / results
+        ▼
+versioned network protocol
+        │
+        ▼
+STRE server authority
+        │ canonical notifications / snapshots
+        ▼
+STRE client projection
+        │
+        ▼
+Skyrim / UI / local engine simulation
 ```
 
-## Architecture actuelle observée
+## Runtime
 
-Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu. Les messages sont des types statiques enregistrés dans les factories de protocole.
+Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu.
 
-Le trading illustre le chemin complet :
+Les messages sont des types statiques enregistrés dans les factories du protocole.
+
+## Verticales first-party actuelles
+
+### World Sync
+
+World Sync ajoute une identité stable aux instances monde synchronisées sans tenter de transformer le serveur en moteur Havok.
+
+```text
+Skyrim object event
+→ client WorldEntity lifecycle
+→ server identity/authority
+→ remote binding/materialization
+→ local engine simulation
+→ authoritative settlement
+```
+
+Voir [`features/world-sync/README.md`](../features/world-sync/README.md).
+
+### Trading
 
 ```text
 Angular action
-→ OverlayClient
-→ TradeMenuService / TradeService client
-→ ClientMessage
-→ TradeService serveur
-→ domaine Trade
-→ ServerMessage
-→ application locale / UI
+→ client Trade services
+→ server TradeService
+→ Trade domain
+→ canonical apply/reconcile messages
+→ client inventory/UI projection
 ```
 
-## Architecture cible
+Voir [`features/trading/`](../features/trading/).
 
-Le Mod Integration Runtime ajoute un niveau générique :
+### Alternate Start / Character Build
 
 ```text
-Mod solo
-→ Adapter local
-→ Intent
-→ Capability Runtime
-→ Command autoritaire
-→ Canonical State
-→ Event
-→ Adapter local
-→ conséquence Skyrim
+CK quest/RaceMenu
+→ CharacterCreationService
+→ Angular logical selections
+→ CharacterBuildService or local fallback
+→ canonical inventory/spells
+→ local application + acknowledgement
 ```
 
-## Frontières de responsabilité
+Voir [`features/alternate-start/`](../features/alternate-start/).
 
-### Creation Kit / mod solo
+### Item Preview
 
-- contenu, présentation et progression locale ;
-- lecture/écriture d’éléments Skyrim ;
-- fallback solo ;
-- application des conséquences validées.
+La preview est une ressource native interne partagée par Trading et Character Creation. Sa cible de lease/arbitration est documentée séparément.
 
-### Mod Adapter
+Voir [`ITEM_PREVIEW_PLATFORM.md`](ITEM_PREVIEW_PLATFORM.md).
 
-- traduction entre concepts du mod et concepts STRE ;
-- déclaration des capabilities ;
-- observation des signaux ;
-- validation locale de forme ;
-- capture/application de snapshot ;
-- gestion des erreurs de compatibilité.
+## Frontières
 
-### STRE Client
+### Skyrim adapters
 
-- transport d’intentions ;
-- cache local de l’état canonique ;
-- bridge UI et Skyrim ;
-- journaux idempotents ;
-- application ordonnée des événements.
+Responsables des appels engine-facing, résolution de formulaires, événements TES, matérialisation et application locale.
 
-### STRE Server
+Ils ne doivent pas devenir la source canonique d’un état partagé uniquement parce qu’ils détiennent une référence native.
 
-- autorité ;
-- invariants ;
-- versionnement ;
-- conflits ;
-- diffusion ;
-- persistance ;
-- reconnexion.
+### STRE client services
+
+Responsables de l’orchestration locale, de la traduction événement → intention et de l’application des résultats/snapshots.
+
+Une mutation moteur déclenchée par le réseau doit être marshalled sur un contexte sûr lorsque nécessaire.
+
+### Shared domain/protocol
+
+Responsable des identités portables, structures sérialisées, règles métier partagées et bornes.
+
+Aucun pointeur Skyrim natif ne traverse cette frontière.
+
+### STRE server
+
+Responsable de la validation et de l’autorité des états partagés explicitement confiés au serveur.
 
 ## Principes transverses
 
-- Aucun état critique n’est défini uniquement par l’affichage d’un menu ou d’une scène.
-- Toute commande possède un identifiant ou une version permettant de détecter les doublons.
-- Les snapshots sont complets ; les événements sont incrémentaux.
-- Les adapters ne doivent pas appeler directement des services internes non contractuels.
-- Les APIs externes sont versionnées et bornées en taille.
+- autorité explicite;
+- identité réseau distincte des FormID locaux lorsque nécessaire;
+- KISS : utiliser le moteur local pour ce qu’il fait déjà correctement;
+- DRY : une règle ou un état mutable ne possède qu’une source de vérité;
+- fail closed si une opération ne sait pas préserver les métadonnées requises;
+- snapshots pour les systèmes qui doivent reconstruire un état après join/reconnect;
+- aucune API tierce annoncée stable avant validation first-party suffisante.
+
+## Architecture future
+
+Campaign State, persistence durable et Mod Integration Runtime générique étendront ces mêmes frontières sans remplacer les contrats first-party déjà éprouvés.

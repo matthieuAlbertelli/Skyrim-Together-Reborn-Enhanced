@@ -2,5 +2,6 @@
 # Plugin : STRE_AlternateStart.esp
 # Ne pas modifier manuellement cette liste.
 Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.pex
+Scripts\Source\QF_STRE_QUEST_AlternateStart_02001AF9.pex
 Source\Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.psc
 STRE_AlternateStart.esp

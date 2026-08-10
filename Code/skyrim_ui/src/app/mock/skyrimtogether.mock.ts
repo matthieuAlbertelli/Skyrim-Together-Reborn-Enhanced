@@ -183,6 +183,15 @@ export class SkyrimtogetherMock extends EventEmitter implements SkyrimTogether {
     }
   }
 
+  characterCreationAction(action: string, payload = ''): void {
+    console.log(
+      `%cCHARACTER CREATION`,
+      'background: #7b4f2b; color: #fff; padding: 3px; font-size: 9px;',
+      action,
+      payload,
+    );
+  }
+
   changePartyLeader(playerId: number): void {
     playerStore.update(updateEntities(playerId, { hasOwnParty: true }));
     this.emit(

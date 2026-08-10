@@ -1,0 +1,828 @@
+import {
+  CharacterLoadoutDefinition,
+  LoadoutRewardLine,
+} from '../models/character-creation';
+
+const reward = (
+  name: string,
+  quantity?: number,
+  detail?: string,
+  previewKey?: string,
+  previewLabel?: string,
+): LoadoutRewardLine => ({ name, quantity, detail, previewKey, previewLabel });
+
+
+const steelOneHandedOptions = (groupId: string) => [
+  {
+    id: `${groupId}.dagger`,
+    name: 'Dague en acier',
+    subtitle: 'Rapidité et discrétion',
+    description: 'Une lame courte, vive et légère.',
+    rewards: [reward('Dague en acier', 1, undefined, 'preview.steel_dagger', 'Dague en acier')],
+    previewKey: 'preview.steel_dagger',
+    previewLabel: 'Dague en acier',
+  },
+  {
+    id: `${groupId}.sword`,
+    name: 'Épée en acier',
+    subtitle: 'Équilibre martial',
+    description: 'Une arme polyvalente au rythme régulier.',
+    rewards: [reward('Épée en acier', 1, undefined, 'preview.steel_sword', 'Épée en acier')],
+    previewKey: 'preview.steel_sword',
+    previewLabel: 'Épée en acier',
+  },
+  {
+    id: `${groupId}.war_axe`,
+    name: 'Hache de guerre en acier',
+    subtitle: 'Tranchant et pression',
+    description: 'Une arme destinée à ouvrir les gardes et maintenir la pression.',
+    rewards: [reward('Hache de guerre en acier', 1, undefined, 'preview.steel_war_axe', 'Hache de guerre en acier')],
+    previewKey: 'preview.steel_war_axe',
+    previewLabel: 'Hache de guerre en acier',
+  },
+  {
+    id: `${groupId}.mace`,
+    name: 'Masse en acier',
+    subtitle: 'Impact et armures',
+    description: 'Une arme lente et lourde conçue pour les protections solides.',
+    rewards: [reward('Masse en acier', 1, undefined, 'preview.steel_mace', 'Masse en acier')],
+    previewKey: 'preview.steel_mace',
+    previewLabel: 'Masse en acier',
+  },
+] as const;
+
+const ironOneHandedOptions = (groupId: string) => [
+  {
+    id: `${groupId}.dagger`,
+    name: 'Dague en fer',
+    subtitle: 'Rapidité',
+    description: 'Une lame courte et très légère.',
+    rewards: [reward('Dague en fer', 1, undefined, 'preview.iron_dagger', 'Dague en fer')],
+    previewKey: 'preview.iron_dagger',
+    previewLabel: 'Dague en fer',
+  },
+  {
+    id: `${groupId}.sword`,
+    name: 'Épée en fer',
+    subtitle: 'Polyvalence',
+    description: 'Une lame simple et équilibrée.',
+    rewards: [reward('Épée en fer', 1, undefined, 'preview.iron_sword', 'Épée en fer')],
+    previewKey: 'preview.iron_sword',
+    previewLabel: 'Épée en fer',
+  },
+  {
+    id: `${groupId}.war_axe`,
+    name: 'Hache de guerre en fer',
+    subtitle: 'Pression',
+    description: 'Un tranchant robuste pour les combats rapprochés.',
+    rewards: [reward('Hache de guerre en fer', 1, undefined, 'preview.iron_war_axe', 'Hache de guerre en fer')],
+    previewKey: 'preview.iron_war_axe',
+    previewLabel: 'Hache de guerre en fer',
+  },
+  {
+    id: `${groupId}.mace`,
+    name: 'Masse en fer',
+    subtitle: 'Impact',
+    description: 'Une masse lourde pour frapper au travers des défenses.',
+    rewards: [reward('Masse en fer', 1, undefined, 'preview.iron_mace', 'Masse en fer')],
+    previewKey: 'preview.iron_mace',
+    previewLabel: 'Masse en fer',
+  },
+] as const;
+
+export const CHARACTER_LOADOUTS: readonly CharacterLoadoutDefinition[] = [
+  {
+    classId: 'class.warrior',
+    title: 'Paquetage du guerrier',
+    introduction:
+      "Le guerrier reçoit une protection lourde et choisit les outils qui définiront sa manière d'entrer dans la mêlée. Les choix encore ambigus dans la spécification sont signalés sans être inventés.",
+    groups: [
+      {
+        id: 'warrior.heavy_armor',
+        skill: 'Armure lourde',
+        title: 'Protection de départ',
+        kind: 'announcement',
+        required: false,
+        description: 'Ce paquetage est attribué automatiquement.',
+        rewards: [
+          reward('Armure de fer', 1, undefined, 'preview.iron_armor', 'Armure de fer'),
+          reward('Bottes de fer', 1, undefined, 'preview.iron_boots', 'Bottes de fer'),
+          reward('Gantelets de fer', 1, undefined, 'preview.iron_gauntlets', 'Gantelets de fer'),
+        ],
+        previewKey: 'preview.iron_armor',
+        previewLabel: 'Armure de fer',
+      },
+      {
+        id: 'warrior.parade',
+        skill: 'Parade · compétence majeure',
+        title: 'Instrument de garde',
+        kind: 'choice',
+        required: true,
+        description:
+          'Choisissez la protection qui accompagnera votre style défensif.',
+        options: [
+          {
+            id: 'warrior.parade.hide_shield',
+            name: 'Bouclier de peau',
+            subtitle: 'Léger et maniable',
+            description:
+              'Un bouclier simple qui favorise la mobilité et une garde réactive.',
+            rewards: [reward('Bouclier de peau', 1, undefined, 'preview.hide_shield', 'Bouclier de peau')],
+            previewKey: 'preview.hide_shield',
+            previewLabel: 'Bouclier de peau',
+          },
+          {
+            id: 'warrior.parade.iron_shield',
+            name: 'Bouclier de fer',
+            subtitle: 'Solide et direct',
+            description:
+              'Une protection plus lourde, conçue pour tenir la ligne.',
+            rewards: [reward('Bouclier de fer', 1, undefined, 'preview.iron_shield', 'Bouclier de fer')],
+            previewKey: 'preview.iron_shield',
+            previewLabel: 'Bouclier de fer',
+          },
+          {
+            id: 'warrior.parade.guard_pendant',
+            name: 'Pendentif de garde',
+            subtitle: 'Parer sans bouclier',
+            description:
+              'Un pendentif faiblement enchanté qui améliore la parade sans imposer de bouclier.',
+            rewards: [
+              reward(
+                'Pendentif de garde',
+                1,
+                'Parade améliorée de 5 %',
+                'preview.stre_guard_pendant',
+                'Pendentif de garde',
+              ),
+            ],
+            previewKey: 'preview.stre_guard_pendant',
+            previewLabel: 'Pendentif de garde',
+          },
+        ],
+      },
+      {
+        id: 'warrior.two_handed',
+        skill: 'Arme à deux mains',
+        title: 'Arme lourde',
+        kind: 'choice',
+        required: true,
+        description:
+          "Choisissez l'arme lourde de base associée à cette compétence mineure.",
+        options: [
+          {
+            id: 'warrior.two_handed.greatsword',
+            name: 'Espadon de fer',
+            subtitle: 'Réactif et polyvalent',
+            description:
+              'Une arme lourde relativement rapide, adaptée aux changements de cible.',
+            rewards: [reward('Espadon de fer', 1, undefined, 'preview.iron_greatsword', 'Espadon de fer')],
+            previewKey: 'preview.iron_greatsword',
+            previewLabel: 'Espadon de fer',
+          },
+          {
+            id: 'warrior.two_handed.battleaxe',
+            name: 'Hache de bataille en fer',
+            subtitle: 'Pression offensive',
+            description:
+              'Un compromis entre vitesse, allonge et puissance par coup.',
+            rewards: [reward('Hache de bataille en fer', 1, undefined, 'preview.iron_battleaxe', 'Hache de bataille en fer')],
+            previewKey: 'preview.iron_battleaxe',
+            previewLabel: 'Hache de bataille en fer',
+          },
+          {
+            id: 'warrior.two_handed.warhammer',
+            name: 'Marteau de guerre en fer',
+            subtitle: 'Impact maximal',
+            description:
+              'Une arme lente destinée à produire le plus fort impact par attaque.',
+            rewards: [reward('Marteau de guerre en fer', 1, undefined, 'preview.iron_warhammer', 'Marteau de guerre en fer')],
+            previewKey: 'preview.iron_warhammer',
+            previewLabel: 'Marteau de guerre en fer',
+          },
+        ],
+      },
+      {
+        id: 'warrior.archery',
+        skill: 'Archerie',
+        title: 'Arme de distance',
+        kind: 'choice',
+        required: true,
+        description:
+          'Choisissez votre solution de repli à distance.',
+        options: [
+          {
+            id: 'warrior.archery.bow',
+            name: 'Arc de chasse',
+            subtitle: 'Cadence et mobilité',
+            description:
+              'Un arc de départ accompagné de cinquante flèches.',
+            rewards: [reward('Arc de chasse', 1, undefined, 'preview.hunting_bow', 'Arc de chasse'), reward('Flèches de fer', 50, undefined, 'preview.iron_arrow', 'Flèche de fer')],
+            previewKey: 'preview.hunting_bow',
+            previewLabel: 'Arc de chasse',
+          },
+          {
+            id: 'warrior.archery.crossbow',
+            name: 'Arbalète',
+            subtitle: 'Tir puissant',
+            description:
+              'Une arbalète vanilla de Dawnguard accompagnée de cinquante carreaux d’acier.',
+            rewards: [
+              reward('Arbalète', 1, undefined, 'preview.crossbow', 'Arbalète'),
+              reward('Carreaux d’acier', 50, undefined, 'preview.steel_bolt', 'Carreau d’acier'),
+            ],
+            previewKey: 'preview.crossbow',
+            previewLabel: 'Arbalète',
+          },
+        ],
+      },
+      {
+        id: 'warrior.smithing_attire',
+        skill: 'Forgeage · compétence majeure',
+        title: 'Tenue de forgeron',
+        kind: 'announcement',
+        required: false,
+        description: 'Cette tenue artisanale est attribuée automatiquement, en plus du kit de matériaux choisi.',
+        rewards: [
+          reward('Tenue de forgeron', 1, 'Forge améliorée de 5 %', 'preview.stre_smithing_clothes', 'Tenue de forgeron'),
+          reward('Bottes de forgeron', 1),
+        ],
+        previewKey: 'preview.stre_smithing_clothes',
+        previewLabel: 'Tenue de forgeron',
+      },
+      {
+        id: 'warrior.smithing',
+        skill: 'Forgeage · compétence majeure',
+        title: 'Matériaux de forge',
+        kind: 'choice',
+        required: true,
+        description:
+          "Choisissez une orientation d'artisanat parmi les ensembles déjà définis.",
+        options: [
+          {
+            id: 'warrior.smithing.light_leather',
+            name: 'Forge légère · cuir',
+            subtitle: 'Travail des peaux',
+            description: 'Un lot entièrement consacré au cuir.',
+            rewards: [reward('Cuirs', 4, undefined, 'preview.leather', 'Cuir'), reward('Bandes de cuir', 8, undefined, 'preview.leather_strips', 'Bande de cuir')],
+          },
+          {
+            id: 'warrior.smithing.light_mixed',
+            name: 'Forge légère · mixte',
+            subtitle: 'Cuir et fer',
+            description: 'Un petit lot polyvalent pour les premiers établis.',
+            rewards: [
+              reward('Cuirs', 3, undefined, 'preview.leather', 'Cuir'),
+              reward('Bandes de cuir', 6, undefined, 'preview.leather_strips', 'Bande de cuir'),
+              reward('Lingots de fer', 2, undefined, 'preview.iron_ingot', 'Lingot de fer'),
+            ],
+          },
+          {
+            id: 'warrior.smithing.heavy_iron',
+            name: 'Forge lourde · fer',
+            subtitle: 'Métal et assemblage',
+            description: 'Des ressources destinées aux pièces lourdes simples.',
+            rewards: [reward('Lingots de fer', 4, undefined, 'preview.iron_ingot', 'Lingot de fer'), reward('Bandes de cuir', 4, undefined, 'preview.leather_strips', 'Bande de cuir')],
+          },
+          {
+            id: 'warrior.smithing.heavy_mixed',
+            name: 'Forge lourde · alliages',
+            subtitle: 'Fer et corindon',
+            description: 'Un lot plus varié pour préparer des recettes avancées.',
+            rewards: [
+              reward('Lingots de fer', 2, undefined, 'preview.iron_ingot', 'Lingot de fer'),
+              reward('Lingots de corindon', 2, undefined, 'preview.corundum_ingot', 'Lingot de corindon'),
+              reward('Bandes de cuir', 4, undefined, 'preview.leather_strips', 'Bande de cuir'),
+            ],
+          },
+          {
+            id: 'warrior.smithing.maintenance',
+            name: 'Entretien et amélioration',
+            subtitle: 'Réparer et renforcer',
+            description: 'Un ensemble équilibré pour les premiers travaux.',
+            rewards: [
+              reward('Lingots de fer', 2, undefined, 'preview.iron_ingot', 'Lingot de fer'),
+              reward("Lingot d'acier", 1, undefined, 'preview.steel_ingot', "Lingot d'acier"),
+              reward('Cuirs', 2, undefined, 'preview.leather', 'Cuir'),
+              reward('Bandes de cuir', 4, undefined, 'preview.leather_strips', 'Bande de cuir'),
+            ],
+          },
+        ],
+      },
+      {
+        id: 'warrior.one_handed_mode',
+        skill: 'Arme à une main',
+        title: 'Doctrine de combat',
+        kind: 'choice',
+        required: true,
+        description:
+          'Choisissez entre une arme d’acier de meilleure facture ou une paire d’armes de fer entièrement panachable.',
+        options: [
+          {
+            id: 'warrior.one_handed_mode.steel',
+            name: 'Une arme en acier',
+            subtitle: 'Qualité et maîtrise',
+            description: 'Choisissez ensuite une dague, une épée, une hache de guerre ou une masse en acier.',
+            rewards: [],
+          },
+          {
+            id: 'warrior.one_handed_mode.dual_iron',
+            name: 'Deux armes en fer',
+            subtitle: 'Ambidextrie et panachage',
+            description: 'Choisissez indépendamment la première et la seconde arme. Les doublons sont autorisés.',
+            rewards: [],
+          },
+        ],
+      },
+      {
+        id: 'warrior.one_handed_steel',
+        skill: 'Arme à une main',
+        title: 'Arme d’acier',
+        kind: 'choice',
+        required: true,
+        description: 'Sélectionnez l’unique arme en acier qui accompagnera votre personnage.',
+        when: {
+          groupId: 'warrior.one_handed_mode',
+          optionId: 'warrior.one_handed_mode.steel',
+        },
+        options: steelOneHandedOptions('warrior.one_handed_steel'),
+      },
+      {
+        id: 'warrior.one_handed_iron_main',
+        skill: 'Arme à une main',
+        title: 'Première arme en fer',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez la première arme de votre paire.',
+        when: {
+          groupId: 'warrior.one_handed_mode',
+          optionId: 'warrior.one_handed_mode.dual_iron',
+        },
+        options: ironOneHandedOptions('warrior.one_handed_iron_main'),
+      },
+      {
+        id: 'warrior.one_handed_iron_off',
+        skill: 'Arme à une main',
+        title: 'Seconde arme en fer',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez la seconde arme. Elle peut être identique à la première.',
+        when: {
+          groupId: 'warrior.one_handed_mode',
+          optionId: 'warrior.one_handed_mode.dual_iron',
+        },
+        options: ironOneHandedOptions('warrior.one_handed_iron_off'),
+      },
+    ],
+  },
+  {
+    classId: 'class.mage',
+    title: 'Paquetage du mage',
+    introduction:
+      "Les écoles de Destruction et d’Altération utilisent désormais leurs vrais sorts STRE. Les autres écoles restent visibles pour préparer les jalons suivants.",
+    groups: [
+      {
+        id: 'mage.destruction',
+        skill: 'Destruction · compétence majeure',
+        title: 'Affinité élémentaire',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez le domaine élémentaire de votre magie offensive.',
+        options: [
+          {
+            id: 'mage.destruction.fire',
+            name: 'Feu',
+            subtitle: 'Braises et combustion',
+            description: 'Une école offensive directe fondée sur les flammes et les explosions.',
+            rewards: [
+              reward('Flammes'),
+              reward('Explosion de braises'),
+              reward('Rune de braises'),
+            ],
+          },
+          {
+            id: 'mage.destruction.frost',
+            name: 'Froid',
+            subtitle: 'Contrôle et ralentissement',
+            description: 'Des sorts de givre centrés sur les dégâts de zone et le ralentissement.',
+            rewards: [
+              reward('Souffle de givre mineur'),
+              reward('Explosion de givre'),
+              reward('Rune de givre mineure'),
+            ],
+          },
+          {
+            id: 'mage.destruction.shock',
+            name: 'Foudre',
+            subtitle: 'Pression sur la magie',
+            description: 'Des décharges électriques qui blessent et épuisent la Magie.',
+            rewards: [
+              reward('Étincelles mineures'),
+              reward('Décharge explosive'),
+              reward('Rune électrique mineure'),
+            ],
+          },
+        ],
+      },
+      {
+        id: 'mage.alteration',
+        skill: 'Altération · compétence majeure',
+        title: "Discipline d'altération",
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez le type de manipulation du monde qui vous définit.',
+        options: [
+          {
+            id: 'mage.alteration.protection',
+            name: 'Protection et contrôle',
+            subtitle: 'Peaux et entraves',
+            description: 'Renforcer, ralentir et protéger un compagnon.',
+            rewards: [
+              reward('Peau minérale mineure'),
+              reward('Entrave mineure'),
+              reward('Rune de cendres mineure'),
+              reward('Égide minérale', undefined, 'Ciblée sur un allié'),
+            ],
+          },
+          {
+            id: 'mage.alteration.exploration',
+            name: 'Exploration et perception',
+            subtitle: 'Voir et respirer',
+            description: "Un ensemble d'exploration et de détection.",
+            rewards: [
+              reward('Lueur mineure'),
+              reward('Détection du vivant mineure'),
+              reward('Détection des morts mineure'),
+              reward('Souffle aquatique partagé', undefined, 'Ciblé sur un allié'),
+            ],
+          },
+          {
+            id: 'mage.alteration.matter',
+            name: 'Manipulation de la matière',
+            subtitle: 'Déplacer et transformer',
+            description: 'Une orientation utilitaire centrée sur la matière et le poids.',
+            rewards: [
+              reward('Télékinésie mineure'),
+              reward('Transmutation mineure'),
+              reward('Équilibre mineur'),
+              reward('Allègement', undefined, 'Ciblé sur un allié'),
+            ],
+          },
+        ],
+      },
+      {
+        id: 'mage.conjuration',
+        skill: 'Invocation',
+        title: "Voie d'invocation",
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez le pacte, les âmes ou les armes liées.',
+        options: [
+          {
+            id: 'mage.conjuration.daedric',
+            name: 'Pactes daedriques',
+            subtitle: 'Serviteurs invoqués',
+            description: 'Des créatures mineures et un gardien offert à un allié.',
+            rewards: [
+              reward('Familier spectral mineur'),
+              reward('Atronach de braises mineur'),
+              reward('Bannissement mineur'),
+              reward('Gardien du compagnon', undefined, 'Ciblé sur un allié'),
+            ],
+          },
+          {
+            id: 'mage.conjuration.necromancy',
+            name: 'Nécromancie et âmes',
+            subtitle: 'Réanimation et ancrage',
+            description: 'Une voie de serviteurs morts et de manipulation des âmes.',
+            rewards: [
+              reward('Réanimation mineure'),
+              reward('Serviteur osseux mineur'),
+              reward("Piège d'âme mineur"),
+              reward("Ancrage d'âme", undefined, 'Allié vivant ou cadavre'),
+            ],
+          },
+          {
+            id: 'mage.conjuration.bound',
+            name: 'Arsenal lié',
+            subtitle: 'Armes conjurées',
+            description: 'Un ensemble martial invoqué, avec partage sur un allié.',
+            rewards: [
+              reward('Lame liée mineure'),
+              reward('Hache de bataille liée mineure'),
+              reward('Arc lié mineur'),
+              reward('Lame liée partagée', undefined, 'Ciblée sur un allié'),
+            ],
+            previewKey: 'preview.iron_sword',
+            previewLabel: "Aperçu d'arme provisoire",
+          },
+        ],
+      },
+      {
+        id: 'mage.illusion',
+        skill: 'Illusion',
+        title: "Doctrine d'illusion",
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez entre paix, discorde ou dissimulation.',
+        options: [
+          {
+            id: 'mage.illusion.pacification',
+            name: 'Pacification et terreur',
+            subtitle: 'Calmer ou briser le courage',
+            description: 'Contrôle mental et soutien du moral allié.',
+            rewards: [
+              reward('Apaisement mineur'),
+              reward("Onde d'apaisement"),
+              reward('Effroi mineur'),
+              reward('Courage partagé', undefined, 'Sur allié'),
+            ],
+          },
+          {
+            id: 'mage.illusion.discord',
+            name: 'Discorde et exaltation',
+            subtitle: 'Retourner les volontés',
+            description: 'Déchaîner les ennemis et renforcer un combattant allié.',
+            rewards: [
+              reward('Fureur mineure'),
+              reward('Éruption de discorde'),
+              reward('Rune de frénésie mineure'),
+              reward('Ardeur guerrière', undefined, 'Sur allié'),
+            ],
+          },
+          {
+            id: 'mage.illusion.shadows',
+            name: 'Ombres et perception',
+            subtitle: 'Silence et voile',
+            description: 'Discrétion, orientation et protection furtive du groupe.',
+            rewards: [
+              reward('Pas étouffés'),
+              reward('Voile fugitif'),
+              reward('Clairvoyance'),
+              reward('Voile du compagnon', undefined, 'Sur allié'),
+            ],
+          },
+        ],
+      },
+      {
+        id: 'mage.restoration',
+        skill: 'Guérison',
+        title: 'Tradition de guérison',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez votre approche de la protection du groupe.',
+        options: [
+          {
+            id: 'mage.restoration.healing',
+            name: 'Soins et vitalité',
+            subtitle: 'Rétablir les forces',
+            description: 'Une voie de soins directs et de vitalité partagée.',
+            rewards: [
+              reward('Guérison mineure'),
+              reward('Rétablissement mineur'),
+              reward('Cercle de vitalité mineur'),
+              reward('Mains guérisseuses mineures', undefined, 'Sur allié'),
+            ],
+          },
+          {
+            id: 'mage.restoration.wards',
+            name: 'Barrières et sanctuaires',
+            subtitle: 'Prévenir les blessures',
+            description: 'Des défenses magiques et une protection coopérative.',
+            rewards: [
+              reward('Barrière mineure'),
+              reward('Égide fugitive'),
+              reward('Sanctuaire mineur'),
+              reward('Protection partagée', undefined, 'Sur allié'),
+            ],
+          },
+          {
+            id: 'mage.restoration.sacred',
+            name: 'Lumière sacrée et exorcisme',
+            subtitle: 'Repousser les ténèbres',
+            description: 'Une voie offensive contre les créatures profanes.',
+            rewards: [
+              reward('Trait solaire mineur'),
+              reward('Répulsion mineure'),
+              reward('Aura de Stendarr mineure'),
+              reward('Aura consacrée', undefined, 'Sur allié'),
+            ],
+          },
+        ],
+      },
+      {
+        id: 'mage.enchanting_attire',
+        skill: 'Enchantement',
+        title: 'Tenue d’enchanteur',
+        kind: 'announcement',
+        required: false,
+        description: 'Une robe purement visuelle est attribuée automatiquement. Elle ne possède aucun enchantement.',
+        rewards: [
+          reward('Tenue d’enchanteur', 1, undefined, 'preview.stre_enchanting_clothes', 'Tenue d’enchanteur'),
+          reward('Bottes d’enchanteur', 1),
+        ],
+        previewKey: 'preview.stre_enchanting_clothes',
+        previewLabel: 'Tenue d’enchanteur',
+      },
+      {
+        id: 'mage.enchanting',
+        skill: 'Enchantement',
+        title: "Approche de l'enchantement",
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez une spécialisation matérielle de départ.',
+        options: [
+          {
+            id: 'mage.enchanting.weapons',
+            name: "Enchantements d'armes",
+            subtitle: "Lames d'étude",
+            description: 'Des armes pédagogiques et une baguette de braises.',
+            rewards: [
+              reward("Lame d'étude ardente"),
+              reward("Lame d'étude glaciale"),
+              reward("Lame d'étude électrique"),
+              reward("Lame d'étude spirituelle"),
+              reward('Baguette de braises'),
+            ],
+            previewKey: 'preview.iron_sword',
+            previewLabel: "Lame d'étude provisoire",
+          },
+          {
+            id: 'mage.enchanting.body',
+            name: 'Enchantements du corps',
+            subtitle: 'Bijoux et robe',
+            description: 'Un ensemble de petits enchantements portables.',
+            rewards: [
+              reward('Amulette de vitalité mineure'),
+              reward('Diadème de Magie mineure'),
+              reward("Anneau d'Endurance mineure"),
+              reward('Robe de récupération mineure'),
+              reward('Baguette de vigueur'),
+            ],
+          },
+          {
+            id: 'mage.enchanting.souls',
+            name: 'Artisan des âmes',
+            subtitle: 'Gemmes et capture',
+            description: "Les outils nécessaires aux premiers essais d'enchantement.",
+            rewards: [
+              reward('Petite gemme spirituelle remplie', 1),
+              reward('Petites gemmes spirituelles vides', 2),
+              reward('Baguette de capture mineure', 1),
+              reward('Bijou non enchanté', 1),
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    classId: 'class.thief',
+    title: 'Paquetage du voleur',
+    introduction:
+      "Le voleur reçoit automatiquement ses outils et ses tenues de compétence, puis choisit sa doctrine d’arme à une main.",
+    groups: [
+      {
+        id: 'thief.light_armor',
+        skill: 'Armure légère',
+        title: 'Protection légère',
+        kind: 'announcement',
+        required: false,
+        description: 'Ce paquetage est attribué automatiquement.',
+        rewards: [
+          reward('Armure de peau', 1, undefined, 'preview.leather_armor', 'Armure de peau'),
+          reward('Bottes de peau', 1, undefined, 'preview.hide_boots', 'Bottes de peau'),
+          reward('Brassards de peau', 1, undefined, 'preview.hide_bracers', 'Brassards de peau'),
+        ],
+        previewKey: 'preview.leather_armor',
+        previewLabel: 'Aperçu de tenue légère',
+      },
+      {
+        id: 'thief.pickpocket',
+        skill: 'Vol à la tire · compétence majeure',
+        title: 'Tenue de foule',
+        kind: 'announcement',
+        required: false,
+        description: 'Une tenue ordinaire permet de se fondre dans la foule.',
+        rewards: [
+          reward('Tenue de foule', 1, 'Vol à la tire amélioré de 5 %', 'preview.stre_pickpocket_clothes', 'Tenue de foule'),
+          reward('Chaussures de foule', 1),
+        ],
+        previewKey: 'preview.stre_pickpocket_clothes',
+        previewLabel: 'Tenue de foule',
+      },
+      {
+        id: 'thief.speech',
+        skill: 'Éloquence',
+        title: 'Tenue noble',
+        kind: 'announcement',
+        required: false,
+        description: 'Une tenue soignée facilite les échanges et les négociations.',
+        rewards: [
+          reward('Tenue noble', 1, 'Éloquence améliorée de 5 %', 'preview.stre_speech_clothes', 'Tenue noble'),
+          reward('Bottes nobles', 1),
+        ],
+        previewKey: 'preview.stre_speech_clothes',
+        previewLabel: 'Tenue noble',
+      },
+      {
+        id: 'thief.lockpicking',
+        skill: 'Crochetage · compétence majeure',
+        title: 'Réserve de crochets',
+        kind: 'announcement',
+        required: false,
+        description: 'Une réserve simple est attribuée automatiquement.',
+        rewards: [reward('Crochets', 10, undefined, 'preview.lockpick', 'Crochet')],
+        previewKey: 'preview.lockpick',
+        previewLabel: 'Crochet',
+      },
+      {
+        id: 'thief.sneak',
+        skill: 'Furtivité',
+        title: 'Tenue discrète',
+        kind: 'announcement',
+        required: false,
+        description: 'Une seule tenue discrète est proposée pour ce premier jalon.',
+        rewards: [
+          reward('Tenue discrète', 1, 'Furtivité améliorée de 5 %', 'preview.stre_sneak_clothes', 'Tenue discrète'),
+          reward('Bottes discrètes', 1),
+        ],
+        previewKey: 'preview.stre_sneak_clothes',
+        previewLabel: 'Tenue discrète',
+      },
+      {
+        id: 'thief.one_handed_mode',
+        skill: 'Arme à une main',
+        title: 'Doctrine de combat',
+        kind: 'choice',
+        required: true,
+        description:
+          'Choisissez entre une arme d’acier fiable ou une paire d’armes de fer panachables pour le combat à deux mains.',
+        options: [
+          {
+            id: 'thief.one_handed_mode.steel',
+            name: 'Une arme en acier',
+            subtitle: 'Précision et fiabilité',
+            description: 'Choisissez ensuite une dague, une épée, une hache de guerre ou une masse en acier.',
+            rewards: [],
+          },
+          {
+            id: 'thief.one_handed_mode.dual_iron',
+            name: 'Deux armes en fer',
+            subtitle: 'Vitesse et combinaison',
+            description: 'Choisissez indépendamment deux armes en fer. Les doublons sont autorisés.',
+            rewards: [],
+          },
+        ],
+      },
+      {
+        id: 'thief.one_handed_steel',
+        skill: 'Arme à une main',
+        title: 'Arme d’acier',
+        kind: 'choice',
+        required: true,
+        description: 'Sélectionnez l’unique arme en acier du paquetage.',
+        when: {
+          groupId: 'thief.one_handed_mode',
+          optionId: 'thief.one_handed_mode.steel',
+        },
+        options: steelOneHandedOptions('thief.one_handed_steel'),
+      },
+      {
+        id: 'thief.one_handed_iron_main',
+        skill: 'Arme à une main',
+        title: 'Première arme en fer',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez la première arme de votre paire.',
+        when: {
+          groupId: 'thief.one_handed_mode',
+          optionId: 'thief.one_handed_mode.dual_iron',
+        },
+        options: ironOneHandedOptions('thief.one_handed_iron_main'),
+      },
+      {
+        id: 'thief.one_handed_iron_off',
+        skill: 'Arme à une main',
+        title: 'Seconde arme en fer',
+        kind: 'choice',
+        required: true,
+        description: 'Choisissez la seconde arme. Elle peut être identique à la première.',
+        when: {
+          groupId: 'thief.one_handed_mode',
+          optionId: 'thief.one_handed_mode.dual_iron',
+        },
+        options: ironOneHandedOptions('thief.one_handed_iron_off'),
+      },
+    ],
+  },
+];
+
+export function getLoadoutForClass(
+  classId: string,
+): CharacterLoadoutDefinition {
+  return (
+    CHARACTER_LOADOUTS.find(entry => entry.classId === classId) ??
+    CHARACTER_LOADOUTS[0]
+  );
+}

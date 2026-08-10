@@ -1,6 +1,15 @@
 # Item Preview — Test Plan
 
-> **Statut : Proposition**
+> **Statut : Smoke-tested dans Trading et Character Creation ; tests automatisés à compléter**
+
+## Déjà observé en jeu
+
+- objets réels chargés dans Trading ;
+- objets réels chargés dans Character Creation ;
+- cadrage automatique ;
+- changements rapides de sélection ;
+- régions Angular mises à jour ;
+- reload natif lorsque nécessaire.
 
 ## Solver pur
 
@@ -20,7 +29,8 @@
 - reload pending annulé ;
 - manager absent ;
 - bind concurrent ;
-- future lease preemption.
+- future lease preemption ;
+- passage Trading → Character Creation → Trading.
 
 ## Rendu
 
@@ -29,4 +39,6 @@
 - UI scale ;
 - armes, armures, livres, potions, petits objets ;
 - objets avec bounds atypiques ;
-- conflit avec inventaire/crafting menus.
+- tenues STRE ;
+- conflit avec inventaire/crafting menus ;
+- comportement explicite pour les sorts sans modèle 3D utile.

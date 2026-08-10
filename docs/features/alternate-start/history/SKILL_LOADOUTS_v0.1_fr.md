@@ -1,6 +1,8 @@
 # Alternate Start — Paquetages de compétences
 
-> **Statut : Proposition de conception — V0.1**
+> **Statut : Archive de conception V0.1 — non canonique pour l’implémentation M7**
+>
+> Ce document conserve l’exploration initiale des 18 compétences et des classes Morrowind. Les récompenses réellement appliquées sont définies par `CharacterBuildCatalog.*`, présentées dans `character-loadouts.ts` et recoupées avec `CK_RECORDS_M7_IMPLEMENTED.json`. Le tableur V2 sert de base aux kits futurs. Ne pas utiliser les quantités, noms d’objets ou sorts de ce fichier comme preuve de l’état actuel.
 
 ## Objectif
 

@@ -21,6 +21,7 @@
 #include <Services/MagicService.h>
 #include <Services/CommandService.h>
 #include <Services/CalendarService.h>
+#include <Services/CharacterCreationService.h>
 #include <Services/StringCacheService.h>
 #include <Services/PlayerService.h>
 #include <Services/CombatService.h>
@@ -50,6 +51,10 @@ World::World()
     ctx().emplace<ObjectService>(*this, m_dispatcher, m_transport);
     ctx().emplace<CalendarService>(*this, m_dispatcher, m_transport);
     ctx().emplace<QuestService>(*this, m_dispatcher);
+    ctx().emplace<CharacterCreationService>(
+        *this,
+        ctx().at<UiSurfaceService>(),
+        m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeItemPreviewService>(*this, m_dispatcher);

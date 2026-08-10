@@ -163,6 +163,7 @@
         "MODS_MISMATCH_REMOVE": "このサーバーに入るには以下のMODSを削除する必要があります:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "このサーバーに入るには以下のMODSをインストールする必要があります:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "このサーバーでは、　 {{mods}}　が禁止とされています. 入るには削除する必要があります。",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "パスワードが間違っています。",
         "NO_REASON": "接続出来ませんでした。",
         "SERVER_FULL": "このサーバーは満員です。",

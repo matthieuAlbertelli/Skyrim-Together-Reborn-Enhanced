@@ -14,6 +14,8 @@ struct NiAVObject : NiObjectNET
     virtual void sub_29();
     virtual NiAVObject* GetByName(BSFixedString& aName);
 
+    void SetCollisionLayer(uint32_t aCollisionLayer) noexcept;
+
     uint8_t pad30[0x110 - 0x30];
 };
 

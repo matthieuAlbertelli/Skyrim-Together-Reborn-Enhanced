@@ -89,6 +89,7 @@ export class RootComponent implements OnInit {
         if (
           this.client.inGameStateChange.getValue() &&
           state &&
+          this.uiSurface.surfaceChange.getValue() === 'str' &&
           !this.uiRepository.isViewOpen()
         ) {
           setTimeout(() => this.chatComp?.focus(), 100);

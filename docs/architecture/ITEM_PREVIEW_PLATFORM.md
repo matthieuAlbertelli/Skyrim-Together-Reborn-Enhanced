@@ -1,10 +1,10 @@
-# Architecture cible de la plateforme Item Preview
+# Architecture de la plateforme Item Preview
 
-> **Statut : Refactor partiellement implémenté / évolution proposée**
+> **Statut : Cœur réutilisé par deux consommateurs / runtime à leases proposé**
 
 ## État actuel
 
-Le code possède déjà des composants génériques solides :
+Le code possède des composants génériques solides :
 
 - session native ;
 - contrôleur ;
@@ -13,11 +13,16 @@ Le code possède déjà des composants génériques solides :
 - host session ;
 - host bridge RAII.
 
-Le consommateur `TradeItemPreviewService` traduit un `Trade::ItemId` vers un `TESBoundObject`, crée une `InventoryEntry` puis pilote le contrôleur.
+Deux consommateurs first-party sont actifs :
+
+- `TradeItemPreviewService` pour les échanges ;
+- Character Creation pour les équipements de classe et de compétence.
+
+Chaque consommateur résout un objet Skyrim réel, fournit une région Angular/CEF et utilise le même pipeline de chargement, mesure et cadrage.
 
 ## Problème restant
 
-`ItemPreviewHostBridge` n’accepte qu’un `ItemPreviewHostClient`. Il ne gère ni plusieurs consommateurs, ni priorité, ni ownership explicite, ni timeout de ressource.
+`ItemPreviewHostBridge` n’accepte toujours qu’un `ItemPreviewHostClient` à la fois. La réutilisation séquentielle est validée, mais le runtime ne gère ni concurrence, ni priorité, ni ownership explicite, ni timeout de ressource.
 
 ## API cible
 
@@ -48,13 +53,13 @@ public:
 ## Arbitrage
 
 - une seule session native active ;
-- priorité explicite : menu système > interaction critique > fonctionnalité standard > preview passive ;
-- préemption notifiée au propriétaire ;
+- priorité explicite ;
+- préemption notifiée ;
 - fermeture idempotente ;
 - restitution de la surface et de l’input ;
 - aucun consommateur ne manipule directement le host menu.
 
-## Séparation recommandée
+## Séparation cible
 
 ```text
 ItemPreviewRuntime
@@ -67,21 +72,22 @@ ItemPreviewRuntime
 └─ Telemetry
 ```
 
-`TradeItemPreviewService` devient un adapter consommateur, non le propriétaire du host.
+Trading et Character Creation deviennent des adapters consommateurs du runtime.
 
 ## API pour mods tiers
 
-Étape 1 : capability STRE interne `item-preview/1`.  
-Étape 2 : bridge UI/Mod Adapter demandant une preview par GameId canonique.  
-Étape 3 : SDK tiers avec permissions et versionnement.
+1. stabiliser les leases entre les consommateurs first-party ;
+2. ajouter une capability interne `item-preview/1` ;
+3. fournir un bridge UI/Mod Adapter par `GameId` canonique ;
+4. publier un SDK tiers versionné.
 
-Un mod externe ne doit pas recevoir des pointeurs Skyrim natifs ni appeler `Inventory3DManager` directement.
+Un mod externe ne doit jamais recevoir de pointeur Skyrim natif ni appeler `Inventory3DManager` directement.
 
 ## Tests requis
 
 - solver pur : tailles extrêmes, bords écran, clamps ;
 - acquisition/release idempotente ;
-- préemption ;
+- préemption Trading ↔ Character Creation ;
 - fermeture pendant reload ;
 - changement rapide d’item ;
 - resize de région ;

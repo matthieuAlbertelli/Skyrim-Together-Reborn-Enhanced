@@ -16,3 +16,7 @@ Le contenu CK conserve un chemin solo complet. Le bridge STRE est optionnel et d
 - adoption plus large et meilleur découplage ;
 - nécessité de tester deux modes ;
 - certaines mécaniques purement coopératives ont une variante ou restent inactives en solo.
+
+## État d’implémentation
+
+Le chemin Character Build local utilise le même catalogue sans serveur. Le nouveau jeu/skip Helgen complet reste à implémenter ; l’ADR est donc validé pour le build, pas encore pour toute l’expérience Alternate Start.

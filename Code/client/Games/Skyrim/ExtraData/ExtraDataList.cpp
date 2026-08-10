@@ -1,5 +1,7 @@
 #include "ExtraDataList.h"
 
+#include <ExtraData/ExtraOwnership.h>
+#include <Forms/TESForm.h>
 #include <Games/Overrides.h>
 
 ExtraDataList* ExtraDataList::New() noexcept
@@ -132,6 +134,42 @@ void ExtraDataList::SetEnchantmentData(EnchantmentItem* apItem, uint16_t aCharge
     TP_THIS_FUNCTION(TSetEnchantmentData, void, ExtraDataList, EnchantmentItem* apItem, uint16_t aCharge, bool aRemoveOnUnequip);
     POINTER_SKYRIMSE(TSetEnchantmentData, setEnchantmentData, 12060);
     TiltedPhoques::ThisCall(setEnchantmentData, this, apItem, aCharge, aRemoveOnUnequip);
+}
+
+TESForm* ExtraDataList::GetOwner() const noexcept
+{
+    auto* pOwnership = reinterpret_cast<ExtraOwnership*>(GetByType(ExtraDataType::Ownership));
+    return pOwnership ? pOwnership->pOwner : nullptr;
+}
+
+void ExtraDataList::SetOwner(TESForm* apOwner) noexcept
+{
+    // Skyrim does not allow dynamic forms to be used as ownership principals.
+    if (apOwner && apOwner->IsTemporary())
+        return;
+
+    auto* pOwnership = reinterpret_cast<ExtraOwnership*>(GetByType(ExtraDataType::Ownership));
+    if (pOwnership)
+    {
+        pOwnership->pOwner = apOwner;
+        return;
+    }
+
+    if (!apOwner)
+        return;
+
+    // CommonLibSSE-NG VTABLE_ExtraOwnership: AE Address Library ID 186673.
+    // Construct the tiny BSExtraData node using Skyrim's heap and real vtable so
+    // the game owns/destructs it exactly like a native ExtraOwnership.
+    POINTER_SKYRIMSE(void, s_extraOwnershipVtable, 186673);
+
+    pOwnership = Memory::Allocate<ExtraOwnership>();
+    memset(pOwnership, 0, sizeof(ExtraOwnership));
+    *reinterpret_cast<void**>(pOwnership) = s_extraOwnershipVtable.Get();
+    pOwnership->next = nullptr;
+    pOwnership->pOwner = apOwner;
+
+    Add(ExtraDataType::Ownership, pOwnership);
 }
 
 bool ExtraDataList::HasQuestObjectAlias() noexcept

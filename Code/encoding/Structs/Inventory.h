@@ -44,6 +44,9 @@ struct Inventory
 
         int32_t ExtraSoulLevel{};
 
+        // Stable Skyrim owner/faction identity used to preserve stolen-item provenance.
+        GameId ExtraOwnerId{};
+
         bool ExtraEnchantRemoveUnequip{};
         bool ExtraWorn{};
         bool ExtraWornLeft{};
@@ -65,7 +68,7 @@ struct Inventory
             // since many of these things can and will change, like poison id or charge
             // or the fact that the enchant id can be temp
             return ExtraCharge == acRhs.ExtraCharge && ExtraEnchantId == acRhs.ExtraEnchantId && ExtraEnchantCharge == acRhs.ExtraEnchantCharge && ExtraEnchantRemoveUnequip == acRhs.ExtraEnchantRemoveUnequip && ExtraHealth == acRhs.ExtraHealth && ExtraPoisonId == acRhs.ExtraPoisonId &&
-                   ExtraPoisonCount == acRhs.ExtraPoisonCount && ExtraSoulLevel == acRhs.ExtraSoulLevel && ExtraWorn == acRhs.ExtraWorn && ExtraWornLeft == acRhs.ExtraWornLeft && IsQuestItem == acRhs.IsQuestItem;
+                   ExtraPoisonCount == acRhs.ExtraPoisonCount && ExtraSoulLevel == acRhs.ExtraSoulLevel && ExtraOwnerId == acRhs.ExtraOwnerId && ExtraWorn == acRhs.ExtraWorn && ExtraWornLeft == acRhs.ExtraWornLeft && IsQuestItem == acRhs.IsQuestItem;
         }
 
         bool IsWorn() const noexcept { return ExtraWorn || ExtraWornLeft; }

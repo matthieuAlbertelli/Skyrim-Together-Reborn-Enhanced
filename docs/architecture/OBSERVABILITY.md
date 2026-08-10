@@ -1,50 +1,94 @@
 # Observabilité et journalisation
 
-> **Statut : Proposition fondée sur les logs existants**
+> **Statut : politique transversale active; couverture à compléter par feature**
 
-## Format commun
+Les marqueurs précis d’une feature peuvent vivre dans son `TEST_PLAN.md`. Ce document définit ce qu’un log STRE doit permettre de diagnostiquer globalement.
 
-Chaque transition critique doit inclure :
+## Identifiants corrélables
 
-- subsystem ;
-- campaign/session id ;
-- player id ;
-- adapter/capability ;
-- ancienne et nouvelle version ;
-- ancienne et nouvelle phase ;
-- request/apply/reconcile id ;
-- résultat ou code de rejet ;
-- durée lorsque pertinent.
+Une transition critique doit inclure, selon le sous-système :
 
-Exemple :
+- subsystem;
+- player/server ID;
+- session/build/WorldEntity ID;
+- request/apply/reconcile ID lorsque présent;
+- revision/version;
+- `GameId` / `PlacedReferenceId` lorsqu’ils sont nécessaires à l’identité;
+- résultat ou code de rejet;
+- fallback/timeout explicite;
+- durée lorsque pertinente.
+
+## Sous-systèmes actuels
+
+### World Sync
+
+Les logs doivent permettre de corréler :
 
 ```text
-[adapter=stre.alternate-start][campaign=42][capability=group.ready-check]
-command_accepted request=918 player=7 version=12->13 ready=true
+client authority
+↔ server
+↔ observer client
 ```
 
-## Événements minimum
+sur :
 
-- adapter registration/compatibility ;
-- command requested/accepted/rejected ;
-- snapshot created/applied/rejected ;
-- event applied/duplicate/stale ;
-- campaign transition ;
-- player binding ;
-- disconnect/reconnect ;
-- CK bridge callback ;
-- preview lease acquire/preempt/release ;
-- trade state/apply/reconcile.
+- création/adoption;
+- binding/materialization;
+- manipulation authority;
+- hide/release;
+- settlement;
+- reconciliation;
+- ownership/theft;
+- forced release;
+- timeout/disconnect.
+
+### Trading
+
+Les IDs de session, revision, apply et reconcile doivent permettre de suivre une saga complète et son recovery.
+
+### Character Build
+
+Les logs doivent permettre de rapprocher :
+
+- logical selections;
+- BuildVersion;
+- inventory/spell hashes;
+- accepted/applied/rejected;
+- résolution de formulaire;
+- application locale.
+
+### Item Preview
+
+Les logs détaillés de rendering/raster doivent rester filtrables et ne pas masquer les transitions fonctionnelles.
 
 ## Niveaux
 
-- `info` : transitions normales ;
-- `warn` : retransmission, état stale, fallback, incompatibilité récupérable ;
-- `error` : invariant brisé, snapshot invalide, application impossible ;
-- `debug/trace` : détails raster, inventory et rendering lourds.
+- `info` — transition normale importante;
+- `warn` — fallback, timeout, stale state, incompatibilité récupérable;
+- `error` — invariant brisé, application impossible, snapshot incohérent;
+- `debug/trace` — détails haute fréquence/diagnostic ponctuel.
 
-Les logs de diagnostic D3D très verbeux observés dans le host menu doivent être contrôlables par catégorie pour éviter de saturer les fichiers en production.
+## Logs temporaires
 
-## Bundle de support
+Un diagnostic très verbeux ajouté pour isoler un crash doit être :
 
-Outil recommandé : exporter automatiquement versions, load order, adapters, derniers logs, état de campagne anonymisé et hash de configuration.
+- retiré après validation;
+- ou converti en log stable de niveau adapté;
+- ou conservé uniquement derrière un niveau debug/trace.
+
+Les marqueurs de hotfix ne doivent pas devenir une API documentaire permanente.
+
+## Support bundle
+
+Pour une reproduction multijoueur, conserver au minimum :
+
+- SHA STRE;
+- runtime Skyrim;
+- configuration serveur;
+- versions/plugins SKSE pertinents;
+- load order lorsque pertinent;
+- logs client de chaque joueur;
+- log serveur;
+- étapes et heure du test.
+
+Les données secrètes futures de campagne doivent être filtrées des bundles standard.

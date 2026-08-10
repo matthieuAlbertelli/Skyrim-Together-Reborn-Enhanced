@@ -1,59 +1,109 @@
-# Alternate Start — Plan d’implémentation Creation Kit
+# Alternate Start — Implémentation Creation Kit
 
-> **Statut : Spécification issue du handoff**
+> **Statut : Bootstrap et records M7 implémentés ; introduction/skip Helgen à poursuivre**
 
-## Records principaux
+## Fichiers versionnés
+
+```text
+GameFiles/Skyrim/STRE_AlternateStart.esp
+GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc
+GameFiles/Skyrim/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.pex
+GameFiles/STRE_AlternateStart.manifest.txt
+```
+
+Les PSC seuls ne sont pas exécutés par Skyrim : le PEX compilé doit être récupéré et déployé.
+
+## Records principaux confirmés
 
 - `STRE_CELL_AlternateStart`
 - `STRE_CELL_DevSandbox`
-- `STRE_NPC_Valen`
 - `STRE_QUEST_AlternateStart`
-- `STRE_SCENE_ValenIntroduction`
-- `STRE_DOOR_AlternateStartExit`
-- `STRE_TRIG_IntroductionStart`
-- `STRE_XMarker_PlayerArrival01` à `10`
-- marqueurs table, Valen, aubergiste et sortie
+- `STRE_FURN_PlayerSeat01`
+- `STRE_FURN_PlayerSeat02`
 
-## Phase A — Assainissement
+Aliases utilisés :
 
-- supprimer PNJ, scènes et marqueurs Whiterun résiduels ;
-- auditer scripts, linked refs, enable parents, ownership et persistent refs ;
-- conserver RoomMarker, Portals, acoustique, lumière et navmesh tant qu’ils ne sont pas compris ;
-- auditer portes et destinations ;
-- tester `coc STRE_CELL_AlternateStart`.
+- `Alias_Player`
+- `Alias_PlayerSeat01`
 
-## Phase B — Capacité multijoueur
+Étapes de quête :
 
-- 10 positions d’arrivée espacées ;
-- placements autour de la table ;
-- circulation vers portes/chambres ;
-- position Valen visible par tous ;
-- test collision et caméra.
+- `0` — initialisation ;
+- `10` — déplacement/assise du joueur ;
+- `20` — déclenchement Character Creation.
 
-## Phase C — Squelette solo
+La quête est volontairement exclue de la synchronisation générique des quêtes.
 
-- quête et aliases ;
-- table de création ;
-- dialogue de test ;
-- scène courte ;
-- classes minimales ;
-- porte de sortie ;
-- logs Papyrus.
+## Flux actuel
 
-## Phase D — Bridge
+```text
+setstage 10
+→ MoveTo vers le siège via alias
+→ attente de l’état assis
+→ passage au stage 20
+→ TESQuestStageEvent reçu par CharacterCreationService
+→ RaceMenu puis UI Angular
+```
 
-Les scripts émettent des intentions via propriétés et API stable. Ils n’appellent pas directement des détails internes du client STRE.
+Ne jamais coder en dur un FormID chargé dépendant du load order. Les références CK utilisent aliases/propriétés ; le catalogue natif utilise nom de plugin + FormID local.
+
+## Records M7
+
+Le manifest `CK_RECORDS_M7_IMPLEMENTED.json` couvre 47 records attendus :
+
+- cellules, quête et références de sièges ;
+- tenues et bottes ;
+- enchantements faibles ;
+- sorts de Destruction et Altération ;
+- effets magiques ciblables pour les buffs alliés.
+
+Les trois buffs alliés doivent conserver un couple compatible dans le `SPEL` et le `MGEF` :
+
+```text
+Casting Type : Fire and Forget
+Delivery     : Target Actor
+```
+
+`Contact` ne convient pas à ces sorts lancés à la main.
 
 ## Navmesh
 
-Toute modification de mobilier imposant un passage doit être suivie d’un test PNJ et multi-joueur. Les portes doivent être reliées des deux côtés et les triangles isolés éliminés.
+La cellule contient plusieurs fragments de navmesh. Éviter de dépendre d’un pathfinding PNJ complexe tant que la cellule n’a pas reçu un audit CK complet. Toute modification de mobilier ou porte doit être suivie d’un test de circulation.
 
-## Tests solo
+## Restant à implémenter
 
-- nouvelle partie ;
-- création de plusieurs races/sexes ;
-- sauvegarde/chargement à chaque phase ;
-- sortie et retour ;
-- mort/chargement éventuel ;
-- absence de STRE ;
-- installation/désinstallation contrôlée.
+- interception propre du nouveau jeu ;
+- skip Helgen et états vanilla associés ;
+- Valen, scènes, dialogues et aliases ;
+- porte de sortie et reprise de la quête principale ;
+- marqueurs/placements pour davantage de joueurs ;
+- scripts de campagne et bridge générique ;
+- compilation Papyrus automatisée.
+
+## Audits
+
+```powershell
+py -3 .\Tools\Scripts\audit_stre_plugin_records.py `
+  .\GameFiles\Skyrim\STRE_AlternateStart.esp `
+  --manifest .\docs\features\alternate-start\CK_RECORDS_M7_IMPLEMENTED.json `
+  --output .\_audit\STRE_AlternateStart.records.m7.tsv `
+  --strict `
+  --reject-unexpected
+```
+
+```powershell
+py -3 .\Tools\Scripts\audit_character_build_catalog.py `
+  .\GameFiles\Skyrim\STRE_AlternateStart.esp `
+  .\Code\common\CharacterCreation\CharacterBuildCatalog.cpp `
+  --client-source .\Code\client\Services\Generic\CharacterCreationService.cpp
+```
+
+Les rapports `_audit/*.tsv` et logs sont générés localement et ne doivent pas être commités.
+
+## Test local
+
+```text
+resetquest STRE_QUEST_AlternateStart
+startquest STRE_QUEST_AlternateStart
+setstage STRE_QUEST_AlternateStart 10
+```

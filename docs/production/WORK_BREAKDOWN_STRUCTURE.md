@@ -1,77 +1,110 @@
 # Work Breakdown Structure
 
-> **Statut : Proposition de découpage**
+> **Statut : découpage structurel; ne contient pas l’avancement**
+
+Le WBS décrit **ce qui compose le projet**. L’état `done/todo` appartient uniquement à [`ROADMAP.md`](../../ROADMAP.md).
 
 ## 1. STRE Core
 
-1.1 Runtime d’intégration  
-1.2 Registry d’adaptateurs  
-1.3 Enveloppes protocole génériques  
-1.4 Autorité et validation  
-1.5 Snapshots et événements incrémentaux  
-1.6 Persistance de campagne  
-1.7 Observabilité et outils de debug
+1.1 Client runtime
+1.2 Server runtime
+1.3 Transport/protocol factories
+1.4 Shared identity and authority contracts
+1.5 Persistence/recovery infrastructure
+1.6 Observability/debug tooling
+1.7 Native plugin policy/authentication
 
-## 2. Preview Platform
+## 2. World Sync
 
-2.1 Contrat public interne  
-2.2 Gestionnaire de leases  
-2.3 Session native Inventory3DManager  
-2.4 Host menu Scaleform  
-2.5 Mesure raster D3D11  
-2.6 Solver de cadrage  
-2.7 Bridge CEF typé  
-2.8 Tests et exemple hors trading
+2.1 WorldEntity identity/lifecycle
+2.2 Dynamic dropped-item materialization
+2.3 Local Havok settlement/reconciliation
+2.4 Placed-reference lazy adoption
+2.5 Manipulation authority
+2.6 Better Grabbing integration
+2.7 Ownership/provenance
+2.8 Snapshot/late join
+2.9 Durable persistence/checkpoints
+2.10 Additional world entity classes
 
 ## 3. Trading
 
-3.1 Domaine de session  
-3.2 Protocole  
-3.3 Service serveur  
-3.4 Application client  
-3.5 Réconciliation  
-3.6 UI/UX  
-3.7 Gold et piles  
-3.8 Tests d’intégration
+3.1 Trade domain/session
+3.2 Protocol
+3.3 Server authority
+3.4 Client application
+3.5 Reconciliation
+3.6 UI/UX
+3.7 Instance metadata transfer
+3.8 Gold/stack support
+3.9 Integration/recovery tests
 
-## 4. Alternate Start Solo
+## 4. Item Preview Platform
 
-4.1 Audit et nettoyage de la cellule  
-4.2 Spawn et création de personnage  
-4.3 Skip Helgen  
-4.4 Valen  
-4.5 Quête et dialogues  
-4.6 Classes et équipement  
-4.7 Porte de sortie et reprise vanilla  
-4.8 Tests solo
+4.1 Native session
+4.2 Controller
+4.3 Host session/bridge
+4.4 Fit solver
+4.5 Raster measurement
+4.6 Consumer adapters
+4.7 Lease/arbitration runtime
+4.8 Lifecycle/concurrency tests
 
-## 5. Alternate Start STRE
+## 5. Alternate Start / Character Creation
 
-5.1 Mod Adapter  
-5.2 Campaign State  
-5.3 Roster et personnages autorisés  
-5.4 Ready check  
-5.5 Introduction partagée  
-5.6 Dragonborn secret  
-5.7 Reconnexion/late join  
-5.8 Tests 2–10 joueurs
+5.1 CK cell/quest/aliases
+5.2 RaceMenu integration
+5.3 Angular flow
+5.4 CharacterBuild catalog
+5.5 Canonical inventory/spells
+5.6 Solo fallback
+5.7 Anti-import reset
+5.8 Helgen/new-game transition
+5.9 Narrative departure
+5.10 Character persistence/recovery
 
-## 6. Valen — Production
+## 6. Character Kits
 
-6.1 Bible personnage  
-6.2 Script  
-6.3 Concept art  
-6.4 Modèle et textures  
-6.5 Casting  
-6.6 Enregistrement  
-6.7 Traitement audio et lipsync  
-6.8 Intégration CK
+6.1 Warrior
+6.2 Mage schools
+6.3 Thief
+6.4 Crafting/support kits
+6.5 Cooperative class talents
+6.6 Balance/combination tests
 
-## 7. Projet
+## 7. Cooperative Campaign
 
-7.1 CI/build  
-7.2 Documentation  
-7.3 Community  
-7.4 Releases  
-7.5 Compatibility  
-7.6 Licences et crédits
+7.1 Character binding
+7.2 Campaign State
+7.3 Roster
+7.4 Ready check
+7.5 Shared phases
+7.6 Dragonborn policy
+7.7 Reconnect/late join
+7.8 Persistence
+
+## 8. Mod Integration
+
+8.1 Adapter registry
+8.2 Versioned envelopes
+8.3 Capability negotiation
+8.4 CK/Papyrus bridge
+8.5 Permissions/sandbox
+8.6 SDK examples/tooling
+
+## 9. Content Production
+
+9.1 Narrative
+9.2 Character/environment art
+9.3 Audio/voice
+9.4 CK integration
+9.5 Localization
+
+## 10. Project Operations
+
+10.1 CI/build
+10.2 Testing/compatibility
+10.3 Documentation
+10.4 Community/contribution
+10.5 Releases
+10.6 Licences/provenance

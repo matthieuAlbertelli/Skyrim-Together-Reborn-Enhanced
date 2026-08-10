@@ -84,6 +84,7 @@ bool IsMvpTransferable(const Inventory::Entry& acEntry) noexcept
            !acEntry.ExtraPoisonId &&
            acEntry.ExtraPoisonCount == 0 &&
            acEntry.ExtraSoulLevel == 0 &&
+           !acEntry.ExtraOwnerId &&
            !acEntry.ExtraEnchantRemoveUnequip;
 }
 

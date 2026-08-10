@@ -4,27 +4,42 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 
 ## Status vocabulary
 
-- **Implemented / Implémenté** — confirmed in the audited source.
+- **Implemented / Implémenté** — confirmed in current source.
+- **Validated in game / Validé en jeu** — exercised in Skyrim; scope/date must be stated.
 - **Accepted / Décidé** — product or architecture direction selected for STRE.
-- **Proposed / Proposé** — recommended design awaiting implementation or formal ratification.
+- **Proposed / Proposé** — recommended design awaiting implementation or ratification.
 - **Open / À valider** — unresolved decision or prototype requirement.
+- **Historical / Historique** — dated evidence preserved for traceability, not current truth.
 
-## Start here
+## Sources of truth
 
-- [Executive summary](project/EXECUTIVE_SUMMARY.md)
-- [Vision](project/VISION.md)
-- [Project charter](project/PROJECT_CHARTER.md)
-- [Current-state audit](audit/CURRENT_STATE_AUDIT.md)
-- [System overview](architecture/SYSTEM_OVERVIEW.md)
-- [Roadmap](../ROADMAP.md)
-- [Contributing](../CONTRIBUTING.md)
+| Information | Canonical location |
+|---|---|
+| Public introduction | [`README.md`](../README.md) |
+| Current implementation/validation status | [`project/STATUS.md`](project/STATUS.md) |
+| Product vision | [`project/VISION.md`](project/VISION.md) |
+| Scope/governance | [`project/PROJECT_CHARTER.md`](project/PROJECT_CHARTER.md) |
+| Priorities/progress | [`ROADMAP.md`](../ROADMAP.md) |
+| Release history | [`CHANGELOG.md`](../CHANGELOG.md) |
+| Cross-feature architecture | [`architecture/`](architecture/) |
+| Feature behavior/design | [`features/<feature>/`](features/) |
+| Cross-feature test policy | [`testing/`](testing/) |
+| Compatibility | [`testing/COMPATIBILITY_MATRIX.md`](testing/COMPATIBILITY_MATRIX.md) |
+| Work decomposition | [`production/WORK_BREAKDOWN_STRUCTURE.md`](production/WORK_BREAKDOWN_STRUCTURE.md) |
+| Technical risks | [`production/RISK_REGISTER.md`](production/RISK_REGISTER.md) |
+| Historical audits | [`audit/`](audit/) |
+| Upstream baseline | [`UPSTREAM.md`](../UPSTREAM.md) |
+| Upstream integration policy | [`architecture/UPSTREAM_STRATEGY.md`](architecture/UPSTREAM_STRATEGY.md) |
+
+Other documents should **link to these sources instead of restating mutable status or planning data**.
 
 ## Architecture
 
+- [System overview](architecture/SYSTEM_OVERVIEW.md)
+- [Network protocol rules](architecture/NETWORK_PROTOCOL.md)
 - [Mod Integration Framework](architecture/MOD_INTEGRATION_FRAMEWORK.md)
 - [Creation Kit / STRE bridge](architecture/CK_STRE_BRIDGE.md)
 - [Campaign State](architecture/CAMPAIGN_STATE.md)
-- [Network protocol](architecture/NETWORK_PROTOCOL.md)
 - [Item Preview Platform](architecture/ITEM_PREVIEW_PLATFORM.md)
 - [Observability](architecture/OBSERVABILITY.md)
 - [Upstream strategy](architecture/UPSTREAM_STRATEGY.md)
@@ -32,10 +47,31 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 
 ## Features
 
+- [World Sync](features/world-sync/README.md)
 - [Trading](features/trading/README.md)
 - [Item Preview](features/item-preview/README.md)
 - [Alternate Start](features/alternate-start/README.md)
 - [Downed State](features/downed-state/README.md)
+
+Each feature owns its product/technical/protocol/test details. Global architecture and testing documents must not duplicate those details.
+
+## Testing
+
+- [Test strategy](testing/TEST_STRATEGY.md)
+- [Feature acceptance index](testing/ACCEPTANCE_TESTS.md)
+- [Multiplayer runbook](testing/MULTIPLAYER_TEST_RUNBOOK.md)
+- [Compatibility matrix](testing/COMPATIBILITY_MATRIX.md)
+
+## Production and contribution
+
+- [Work Breakdown Structure](production/WORK_BREAKDOWN_STRUCTURE.md)
+- [Dependency map](production/DEPENDENCY_MAP.md)
+- [Risk register](production/RISK_REGISTER.md)
+- [Decision register](production/DECISION_REGISTER.md)
+- [RACI](production/RACI.md)
+- [Onboarding paths](production/ONBOARDING_PATHS.md)
+- [Open roles](production/OPEN_ROLES.md)
+- [Documentation maintenance](production/DOCUMENTATION_MAINTENANCE.md)
 
 ## Narrative, art and audio
 
@@ -47,24 +83,6 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 - [Audio Direction](audio/AUDIO_DIRECTION.md)
 - [Valen Voice Brief](audio/VALEN_VOICE_BRIEF.md)
 
-## Production and contribution
-
-- [Open roles](production/OPEN_ROLES.md)
-- [Milestones](production/MILESTONES.md)
-- [Onboarding paths](production/ONBOARDING_PATHS.md)
-- [Decision register](production/DECISION_REGISTER.md)
-- [RACI](production/RACI.md)
-- [Dependency map](production/DEPENDENCY_MAP.md)
-- [Work Breakdown Structure](production/WORK_BREAKDOWN_STRUCTURE.md)
-- [Documentation maintenance](production/DOCUMENTATION_MAINTENANCE.md)
-
-## Testing
-
-- [Test strategy](testing/TEST_STRATEGY.md)
-- [Acceptance tests](testing/ACCEPTANCE_TESTS.md)
-- [Multiplayer runbook](testing/MULTIPLAYER_TEST_RUNBOOK.md)
-- [Compatibility matrix](testing/COMPATIBILITY_MATRIX.md)
-
 ## Development and inherited notes
 
 - [Building STRE](development/BUILDING.md)
@@ -72,4 +90,6 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 
 ## Canonical-location rule
 
-Each feature owns one directory under `docs/features/<feature>/`. Do not recreate single-file feature summaries such as `docs/features/trading.md`; add or update the feature directory instead.
+A feature owns one directory under `docs/features/<feature>/`.
+
+Do not create parallel feature trees under `docs/architecture/`, `docs/testing/` or the repository root. Cross-feature documents may describe contracts and policy, but they must link to feature-specific details rather than copy them.

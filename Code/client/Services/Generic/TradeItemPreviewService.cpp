@@ -33,15 +33,24 @@ void TradeItemPreviewService::SelectItem(Trade::ItemId aItemId) noexcept
         static_cast<std::uint32_t>(aItemId >> 32),
         static_cast<std::uint32_t>(aItemId)};
     const std::uint32_t gameId = m_world.GetModSystem().GetGameId(serverId);
-    TESForm* const pForm = gameId ? TESForm::GetById(gameId) : nullptr;
-    TESBoundObject* const pObject = pForm ? Cast<TESBoundObject>(pForm) : nullptr;
+
+    SelectGameForm(gameId, aItemId);
+}
+
+void TradeItemPreviewService::SelectGameForm(
+    std::uint32_t aGameFormId,
+    std::uint64_t aContextId) noexcept
+{
+    TESForm* const pForm =
+        aGameFormId ? TESForm::GetById(aGameFormId) : nullptr;
+    TESBoundObject* const pObject =
+        pForm ? Cast<TESBoundObject>(pForm) : nullptr;
 
     if (!pObject)
     {
         spdlog::warn(
-            "Trade preview rejected item {:016X}: game form {:08X}",
-            aItemId,
-            gameId);
+            "Item preview rejected game form {:08X}",
+            aGameFormId);
         return;
     }
 
@@ -49,13 +58,16 @@ void TradeItemPreviewService::SelectItem(Trade::ItemId aItemId) noexcept
     entry.pObject = pObject;
     entry.pExtraLists = nullptr;
     entry.count = 1;
-    m_controller.SetItem(entry, aItemId);
+
+    const std::uint64_t contextId =
+        aContextId != 0 ? aContextId : aGameFormId;
+    m_controller.SetItem(entry, contextId);
     ExecuteHostCommand(m_hostSession.RequestOpen());
 
     spdlog::info(
-        "Trade preview selected item {:016X} (game form {:08X})",
-        aItemId,
-        gameId);
+        "Item preview selected context={:016X} gameForm={:08X}",
+        contextId,
+        aGameFormId);
 }
 
 void TradeItemPreviewService::Clear() noexcept

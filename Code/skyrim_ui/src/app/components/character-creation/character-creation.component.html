@@ -1,0 +1,542 @@
+<section
+  class="creation-shell"
+  [class.loadout-active]="state.phase === 'loadoutSelection' || state.phase === 'buildSummary'"
+  *ngIf="state.visible && (surface$ | async) === 'characterCreation'"
+>
+  <div class="veil"></div>
+
+  <article class="class-selection-frame" *ngIf="state.phase === 'classSelection'" [ngClass]="selectedClass.theme">
+    <div class="step-rail" aria-label="Progression de la création">
+      <span class="complete">I&nbsp;· Apparence</span>
+      <i></i>
+      <span class="active">II&nbsp;· Classe</span>
+      <i></i>
+      <span>III&nbsp;· Équipement</span>
+    </div>
+
+    <aside class="class-list-panel">
+      <div class="crest-mark">STRE</div>
+      <p class="eyebrow">LES CONSTELLATIONS GUIDENT VOTRE MAIN</p>
+      <h2>Choisissez votre voie</h2>
+
+      <nav class="class-list" aria-label="Liste des classes">
+        <button
+          *ngFor="let entry of classes; trackBy: trackClass"
+          type="button"
+          class="class-entry"
+          [class.selected]="entry.id === state.selectedClassId"
+          [attr.aria-current]="entry.id === state.selectedClassId ? 'true' : null"
+          (click)="selectClass(entry.id)"
+        >
+          <span class="class-entry-icon">
+            <fa-icon [icon]="classIcon(entry)"></fa-icon>
+          </span>
+          <span>
+            <b>{{ entry.name }}</b>
+            <small>{{ entry.subtitle }}</small>
+          </span>
+        </button>
+      </nav>
+
+      <div class="input-hint">
+        <span>↑ ↓</span>
+        <span>Changer de classe</span>
+        <span>Entrée</span>
+        <span>Sceller la voie</span>
+      </div>
+    </aside>
+
+    <section class="class-details-panel">
+      <div class="class-heading">
+        <p>{{ selectedClass.archetype }}</p>
+        <h1>{{ selectedClass.name }}</h1>
+        <h3>{{ selectedClass.subtitle }}</h3>
+      </div>
+
+      <section class="class-description">
+        <div class="section-title">
+          <fa-icon [icon]="loreIcon"></fa-icon>
+          <span>Épitaphe de la classe</span>
+        </div>
+        <blockquote>{{ selectedClass.description }}</blockquote>
+      </section>
+
+      <div class="skills-grid">
+        <section>
+          <div class="section-title">
+            <fa-icon [icon]="majorIcon"></fa-icon>
+            <span>Compétences majeures</span>
+          </div>
+          <ul>
+            <li *ngFor="let skill of selectedClass.majorSkills">{{ skill }}</li>
+          </ul>
+        </section>
+        <section>
+          <div class="section-title">
+            <fa-icon [icon]="minorIcon"></fa-icon>
+            <span>Compétences mineures</span>
+          </div>
+          <ul>
+            <li *ngFor="let skill of selectedClass.minorSkills">{{ skill }}</li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="information-strip">
+        <section>
+          <b>Équipement de départ</b>
+          <span>{{ selectedClass.loadoutHint }}</span>
+        </section>
+        <section>
+          <b>Don coopératif</b>
+          <span>{{ selectedClass.cooperativeGift }}</span>
+        </section>
+      </div>
+
+      <section class="role-summary">
+        <b>Présence au sein du groupe</b>
+        <div>
+          <span *ngFor="let tag of selectedClass.roleTags">{{ tag }}</span>
+        </div>
+      </section>
+    </section>
+
+    <aside class="tarot-panel">
+      <div class="tarot-card" [ngClass]="selectedClass.theme">
+        <div class="tarot-crown">
+          <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+        </div>
+        <div class="tarot-art">
+          <span class="halo"></span>
+          <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+          <i class="mountain mountain-a"></i>
+          <i class="mountain mountain-b"></i>
+        </div>
+        <div class="tarot-name">
+          <small>{{ selectedClass.archetype }}</small>
+          <b>{{ selectedClass.tarotTitle }}</b>
+        </div>
+      </div>
+      <p>Une grande lame, un grimoire ou le voile de l'ombre&nbsp;: contemplez la destinée que vous allez sceller.</p>
+    </aside>
+
+    <footer class="class-actions">
+      <button class="secondary" (click)="modifyRace()">
+        <fa-icon [icon]="editIcon"></fa-icon>
+        Refaçonner l'apparence
+      </button>
+      <div class="selection-status">
+        <small>VOIE SÉLECTIONNÉE</small>
+        <b>{{ selectedClass.name }}</b>
+      </div>
+      <button class="primary" (click)="confirmClass()">
+        <fa-icon [icon]="confirmIcon"></fa-icon>
+        Sceller cette classe
+      </button>
+    </footer>
+  </article>
+
+  <article class="loadout-selection-frame" *ngIf="state.phase === 'loadoutSelection'" [ngClass]="selectedClass.theme">
+    <div class="step-rail">
+      <span class="complete">I&nbsp;· Apparence</span>
+      <i></i>
+      <span class="complete">II&nbsp;· Classe</span>
+      <i></i>
+      <span class="active">III&nbsp;· Équipement</span>
+    </div>
+
+    <aside class="loadout-groups-panel">
+      <div class="loadout-class-mark">
+        <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+        <span>
+          <small>{{ selectedClass.name }}</small>
+          <b>{{ currentLoadout.title }}</b>
+        </span>
+      </div>
+
+      <p class="eyebrow">DISCIPLINES DU PAQUETAGE</p>
+      <p class="loadout-intro">{{ currentLoadout.introduction }}</p>
+
+      <nav class="loadout-group-list" aria-label="Disciplines du paquetage">
+        <button
+          *ngFor="let group of visibleGroups; trackBy: trackGroup"
+          type="button"
+          [ngClass]="skillDomain(group)"
+          [class.selected]="group.id === activeGroupId"
+          [class.complete]="groupComplete(group)"
+          [class.deferred]="group.kind === 'deferred'"
+          (click)="selectLoadoutGroup(group)"
+        >
+          <span class="group-state">
+            <fa-icon
+              [icon]="group.kind === 'deferred' ? warningIcon : groupComplete(group) ? confirmIcon : lockIcon"
+            ></fa-icon>
+          </span>
+          <span class="group-copy">
+            <b class="group-skill">{{ group.skill }}</b>
+            <small class="group-title">{{ group.title }}</small>
+          </span>
+          <em>{{ groupStatus(group) }}</em>
+        </button>
+      </nav>
+
+      <div class="loadout-progress">
+        <span>{{ completedRequiredChoiceCount }} / {{ requiredChoiceGroups.length }}</span>
+        <div>
+          <i [style.width.%]="requiredChoiceGroups.length ? (completedRequiredChoiceCount / requiredChoiceGroups.length) * 100 : 100"></i>
+        </div>
+        <small>Serments obligatoires déjà scellés</small>
+      </div>
+    </aside>
+
+    <section class="loadout-options-panel">
+      <header [ngClass]="skillDomain(activeGroup)">
+        <p>{{ activeGroup.skill }}</p>
+        <h1>{{ activeGroup.title }}</h1>
+        <span>{{ activeGroup.description }}</span>
+      </header>
+
+      <div class="automatic-rewards" *ngIf="activeGroup.kind === 'announcement'">
+        <div class="status-ribbon">
+          <fa-icon [icon]="confirmIcon"></fa-icon>
+          Dotation accordée d'office
+        </div>
+        <ul>
+          <li *ngFor="let item of activeGroup.rewards; trackBy: trackReward">
+            <button
+              class="reward-pill"
+              type="button"
+              [class.renderable]="rewardPreviewAvailable(item)"
+              [class.selected]="isRewardSelected(item)"
+              (click)="previewRewardFromAnnouncement($event, item)"
+            >
+              <span>
+                <b>{{ item.name }}</b>
+                <small *ngIf="item.detail">{{ item.detail }}</small>
+              </span>
+              <strong *ngIf="item.quantity">×{{ item.quantity }}</strong>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="deferred-card" *ngIf="activeGroup.kind === 'deferred'">
+        <fa-icon [icon]="warningIcon"></fa-icon>
+        <div>
+          <b>Décision de design encore ouverte</b>
+          <p>{{ activeGroup.description }}</p>
+          <span>Ce point n'est pas inventé&nbsp;: il sera arbitré avant l'application finale du build.</span>
+        </div>
+      </div>
+
+      <div class="loadout-option-grid" *ngIf="activeGroup.kind === 'choice'">
+        <article
+          *ngFor="let option of activeGroup.options; trackBy: trackOption"
+          tabindex="0"
+          [class.selected]="selectionFor(activeGroup) === option.id"
+          (click)="selectLoadoutOption(activeGroup, option)"
+          (keydown.enter)="selectLoadoutOption(activeGroup, option)"
+        >
+          <span class="option-check">
+            <fa-icon [icon]="selectionFor(activeGroup) === option.id ? confirmIcon : packageIcon"></fa-icon>
+          </span>
+          <span class="option-heading">
+            <small>{{ option.subtitle }}</small>
+            <b>{{ option.name }}</b>
+          </span>
+          <p>{{ option.description }}</p>
+          <div class="choice-section-label">Objets du pack</div>
+          <div class="option-reward-rack">
+            <button
+              *ngFor="let item of option.rewards; trackBy: trackReward"
+              type="button"
+              class="reward-pill"
+              [class.renderable]="rewardPreviewAvailable(item)"
+              [class.selected]="isRewardSelected(item)"
+              (click)="previewRewardFromOption($event, activeGroup, option, item)"
+            >
+              <span>{{ item.name }}</span>
+              <em *ngIf="item.detail">{{ item.detail }}</em>
+              <strong *ngIf="item.quantity">×{{ item.quantity }}</strong>
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div class="loadout-help">
+        <span>↑ ↓ Disciplines</span>
+        <span>← → Packs</span>
+        <span>Entrée Sceller</span>
+      </div>
+    </section>
+
+    <aside class="loadout-preview-panel">
+      <div class="preview-heading">
+        <small>OBJET CONTEMPLÉ</small>
+        <h2>{{ previewLabel || activeGroup.title }}</h2>
+        <p class="preview-origin" *ngIf="previewOrigin">{{ previewOrigin }}</p>
+      </div>
+
+      <div #loadoutPreviewViewport class="loadout-preview-viewport" [class.unavailable]="!previewKey">
+        <span class="preview-label">{{ previewKey ? 'VUE 3D DE L’OBJET' : 'AUCUN OBJET VISUALISABLE' }}</span>
+        <i class="corner corner-tl"></i>
+        <i class="corner corner-tr"></i>
+        <i class="corner corner-bl"></i>
+        <i class="corner corner-br"></i>
+        <div class="no-preview-copy" *ngIf="!previewKey">
+          <fa-icon [icon]="packageIcon"></fa-icon>
+          <p>Les sorts, effets STRE et objets encore abstraits restent décrits par le texte.</p>
+        </div>
+      </div>
+
+      <div class="preview-selection-card">
+        <small>RELique OU OUTIL MIS EN LUMIÈRE</small>
+        <b>{{ previewLabel || 'Aucune relique choisie' }}</b>
+        <p>{{ previewDescription || activeGroup.description }}</p>
+      </div>
+    </aside>
+
+    <footer class="loadout-actions">
+      <button class="secondary" (click)="reopenClassSelection()">
+        <fa-icon [icon]="backIcon"></fa-icon>
+        Revenir aux classes
+      </button>
+      <div class="selection-status">
+        <small>PAQUETAGE</small>
+        <b>{{ loadoutComplete ? 'La destinée matérielle est prête' : 'Des serments restent à sceller' }}</b>
+      </div>
+      <button class="primary" [disabled]="!loadoutComplete" (click)="confirmLoadout()">
+        <fa-icon [icon]="checklistIcon"></fa-icon>
+        Contempler le build
+      </button>
+    </footer>
+  </article>
+
+  <article
+    class="destiny-summary-frame"
+    *ngIf="state.phase === 'buildSummary'"
+    [ngClass]="selectedClass.theme"
+  >
+    <div class="step-rail">
+      <span class="complete">I&nbsp;· Apparence</span>
+      <i></i>
+      <span class="complete">II&nbsp;· Classe</span>
+      <i></i>
+      <span class="active">III&nbsp;· Destinée</span>
+    </div>
+
+    <nav class="destiny-rail" aria-label="Résumé du personnage">
+      <button
+        type="button"
+        class="destiny-anchor race-anchor"
+        [class.selected]="summaryFocus === 'race'"
+        (click)="showRaceSummary()"
+      >
+        <span class="anchor-sigil">
+          <fa-icon [icon]="shieldIcon"></fa-icon>
+        </span>
+        <span>
+          <small>RACE</small>
+          <b>{{ selectedRace.name }}</b>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="destiny-anchor class-anchor"
+        [class.selected]="summaryFocus === 'class'"
+        (click)="showClassSummary()"
+      >
+        <span class="anchor-sigil">
+          <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+        </span>
+        <span>
+          <small>CLASSE</small>
+          <b>{{ selectedClass.name }}</b>
+        </span>
+      </button>
+
+      <div class="discipline-constellation">
+        <button
+          *ngFor="let discipline of summaryDisciplines"
+          type="button"
+          class="discipline-star"
+          [ngClass]="discipline.domain"
+          [class.selected]="
+            summaryFocus === 'discipline' &&
+            summaryDisciplineId === discipline.id
+          "
+          (click)="showDisciplineSummary(discipline)"
+        >
+          <span class="star-core"></span>
+          <b>{{ discipline.name }}</b>
+        </button>
+      </div>
+    </nav>
+
+    <section
+      class="destiny-codex"
+      [ngClass]="[
+        summaryFocus,
+        summaryFocus === 'race' ? selectedRace.theme : selectedClass.theme,
+        summaryFocus === 'discipline' ? activeSummaryDiscipline?.domain : ''
+      ]"
+    >
+      <div class="codex-visual">
+        <span class="codex-moon moon-a"></span>
+        <span class="codex-moon moon-b"></span>
+        <span class="codex-rune rune-a"></span>
+        <span class="codex-rune rune-b"></span>
+        <div class="codex-emblem">
+          <fa-icon
+            [icon]="
+              summaryFocus === 'class'
+                ? classIcon(selectedClass)
+                : summaryFocus === 'discipline'
+                  ? majorIcon
+                  : shieldIcon
+            "
+          ></fa-icon>
+        </div>
+      </div>
+
+      <div class="codex-copy">
+        <p class="codex-epithet">{{ summaryEpithet }}</p>
+        <h1>{{ summaryTitle }}</h1>
+        <blockquote>{{ summaryDescription }}</blockquote>
+        <p class="codex-history">{{ summaryHistory }}</p>
+
+        <div class="codex-insignia" *ngIf="summaryTags.length">
+          <span *ngFor="let tag of summaryTags">{{ tag }}</span>
+        </div>
+
+        <div
+          class="codex-reliquary"
+          *ngIf="summaryFocus === 'discipline' && summaryRewards.length"
+        >
+          <button
+            *ngFor="let reward of summaryRewards; trackBy: trackReward"
+            type="button"
+            [class.selected]="isRewardSelected(reward)"
+            [class.renderable]="rewardPreviewAvailable(reward)"
+            (click)="previewSummaryReward($event, reward)"
+          >
+            <span class="reliquary-gem"></span>
+            <b>{{ reward.name }}</b>
+            <strong *ngIf="reward.quantity">×{{ reward.quantity }}</strong>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="destiny-preview">
+      <header>
+        <p>{{ previewOrigin || summaryEpithet }}</p>
+        <h2>{{ previewLabel || summaryTitle }}</h2>
+      </header>
+
+      <div
+        #loadoutPreviewViewport
+        class="loadout-preview-viewport destiny-preview-viewport"
+        [class.unavailable]="!previewKey"
+        [class.spell-active]="previewIsSpell"
+      >
+        <i class="corner corner-tl"></i>
+        <i class="corner corner-tr"></i>
+        <i class="corner corner-bl"></i>
+        <i class="corner corner-br"></i>
+
+        <div class="spell-vision" *ngIf="previewIsSpell">
+          <span class="spell-orbit orbit-a"></span>
+          <span class="spell-orbit orbit-b"></span>
+          <span class="spell-orbit orbit-c"></span>
+          <span class="spell-core"></span>
+        </div>
+
+        <div
+          class="destiny-symbol"
+          *ngIf="!previewKey && !previewIsSpell"
+        >
+          <fa-icon
+            [icon]="
+              summaryFocus === 'class'
+                ? classIcon(selectedClass)
+                : summaryFocus === 'discipline'
+                  ? packageIcon
+                  : shieldIcon
+            "
+          ></fa-icon>
+        </div>
+      </div>
+
+      <div class="destiny-object-name">
+        <b>{{ previewLabel || summaryTitle }}</b>
+        <p>{{ previewDescription || summaryDescription }}</p>
+      </div>
+    </aside>
+
+    <footer class="destiny-actions">
+      <button
+        class="secondary"
+        [disabled]="state.serverPending"
+        (click)="reopenLoadoutSelection()"
+      >
+        <fa-icon [icon]="backIcon"></fa-icon>
+        Recomposer l'équipement
+      </button>
+      <div class="destiny-seal">
+        <span></span>
+        <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+        <span></span>
+      </div>
+      <button
+        class="primary"
+        [disabled]="state.serverPending"
+        (click)="confirmBuild()"
+      >
+        <fa-icon [icon]="confirmIcon"></fa-icon>
+        Sceller la destinée
+      </button>
+    </footer>
+  </article>
+
+  <article
+    class="destiny-sealing-screen"
+    *ngIf="state.phase === 'buildConfirmed'"
+    [ngClass]="selectedClass.theme"
+  >
+    <div class="sealing-halo halo-outer"></div>
+    <div class="sealing-halo halo-middle"></div>
+    <div class="sealing-halo halo-inner"></div>
+    <div class="sealing-mark">
+      <fa-icon [icon]="classIcon(selectedClass)"></fa-icon>
+    </div>
+    <p>{{ selectedRace.name }}</p>
+    <h1>{{ selectedClass.name }}</h1>
+  </article>
+
+  <article class="creation-frame compact error" *ngIf="state.phase === 'error'">
+    <header>
+      <div class="sigil">
+        <fa-icon [icon]="warningIcon"></fa-icon>
+      </div>
+      <div>
+        <p>CRÉATION INTERROMPUE</p>
+        <h1>STRE n'a pas pu poursuivre</h1>
+      </div>
+    </header>
+
+    <main>
+      <p class="lead">{{ state.error }}</p>
+      <p class="technical">Le personnage reste verrouillé afin d'éviter un état incohérent.</p>
+    </main>
+
+    <footer>
+      <button class="secondary danger" (click)="recoverControls()">Déverrouillage de secours</button>
+      <button class="primary" (click)="retryRaceMenu()">
+        <fa-icon [icon]="retryIcon"></fa-icon>
+        Réessayer depuis l'apparence
+      </button>
+    </footer>
+  </article>
+</section>

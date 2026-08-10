@@ -1,78 +1,82 @@
-# Protocole réseau : existant et évolution
+# Règles du protocole réseau STRE
 
-> **Statut : Implémenté pour Trading / Proposé pour Mod Integration**
+> **Statut : contrat transversal actif**
 
-## Trading actuel
+Ce document définit les **règles communes** du protocole STRE. Les listes de messages, champs et transitions propres à une feature appartiennent à `docs/features/<feature>/PROTOCOL_REFERENCE.md`.
 
-### Requêtes client
+## Modèle général
 
-1. `TradeInviteRequest`
-2. `TradeInviteResponseRequest`
-3. `TradeOfferUpdateRequest`
-4. `TradeConfirmRequest`
-5. `TradeCancelRequest`
-6. `TradeApplyResultRequest`
-7. `TradeReconcileResultRequest`
-
-### Notifications serveur
-
-1. `NotifyTradeInvite`
-2. `NotifyTradeStarted`
-3. `NotifyTradeState`
-4. `NotifyTradeApply`
-5. `NotifyTradeReconcile`
-6. `NotifyTradeCancelled`
-
-Les listes sont bornées à 64 entrées pour offres, mutations et targets.
-
-## Sémantique
-
-- `SessionId` identifie le trade.
-- `Revision` change à chaque modification réelle d’offre.
-- les confirmations portent sur une révision précise ;
-- `ApplyId` identifie une tentative d’application ;
-- `ReconcileId` identifie une correction absolue ;
-- les clients journalisent les résultats pour répondre identiquement aux doublons.
-
-## Modèle transactionnel réel
-
-Le trading n’est pas une transaction ACID distribuée. C’est une **saga autoritaire** :
-
-1. le serveur valide et produit un plan ;
-2. chaque client applique sa part ;
-3. le serveur collecte les résultats ;
-4. il commit son état si tous réussissent ;
-5. en cas d’incertitude, il envoie une cible absolue de réconciliation.
-
-Cette formulation doit être utilisée dans la documentation publique afin de ne pas surpromettre une atomicité impossible entre deux processus de jeu.
-
-## Évolution pour Mod Integration
-
-Éviter un nouveau type statique pour chaque champ de chaque mod. Ajouter une enveloppe versionnée :
-
-```cpp
-struct ModCommandEnvelope
-{
-    AdapterId Adapter;
-    CapabilityId Capability;
-    SchemaVersion Schema;
-    RequestId Request;
-    StateVersion ExpectedVersion;
-    BoundedByteBuffer Payload;
-};
+```text
+Client
+  → intention / résultat d'application
+Server
+  → validation / transition canonique
+Server
+  → notification ou snapshot
+Client
+  → projection locale Skyrim/UI
 ```
 
-Notifications :
+Le client ne devient pas source de vérité d’un état partagé simplement parce qu’il l’a observé ou affiché.
 
-- `NotifyAdapterManifest`
-- `NotifyAdapterSnapshot`
-- `NotifyAdapterEvent`
-- `NotifyAdapterCommandRejected`
+## Catégories
+
+### Intentions client → serveur
+
+Une intention décrit ce que le joueur tente de faire.
+
+Elle doit contenir uniquement les identifiants et données nécessaires à la validation, avec des collections bornées.
+
+### Résultats/accusés client → serveur
+
+Quand le serveur demande une application locale qui peut échouer, le client peut renvoyer un résultat corrélé afin que le serveur committe, réconcilie ou abandonne explicitement.
+
+### Notifications serveur → client
+
+Une notification décrit une transition admise ou un état canonique. Les clients appliquent la projection locale de manière idempotente lorsque le domaine l’exige.
+
+### Snapshots
+
+Un système reconnectable doit avoir un chemin de snapshot canonique couvrant l’état nécessaire à la reconstruction locale.
+
+## Identité
+
+- les `FormID` chargés Skyrim ne sont pas des identifiants réseau génériques;
+- les formulaires persistants utilisent des identités server-space (`GameId`) lorsqu’approprié;
+- les instances monde dynamiques utilisent des identités dédiées comme `WorldEntityId`;
+- les identifiants de requête/révision doivent être explicites lorsque concurrence ou retransmission l’exigent.
+
+## Bornes et validation
+
+- toute collection décodée possède une borne;
+- tout enum reçu est validé;
+- toute identité est résolue avant mutation;
+- les payloads malformés sont rejetés;
+- une feature ne doit pas accepter silencieusement une donnée qu’elle ne sait pas préserver.
+
+## Threading
+
+La réception réseau n’autorise pas directement n’importe quel appel moteur Skyrim.
+
+Les handlers qui doivent muter le jeu doivent marshaller le travail vers un contexte approprié, par exemple le chemin `RunnerService`/`OnUpdate` utilisé par STRE.
 
 ## Compatibilité
 
-- négociation des versions d’adapter à la connexion ;
-- refus explicite si une capability obligatoire manque ;
-- migration de snapshot côté serveur ;
-- jamais de désérialisation non bornée ;
-- opcodes génériques stables, schemas de payload versionnés.
+Tout changement de schéma doit préciser :
+
+- compatibilité client/serveur;
+- stratégie de rejet ou de migration;
+- tests de round-trip;
+- comportement face aux payloads anciens/malformés.
+
+Les changements purement append-only ne sont pas automatiquement sûrs : ils doivent rester cohérents avec les encode/decode des deux côtés.
+
+## Références par feature
+
+- [Trading protocol](../features/trading/PROTOCOL_REFERENCE.md)
+- [World Sync protocol](../features/world-sync/PROTOCOL_REFERENCE.md)
+- Alternate Start / Character Build : documenter les détails dans son répertoire feature; ne pas recopier la liste ici.
+
+## Future Mod Integration
+
+Une future enveloppe générique d’adapter doit rester versionnée, bornée et négociable. Elle ne remplace pas les protocoles first-party avant d’avoir été validée par plusieurs intégrations réelles.

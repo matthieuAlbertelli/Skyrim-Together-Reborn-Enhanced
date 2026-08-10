@@ -17,6 +17,7 @@ struct AnimationVariables;
 struct TESWorldSpace;
 struct TESBoundObject;
 struct TESContainer;
+struct Actor;
 
 enum class ITEM_REMOVE_REASON
 {
@@ -172,6 +173,9 @@ struct TESObjectREFR : TESForm
     TESContainer* GetContainer() const noexcept;
     int64_t GetItemCountInInventory(TESForm* apItem) const noexcept;
     TESObjectCELL* GetParentCellEx() const noexcept;
+    TESForm* GetOwner() const noexcept;
+    bool IsAnOwner(const Actor* apActor, bool aUseFaction = true, bool aRequiresOwner = false) const noexcept;
+    void GetOwnershipData(Inventory::Entry& arEntry) const noexcept;
 
     void SaveAnimationVariables(AnimationVariables& aWriter) const noexcept;
     void LoadAnimationVariables(const AnimationVariables& aReader) const noexcept;

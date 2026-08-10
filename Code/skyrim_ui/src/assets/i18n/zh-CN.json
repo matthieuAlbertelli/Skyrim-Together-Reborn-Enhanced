@@ -158,6 +158,7 @@
         "MODS_MISMATCH_REMOVE": "欲加入该服务器，请移除以下模组：\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "欲加入该服务器，请安装以下模组：\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "该服务器禁止以下模组：{{mods}}。将其移除以加入服务器。",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "您输入的密码不正确。",
         "NO_REASON": "服务器无故拒绝了连接。",
         "SERVER_FULL": "服务器已满。"

@@ -118,6 +118,10 @@ struct PlayerCharacter : Actor
 
     void PayCrimeGoldToAllFactions() noexcept;
 
+    // Ends the vanilla physics grab state (mouse spring). Used when gameplay
+    // transitions into a blocking UI such as guard dialogue.
+    bool TryEndGrabObject() noexcept;
+
     void SetWaypoint(NiPoint3* apPosition, TESWorldSpace* apWorldSpace) noexcept;
     void RemoveWaypoint() noexcept;
 

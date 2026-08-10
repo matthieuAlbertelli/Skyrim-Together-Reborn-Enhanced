@@ -23,6 +23,19 @@
 
 #include <misc/ActorValueOwner.h>
 
+namespace
+{
+void ApplyHealthValue(Actor* apActor, const float acHealth) noexcept
+{
+    apActor->ForceActorValue(ActorValueOwner::ForceMode::DAMAGE, ActorValueInfo::kHealth, acHealth);
+
+    const float health = apActor->GetActorValue(ActorValueInfo::kHealth);
+    const auto* pExtension = apActor->GetExtension();
+    if (!apActor->IsDead() && health <= 0.f && pExtension && !pExtension->IsPlayer())
+        apActor->Kill();
+}
+}
+
 ActorValueService::ActorValueService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
     : m_world(aWorld)
     , m_dispatcher(aDispatcher)
@@ -68,6 +81,9 @@ void ActorValueService::OnLocalComponentAdded(entt::registry& aRegistry, const e
 
 void ActorValueService::OnDisconnected(const DisconnectedEvent& acEvent) noexcept
 {
+    m_smallHealthChanges.clear();
+    m_pendingHealthSnapshots.clear();
+
     // TODO: this crashes sometimes, no clue why
     m_world.clear<ActorValuesComponent>();
 }
@@ -90,12 +106,20 @@ void ActorValueService::OnActorRemoved(const ActorRemovedEvent& acEvent) noexcep
         });
 
     if (it != std::end(view))
+    {
+        if (const auto serverId = Utils::GetServerId(*it); serverId.has_value())
+        {
+            m_smallHealthChanges.erase(serverId.value());
+            m_pendingHealthSnapshots.erase(serverId.value());
+        }
+
         m_world.remove<ActorValuesComponent>(*it);
+    }
 }
 
 void ActorValueService::OnUpdate(const UpdateEvent& acEvent) noexcept
 {
-    RunSmallHealthUpdates();
+    RunHealthUpdates();
     RunDeathStateUpdates();
     RunActorValuesUpdates();
 }
@@ -130,13 +154,19 @@ void ActorValueService::BroadcastActorValues() noexcept
         {
             if (isPlayer && i == ActorValueInfo::kDragonSouls)
                 continue;
-            
-            float newValue = pActor->GetActorValue(i);
-            float oldValue = actorValuesComponent.CurrentActorValues.ActorValuesList[i];
-            if (newValue != oldValue)
+
+            // Current health has its own 250 ms snapshot cadence. Keeping it out of
+            // the generic 1 s pass gives health one authoritative cache owner and
+            // avoids duplicate absolute packets. Max health remains synced below.
+            if (i != ActorValueInfo::kHealth)
             {
-                requestValueChanges.Values.insert({i, newValue});
-                actorValuesComponent.CurrentActorValues.ActorValuesList[i] = newValue;
+                float newValue = pActor->GetActorValue(i);
+                float oldValue = actorValuesComponent.CurrentActorValues.ActorValuesList[i];
+                if (newValue != oldValue)
+                {
+                    requestValueChanges.Values.insert({i, newValue});
+                    actorValuesComponent.CurrentActorValues.ActorValuesList[i] = newValue;
+                }
             }
 
             float newMaxValue = pActor->GetActorPermanentValue(i);
@@ -184,6 +214,12 @@ void ActorValueService::OnHealthChange(const HealthChangeEvent& acEvent) noexcep
 
     uint32_t serverId = serverIdRes.value();
 
+    // The delta hook runs before Skyrim has necessarily committed the final health
+    // value. Force a later absolute snapshot for locally owned actors so immunity,
+    // clamping and formula mismatches cannot leave the server or peers divergent.
+    if (m_world.any_of<LocalComponent>(*hitteeIt))
+        m_pendingHealthSnapshots.insert(serverId);
+
     if (acEvent.DeltaHealth > -1.0f && acEvent.DeltaHealth < 1.0f)
     {
         if (m_smallHealthChanges.find(serverId) == m_smallHealthChanges.end())
@@ -202,8 +238,11 @@ void ActorValueService::OnHealthChange(const HealthChangeEvent& acEvent) noexcep
     spdlog::debug("Sent out delta health through collection: {:X}:{:f}", serverId, acEvent.DeltaHealth);
 }
 
-void ActorValueService::RunSmallHealthUpdates() noexcept
+void ActorValueService::RunHealthUpdates() noexcept
 {
+    if (!m_transport.IsConnected())
+        return;
+
     static std::chrono::steady_clock::time_point lastSendTimePoint;
     constexpr auto cDelayBetweenUpdates = 250ms;
 
@@ -213,20 +252,57 @@ void ActorValueService::RunSmallHealthUpdates() noexcept
 
     lastSendTimePoint = now;
 
-    if (!m_smallHealthChanges.empty())
+    // Delta messages are the low-latency path. Send them first so the absolute
+    // snapshots below are the final state on the reliable ordered connection.
+    for (const auto& [serverId, deltaHealth] : m_smallHealthChanges)
     {
-        for (auto& value : m_smallHealthChanges)
+        RequestHealthChangeBroadcast requestHealthChange;
+        requestHealthChange.Id = serverId;
+        requestHealthChange.DeltaHealth = deltaHealth;
+
+        m_transport.Send(requestHealthChange);
+        spdlog::debug("Sent out delta health through timer, {:X}:{:f}", serverId, deltaHealth);
+    }
+    m_smallHealthChanges.clear();
+
+    BroadcastHealthSnapshots();
+}
+
+void ActorValueService::BroadcastHealthSnapshots() noexcept
+{
+    auto view = m_world.view<FormIdComponent, LocalComponent, ActorValuesComponent>();
+
+    for (auto entity : view)
+    {
+        const auto& formIdComponent = view.get<FormIdComponent>(entity);
+        Actor* const pActor = Cast<Actor>(TESForm::GetById(formIdComponent.Id));
+        if (!pActor)
+            continue;
+
+        auto& localComponent = view.get<LocalComponent>(entity);
+        auto& actorValuesComponent = view.get<ActorValuesComponent>(entity);
+
+        const float currentHealth = pActor->GetActorValue(ActorValueInfo::kHealth);
+        const float maxHealth = pActor->GetActorPermanentValue(ActorValueInfo::kHealth);
+        float& cachedHealth = actorValuesComponent.CurrentActorValues.ActorValuesList[ActorValueInfo::kHealth];
+
+        const bool forceSnapshot = m_pendingHealthSnapshots.find(localComponent.Id) != m_pendingHealthSnapshots.end();
+        const bool healthChanged = currentHealth != cachedHealth;
+        const bool injuredHeartbeat = !pActor->IsDead() && currentHealth > 0.f && currentHealth < maxHealth;
+        if (!forceSnapshot && !healthChanged && !injuredHeartbeat)
+            continue;
+
+        RequestActorValueChanges requestValueChanges;
+        requestValueChanges.Id = localComponent.Id;
+        requestValueChanges.Values.insert({ActorValueInfo::kHealth, currentHealth});
+
+        // Only advance the cache after a successful enqueue. If the connection
+        // disappears between the initial check and Send(), the next pass retries.
+        if (m_transport.Send(requestValueChanges))
         {
-            RequestHealthChangeBroadcast requestHealthChange;
-            requestHealthChange.Id = value.first;
-            requestHealthChange.DeltaHealth = value.second;
-
-            m_transport.Send(requestHealthChange);
-
-            spdlog::debug("Sent out delta health through timer, {:X}:{:f}", value.first, value.second);
+            cachedHealth = currentHealth;
+            m_pendingHealthSnapshots.erase(localComponent.Id);
         }
-
-        m_smallHealthChanges.clear();
     }
 }
 
@@ -280,7 +356,7 @@ void ActorValueService::RunActorValuesUpdates() noexcept
     BroadcastActorValues();
 }
 
-void ActorValueService::OnHealthChangeBroadcast(const NotifyHealthChangeBroadcast& acMessage) const noexcept
+void ActorValueService::OnHealthChangeBroadcast(const NotifyHealthChangeBroadcast& acMessage) noexcept
 {
     Actor* pActor = Utils::GetByServerId<Actor>(acMessage.Id);
     if (!pActor)
@@ -290,16 +366,14 @@ void ActorValueService::OnHealthChangeBroadcast(const NotifyHealthChangeBroadcas
     }
 
     const float newHealth = pActor->GetActorValue(ActorValueInfo::kHealth) + acMessage.DeltaHealth;
-    pActor->ForceActorValue(ActorValueOwner::ForceMode::DAMAGE, ActorValueInfo::kHealth, newHealth);
+    ApplyHealthValue(pActor, newHealth);
 
-    const float health = pActor->GetActorValue(ActorValueInfo::kHealth);
-    if (!pActor->IsDead() && health <= 0.f)
-    {
-        ActorExtension* pExtension = pActor->GetExtension();
-        // Players should never be killed
-        if (!pExtension->IsPlayer())
-            pActor->Kill();
-    }
+    // If this client owns the actor, the incoming delta may have been produced by
+    // another client's attack. Re-assert the actual post-clamp value on the next
+    // snapshot so the owner remains the convergence authority.
+    const auto* pExtension = pActor->GetExtension();
+    if (pExtension && pExtension->IsLocal())
+        m_pendingHealthSnapshots.insert(acMessage.Id);
 
     // TODO(cosideci): find fix for player health sync so this can be used again
     /*
@@ -325,13 +399,19 @@ void ActorValueService::OnActorValueChanges(const NotifyActorValueChanges& acMes
 
     for (const auto& [key, value] : acMessage.Values)
     {
-        // Syncing dragon souls triggers "Dragon soul collected" event
-        if (key == ActorValueInfo::kDragonSouls || key == ActorValueInfo::kHealth)
+        // Syncing dragon souls triggers "Dragon soul collected" event.
+        if (key == ActorValueInfo::kDragonSouls)
             continue;
 
         spdlog::debug("Actor value update, server ID: {:X}, key: {}, value: {}", acMessage.Id, key, value);
 
-        if (key == ActorValueInfo::kStamina || key == ActorValueInfo::kMagicka || key == ActorValueInfo::kHealth)
+        if (key == ActorValueInfo::kHealth)
+        {
+            ApplyHealthValue(pActor, value);
+            continue;
+        }
+
+        if (key == ActorValueInfo::kStamina || key == ActorValueInfo::kMagicka)
         {
             pActor->ForceActorValue(ActorValueOwner::ForceMode::DAMAGE, key, value);
             continue;

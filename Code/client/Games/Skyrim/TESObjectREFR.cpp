@@ -1,4 +1,4 @@
-﻿#include <TiltedOnlinePCH.h>
+#include <TiltedOnlinePCH.h>
 
 #include <Games/References.h>
 #include <Games/Overrides.h>
@@ -19,6 +19,7 @@
 #include <ExtraData/ExtraHealth.h>
 #include <ExtraData/ExtraPoison.h>
 #include <ExtraData/ExtraSoul.h>
+#include <ExtraData/ExtraOwnership.h>
 #include <ExtraData/ExtraTextDisplayData.h>
 #include <ExtraData/ExtraWorn.h>
 #include <ExtraData/ExtraWornLeft.h>
@@ -143,6 +144,7 @@ void TESObjectREFR::SetRotation(float aX, float aY, float aZ) noexcept
     TiltedPhoques::ThisCall(RealRotateY, this, aY);
     TiltedPhoques::ThisCall(RealRotateZ, this, aZ);
 }
+
 
 using TiltedPhoques::Serialization;
 
@@ -462,6 +464,39 @@ TESObjectCELL* TESObjectREFR::GetParentCellEx() const noexcept
     return parentCell ? parentCell : GetParentCell();
 }
 
+TESForm* TESObjectREFR::GetOwner() const noexcept
+{
+    TP_THIS_FUNCTION(TGetOwner, TESForm*, const TESObjectREFR);
+    POINTER_SKYRIMSE(TGetOwner, s_getOwner, 20194);
+    return TiltedPhoques::ThisCall(s_getOwner, this);
+}
+
+bool TESObjectREFR::IsAnOwner(const Actor* apActor, bool aUseFaction, bool aRequiresOwner) const noexcept
+{
+    TP_THIS_FUNCTION(TIsAnOwner, bool, const TESObjectREFR, const Actor*, bool, bool);
+    POINTER_SKYRIMSE(TIsAnOwner, s_isAnOwner, 20210);
+    return TiltedPhoques::ThisCall(s_isAnOwner, this, apActor, aUseFaction, aRequiresOwner);
+}
+
+void TESObjectREFR::GetOwnershipData(Inventory::Entry& arEntry) const noexcept
+{
+    TESForm* pOwner = GetOwner();
+    if (!pOwner)
+        return;
+
+    auto& modSystem = World::Get().GetModSystem();
+    if (modSystem.GetServerModId(pOwner->formID, arEntry.ExtraOwnerId))
+    {
+        spdlog::info("[STRE][Ownership] resolved_owner_captured reference={:08X} owner={:08X}:{:08X}",
+                     formID, arEntry.ExtraOwnerId.ModId, arEntry.ExtraOwnerId.BaseId);
+    }
+    else
+    {
+        spdlog::warn("[STRE][Ownership] resolved_owner_unmapped reference={:08X} owner={:08X}",
+                     formID, pOwner->formID);
+    }
+}
+
 void TESObjectREFR::GetItemFromExtraData(Inventory::Entry& arEntry, ExtraDataList* apExtraDataList) noexcept
 {
     auto& modSystem = World::Get().GetModSystem();
@@ -527,6 +562,15 @@ void TESObjectREFR::GetItemFromExtraData(Inventory::Entry& arEntry, ExtraDataLis
     if (ExtraSoul* pExtraSoul = Cast<ExtraSoul>(apExtraDataList->GetByType(ExtraDataType::Soul)))
     {
         arEntry.ExtraSoulLevel = (int32_t)pExtraSoul->cSoul;
+    }
+
+    if (ExtraOwnership* pExtraOwnership = Cast<ExtraOwnership>(apExtraDataList->GetByType(ExtraDataType::Ownership)))
+    {
+        if (pExtraOwnership->pOwner)
+        {
+            if (!modSystem.GetServerModId(pExtraOwnership->pOwner->formID, arEntry.ExtraOwnerId))
+                spdlog::warn("[STRE][Ownership] inventory_owner_unmapped owner={:08X}", pExtraOwnership->pOwner->formID);
+        }
     }
 
     /*
@@ -600,6 +644,20 @@ ExtraDataList* TESObjectREFR::GetExtraDataFromItem(const Inventory::Entry& arEnt
     if (arEntry.ExtraSoulLevel > 0 && arEntry.ExtraSoulLevel <= 5)
     {
         pExtraDataList->SetSoulData(static_cast<SOUL_LEVEL>(arEntry.ExtraSoulLevel));
+    }
+
+    if (arEntry.ExtraOwnerId)
+    {
+        const uint32_t ownerId = modSystem.GetGameId(arEntry.ExtraOwnerId);
+        if (TESForm* pOwner = TESForm::GetById(ownerId))
+        {
+            pExtraDataList->SetOwner(pOwner);
+        }
+        else
+        {
+            spdlog::warn("[STRE][Ownership] owner_restore_failed owner={:08X}:{:08X}",
+                         arEntry.ExtraOwnerId.ModId, arEntry.ExtraOwnerId.BaseId);
+        }
     }
 
     if (arEntry.ExtraWorn)

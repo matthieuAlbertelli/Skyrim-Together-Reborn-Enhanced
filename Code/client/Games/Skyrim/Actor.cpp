@@ -1042,26 +1042,8 @@ void TP_MAKE_THISCALL(HookApplyActorEffect, ActiveEffect, Actor* apTarget, float
     return TiltedPhoques::ThisCall(RealApplyActorEffect, apThis, apTarget, aEffectValue, unk1);
 }
 
-TP_THIS_FUNCTION(TRegenAttributes, void*, Actor, int aId, float regenValue);
-static TRegenAttributes* RealRegenAttributes = nullptr;
-
-void* TP_MAKE_THISCALL(HookRegenAttributes, Actor, int aId, float aRegenValue)
-{
-    if (aId != ActorValueInfo::kHealth)
-    {
-        return TiltedPhoques::ThisCall(RealRegenAttributes, apThis, aId, aRegenValue);
-    }
-
-    const auto* pExTarget = apThis->GetExtension();
-    if (pExTarget->IsRemote())
-    {
-        return 0;
-    }
-
-    World::Get().GetRunner().Trigger(HealthChangeEvent(apThis->formID, aRegenValue));
-    return TiltedPhoques::ThisCall(RealRegenAttributes, apThis, aId, aRegenValue);
-}
-
+// Natural health regeneration is synchronized by ActorValueService through
+// absolute health snapshots. Do not reintroduce a native regeneration hook here.
 void TP_MAKE_THISCALL(HookAddInventoryItem, Actor, TESBoundObject* apItem, ExtraDataList* apExtraData, int32_t aCount, TESObjectREFR* apOldOwner)
 {
     if (!ScopedInventoryOverride::IsOverriden())
@@ -1074,6 +1056,11 @@ void TP_MAKE_THISCALL(HookAddInventoryItem, Actor, TESBoundObject* apItem, Extra
 
         if (apExtraData)
             apThis->GetItemFromExtraData(item, apExtraData);
+
+        // Container/world transfers can inherit ownership from the source reference
+        // without carrying an explicit ExtraOwnership node on the item instance.
+        if (!item.ExtraOwnerId && apOldOwner)
+            apOldOwner->GetOwnershipData(item);
 
         World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item)));
     }
@@ -1094,11 +1081,15 @@ void* TP_MAKE_THISCALL(HookPickUpObject, Actor, TESObjectREFR* apObject, int32_t
         if (apObject->GetExtraDataList())
             apThis->GetItemFromExtraData(item, apObject->GetExtraDataList());
 
+        // Resolve ownership from the world reference itself as Skyrim may inherit
+        // it from the cell/location without an explicit ExtraOwnership node.
+        apObject->GetOwnershipData(item);
+
         // This is here so that objects that are picked up on both clients, aka non temps, are synced through activation sync.
         // The inventory change event should always be sent to the server, otherwise the server inventory won't be updated.
         bool shouldUpdateClients = apObject->IsTemporary() && !ScopedActivateOverride::IsOverriden();
 
-        World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), false, shouldUpdateClients));
+        World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), false, shouldUpdateClients, apObject->formID));
     }
 
     return TiltedPhoques::ThisCall(RealPickUpObject, apThis, apObject, aCount, aUnk1, aUnk2);
@@ -1109,8 +1100,20 @@ void Actor::PickUpObject(TESObjectREFR* apObject, int32_t aCount, bool aUnk1, fl
     TiltedPhoques::ThisCall(RealPickUpObject, this, apObject, aCount, aUnk1, aUnk2);
 }
 
+void Actor::StealAlarm(TESObjectREFR* apReference, TESForm* apObject, int32_t aCount, int32_t aTotal, TESForm* apOwner, bool aAllowWarning) noexcept
+{
+    TP_THIS_FUNCTION(TStealAlarm, void, Actor, TESObjectREFR*, TESForm*, int32_t, int32_t, TESForm*, bool);
+    POINTER_SKYRIMSE(TStealAlarm, s_stealAlarm, 37422);
+    TiltedPhoques::ThisCall(s_stealAlarm, this, apReference, apObject, aCount, aTotal, apOwner, aAllowWarning);
+}
+
 void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation)
 {
+    // Outside an active multiplayer session, preserve Skyrim's native drop path exactly.
+    // Do not inspect the returned handle, emit World Sync events or install inventory overrides.
+    if (!World::Get().GetTransport().IsConnected())
+        return TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
+
     auto& modSystem = World::Get().GetModSystem();
 
     Inventory::Entry item{};
@@ -1120,14 +1123,24 @@ void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* ap
     if (apExtraData)
         apThis->GetItemFromExtraData(item, apExtraData);
 
-    World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), true));
-
     ScopedInventoryOverride _;
 
-    return TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
+    void* pResult = TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
+
+    uint32_t droppedFormId = 0;
+    const auto* pHandle = static_cast<const BSPointerHandle<TESObjectREFR>*>(apResult);
+    if (pHandle && *pHandle)
+    {
+        if (auto* pDroppedObject = TESObjectREFR::GetByHandle(pHandle->handle.iBits))
+            droppedFormId = pDroppedObject->formID;
+    }
+
+    World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), true, true, droppedFormId));
+
+    return pResult;
 }
 
-void Actor::DropOrPickUpObject(const Inventory::Entry& arEntry, NiPoint3* apLocation, NiPoint3* apRotation) noexcept
+TESObjectREFR* Actor::DropOrPickUpObject(const Inventory::Entry& arEntry, NiPoint3* apLocation, NiPoint3* apRotation) noexcept
 {
     ExtraDataList* pExtraData = GetExtraDataFromItem(arEntry);
 
@@ -1138,19 +1151,22 @@ void Actor::DropOrPickUpObject(const Inventory::Entry& arEntry, NiPoint3* apLoca
     if (!pObject)
     {
         spdlog::warn("Object to drop not found, {:X}:{:X}.", arEntry.BaseId.ModId, arEntry.BaseId.BaseId);
-        return;
+        return nullptr;
     }
 
     if (arEntry.Count < 0)
-        DropObject(pObject, pExtraData, -arEntry.Count, apLocation, apRotation);
+        return DropObject(pObject, pExtraData, -arEntry.Count, apLocation, apRotation);
+
     // TODO: pick up
+    return nullptr;
 }
 
-void Actor::DropObject(TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation) noexcept
+TESObjectREFR* Actor::DropObject(TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation) noexcept
 {
     spdlog::debug("Dropping object, form id: {:X}, count: {}, actor: {:X}", apObject->formID, aCount, formID);
     BSPointerHandle<TESObjectREFR> result{};
     TiltedPhoques::ThisCall(RealDropObject, this, &result, apObject, apExtraData, aCount, apLocation, apRotation);
+    return result ? TESObjectREFR::GetByHandle(result.handle.iBits) : nullptr;
 }
 
 TP_THIS_FUNCTION(TUpdateDetectionState, void, ActorKnowledge, void*);
@@ -1278,7 +1294,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         POINTER_SKYRIMSE(TSpawnActorInWorld, s_SpawnActorInWorld, 19742);
         POINTER_SKYRIMSE(TDamageActor, s_damageActor, 37335);
         POINTER_SKYRIMSE(TApplyActorEffect, s_applyActorEffect, 35086);
-        POINTER_SKYRIMSE(TRegenAttributes, s_regenAttributes, 37448);
         POINTER_SKYRIMSE(TAddInventoryItem, s_addInventoryItem, 37525);
         POINTER_SKYRIMSE(TPickUpObject, s_pickUpObject, 37521);
         POINTER_SKYRIMSE(TDropObject, s_dropObject, 40454);
@@ -1300,7 +1315,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         RealSpawnActorInWorld = s_SpawnActorInWorld.Get();
         RealDamageActor = s_damageActor.Get();
         RealApplyActorEffect = s_applyActorEffect.Get();
-        RealRegenAttributes = s_regenAttributes.Get();
         RealAddInventoryItem = s_addInventoryItem.Get();
         RealPickUpObject = s_pickUpObject.Get();
         RealDropObject = s_dropObject.Get();
@@ -1321,7 +1335,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         TP_HOOK(&RealSpawnActorInWorld, HookSpawnActorInWorld);
         TP_HOOK(&RealDamageActor, HookDamageActor);
         TP_HOOK(&RealApplyActorEffect, HookApplyActorEffect);
-        TP_HOOK(&RealRegenAttributes, HookRegenAttributes);
         TP_HOOK(&RealAddInventoryItem, HookAddInventoryItem);
         TP_HOOK(&RealPickUpObject, HookPickUpObject);
         TP_HOOK(&RealDropObject, HookDropObject);

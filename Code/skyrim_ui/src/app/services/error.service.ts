@@ -8,6 +8,7 @@ export interface ErrorEvent {
     | 'wrong_version'
     | 'mods_mismatch'
     | 'client_mods_disallowed'
+    | 'native_plugins_missing'
     | 'wrong_password'
     | 'server_full'
     | 'no_reason'
@@ -32,10 +33,16 @@ export interface ClientModsDisallowedErrorEvent extends ErrorEvent {
   data: { mods: ('SKSE' | 'MO2')[] };
 }
 
+export interface NativePluginsMissingErrorEvent extends ErrorEvent {
+  error: 'native_plugins_missing';
+  data: { plugins: string[] };
+}
+
 export type ErrorEvents =
   | WrongVersionErrorEvent
   | ModsMismatchErrorEvent
   | ClientModsDisallowedErrorEvent
+  | NativePluginsMissingErrorEvent
   | ErrorEvent;
 
 @Injectable({
@@ -92,6 +99,9 @@ export class ErrorService {
           break;
         case 'client_mods_disallowed':
           data = { mods: error.data.mods.join(', ') };
+          break;
+        case 'native_plugins_missing':
+          data = { plugins: error.data.plugins.join(', ') };
           break;
       }
       message = await firstValueFrom(

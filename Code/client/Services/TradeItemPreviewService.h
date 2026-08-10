@@ -21,6 +21,9 @@ public:
     TP_NOCOPYMOVE(TradeItemPreviewService);
 
     void SelectItem(Trade::ItemId aItemId) noexcept;
+    void SelectGameForm(
+        std::uint32_t aGameFormId,
+        std::uint64_t aContextId = 0) noexcept;
     void Clear() noexcept;
     void SetPreviewRegion(float aLeft, float aTop, float aWidth, float aHeight) noexcept;
     void UpdatePreviewPlacement() noexcept override;

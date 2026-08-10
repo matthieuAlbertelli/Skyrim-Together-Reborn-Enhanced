@@ -241,6 +241,7 @@ static TiltedPhoques::Initializer s_magicTargetHooks([]() {
     RealHasPerk = hasPerk.Get();
     RealGetPerkRank = getPerkRank.Get();
 
+
     TP_HOOK(&RealAddTarget, HookAddTarget);
     TP_HOOK(&RealCheckAddEffectTargetData, HookCheckAddEffectTargetData);
     TP_HOOK(&RealFindTargets, HookFindTargets);

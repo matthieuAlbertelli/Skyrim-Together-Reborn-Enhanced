@@ -167,6 +167,7 @@
         "MODS_MISMATCH_REMOVE": "Пожалуйста, удалите следующие моды, чтобы присоединиться:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Чтобы присоединиться, установите следующие моды:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Этот сервер запрещает использование {{mods}}. Пожалуйста, удалите их, чтобы присоединиться.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Введён неверный пароль.",
         "NO_REASON": "Сервер отказал в подключении без причины.",
         "SERVER_FULL": "Сервер переполнен.",

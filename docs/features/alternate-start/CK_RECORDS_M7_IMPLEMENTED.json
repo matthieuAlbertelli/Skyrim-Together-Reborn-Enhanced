@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 2,
+  "pluginName": "STRE_AlternateStart.esp",
+  "requiredMasters": [
+    "Skyrim.esm",
+    "Update.esm",
+    "Dragonborn.esm"
+  ],
+  "editorIdPrefix": "STRE_",
+  "notes": [
+    "Les FormID sont locaux au plugin non-ESL.",
+    "Le mode strict rejette les doublons ou records STRE inattendus.",
+    "Les noms FULL ne doivent contenir aucun espace ni retour de ligne périphérique."
+  ],
+  "records": [
+    {
+      "signature": "QUST",
+      "editorId": "STRE_QUEST_AlternateStart",
+      "expectedLocalFormId": "0x00001AF9",
+      "displayName": "STRE Alternate Start"
+    },
+    {
+      "signature": "CELL",
+      "editorId": "STRE_CELL_AlternateStart",
+      "expectedLocalFormId": "0x000012D1",
+      "displayName": "STRE CELL AlternateStart"
+    },
+    {
+      "signature": "CELL",
+      "editorId": "STRE_CELL_DevSandbox",
+      "expectedLocalFormId": "0x000012C7",
+      "displayName": "STRE Developer Sandbox"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat01",
+      "expectedLocalFormId": "0x00001325"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat02",
+      "expectedLocalFormId": "0x00001321"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Alchemy_Boots",
+      "expectedLocalFormId": "0x00003B68",
+      "displayName": "Bottes d’apothicaire"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Alchemy_Clothes",
+      "expectedLocalFormId": "0x00003B66",
+      "displayName": "Tenue d’apothicaire"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Block_GuardPendant",
+      "expectedLocalFormId": "0x00003B41",
+      "displayName": "Pendentif de garde"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Enchanting_Boots",
+      "expectedLocalFormId": "0x00003B70",
+      "displayName": "Bottes d’enchanteur"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Enchanting_Clothes",
+      "expectedLocalFormId": "0x00003B6E",
+      "displayName": "Tenue d’enchanteur"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Pickpocket_Boots",
+      "expectedLocalFormId": "0x00003B59",
+      "displayName": "Chaussures de foule"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Pickpocket_Clothes",
+      "expectedLocalFormId": "0x00003B57",
+      "displayName": "Tenue de foule"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Smithing_Boots",
+      "expectedLocalFormId": "0x00003B60",
+      "displayName": "Bottes de forgeron"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Smithing_Clothes",
+      "expectedLocalFormId": "0x00003B5D",
+      "displayName": "Tenue de forgeron"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Sneak_Boots",
+      "expectedLocalFormId": "0x00003B45",
+      "displayName": "Bottes discrètes"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Sneak_Clothes",
+      "expectedLocalFormId": "0x00003B43",
+      "displayName": "Tenue discrète"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Speech_FineBoots",
+      "expectedLocalFormId": "0x00003B51",
+      "displayName": "Bottes nobles"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_Speech_FineClothes",
+      "expectedLocalFormId": "0x00003B4F",
+      "displayName": "Tenue noble"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Alchemy_Starter",
+      "expectedLocalFormId": "0x00003B6B",
+      "displayName": "Alchimie mineure"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Block_Starter",
+      "expectedLocalFormId": "0x00003B4C",
+      "displayName": "Parade mineure"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Pickpocket_Starter",
+      "expectedLocalFormId": "0x00003B5C",
+      "displayName": "Vol à la tire mineur"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Smithing_Starter",
+      "expectedLocalFormId": "0x00003B63",
+      "displayName": "Forge mineure"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Sneak_Starter",
+      "expectedLocalFormId": "0x00003B48",
+      "displayName": "Furtivité mineure"
+    },
+    {
+      "signature": "ENCH",
+      "editorId": "STRE_ENCH_Speech_Starter",
+      "expectedLocalFormId": "0x00003B54",
+      "displayName": "Éloquence mineure"
+    },
+    {
+      "signature": "MGEF",
+      "editorId": "STRE_MGEF_Alteration_Exploration_AllyWaterbreathing",
+      "expectedLocalFormId": "0x00006FE5",
+      "displayName": "Souffle aquatique partagé"
+    },
+    {
+      "signature": "MGEF",
+      "editorId": "STRE_MGEF_Alteration_Matter_AllyFeather",
+      "expectedLocalFormId": "0x00006FF5",
+      "displayName": "Allègement"
+    },
+    {
+      "signature": "MGEF",
+      "editorId": "STRE_MGEF_Alteration_Protection_AllyMineralAegis",
+      "expectedLocalFormId": "0x00006FD5",
+      "displayName": "Égide minérale"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Exploration_AllyWaterbreathing",
+      "expectedLocalFormId": "0x00006FE6",
+      "displayName": "Souffle aquatique partagé"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Exploration_MinorDetectDead",
+      "expectedLocalFormId": "0x00006FE0",
+      "displayName": "Détection des morts mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Exploration_MinorDetectLife",
+      "expectedLocalFormId": "0x00006FDC",
+      "displayName": "Détection du vivant mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Exploration_MinorLight",
+      "expectedLocalFormId": "0x00006FD8",
+      "displayName": "Lueur mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Matter_AllyFeather",
+      "expectedLocalFormId": "0x00006FF8",
+      "displayName": "Allègement"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Matter_MinorEquilibrium",
+      "expectedLocalFormId": "0x00006FF2",
+      "displayName": "Équilibre mineur"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Matter_MinorTelekinesis",
+      "expectedLocalFormId": "0x00006FEA",
+      "displayName": "Télékinésie mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Matter_MinorTransmutation",
+      "expectedLocalFormId": "0x00006FEE",
+      "displayName": "Transmutation mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Protection_AllyMineralAegis",
+      "expectedLocalFormId": "0x00006FD1",
+      "displayName": "Égide minérale"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Protection_MinorAshRune",
+      "expectedLocalFormId": "0x00006FCD",
+      "displayName": "Rune de cendres mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Protection_MinorMineralSkin",
+      "expectedLocalFormId": "0x000040FE",
+      "displayName": "Peau minérale mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Alteration_Protection_MinorRestraint",
+      "expectedLocalFormId": "0x00004102",
+      "displayName": "Entrave mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Fire_EmberBurst",
+      "expectedLocalFormId": "0x000040DA",
+      "displayName": "Explosion de braises"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Fire_EmberRune",
+      "expectedLocalFormId": "0x000040DE",
+      "displayName": "Rune de braises"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Frost_IceBurst",
+      "expectedLocalFormId": "0x000040EA",
+      "displayName": "Explosion de givre"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Frost_MinorBreath",
+      "expectedLocalFormId": "0x000040E2",
+      "displayName": "Souffle de givre mineur"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Frost_MinorRune",
+      "expectedLocalFormId": "0x000040E6",
+      "displayName": "Rune de givre mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Shock_ExplosiveDischarge",
+      "expectedLocalFormId": "0x000040FA",
+      "displayName": "Décharge explosive"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Shock_MinorRune",
+      "expectedLocalFormId": "0x000040F6",
+      "displayName": "Rune électrique mineure"
+    },
+    {
+      "signature": "SPEL",
+      "editorId": "STRE_SPEL_Destruction_Shock_MinorSparks",
+      "expectedLocalFormId": "0x000040EE",
+      "displayName": "Étincelles mineures"
+    }
+  ],
+  "spellEffectExpectations": {
+    "STRE_SPEL_Alteration_Protection_AllyMineralAegis": [
+      {
+        "effectEditorId": "STRE_MGEF_Alteration_Protection_AllyMineralAegis",
+        "magnitude": 20.0,
+        "area": 0,
+        "duration": 30,
+        "conditionCount": 0
+      }
+    ]
+  }
+}

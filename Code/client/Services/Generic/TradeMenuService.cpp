@@ -2,6 +2,7 @@
 
 #include <Services/TradeMenuService.h>
 
+#include <Services/CharacterCreationService.h>
 #include <Services/OverlayService.h>
 #include <Services/UiSurfaceService.h>
 #include <Services/TradeService.h>
@@ -511,6 +512,17 @@ void TradeMenuService::OnUpdate(
 
 void TradeMenuService::SetVisible(bool aVisible) noexcept
 {
+    const auto& characterCreation =
+        m_world.ctx().at<CharacterCreationService>();
+    if (aVisible &&
+        characterCreation.GetPhase() !=
+            CharacterCreationPhase::Inactive)
+    {
+        // Character creation owns both the native RaceMenu and the CEF input
+        // surface. Trading must not take focus until that flow is complete.
+        return;
+    }
+
     if (m_visible == aVisible)
         return;
 

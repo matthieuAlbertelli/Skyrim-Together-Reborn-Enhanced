@@ -84,8 +84,30 @@ bool MagicItem::IsBuffSpell() const noexcept
     case 0x7e8dd: // Call to Arms
         return true;
     default:
-        return false;
+        break;
     }
+
+    // STRE cooperative buffs are custom SPEL records. Skyrim Together's
+    // MagicTarget hook only permits healing spells and recognized buff spells
+    // to affect a remote player. Resolve the records through the plugin so the
+    // check remains independent from the plugin's load-order prefix.
+    static uint32_t s_allyMineralAegis = 0;
+    static uint32_t s_allyWaterbreathing = 0;
+    static uint32_t s_allyFeather = 0;
+
+    if (s_allyMineralAegis == 0 || s_allyWaterbreathing == 0 || s_allyFeather == 0)
+    {
+        if (Mod* pStreMod = ModManager::Get()->GetByName("STRE_AlternateStart.esp"))
+        {
+            s_allyMineralAegis = pStreMod->GetFormId(0x00006FD1);
+            s_allyWaterbreathing = pStreMod->GetFormId(0x00006FE6);
+            s_allyFeather = pStreMod->GetFormId(0x00006FF8);
+        }
+    }
+
+    return formID == s_allyMineralAegis ||
+           formID == s_allyWaterbreathing ||
+           formID == s_allyFeather;
 }
 
 bool MagicItem::IsBoundWeaponSpell() noexcept
