@@ -1,20 +1,23 @@
 # Matrice RACI
 
-> **Statut : Proposition**
+> **Statut : proposition organisationnelle**
 
 Abréviations : **R** réalise, **A** répond du résultat, **C** consulté, **I** informé.
 
 | Livrable | Produit | Architecture | STRE Core | Mod Integration | CK | Narrative | Art | Audio | UI | QA |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Vision et MVP | A/R | C | C | C | C | C | I | I | C | C |
+| Vision / roadmap | A/R | C | C | C | C | C | I | I | C | C |
+| World Sync | C | A | R | I | I | I | I | I | I | R |
+| Trading | A | C | R | I | I | I | I | I | R | R |
+| Preview Platform | C | A | R | C | I | I | I | I | C | R |
 | Mod Integration Framework | C | A | R | R | C | I | I | I | C | C |
 | Campaign State | C | A | R | R | C | C | I | I | C | C |
 | Plugin Alternate Start solo | C | C | I | C | A/R | C | C | C | C | R |
-| Adaptateur Alternate Start | C | A | R | R | R | I | I | I | C | R |
+| Adaptation Alternate Start STRE | C | A | R | R | R | I | I | I | C | R |
 | Skip Helgen | A | C | I | C | R | C | I | I | I | R |
 | Valen — concept narratif | A | I | I | I | C | R | C | C | I | C |
 | Valen — modèle | C | I | I | I | C | C | A/R | I | I | C |
 | Valen — voix | C | I | I | I | C | A/C | I | R | I | C |
-| Preview Platform | C | A | R | C | I | I | I | I | C | R |
-| Trading | A | C | R | I | I | I | I | I | R | R |
 | Release | A | C | R | C | R | I | I | I | R | C |
+
+Les détails de progression ne sont pas maintenus dans la RACI; voir `ROADMAP.md`.

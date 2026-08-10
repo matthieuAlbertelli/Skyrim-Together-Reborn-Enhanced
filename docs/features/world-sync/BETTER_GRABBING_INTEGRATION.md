@@ -1,105 +1,114 @@
 # Better Grabbing multiplayer integration
 
+> **Statut : Implémenté et validé pour le périmètre World Sync actuel**
+
 ## Scope
 
-STRE does not ship or redistribute Better Grabbing. The user installs the SKSE plugin separately.
-Multiplayer requires the loaded module `BetterGrabbing.dll` by default.
+STRE **ne distribue pas** et **ne linke pas** le code de Better Grabbing.
 
-## Responsibilities
+L’utilisateur installe le plugin SKSE séparément. En multijoueur, `BetterGrabbing.dll` est requis par défaut via la politique générique des plugins natifs.
+
+## Responsabilités
 
 ### Better Grabbing
-- Owns local grab input and object placement.
-- Updates the grabbed reference through Skyrim's SetAngle/SetPosition/Update3DPosition path.
-- Keeps grabbed items non-collidable when its default `DisableCollisionWithItemsWhileGrabbing = true` option is enabled.
-- Continues to work independently in solo.
+
+- possède l’input local de grab;
+- calcule translation/rotation locale;
+- applique son comportement local Skyrim;
+- continue de fonctionner indépendamment en solo.
 
 ### STRE
-- Detects loaded SKSE plugin DLLs during authentication.
-- Enforces required native plugins through ModPolicy.
-- Maps local dynamic FormIDs to stable WorldEntityIds.
-- Arbitrates one manipulation authority per WorldEntity.
-- Broadcasts Start and Release lifecycle events while connected.
-- Sends private authority heartbeats to the server while held; observers never receive held-object transforms.
-- Hides the remote WorldEntity representation for the duration of the grab.
-- Reuses the existing authoritative settlement/recreate path after release.
+
+- détecte les plugins SKSE natifs chargés au handshake;
+- applique `ModPolicy:sRequiredNativePlugins`;
+- observe le lifecycle via les événements Skyrim disponibles;
+- attribue/résout le `WorldEntityId`;
+- arbitre l’autorité;
+- masque l’objet chez les observateurs pendant le grab;
+- gère release, settlement, timeout, disconnect et snapshots;
+- gère lazy adoption des références placées;
+- préserve l’ownership dans les chemins supportés;
+- force une fin de grab si un dialogue Skyrim s’ouvre pendant la manipulation.
+
+STRE ne dépend pas du `Manager` interne de Better Grabbing.
 
 ## Native plugin policy
 
-The generic server setting is:
+Configuration par défaut :
 
 ```ini
+[Gameplay]
+bEnableItemDrops = true
+
 [ModPolicy]
 sRequiredNativePlugins = BetterGrabbing.dll
 ```
 
-The value is a comma-separated list of loaded SKSE plugin DLL filenames. Presence means loaded in the Skyrim process, not merely present on disk.
+La valeur est une liste de noms de DLL SKSE chargées. Le mécanisme est générique et n’est pas un dependency manager spécifique à Better Grabbing.
 
-The handshake carries each loaded native plugin filename and its Windows file version when available. Version constraints are deliberately not enforced in this first milestone.
+## Représentation distante
 
-## WorldEntity manipulation state
+Pendant un grab accepté :
 
 ```text
-FREE
-  -> Start accepted
-MANIPULATED(authorityPlayerId)
-  -> Release
-SETTLING(authorityPlayerId)
-  -> authoritative settled transform
-FREE
+authority
+  Better Grabbing local motion
+
+observer
+  local WorldEntity representation hidden
 ```
 
-A second Start while MANIPULATED is rejected. Private heartbeat Updates and Release are accepted only from the current authority. Heartbeats refresh authority state but are not broadcast.
+Les transforms intermédiaires ne sont pas diffusés pour simuler le mouvement à distance.
 
-## Remote representation
+Au release :
 
-While MANIPULATED, the observing client disables its local WorldEntity reference.
-There is no remote interpolation and no remote collision participation while held.
+- l’observateur restaure/repositionne la représentation;
+- Havok local reprend;
+- le settlement autoritaire final corrige seulement si nécessaire.
 
-On Release, the observer recreates the WorldEntity immediately at the release transform.
-Normal local Havok resumes from that point. The later authoritative settlement transform
-uses the existing one-shot recreate/reconcile path if local simulation diverged.
+## Références placées
+
+La première interaction peut envoyer :
+
+```text
+WorldEntityId = 0
+PlacedReferenceId = stable GameId de la TESObjectREFR
+```
+
+Le serveur résout ou crée atomiquement un `WorldEntityId`.
+
+Chaque client lie ensuite cet ID à sa référence locale existante. **Aucun duplicate spawn**.
+
+Au release distant d’une référence placée, STRE utilise le `MoveTo` existant de STR sur la game thread (`RunnerService`), et non des wrappers `SetPosition`/`SetAngle` spéculatifs.
+
+## Ownership / vol
+
+Si la référence placée a un owner et que Skyrim ne considère pas le joueur comme owner autorisé, le grab déclenche la primitive de vol Skyrim.
+
+La sanction, les témoins et les gardes restent ensuite gérés par les systèmes vanilla.
+
+## Dialogue safety
+
+Le `Dialogue Menu` peut s’ouvrir alors que Better Grabbing tient encore un objet.
+
+STRE force alors la fin du grab par la primitive joueur native. Le `TESGrabReleaseEvent` normal poursuit le lifecycle WorldEntity, ce qui évite :
+
+- contrôles de dialogue bloqués;
+- objet restant grabé après arrestation;
+- état réseau différent de l’état local.
 
 ## Failure recovery
 
-- Authority heartbeat timeout: server releases authority.
-- Authority disconnect: server broadcasts a release/final known transform.
-- Recreate failure: client retries for a bounded window.
-- Network disconnect while a remote item is hidden: client re-enables the original local reference so it cannot remain permanently invisible.
+- heartbeat timeout : libération de l’autorité;
+- disconnect autorité : release/recovery;
+- disconnect observateur : snapshot/rebinding à la reconnexion;
+- adoption en attente + release : release différé jusqu’à résolution;
+- dialogue pendant grab : forced release local puis lifecycle normal.
 
 ## Non-goals
 
-- STRE does not implement Better Grabbing input, raycasts, placement, rotation controls or collision avoidance.
-- STRE does not distribute Better Grabbing.
-- STRE does not synchronize collision cascades caused by a configuration that re-enables collisions while grabbing.
-- Native plugin version constraints are future work.
-
-## Lazy adoption of placed references
-
-Placed Skyrim/plugin references are not pre-registered as WorldEntities. STRE adopts them only when a multiplayer interaction needs a stable network identity.
-
-### Grab
-
-1. Better Grabbing starts holding a non-temporary `TESObjectREFR`.
-2. If the local FormID has no WorldEntity binding, the client resolves the reference FormID through `ModSystem` to a server-space `GameId`.
-3. `RequestWorldEntityManipulation(Start)` carries `WorldEntityId = 0` plus that `PlacedReferenceId`.
-4. The server atomically resolves or creates one WorldEntity for that `GameId`.
-5. Start notification returns the assigned WorldEntityId and the placed reference identity to every observer.
-6. Each client binds the WorldEntityId to its own already-existing local `TESObjectREFR`; no duplicate object is spawned.
-7. Observers hide that reference until release.
-8. Release moves the same placed reference once to the release transform, re-enables it, and uses the normal settlement authority flow.
-
-### Pickup from the world
-
-If a non-temporary placed reference is picked up before any grab adoption, `RequestInventoryChanges` carries its `PlacedReferenceId`. The server performs `resolve/adopt -> consume` in the same packet handler, so two players cannot create two WorldEntity identities for the same placed reference.
-
-For vanilla non-temporary pickups, activation sync already owns the inventory delta. STRE therefore emits a `LifecycleOnly` WorldEntity notification to retire the physical binding without applying the inventory delta twice.
-
-### Identity invariant
-
-For a placed reference, the authoritative uniqueness key is:
-
-`PlacedReferenceId = GameId(ModId, BaseId of TESObjectREFR)`
-
-The server keeps a reverse index `PlacedReferenceId -> WorldEntityId`. Once adopted, later grabs reuse the same WorldEntityId until the reference is consumed.
-
-Dynamic dropped references continue to use their existing runtime WorldEntity creation/materialization path and are not affected by lazy adoption.
+- réimplémenter les contrôles Better Grabbing;
+- streamer la physique tenue frame-by-frame;
+- redistribuer Better Grabbing;
+- dépendre de ses classes internes;
+- garantir toutes les configurations Better Grabbing qui modifient fortement collision/physics sans test.

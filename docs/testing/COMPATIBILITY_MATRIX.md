@@ -1,41 +1,65 @@
 # Matrice de compatibilité
 
-> **Statut : État connu au 27 juillet 2026 ; compléter à chaque campagne de test**
+> **Statut : source de vérité de compatibilité connue**
+> **Dernière mise à jour : 10 août 2026**
 
-## Versions plateforme
+## Plateforme de référence
 
-| Composant | Version supportée / observée | Testée | Notes |
-|---|---|---|---|
-| Skyrim SE/AE runtime | `1.6.1170` | Oui | runtime principal du développement M7 |
-| Address Library | entrée `441582`, fallback `21890` | Oui pour `441582` | utilisée par `Script::CompileAndRun` |
-| Skyrim Together Reborn upstream | baseline `ca3f3234` | Partiel | voir `UPSTREAM.md` ; full SHA à enregistrer pour une release |
-| STRE | `0.1.0-alpha.1` + changements Unreleased | Oui localement | version de package non incrémentée |
-| Creation Kit | environnement compatible 1.6.1170 | Oui | version exacte à consigner |
-| Angular | 16.x | Oui | Character Creation et Trading |
-| xmake | 3.0.0 ou compatible | Oui localement | build Windows réussi |
-| `STRE_AlternateStart.esp` | manifest M7, BuildVersion 5 | Oui | 47 records stricts, dépend de Dragonborn.esm |
+| Composant | Version/support observé | État |
+|---|---|---|
+| Skyrim SE/AE runtime | `1.6.1170` | runtime principal de développement |
+| Skyrim Together Reborn upstream | baseline historique dans `UPSTREAM.md` | partiel, full SHA requis pour release |
+| STRE | `0.1.0-alpha.1` + `Unreleased` | build/dev validé localement |
+| Angular | 16.x | utilisé |
+| xmake | 3.0.0 ou compatible | build Windows observé |
+| Creation Kit | environnement compatible 1.6.1170 | utilisé |
+| Better Grabbing | plugin externe requis par défaut pour manipulation World Sync multijoueur | validé sur le périmètre testé |
+| Address Library | dépendance de l’environnement SKSE / Better Grabbing et certains appels STRE | requise selon installation/runtime |
+
+Les versions exactes des dépendances externes doivent être enregistrées lors d’une release reproductible.
 
 ## Fonctionnalités
 
-| Configuration | Trading | Preview | Character Build solo | Character Build STRE | Campagne Alternate Start complète |
+| Configuration | Trading | World Sync drops | World Sync placed/grab | Character Build solo | Character Build STRE |
 |---|---:|---:|---:|---:|---:|
-| Vanilla + STRE | Alpha | Implémenté | Smoke testé | Smoke testé | Non implémentée |
-| SkyUI | À retester | À retester | Utilisé dans l’environnement dev | Utilisé dans l’environnement dev | N/A |
-| Anniversary content | À tester | À tester | Test runtime 1.6.1170 | Test runtime 1.6.1170 | N/A |
-| 1 joueur hors ligne | N/A | Oui | Oui | N/A | Non |
-| 2 joueurs | Cible principale | Oui | N/A | Buffs ciblés validés | Non |
-| 4 joueurs | À tester | À tester | N/A | À tester | Cible future |
-| 10 joueurs | Non prioritaire | Non prioritaire | N/A | Non testé | Cible hub future |
+| 1 joueur hors ligne | N/A | vanilla/local | Better Grabbing local | Oui | N/A |
+| 2 joueurs | Alpha | Validé | Validé sur cas courants | N/A | Smoke-testé |
+| 4 joueurs | À tester | À tester | À tester | N/A | À tester |
+| SkyUI | À retester | N/A | N/A | environnement dev | environnement dev |
+| Anniversary content | À tester | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 |
 
-## Éléments M7 vérifiés
+## World Sync validé
 
-- BuildVersion et catalogue identiques client/serveur ;
-- 47 records CK conformes ;
-- 41 références code/ESP conformes ;
-- inventaire et spell hashes acceptés ;
-- ciblage `Target Actor` des trois buffs alliés ;
-- même ESP déployé sur les deux PC.
+- drop dynamique → matérialisation distante;
+- Havok local + settlement autoritaire;
+- pickup distant;
+- grab/release d’un WorldEntity droppé;
+- lazy adoption d’une référence placée mobile;
+- grab/release placé sans crash observateur;
+- ownership déclenchant le vol vanilla au grab;
+- forced release à l’ouverture du dialogue de garde;
+- nage après correction de régression STRE.
 
-## Fiche de test d’un mod
+## World Sync à étendre
 
-Pour chaque mod : nom, version, load order, adapter, résultat solo, résultat STRE, conflit, workaround, logs et date.
+- objets de quête;
+- références fortement scriptées;
+- enable-parent complexes;
+- reset de cellule;
+- noms personnalisés d’items;
+- persistence durable après restart/save branch;
+- 4 joueurs.
+
+## Fiche de test d’un mod/dépendance
+
+Pour chaque mod/dépendance :
+
+- nom/version;
+- runtime Skyrim;
+- load order si pertinent;
+- résultat solo;
+- résultat STRE;
+- conflit/workaround;
+- logs;
+- date;
+- SHA STRE.

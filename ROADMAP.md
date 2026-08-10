@@ -1,106 +1,121 @@
 # STRE Roadmap
 
-> **Status:** updated on 27 July 2026 from the repository state and in-game M7 validation.
+> **Status:** canonical progress roadmap.
+> **Last updated:** 10 August 2026.
 
-The roadmap is organized around demonstrable outcomes. A milestone is complete only when its user flow, failure cases and recovery behavior can be shown in game.
+This file is the single source of truth for **priority and progress**. Feature documents describe behavior and design; the WBS describes work decomposition without duplicating progress state.
+
+A milestone is complete only when its user-visible outcome, failure cases and recovery behavior are demonstrable.
 
 ## R0 — Repository ready
 
-**Outcome:** a new contributor can understand, build and test STRE from a clean checkout.
+**Outcome:** a contributor can understand, build and test STRE from a documented checkout.
 
-- [x] record the audited upstream baseline;
-- [x] document current build entry points;
-- [x] version CK-authored Alternate Start files;
-- [ ] validate a clean-machine prerequisite matrix;
-- [ ] add CI coverage for native tests and the Angular UI;
-- [ ] publish the supported Skyrim/STRE version matrix;
-- [ ] establish one canonical automated test command.
+- [x] audited upstream baseline recorded;
+- [x] build entry points documented;
+- [x] CK-authored Alternate Start files versioned;
+- [x] canonical documentation structure established;
+- [ ] clean-machine prerequisite matrix;
+- [ ] broader CI coverage for native tests and Angular UI;
+- [ ] one canonical automated test command;
+- [ ] release-grade supported-version matrix.
 
-## R1 — Trading 0.2
+## R1 — Trading stabilization
 
-**Outcome:** trading is reliable enough for real campaign play.
+**Outcome:** trading is reliable enough for normal campaign use.
 
-- [x] authoritative trade protocol and reconciliation model;
-- [x] dedicated domain/protocol tests;
-- [ ] client/server integration tests;
-- [ ] telemetry for application and reconciliation failures;
-- [ ] explicit disconnect/reconnect policy during a trade;
-- [ ] stack splitting;
-- [ ] gold exchange;
-- [ ] player-facing error and recovery UX.
+- [x] authoritative trade protocol;
+- [x] deterministic mutation plans;
+- [x] idempotent client application;
+- [x] absolute reconciliation path;
+- [x] Angular/CEF UI and native item preview;
+- [ ] full client/server integration harness;
+- [ ] reconnect policy during active trades;
+- [ ] stack splitting and gold;
+- [ ] instance-metadata-aware transfer beyond the current MVP;
+- [ ] player-facing recovery UX.
 
-## R2 — Item Preview Platform
+## R2 — World Sync foundation
 
-**Outcome:** multiple STRE features can use the same internal preview runtime safely.
+**Outcome:** physical world items can be shared without continuous remote physics streaming.
 
-- [x] modular native session, controller, bridge, solver and raster measurement;
-- [x] automatic fitting of real Skyrim objects;
-- [x] demonstrate a second first-party consumer in Character Creation;
-- [ ] replace the single-client bridge with leases and owner tokens;
-- [ ] formalize request, priority and lifecycle contracts;
-- [ ] add solver and lifecycle tests;
-- [ ] define arbitration with native Skyrim menus.
+- [x] stable in-memory `WorldEntityId` for dropped objects;
+- [x] local Havok with server-authoritative settlement;
+- [x] bounded final-position reconciliation;
+- [x] snapshot/late-join path for world entities;
+- [x] lazy adoption of movable placed references;
+- [x] Better Grabbing native-plugin policy and multiplayer bridge;
+- [x] hidden remote representation while another player grabs an object;
+- [x] placed-reference release via STR `MoveTo` on the game update path;
+- [x] ownership/stolen provenance in supported inventory/world flows;
+- [x] grab of unauthorized owned references treated as Skyrim theft;
+- [x] forced release when dialogue opens to avoid stuck grab state;
+- [ ] broader validation of scripted/quest-owned movable references;
+- [ ] custom player-renamed item metadata;
+- [ ] durable world persistence across server restarts/save branches;
+- [ ] extend the same entity model to additional world object classes.
 
-## R3 — Alternate Start character bootstrap
+## R3 — Item Preview Platform
 
-**Outcome:** a player can create a clean campaign character in the custom inn, in solo or through an authoritative server session.
+**Outcome:** multiple STRE features safely reuse one native preview runtime.
 
-- [x] version the ESP, PSC and PEX files;
-- [x] custom inn cell, quest aliases, seats and stages `0/10/20`;
-- [x] RaceMenu and Angular character-creation flow;
-- [x] Warrior, Mage and Thief class/loadout selection;
-- [x] anti-import cleanup, level reset and canonical equipment application;
-- [x] offline/local fallback without a connected server;
-- [x] Destruction and Alteration starter spells;
-- [x] targeted cooperative buffs validated between two PCs;
-- [ ] automatic new-game interception and complete Helgen bypass;
-- [ ] Valen and minimal introduction quest;
-- [ ] coherent departure into Skyrim and verified vanilla quest continuation.
+- [x] modular native session, controller, host bridge, solver and raster measurement;
+- [x] Trading consumer;
+- [x] Character Creation consumer;
+- [ ] lease/owner arbitration;
+- [ ] lifecycle/concurrency test coverage;
+- [ ] stable internal request contract;
+- [ ] third-party API only after first-party stabilization.
 
-## R4 — Authoritative character builds and first-party integration
+## R4 — Alternate Start character bootstrap
 
-**Outcome:** client choices become a validated canonical character build without trusting arbitrary FormIDs.
+**Outcome:** a player creates a clean campaign character in the custom inn, in solo or through an authoritative STRE session.
 
-- [x] logical class/loadout selections;
-- [x] shared catalog at `BuildVersion = 5`;
-- [x] canonical inventory and inventory hash;
-- [x] canonical spells and spell hash;
-- [x] applied acknowledgement and server state broadcast;
-- [x] strict ESP/catalog audits;
-- [ ] durable build persistence;
-- [ ] restoration after reconnect/server restart;
-- [ ] remaining skill kits and magic schools;
-- [ ] generic adapter registry and version negotiation.
+- [x] versioned ESP/PSC/PEX;
+- [x] custom inn, quest aliases and seat flow;
+- [x] RaceMenu + Angular character creation;
+- [x] Warrior, Mage and Thief catalog path;
+- [x] canonical inventory and spell application;
+- [x] offline/local fallback;
+- [x] Destruction and Alteration starter spell vertical slice;
+- [x] targeted cooperative buffs smoke-tested between two PCs;
+- [ ] automatic new-game interception and exhaustive Helgen bypass;
+- [ ] remaining character kits and schools;
+- [ ] full reset policy for skills/perks/attribute history;
+- [ ] Valen introduction and coherent vanilla departure.
 
-## R5 — Playable cooperative campaign start
+## R5 — Persistent cooperative campaign
 
-**Outcome:** 2–10 players create campaign characters and leave the inn together.
+**Outcome:** campaign state and character binding survive reconnects and server restarts.
 
-- [ ] campaign roster and character binding;
-- [ ] shared phase and ready check;
-- [ ] synchronized Valen introduction;
-- [ ] secret Dragonborn assignment;
+- [ ] durable character binding;
+- [ ] versioned persistence;
+- [ ] canonical campaign snapshot;
+- [ ] reconnect restoration;
+- [ ] roster and ready state;
 - [ ] late-join policy;
-- [ ] persistence between sessions;
-- [ ] functional 2-, 4- and 10-player validation.
+- [ ] shared introduction/departure phases;
+- [ ] 2- and 4-player validation before broader scale targets.
 
-## R6 — Experimental third-party SDK
+## R6 — Experimental mod-integration SDK
 
-**Outcome:** an external mod author can implement a documented adapter.
+**Outcome:** an external mod author can implement a documented STRE adapter.
 
-- [ ] versioned generic envelopes and schemas;
-- [ ] adapter manifest and validation tooling;
-- [ ] permissions/sandbox model;
+- [ ] generic versioned adapter envelopes;
+- [ ] adapter manifest and negotiation;
+- [ ] permissions/sandbox policy;
 - [ ] Papyrus and C++ examples;
-- [ ] compatibility and deprecation policy;
+- [ ] compatibility/deprecation policy;
 - [ ] at least one additional first-party integration before freezing contracts.
 
 ## R7 — Additional cooperative systems
 
-- downed, out-of-combat and post-combat recovery states;
-- cooperative classes and proximity-based talents;
+Potential later systems include:
+
+- downed/out-of-combat/recovery states;
+- cooperative classes and proximity talents;
 - persistent consequences;
 - group votes and shared decisions;
 - additional pilot mod integrations.
 
-See [production milestones](docs/production/MILESTONES.md) and [work breakdown](docs/production/WORK_BREAKDOWN_STRUCTURE.md).
+See [Work Breakdown Structure](docs/production/WORK_BREAKDOWN_STRUCTURE.md) for decomposition, not progress tracking.

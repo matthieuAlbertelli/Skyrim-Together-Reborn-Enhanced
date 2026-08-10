@@ -1,124 +1,119 @@
 # Vue d’ensemble du système
 
-> **Statut : Implémenté pour Trading et Character Build / Proposé pour Campaign State et SDK générique**
+> **Statut : architecture transversale courante**
 
-## Couches
+Ce document décrit les frontières générales. Les détails d’une feature appartiennent à `docs/features/<feature>/`.
+
+## Vue générale
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ Contenu Skyrim                                               │
-│ Cellules, quêtes, Papyrus, objets, sorts, animations         │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ événements / application locale
-┌───────────────────────────────▼──────────────────────────────┐
-│ Bridges client                                               │
-│ TES events · CEF/V8 bridge · Skyrim native adapters          │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ intentions / résultats
-┌───────────────────────────────▼──────────────────────────────┐
-│ STRE Client                                                  │
-│ Services · UI Surface · local appliers · verification        │
-└───────────────────────────────┬──────────────────────────────┘
-                                │ protocole versionné
-┌───────────────────────────────▼──────────────────────────────┐
-│ STRE Server                                                  │
-│ Validation · canonical inventory/spells · state broadcasts   │
-└──────────────────────────────────────────────────────────────┘
+Skyrim / Creation Kit / SKSE plugins
+        │ local events + projections
+        ▼
+STRE client adapters/services
+        │ intents / results
+        ▼
+versioned network protocol
+        │
+        ▼
+STRE server authority
+        │ canonical notifications / snapshots
+        ▼
+STRE client projection
+        │
+        ▼
+Skyrim / UI / local engine simulation
 ```
 
-## Architecture actuelle observée
+## Runtime
 
-Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu. Les messages sont des types statiques enregistrés dans les factories de protocole.
+Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu.
+
+Les messages sont des types statiques enregistrés dans les factories du protocole.
+
+## Verticales first-party actuelles
+
+### World Sync
+
+World Sync ajoute une identité stable aux instances monde synchronisées sans tenter de transformer le serveur en moteur Havok.
+
+```text
+Skyrim object event
+→ client WorldEntity lifecycle
+→ server identity/authority
+→ remote binding/materialization
+→ local engine simulation
+→ authoritative settlement
+```
+
+Voir [`features/world-sync/README.md`](../features/world-sync/README.md).
 
 ### Trading
 
 ```text
 Angular action
-→ TradeMenuService / TradeService client
-→ ClientMessage
-→ TradeService serveur
-→ domaine Trade
-→ ServerMessage
-→ application locale / UI
+→ client Trade services
+→ server TradeService
+→ Trade domain
+→ canonical apply/reconcile messages
+→ client inventory/UI projection
 ```
+
+Voir [`features/trading/`](../features/trading/).
 
 ### Alternate Start / Character Build
 
 ```text
-Stage de quête CK 20
+CK quest/RaceMenu
 → CharacterCreationService
-→ RaceMenu + Angular loadouts
-→ sélection logique race/classe/kits
-→ CharacterBuildRequest
-→ CharacterBuildService serveur
-→ inventaire + sorts canoniques + hashes
-→ CharacterBuildResponse
-→ nettoyage et application locale
-→ CharacterBuildAppliedRequest
-→ validation des hashes
-→ NotifyCharacterBuildState(Applied)
+→ Angular logical selections
+→ CharacterBuildService or local fallback
+→ canonical inventory/spells
+→ local application + acknowledgement
 ```
 
-En mode hors ligne, `CharacterCreationService` utilise le même catalogue partagé et applique le build localement sans connexion au serveur.
+Voir [`features/alternate-start/`](../features/alternate-start/).
 
-## Frontières de responsabilité actuelles
+### Item Preview
 
-### Creation Kit / plugin Alternate Start
+La preview est une ressource native interne partagée par Trading et Character Creation. Sa cible de lease/arbitration est documentée séparément.
 
-- cellule, quête, aliases, sièges et records de gameplay ;
-- déclenchement local de Character Creation ;
-- modèles, noms, enchantements, sorts et effets ;
-- fallback solo au niveau du flux de création.
+Voir [`ITEM_PREVIEW_PLATFORM.md`](ITEM_PREVIEW_PLATFORM.md).
 
-Le plugin n’est pas la source de vérité du build multijoueur.
+## Frontières
 
-### Catalogue partagé
+### Skyrim adapters
 
-- classes/options autorisées ;
-- activation conditionnelle des groupes ;
-- objets, quantités, équipement et sorts dérivés ;
-- version de build.
+Responsables des appels engine-facing, résolution de formulaires, événements TES, matérialisation et application locale.
 
-### STRE Client
+Ils ne doivent pas devenir la source canonique d’un état partagé uniquement parce qu’ils détiennent une référence native.
 
-- UI et collecte des choix ;
-- transport des intentions ;
-- nettoyage anti-import ;
-- application de l’inventaire et des sorts ;
-- vérification locale et accusé d’application ;
-- synchronisation des buffs distants reconnus.
+### STRE client services
 
-### STRE Server
+Responsables de l’orchestration locale, de la traduction événement → intention et de l’application des résultats/snapshots.
 
-- validation de version, race, classe et options ;
-- résolution plugin/FormID local ;
-- construction des snapshots canoniques ;
-- calcul des hashes ;
-- état Pending/Applied pendant la session ;
-- niveau serveur à 1 après accusé valide.
+Une mutation moteur déclenchée par le réseau doit être marshalled sur un contexte sûr lorsque nécessaire.
 
-## Architecture cible
+### Shared domain/protocol
 
-Le Mod Integration Runtime générique ajoutera :
+Responsable des identités portables, structures sérialisées, règles métier partagées et bornes.
 
-```text
-Mod solo
-→ Adapter local
-→ Intent versionnée
-→ Capability Runtime
-→ Canonical State persistant
-→ Snapshot / Event
-→ Adapter local
-→ conséquence Skyrim
-```
+Aucun pointeur Skyrim natif ne traverse cette frontière.
 
-Campaign State, adapter registry, persistance et reconnexion ne sont pas encore fournis par le service Character Build actuel.
+### STRE server
+
+Responsable de la validation et de l’autorité des états partagés explicitement confiés au serveur.
 
 ## Principes transverses
 
-- Aucun état critique n’est défini uniquement par un menu, une scène ou un stage de quête.
-- Le client n’envoie pas de liste arbitraire de FormIDs d’objets ou de sorts.
-- Les snapshots canoniques sont validés avant application.
-- Les accusés d’application portent des hashes déterministes.
-- Les FormIDs chargés ne sont jamais codés en dur ; le code résout plugin + FormID local.
-- Les APIs tierces restent proposées tant qu’elles n’ont pas été validées par plusieurs intégrations first-party.
+- autorité explicite;
+- identité réseau distincte des FormID locaux lorsque nécessaire;
+- KISS : utiliser le moteur local pour ce qu’il fait déjà correctement;
+- DRY : une règle ou un état mutable ne possède qu’une source de vérité;
+- fail closed si une opération ne sait pas préserver les métadonnées requises;
+- snapshots pour les systèmes qui doivent reconstruire un état après join/reconnect;
+- aucune API tierce annoncée stable avant validation first-party suffisante.
+
+## Architecture future
+
+Campaign State, persistence durable et Mod Integration Runtime générique étendront ces mêmes frontières sans remplacer les contrats first-party déjà éprouvés.

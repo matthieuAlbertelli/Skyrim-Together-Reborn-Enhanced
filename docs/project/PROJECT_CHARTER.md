@@ -1,73 +1,79 @@
 # Charte du projet
 
-> **Statut : Charte active — progression mise à jour le 27 juillet 2026**
+> **Statut : charte active**
 
 ## Mission
 
-Développer et maintenir un fork open source de Skyrim Together Reborn qui renforce la coopération immersive, fournit une campagne commune et construit un framework d’adaptation de mods solo.
+Développer et maintenir un fork open source de Skyrim Together Reborn qui renforce la coopération immersive, fournit une base de campagne commune et construit des contrats d’adaptation maintenables pour du contenu Skyrim initialement solo.
 
 ## Périmètre
 
 ### Inclus
 
-- client et serveur STRE ;
-- protocole réseau et états autoritaires ;
-- UI coopérative ;
-- plugin Alternate Start ;
-- bridge CK/Papyrus ↔ STRE ;
-- SDK et contrats d’adaptation ;
-- contenu narratif et artistique propre au projet ;
+- client et serveur STRE;
+- protocole réseau et états autoritaires;
+- UI coopérative;
+- synchronisation d’entités monde STRE;
+- plugin Alternate Start;
+- bridge CK/Papyrus ↔ STRE;
+- contrats d’intégration pour mods;
+- contenu narratif et artistique propre au projet;
 - outils de test, logs, documentation et packaging.
 
 ### Hors périmètre initial
 
-- monde persistant de type MMO ;
-- compatibilité universelle sans intervention du moddeur ;
-- réécriture complète des quêtes vanilla ;
-- support garanti de toutes les versions de Skyrim et tous les load orders ;
+- monde persistant de type MMO;
+- compatibilité universelle sans intervention du moddeur;
+- réécriture complète de toutes les quêtes vanilla;
+- support garanti de toutes les versions Skyrim et de tous les load orders;
 - redistribution d’assets propriétaires sans autorisation.
-
-## Livrables MVP et progression
-
-1. **Trading alpha** — implémenté ; stabilisation et tests d’intégration à poursuivre.
-2. **Item Preview interne** — architecture modulaire et second consommateur Character Creation implémentés ; lease manager à faire.
-3. **Alternate Start / Character Build** — bootstrap en auberge, RaceMenu, classes, kits, inventaire et sorts canoniques implémentés ; skip Helgen et départ vanilla à faire.
-4. **Alternate Start STRE de campagne** — roster, ready check, phases partagées, persistence et reconnexion à faire.
-5. **Première intégration first-party** — Character Build démontre un service autoritaire dédié ; adapter générique non stabilisé.
-6. **Documentation de contribution** — portail et guides présents ; parcours clean-machine et CI à compléter.
 
 ## Gouvernance
 
 ### Décisions produit
 
-La direction produit tranche la vision, le périmètre, le ton narratif et les priorités de roadmap après consultation des responsables concernés.
+La direction produit tranche la vision, le périmètre et les priorités après consultation des responsables concernés.
 
 ### Décisions d’architecture
 
-Toute décision structurelle est consignée dans un ADR. Le responsable d’architecture est accountable ; les équipes affectées sont consultées.
-
-### Décisions de contenu
-
-La direction narrative valide les personnages et dialogues. La direction artistique valide le style. L’intégration CK valide la faisabilité en jeu.
+Toute décision structurelle durable est consignée dans un ADR. Les détails d’une feature restent dans son répertoire canonique.
 
 ### Modifications de protocole
 
-Toute modification d’opcode, de schéma sérialisé ou d’état persistant exige : versionnement, tests de round-trip, stratégie de compatibilité et revue serveur/client.
+Toute modification significative d’opcode, de schéma sérialisé ou d’état persistant exige :
+
+- bornes explicites;
+- tests de round-trip;
+- stratégie de compatibilité;
+- revue serveur/client;
+- mise à jour de la référence protocole de la feature.
 
 ## Règles de fonctionnement
 
-- Une issue doit décrire un résultat observable, pas seulement une activité.
+- Une issue décrit un résultat observable.
 - Une fonctionnalité n’est pas terminée sans tests, logs utiles et documentation.
-- Les branches ne doivent pas mélanger refactor massif et changement fonctionnel sans justification.
-- Les dépendances cross-team sont écrites dans la Definition of Ready.
-- Les données critiques doivent posséder une source de vérité et une stratégie de reprise.
+- Une branche évite de mélanger refactor massif et changement fonctionnel sans justification.
+- Toute donnée critique possède une source de vérité et une stratégie de reprise.
+- Toute information documentaire mutable possède une seule source canonique.
+- Les documents historiques sont archivés comme tels et ne servent pas à annoncer l’état courant.
 
-## Critères de santé du projet
+## Principes d’ingénierie
 
-- build reproductible ;
-- tests automatisés exécutés sur les PR ;
-- upstream base identifié sans placeholder ;
-- décisions architecturales enregistrées ;
-- roadmap liée aux issues ;
-- aucun rôle clé dépendant d’une seule personne sans documentation ;
-- démos jouables à chaque jalon.
+- KISS : réutiliser les mécanismes fiables du moteur et de STR avant d’inventer une couche.
+- DRY : une règle métier, un contrat protocole et un statut mutable ne doivent pas être maintenus en parallèle à plusieurs endroits.
+- API-friendly : dépendre de contrats observables/stables plutôt que d’internals tiers lorsque possible.
+- Fail closed : refuser une opération lorsque les métadonnées requises ne peuvent pas être préservées correctement.
+- Authority explicit : chaque état partagé muté possède une autorité déclarée.
+- Engine-safe : les mutations Skyrim déclenchées par le réseau sont exécutées sur un contexte moteur approprié.
+
+## Critères de santé
+
+- build reproductible;
+- tests automatisés pertinents;
+- upstream base identifiable;
+- décisions architecturales enregistrées;
+- roadmap liée à des résultats démontrables;
+- documentation sans sources de vérité concurrentes;
+- démos jouables à chaque jalon significatif.
+
+Pour l’avancement courant, voir [`docs/project/STATUS.md`](STATUS.md) et [`ROADMAP.md`](../../ROADMAP.md).

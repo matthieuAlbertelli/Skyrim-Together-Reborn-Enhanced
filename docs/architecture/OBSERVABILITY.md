@@ -1,73 +1,94 @@
 # Observabilité et journalisation
 
-> **Statut : Patterns partiellement implémentés ; cible structurée à poursuivre**
+> **Statut : politique transversale active; couverture à compléter par feature**
 
-## Logs actuels utiles
+Les marqueurs précis d’une feature peuvent vivre dans son `TEST_PLAN.md`. Ce document définit ce qu’un log STRE doit permettre de diagnostiquer globalement.
 
-Character Build journalise notamment :
+## Identifiants corrélables
 
-```text
-[STRE][CharacterBuild][Server] Build accepted ... revision=... inventoryHash=... spellHash=...
-[STRE][CharacterCreation] Spell grant applied form=...
-[STRE][CharacterBuild][Client] Canonical spells applied ... count=... spellHash=...
-[STRE][CharacterBuild][Client] Applied acknowledgement sent ...
-[STRE][CharacterBuild][Server] Build applied ... level=1
-```
+Une transition critique doit inclure, selon le sous-système :
 
-Trading possède ses propres IDs de session, révision, apply et reconcile. La preview journalise session native, région et fitting.
+- subsystem;
+- player/server ID;
+- session/build/WorldEntity ID;
+- request/apply/reconcile ID lorsque présent;
+- revision/version;
+- `GameId` / `PlacedReferenceId` lorsqu’ils sont nécessaires à l’identité;
+- résultat ou code de rejet;
+- fallback/timeout explicite;
+- durée lorsque pertinente.
 
-## Format commun cible
+## Sous-systèmes actuels
 
-Chaque transition critique doit inclure selon le subsystem :
+### World Sync
 
-- subsystem ;
-- session/campaign/build ID ;
-- player/server ID ;
-- class/capability ;
-- revision/version ;
-- request/apply/reconcile ID ;
-- inventory/spell hash lorsque pertinent ;
-- plugin/FormID local pour les résolutions ;
-- résultat ou code de rejet ;
-- durée.
-
-Exemple futur :
+Les logs doivent permettre de corréler :
 
 ```text
-[adapter=stre.alternate-start][campaign=42][capability=group.ready-check]
-command_accepted request=918 player=7 version=12->13 ready=true
+client authority
+↔ server
+↔ observer client
 ```
 
-## Événements minimum
+sur :
 
-Implémentés ou partiels :
+- création/adoption;
+- binding/materialization;
+- manipulation authority;
+- hide/release;
+- settlement;
+- reconciliation;
+- ownership/theft;
+- forced release;
+- timeout/disconnect.
 
-- trade state/apply/reconcile ;
-- Character Build request/accepted/applied/rejected ;
-- nettoyage et application d’inventaire/sorts ;
-- résolution de plugin/FormID ;
-- événements de magie distante ;
-- preview session/fitting.
+### Trading
 
-Futurs :
+Les IDs de session, revision, apply et reconcile doivent permettre de suivre une saga complète et son recovery.
 
-- adapter registration/compatibility ;
-- snapshot persistant créé/appliqué/rejeté ;
-- campaign transition ;
-- player binding ;
-- disconnect/reconnect ;
-- CK bridge callback générique ;
-- preview lease acquire/preempt/release.
+### Character Build
+
+Les logs doivent permettre de rapprocher :
+
+- logical selections;
+- BuildVersion;
+- inventory/spell hashes;
+- accepted/applied/rejected;
+- résolution de formulaire;
+- application locale.
+
+### Item Preview
+
+Les logs détaillés de rendering/raster doivent rester filtrables et ne pas masquer les transitions fonctionnelles.
 
 ## Niveaux
 
-- `info` : transitions normales ;
-- `warn` : retransmission, état stale, fallback, incompatibilité récupérable ;
-- `error` : invariant brisé, snapshot invalide, application impossible ;
-- `debug/trace` : détails raster, inventory et rendering lourds.
+- `info` — transition normale importante;
+- `warn` — fallback, timeout, stale state, incompatibilité récupérable;
+- `error` — invariant brisé, application impossible, snapshot incohérent;
+- `debug/trace` — détails haute fréquence/diagnostic ponctuel.
 
-Les logs D3D et signatures de créatures doivent pouvoir être filtrés pour ne pas masquer les lignes Character Build/MagicService.
+## Logs temporaires
 
-## Bundle de support
+Un diagnostic très verbeux ajouté pour isoler un crash doit être :
 
-Exporter : versions, BuildVersion, SHA de l’ESP, load order, dernier log client de chaque joueur, log serveur, choix de classe/kits, hashes, runtime Skyrim et étapes de reproduction. Les données narratives secrètes futures doivent être anonymisées/filtrées.
+- retiré après validation;
+- ou converti en log stable de niveau adapté;
+- ou conservé uniquement derrière un niveau debug/trace.
+
+Les marqueurs de hotfix ne doivent pas devenir une API documentaire permanente.
+
+## Support bundle
+
+Pour une reproduction multijoueur, conserver au minimum :
+
+- SHA STRE;
+- runtime Skyrim;
+- configuration serveur;
+- versions/plugins SKSE pertinents;
+- load order lorsque pertinent;
+- logs client de chaque joueur;
+- log serveur;
+- étapes et heure du test.
+
+Les données secrètes futures de campagne doivent être filtrées des bundles standard.

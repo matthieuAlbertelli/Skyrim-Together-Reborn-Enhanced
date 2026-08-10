@@ -1,74 +1,102 @@
 # Carte des dépendances
 
-> **Statut : Mise à jour après Character Build M7**
+> **Statut : relations structurelles courantes**
 
-## Chaîne implémentée Character Build
+Ce document décrit **les dépendances entre sous-systèmes**, pas leur avancement.
+
+## World Sync
 
 ```text
-Quête CK + RaceMenu
-  → Character Creation Angular
-  → sélections logiques
-  → CharacterBuildCatalog v5
-  → CharacterBuildService serveur ou fallback local
-  → inventaire + sorts canoniques
-  → application client + hashes
-  → état Applied
+Skyrim reference / inventory event
+  → client InventoryService / WorldEntity lifecycle
+  → WorldEntity protocol
+  → server InventoryService authority
+  → remote binding/materialization
+  → local Havok
+  → authoritative settlement
 ```
 
-Dépendances de cohérence :
+Manipulation :
+
+```text
+Better Grabbing (external SKSE plugin)
+  → Skyrim grab/release behavior/events
+  → STRE WorldEntity manipulation lifecycle
+  → server authority
+  → remote hide/release
+```
+
+Dependency gate:
+
+```text
+Authentication
+  → generic NativePlugins inventory
+  → ModPolicy:sRequiredNativePlugins
+  → BetterGrabbing.dll required by default
+```
+
+## Trading
+
+```text
+Trade domain
+  → protocol
+  → server TradeService
+  → client TradeService
+  → Angular UI
+  → Item Preview
+```
+
+Inventory metadata limits feed the trade eligibility policy; unsupported instance metadata must fail closed.
+
+## Item Preview
+
+```text
+NativeSession + Controller + Solver + RasterMeasurer + Host
+  → Trading
+  → Character Creation
+```
+
+Future lease arbitration sits between consumers and the native host.
+
+## Alternate Start / Character Build
+
+```text
+CK quest + RaceMenu
+  → Character Creation UI
+  → logical selections
+  → CharacterBuildCatalog
+  → server CharacterBuildService OR local fallback
+  → canonical inventory/spells
+  → local application + acknowledgement
+```
+
+CK record/catalog coupling:
 
 ```text
 STRE_AlternateStart.esp
   ↔ CK_RECORDS_M7_IMPLEMENTED.json
-  ↔ CharacterBuildCatalog.cpp
+  ↔ CharacterBuildCatalog
   ↔ character-loadouts.ts
   ↔ tests/audits
 ```
 
-## Chaîne Alternate Start complète
+## Campaign
 
 ```text
-Character Build M7 (acquis)
-  → persistance et character binding
-  → Campaign State minimal
-  → roster et ready check
-  → Valen / introduction
-  → départ et reprise vanilla
-  → late join / reconnexion
+Character binding/persistence
+  → Campaign State
+  → roster/ready
+  → shared introduction/departure
+  → late join/reconnect
 ```
 
-## Chaîne Preview
+## Mod Integration
 
 ```text
-NativeSession + Controller + Solver + RasterMeasurer + Host
-  → consommateurs Trading et Character Creation
-  → futur Lease Manager
-  → API interne stable
-  → SDK tiers expérimental
+first-party feature contracts
+  → generalized capability model
+  → adapter registry/version negotiation
+  → Papyrus/C++ SDK
 ```
 
-## Chaîne Trading
-
-```text
-Trade Session Domain
-  → Protocol Messages
-  → Server TradeService
-  → Client TradeService
-  → Angular UI
-  → Item Preview
-
-Inventory snapshots
-  → Mutation plan
-  → Client apply journals
-  → Server commit
-  → Absolute reconciliation when uncertain
-```
-
-## Gates
-
-- Persistance/character binding avant Campaign State complet.
-- Skip Helgen testé avant d’annoncer Alternate Start comme remplacement du nouveau jeu.
-- Script Valen verrouillé avant voix/lipsync.
-- Lease manager avant SDK preview tiers.
-- Au moins une intégration first-party supplémentaire avant de stabiliser le SDK d’adapters.
-- Les nouveaux records CK doivent passer les audits manifest et catalogue avant intégration.
+Do not invert this dependency by freezing a generic SDK before enough first-party contracts are proven.

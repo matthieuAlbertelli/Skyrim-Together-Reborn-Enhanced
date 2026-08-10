@@ -1,141 +1,82 @@
-# Protocole réseau : état actuel et évolution
+# Règles du protocole réseau STRE
 
-> **Statut : Implémenté pour Trading et Character Build / Proposé pour Mod Integration générique**
+> **Statut : contrat transversal actif**
 
-## Trading actuel
+Ce document définit les **règles communes** du protocole STRE. Les listes de messages, champs et transitions propres à une feature appartiennent à `docs/features/<feature>/PROTOCOL_REFERENCE.md`.
 
-### Requêtes client
-
-1. `TradeInviteRequest`
-2. `TradeInviteResponseRequest`
-3. `TradeOfferUpdateRequest`
-4. `TradeConfirmRequest`
-5. `TradeCancelRequest`
-6. `TradeApplyResultRequest`
-7. `TradeReconcileResultRequest`
-
-### Notifications serveur
-
-1. `NotifyTradeInvite`
-2. `NotifyTradeStarted`
-3. `NotifyTradeState`
-4. `NotifyTradeApply`
-5. `NotifyTradeReconcile`
-6. `NotifyTradeCancelled`
-
-Les listes sont bornées à 64 entrées pour offres, mutations et targets.
-
-### Modèle transactionnel
-
-Le trading est une **saga autoritaire** : validation serveur, application locale, collecte des résultats puis commit ou réconciliation absolue.
-
-## Character Build actuel
-
-### Messages
-
-Client vers serveur :
-
-1. `CharacterBuildRequest`
-2. `CharacterBuildAppliedRequest`
-
-Serveur vers client :
-
-1. `CharacterBuildResponse`
-2. `NotifyCharacterBuildState`
-
-### Requête logique
-
-Le client transmet :
-
-- `BuildVersion` ;
-- `RaceId` ;
-- `ClassId` ;
-- une liste bornée de couples `GroupId` / `OptionId`.
-
-Il ne transmet ni l’inventaire final ni une liste arbitraire de sorts.
-
-### Snapshot canonique
-
-`CharacterBuildSnapshotData` contient :
+## Modèle général
 
 ```text
-BuildVersion
-RaceId
-ClassId
-Selections
-CanonicalInventory
-InventoryHash
-CanonicalSpells
-SpellHash
+Client
+  → intention / résultat d'application
+Server
+  → validation / transition canonique
+Server
+  → notification ou snapshot
+Client
+  → projection locale Skyrim/UI
 ```
 
-Le catalogue courant utilise `BuildVersion = 5`.
+Le client ne devient pas source de vérité d’un état partagé simplement parce qu’il l’a observé ou affiché.
 
-### Validation et accusé
+## Catégories
 
-Le serveur :
+### Intentions client → serveur
 
-1. valide la version, la race, la classe et les sélections ;
-2. résout les plugins et FormIDs locaux ;
-3. construit, trie et déduplique les récompenses ;
-4. calcule les hashes d’inventaire et de sorts ;
-5. remplace l’inventaire serveur par le snapshot canonique ;
-6. envoie l’état `Accepted`.
+Une intention décrit ce que le joueur tente de faire.
 
-Le client nettoie puis applique le snapshot. Il envoie ensuite :
+Elle doit contenir uniquement les identifiants et données nécessaires à la validation, avec des collections bornées.
 
-```text
-Revision
-InventoryHash
-SpellHash
-```
+### Résultats/accusés client → serveur
 
-Le serveur refuse notamment :
+Quand le serveur demande une application locale qui peut échouer, le client peut renvoyer un résultat corrélé afin que le serveur committe, réconcilie ou abandonne explicitement.
 
-- `RejectedVersion` ;
-- `RejectedInvalidRace` ;
-- `RejectedInvalidBuild` ;
-- `RejectedMissingPlugin` ;
-- `RejectedRevision` ;
-- `RejectedInventoryHash` ;
-- `RejectedSpellHash`.
+### Notifications serveur → client
 
-Un accusé valide place le build à l’état `Applied` et le niveau serveur à 1.
+Une notification décrit une transition admise ou un état canonique. Les clients appliquent la projection locale de manière idempotente lorsque le domaine l’exige.
 
-### Limites
+### Snapshots
 
-- état en mémoire pendant la session ;
-- pas de persistance/reconnexion durable ;
-- protocole spécifique Character Build, pas encore une enveloppe générique d’adapter ;
-- compatibilité réseau requiert la même `BuildVersion` et le même catalogue/plugin sur les clients.
+Un système reconnectable doit avoir un chemin de snapshot canonique couvrant l’état nécessaire à la reconstruction locale.
 
-## Évolution pour Mod Integration
+## Identité
 
-Éviter un type statique par champ de chaque mod. Une future enveloppe versionnée peut prendre la forme :
+- les `FormID` chargés Skyrim ne sont pas des identifiants réseau génériques;
+- les formulaires persistants utilisent des identités server-space (`GameId`) lorsqu’approprié;
+- les instances monde dynamiques utilisent des identités dédiées comme `WorldEntityId`;
+- les identifiants de requête/révision doivent être explicites lorsque concurrence ou retransmission l’exigent.
 
-```cpp
-struct ModCommandEnvelope
-{
-    AdapterId Adapter;
-    CapabilityId Capability;
-    SchemaVersion Schema;
-    RequestId Request;
-    StateVersion ExpectedVersion;
-    BoundedByteBuffer Payload;
-};
-```
+## Bornes et validation
 
-Notifications proposées :
+- toute collection décodée possède une borne;
+- tout enum reçu est validé;
+- toute identité est résolue avant mutation;
+- les payloads malformés sont rejetés;
+- une feature ne doit pas accepter silencieusement une donnée qu’elle ne sait pas préserver.
 
-- `NotifyAdapterManifest`
-- `NotifyAdapterSnapshot`
-- `NotifyAdapterEvent`
-- `NotifyAdapterCommandRejected`
+## Threading
 
-## Compatibilité future
+La réception réseau n’autorise pas directement n’importe quel appel moteur Skyrim.
 
-- négociation des versions d’adapter à la connexion ;
-- refus explicite si une capability obligatoire manque ;
-- migration de snapshot côté serveur ;
-- jamais de désérialisation non bornée ;
-- opcodes génériques stables et schémas de payload versionnés.
+Les handlers qui doivent muter le jeu doivent marshaller le travail vers un contexte approprié, par exemple le chemin `RunnerService`/`OnUpdate` utilisé par STRE.
+
+## Compatibilité
+
+Tout changement de schéma doit préciser :
+
+- compatibilité client/serveur;
+- stratégie de rejet ou de migration;
+- tests de round-trip;
+- comportement face aux payloads anciens/malformés.
+
+Les changements purement append-only ne sont pas automatiquement sûrs : ils doivent rester cohérents avec les encode/decode des deux côtés.
+
+## Références par feature
+
+- [Trading protocol](../features/trading/PROTOCOL_REFERENCE.md)
+- [World Sync protocol](../features/world-sync/PROTOCOL_REFERENCE.md)
+- Alternate Start / Character Build : documenter les détails dans son répertoire feature; ne pas recopier la liste ici.
+
+## Future Mod Integration
+
+Une future enveloppe générique d’adapter doit rester versionnée, bornée et négociable. Elle ne remplace pas les protocoles first-party avant d’avoir été validée par plusieurs intégrations réelles.
