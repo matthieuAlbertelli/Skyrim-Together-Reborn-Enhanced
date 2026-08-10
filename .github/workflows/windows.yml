@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
       - prerel
   workflow_call:
     inputs:
@@ -29,7 +29,7 @@ jobs:
         arch: [x64]
 
     runs-on: ${{ matrix.os }}
-    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    if: ${{ github.ref_type == 'tag' || !contains(github.event.head_commit.message, 'ci skip') }}
 
     outputs:
       version: ${{ steps.output-version.outputs.version }}
@@ -37,18 +37,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # We need full history in order to create a version string (BuildInfo.h)
+          # Full history is required for git describe / BuildInfo versioning.
           fetch-depth: 0
 
       - name: Checkout submodules
+        shell: pwsh
         run: |
           git submodule sync --recursive
           git submodule update --init --force --recursive --depth=1
-
-      - name: Checkout master on tag push
-        if: github.ref_type == 'tag'
-        # Checkout only if the tag was pushed to master
-        run: (git rev-parse HEAD) -eq (git rev-parse origin/master) -and (git checkout master)
 
       - name: Cache xmake dependencies
         uses: actions/cache@v4
@@ -56,30 +52,33 @@ jobs:
           path: ~/AppData/Local/.xmake/packages
           key: ${{ runner.os }}-xmake-${{ hashFiles('**/xmake.lua') }}
 
-      # Install xmake
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: 3.0.9
-          actions-cache-folder: '.xmake-cache' # This doesn't cache dependencies, only xmake itself
+          actions-cache-folder: '.xmake-cache'
           actions-cache-key: ${{ matrix.os }}
 
       - name: Configure xmake and install dependencies
+        shell: pwsh
         run: xmake config --arch=${{ matrix.arch }} --mode=${{ inputs.build-mode }} --yes -vD
 
-      # Build the client
       - name: Build with xmake
+        shell: pwsh
         run: |
           xmake -y
-          echo "STR_BUILD_DIR=build/windows/${{ matrix.arch }}/${{ inputs.build-mode }}/" >> $env:GITHUB_ENV
+          "STR_BUILD_DIR=build/windows/${{ matrix.arch }}/${{ inputs.build-mode }}/" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      # Create distrib
       - name: Output distrib binaries via xmake
+        shell: pwsh
         run: |
           xmake install -o distrib
-          cp -Force -Recurse distrib/bin/* ${{ env.STR_BUILD_DIR }}
-
-      # Building the Together UI
+          Copy-Item `
+            -Path "distrib/bin/*" `
+            -Destination $env:STR_BUILD_DIR `
+            -Recurse `
+            -Force
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -94,20 +93,32 @@ jobs:
           cache: 'pnpm'
 
       - name: Build the UI
+        shell: pwsh
         run: |
           pnpm --prefix Code/skyrim_ui/ install
           pnpm --prefix Code/skyrim_ui/ deploy:production
-          cp -r Code/skyrim_ui/dist/UI ${{ env.STR_BUILD_DIR }}
+
+          Copy-Item `
+            -Path "Code/skyrim_ui/dist/UI" `
+            -Destination $env:STR_BUILD_DIR `
+            -Recurse `
+            -Force
 
       - id: output-version
-        run: echo "version=$(git describe --tags)" >> $env:GITHUB_OUTPUT
+        name: Resolve build version
+        shell: pwsh
+        run: |
+          $version = git describe --tags
+          "version=$version" |
+            Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Upload build files for the next job
+      - name: Upload build files for packaging
         if: ${{ inputs.upload-build-for-next-job }}
         uses: actions/upload-artifact@v4
         with:
           name: internal-job-files
           retention-days: 1
+          if-no-files-found: error
           path: |
             ${{ env.STR_BUILD_DIR }}
             GameFiles/Skyrim/

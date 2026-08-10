@@ -7,13 +7,13 @@ on:
     - cron: '0 13 * * 5'
   push:
     branches:
-      - master
+      - main
     tags:
-      - 'v[0-9]+\.[0-9]+\.[0-9]+'
+      - 'v*'
 
 jobs:
   build-windows:
-    if: ${{ github.repository_owner == 'tiltedphoques' || github.event_name != 'schedule' }} # Disable cron runs in forks
+    if: ${{ github.repository_owner == 'tiltedphoques' || github.event_name != 'schedule' }}
     uses: ./.github/workflows/windows.yml
     with:
       build-mode: 'release'
@@ -22,33 +22,68 @@ jobs:
   package-and-upload:
     runs-on: windows-2022
     needs: build-windows
+
     steps:
-      - name: Download artifact from the previous job
+      - name: Download build artifact
         uses: actions/download-artifact@v5
         with:
           name: internal-job-files
 
-      - name: Package build and organize directories
+      - name: Package playable build
+        shell: pwsh
         run: |
-          mkdir -p str-build/SkyrimTogetherReborn
-          mv build/windows/x64/release/* str-build/SkyrimTogetherReborn
-          cp -r GameFiles/Skyrim/* str-build/
+          New-Item -ItemType Directory -Force -Path "str-build/SkyrimTogetherReborn" | Out-Null
 
-      - name: Remove unnecessary build files, keep .pdb
+          Move-Item `
+            -Path "build/windows/x64/release/*" `
+            -Destination "str-build/SkyrimTogetherReborn" `
+            -Force
+
+          Copy-Item `
+            -Path "GameFiles/Skyrim/*" `
+            -Destination "str-build" `
+            -Recurse `
+            -Force
+
+      - name: Separate debug symbols and remove build-only files
+        shell: pwsh
         run: |
-          mkdir str-pdb
-          mv str-build/SkyrimTogetherReborn/SkyrimTogether.pdb, str-build/SkyrimTogetherReborn/SkyrimTogetherServer.pdb str-pdb
-          rm str-build/SkyrimTogetherReborn/*.pdb, str-build/SkyrimTogetherReborn/*.lib, str-build/SkyrimTogetherReborn/*.exp
-          rm str-build/SkyrimTogetherReborn/*Tests.exe
+          New-Item -ItemType Directory -Force -Path "str-pdb" | Out-Null
+
+          $symbolNames = @(
+            "SkyrimTogether.pdb",
+            "SkyrimTogetherServer.pdb"
+          )
+
+          foreach ($symbolName in $symbolNames) {
+            $source = Join-Path "str-build/SkyrimTogetherReborn" $symbolName
+            if (Test-Path $source) {
+              Move-Item -Path $source -Destination "str-pdb" -Force
+            }
+          }
+
+          Get-ChildItem "str-build/SkyrimTogetherReborn" -Filter "*.pdb" -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force
+
+          Get-ChildItem "str-build/SkyrimTogetherReborn" -Filter "*.lib" -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force
+
+          Get-ChildItem "str-build/SkyrimTogetherReborn" -Filter "*.exp" -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force
+
+          Get-ChildItem "str-build/SkyrimTogetherReborn" -Filter "*Tests.exe" -File -ErrorAction SilentlyContinue |
+            Remove-Item -Force
 
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
           name: Skyrim Together Build (${{ needs.build-windows.outputs.str-version }})
           path: str-build/
+          if-no-files-found: error
 
       - name: Upload debug symbols
         uses: actions/upload-artifact@v4
         with:
           name: Debug Symbols (${{ needs.build-windows.outputs.str-version }})
           path: str-pdb/
+          if-no-files-found: warn
