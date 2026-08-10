@@ -1,22 +1,23 @@
 # Matrice de compatibilité
 
 > **Statut : source de vérité de compatibilité connue**
-> **Dernière mise à jour : 10 août 2026**
+> **Dernière mise à jour : 11 août 2026**
 
 ## Plateforme de référence
 
 | Composant | Version/support observé | État |
 |---|---|---|
-| Skyrim SE/AE runtime | `1.6.1170` | runtime principal de développement |
-| Skyrim Together Reborn upstream | baseline historique dans `UPSTREAM.md` | partiel, full SHA requis pour release |
-| STRE | `0.1.0-alpha.1` + `Unreleased` | build/dev validé localement |
+| Skyrim SE/AE runtime | `1.6.1170` Steam | runtime principal de développement et cible de l'alpha publique |
+| Skyrim Together Reborn upstream | baseline historique dans `UPSTREAM.md` | fork intégré dans STRE |
+| STRE | `0.2.0-alpha.1` | première alpha publique, build CI Windows validé |
 | Angular | 16.x | utilisé |
-| xmake | 3.0.0 ou compatible | build Windows observé |
-| Creation Kit | environnement compatible 1.6.1170 | utilisé |
-| Better Grabbing | plugin externe requis par défaut pour manipulation World Sync multijoueur | validé sur le périmètre testé |
-| Address Library | dépendance de l’environnement SKSE / Better Grabbing et certains appels STRE | requise selon installation/runtime |
+| xmake | `3.0.9` en CI (`>= 3.0.0` projet) | build Windows validé |
+| Creation Kit | environnement compatible `1.6.1170` | utilisé |
+| SKSE64 | `2.2.6` pour Skyrim `1.6.1170` | cible d'installation alpha |
+| Better Grabbing | `1.17` | plugin externe requis par défaut pour manipulation World Sync multijoueur |
+| Address Library | `11` | dépendance externe requise; base runtime pour STRE/Better Grabbing |
 
-Les versions exactes des dépendances externes doivent être enregistrées lors d’une release reproductible.
+Les versions ci-dessus sont les **cibles de release `v0.2.0-alpha.1`**. Une future release doit réviser cette table lorsqu'une dépendance ou un runtime supporté change.
 
 ## Fonctionnalités
 

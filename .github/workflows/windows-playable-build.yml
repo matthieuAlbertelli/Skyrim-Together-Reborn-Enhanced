@@ -39,6 +39,15 @@ jobs:
             -Recurse `
             -Force
 
+          Copy-Item `
+            -Path "docs/user/INSTALLATION.md" `
+            -Destination "str-build/INSTALLATION.md" `
+            -Force
+
+          Copy-Item -Path "LICENSE" -Destination "str-build/LICENSE" -Force
+          Copy-Item -Path "NOTICE.md" -Destination "str-build/NOTICE.md" -Force
+          Copy-Item -Path "VERSION" -Destination "str-build/VERSION" -Force
+
       - name: Separate debug symbols and remove build-only files
         shell: pwsh
         run: |

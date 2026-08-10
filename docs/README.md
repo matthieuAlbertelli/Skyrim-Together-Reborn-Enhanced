@@ -16,6 +16,7 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 | Information | Canonical location |
 |---|---|
 | Public introduction | [`README.md`](../README.md) |
+| Player installation | [`user/INSTALLATION.md`](user/INSTALLATION.md) |
 | Current implementation/validation status | [`project/STATUS.md`](project/STATUS.md) |
 | Product vision | [`project/VISION.md`](project/VISION.md) |
 | Scope/governance | [`project/PROJECT_CHARTER.md`](project/PROJECT_CHARTER.md) |
@@ -32,6 +33,14 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 | Upstream integration policy | [`architecture/UPSTREAM_STRATEGY.md`](architecture/UPSTREAM_STRATEGY.md) |
 
 Other documents should **link to these sources instead of restating mutable status or planning data**.
+
+## Players
+
+- [Install and launch STRE](user/INSTALLATION.md)
+- [Compatibility matrix](testing/COMPATIBILITY_MATRIX.md)
+- [Current project status](project/STATUS.md)
+
+Player-facing installation details belong in `docs/user/INSTALLATION.md`. Feature documents should not duplicate the installation procedure.
 
 ## Architecture
 

@@ -4,6 +4,10 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 ## [Unreleased]
 
+_No unreleased STRE-specific changes documented yet._
+
+## [0.2.0-alpha.1] - 2026-08-10
+
 ### Added
 
 - Stable in-memory `WorldEntityId` lifecycle for synchronized dropped objects.
@@ -25,6 +29,7 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 - Targeted cooperative buffs for mineral armor, water breathing and carry weight.
 - Strict ESP-record and catalog-to-ESP audit scripts.
 - Character-build catalog, hash and protocol tests.
+- CI-built Windows playable release artifact.
 
 ### Changed
 
@@ -59,6 +64,7 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 - Dialogue-triggered forced release after a theft arrest/conversation.
 - Swimming behavior after the STRE regression fix.
 - Windows xmake build and local deployment.
+- GitHub Actions Windows release build.
 - Mage character-build smoke flow.
 - Cooperative targeted buffs between two PCs.
 

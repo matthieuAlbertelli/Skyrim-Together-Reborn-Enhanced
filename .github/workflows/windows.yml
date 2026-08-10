@@ -134,3 +134,7 @@ jobs:
           path: |
             ${{ env.STR_BUILD_DIR }}
             GameFiles/Skyrim/
+            docs/user/INSTALLATION.md
+            LICENSE
+            NOTICE.md
+            VERSION

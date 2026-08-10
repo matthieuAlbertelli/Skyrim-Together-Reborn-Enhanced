@@ -6,7 +6,7 @@
 
 <p align="center">
 
-![Version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)
+![Version](https://img.shields.io/badge/version-0.2.0--alpha.1-orange)
 ![Status](https://img.shields.io/badge/status-Alpha-red)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 
@@ -15,6 +15,17 @@
 > An immersive, systems-driven cooperative fork of Skyrim Together Reborn.
 
 **Skyrim Together Reborn Enhanced (STRE)** extends Skyrim Together Reborn with cooperative mechanics, explicit server authority and systems designed for coherent small-group campaigns without turning Skyrim into an MMO.
+
+## Install and play
+
+The current public build is **STRE `v0.2.0-alpha.1`**.
+
+- [Download STRE releases](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases)
+- [Player installation guide](docs/user/INSTALLATION.md)
+
+Download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
+
+The current alpha installation target is Steam Skyrim Special Edition runtime `1.6.1170` on Windows x64. Address Library, matching SKSE64 and Better Grabbing are external dependencies; Better Grabbing is not redistributed by STRE.
 
 ## Current capabilities
 
@@ -50,6 +61,7 @@ Read [System overview](docs/architecture/SYSTEM_OVERVIEW.md), [Network protocol 
 
 ## Documentation
 
+- [Player installation](docs/user/INSTALLATION.md)
 - [Documentation portal](docs/README.md)
 - [Current project status](docs/project/STATUS.md)
 - [Vision](docs/project/VISION.md)
