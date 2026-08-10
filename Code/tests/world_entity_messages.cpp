@@ -126,6 +126,7 @@ TEST_CASE("Placed reference pickup request carries lazy adoption identity", "[st
     request.ServerId = 77;
     request.Item.BaseId = GameId{2, 0x1234};
     request.Item.Count = 1;
+    request.Item.ExtraOwnerId = GameId{6, 0x00C0FFEE};
     request.UpdateClients = false;
     request.DroppedFormId = 0x01001234;
     request.PlacedReferenceId = GameId{9, 0x00FEDCBA};
@@ -141,6 +142,26 @@ TEST_CASE("Placed reference pickup request carries lazy adoption identity", "[st
     REQUIRE(message);
     auto decoded = CastUnique<RequestInventoryChanges>(std::move(message));
     REQUIRE(*decoded == request);
+}
+
+TEST_CASE("Inventory ownership provenance round-trips", "[stre.ownership]")
+{
+    Inventory::Entry sent;
+    sent.BaseId = GameId{2, 0x123456};
+    sent.Count = 1;
+    sent.ExtraOwnerId = GameId{7, 0x00ABCDEF};
+
+    Buffer buffer(256);
+    Buffer::Writer writer(&buffer);
+    sent.Serialize(writer);
+
+    Inventory::Entry received;
+    Buffer::Reader reader(&buffer);
+    received.Deserialize(reader);
+
+    REQUIRE(received == sent);
+    REQUIRE(received.ContainsExtraData());
+    REQUIRE(received.ExtraOwnerId == sent.ExtraOwnerId);
 }
 
 TEST_CASE("Placed reference lifecycle notification round-trips", "[stre.world-entity]")

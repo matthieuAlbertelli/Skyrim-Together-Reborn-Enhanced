@@ -32,6 +32,7 @@ TP_THIS_FUNCTION(TAddSkillExperience, void, PlayerCharacter, int32_t aSkill, flo
 TP_THIS_FUNCTION(TCalculateExperience, bool, int32_t, float* aFactor, float* aBonus, float* aUnk1, float* aUnk2);
 TP_THIS_FUNCTION(TSetWaypoint, void, PlayerCharacter, NiPoint3* apPosition, TESWorldSpace* apWorldSpace);
 TP_THIS_FUNCTION(TRemoveWaypoint, void, PlayerCharacter);
+TP_THIS_FUNCTION(TDestroyMouseSprings, void, PlayerCharacter);
 
 static TPickUpObject* RealPickUpObject = nullptr;
 static TSetBeastForm* RealSetBeastForm = nullptr;
@@ -139,6 +140,30 @@ void PlayerCharacter::PayCrimeGoldToAllFactions() noexcept
         PayFine(pCrimeFaction, false, false);
     }
 }
+
+bool PlayerCharacter::TryEndGrabObject() noexcept
+{
+    int major = 0;
+    int minor = 0;
+    int revision = 0;
+    int build = 0;
+    VersionDb::Get().GetLoadedVersion(major, minor, revision, build);
+
+    // Address Library IDs used by CommonLibSSE-NG for
+    // PlayerCharacter::DestroyMouseSprings(). Skyrim 1.6+ uses the AE ID.
+    const uint32_t addressId = (major > 1 || (major == 1 && minor >= 6)) ? 40557u : 39480u;
+    VersionDbPtr<TDestroyMouseSprings> destroyMouseSprings{addressId};
+    if (!destroyMouseSprings.Get())
+    {
+        spdlog::error("[STRE][WorldSync] forced_grab_release_failed reason=missing-destroy-mouse-springs id={} version={}.{}.{}.{}",
+                      addressId, major, minor, revision, build);
+        return false;
+    }
+
+    TiltedPhoques::ThisCall(destroyMouseSprings, this);
+    return true;
+}
+
 
 void PlayerCharacter::SetWaypoint(NiPoint3* apPosition, TESWorldSpace* apWorldSpace) noexcept
 {

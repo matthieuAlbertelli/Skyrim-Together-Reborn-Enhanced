@@ -1057,6 +1057,11 @@ void TP_MAKE_THISCALL(HookAddInventoryItem, Actor, TESBoundObject* apItem, Extra
         if (apExtraData)
             apThis->GetItemFromExtraData(item, apExtraData);
 
+        // Container/world transfers can inherit ownership from the source reference
+        // without carrying an explicit ExtraOwnership node on the item instance.
+        if (!item.ExtraOwnerId && apOldOwner)
+            apOldOwner->GetOwnershipData(item);
+
         World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item)));
     }
 
@@ -1076,6 +1081,10 @@ void* TP_MAKE_THISCALL(HookPickUpObject, Actor, TESObjectREFR* apObject, int32_t
         if (apObject->GetExtraDataList())
             apThis->GetItemFromExtraData(item, apObject->GetExtraDataList());
 
+        // Resolve ownership from the world reference itself as Skyrim may inherit
+        // it from the cell/location without an explicit ExtraOwnership node.
+        apObject->GetOwnershipData(item);
+
         // This is here so that objects that are picked up on both clients, aka non temps, are synced through activation sync.
         // The inventory change event should always be sent to the server, otherwise the server inventory won't be updated.
         bool shouldUpdateClients = apObject->IsTemporary() && !ScopedActivateOverride::IsOverriden();
@@ -1089,6 +1098,13 @@ void* TP_MAKE_THISCALL(HookPickUpObject, Actor, TESObjectREFR* apObject, int32_t
 void Actor::PickUpObject(TESObjectREFR* apObject, int32_t aCount, bool aUnk1, float aUnk2) noexcept
 {
     TiltedPhoques::ThisCall(RealPickUpObject, this, apObject, aCount, aUnk1, aUnk2);
+}
+
+void Actor::StealAlarm(TESObjectREFR* apReference, TESForm* apObject, int32_t aCount, int32_t aTotal, TESForm* apOwner, bool aAllowWarning) noexcept
+{
+    TP_THIS_FUNCTION(TStealAlarm, void, Actor, TESObjectREFR*, TESForm*, int32_t, int32_t, TESForm*, bool);
+    POINTER_SKYRIMSE(TStealAlarm, s_stealAlarm, 37422);
+    TiltedPhoques::ThisCall(s_stealAlarm, this, apReference, apObject, aCount, aTotal, apOwner, aAllowWarning);
 }
 
 void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* apObject, ExtraDataList* apExtraData, int32_t aCount, NiPoint3* apLocation, NiPoint3* apRotation)
@@ -1112,25 +1128,14 @@ void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* ap
     void* pResult = TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
 
     uint32_t droppedFormId = 0;
-    InventoryChangeEvent inventoryEvent(apThis->formID, std::move(item), true, true);
     const auto* pHandle = static_cast<const BSPointerHandle<TESObjectREFR>*>(apResult);
     if (pHandle && *pHandle)
     {
         if (auto* pDroppedObject = TESObjectREFR::GetByHandle(pHandle->handle.iBits))
-        {
             droppedFormId = pDroppedObject->formID;
-            inventoryEvent.DroppedFormId = droppedFormId;
-            inventoryEvent.HasDropTransform = true;
-            inventoryEvent.DropPositionX = pDroppedObject->position.x;
-            inventoryEvent.DropPositionY = pDroppedObject->position.y;
-            inventoryEvent.DropPositionZ = pDroppedObject->position.z;
-            inventoryEvent.DropRotationX = pDroppedObject->rotation.x;
-            inventoryEvent.DropRotationY = pDroppedObject->rotation.y;
-            inventoryEvent.DropRotationZ = pDroppedObject->rotation.z;
-        }
     }
 
-    World::Get().GetRunner().Trigger(std::move(inventoryEvent));
+    World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), true, true, droppedFormId));
 
     return pResult;
 }

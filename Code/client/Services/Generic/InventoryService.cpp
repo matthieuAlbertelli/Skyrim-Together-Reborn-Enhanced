@@ -43,6 +43,37 @@ constexpr float cWorldEntityMaximumSettledDriftSquared =
     cWorldEntityMaximumSettledDrift * cWorldEntityMaximumSettledDrift;
 constexpr auto cManipulationHeartbeat = std::chrono::milliseconds(500);
 constexpr wchar_t cBetterGrabbingModule[] = L"BetterGrabbing.dll";
+
+void QueueGrabTheftAlarm(World& aWorld, uint32_t aLocalFormId) noexcept
+{
+    aWorld.GetRunner().Queue([aLocalFormId]()
+    {
+        auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(aLocalFormId));
+        auto* pPlayer = PlayerCharacter::Get();
+        if (!pReference || !pPlayer || !pReference->baseForm)
+            return;
+
+        TESForm* pOwner = pReference->GetOwner();
+        if (!pOwner)
+            return;
+
+        // Follow Skyrim's own permission/faction logic. If the player is not
+        // considered an owner, grabbing the reference is the theft attempt.
+        const bool playerOwns = pReference->IsAnOwner(pPlayer, true, false);
+        if (playerOwns)
+        {
+            spdlog::info("[STRE][Ownership] grab_theft_skipped reference={:08X} owner={:08X} playerOwns=true",
+                         aLocalFormId, pOwner->formID);
+            return;
+        }
+
+        // Treat grabbing as the theft attempt itself. Do not transfer or clear
+        // ownership: the reference must remain stolen property after release.
+        pPlayer->StealAlarm(pReference, pReference->baseForm, 1, 1, pOwner, true);
+        spdlog::info("[STRE][Ownership] grab_theft_alarm reference={:08X} owner={:08X}",
+                     aLocalFormId, pOwner->formID);
+    });
+}
 }
 
 InventoryService::InventoryService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
@@ -79,8 +110,53 @@ void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
     RunPendingWorldEntitySnapshots();
     RunPendingRemoteWorldEntities();
     RunPendingRemoteWorldEntityManipulations();
+    RunBlockingMenuGrabRelease();
     RunLocalWorldEntityManipulation();
     RunPendingDropStabilization();
+}
+
+
+void InventoryService::RunBlockingMenuGrabRelease() noexcept
+{
+    if (!m_localManipulation)
+        return;
+
+    auto* pUI = UI::Get();
+    if (!pUI)
+        return;
+
+    static BSFixedString s_dialogueMenuName{"Dialogue Menu"};
+    if (!pUI->GetMenuOpen(s_dialogueMenuName))
+        return;
+
+    const auto now = std::chrono::steady_clock::now();
+    if (m_localManipulation->ForcedReleaseRequested &&
+        now - m_localManipulation->ForcedReleaseRequestedAt < std::chrono::milliseconds(500))
+    {
+        return;
+    }
+
+    auto* pPlayer = PlayerCharacter::Get();
+    if (!pPlayer)
+        return;
+
+    const uint64_t worldEntityId = m_localManipulation->WorldEntityId;
+    const uint32_t localFormId = m_localManipulation->LocalFormId;
+    m_localManipulation->ForcedReleaseRequested = true;
+    m_localManipulation->ForcedReleaseRequestedAt = now;
+
+    if (!pPlayer->TryEndGrabObject())
+    {
+        m_localManipulation->ForcedReleaseRequested = false;
+        return;
+    }
+
+    // DestroyMouseSprings follows Skyrim's native release path. The resulting
+    // TESGrabReleaseEvent performs both the normal WorldEntity release and
+    // Better Grabbing's own state/collision cleanup. Retry after 500 ms only
+    // if that event never arrives.
+    spdlog::info("[STRE][WorldSync] forced_grab_release entity={} localForm={:08X} reason=dialogue-menu",
+                 worldEntityId, localFormId);
 }
 
 
@@ -1388,6 +1464,13 @@ BSTEventResult InventoryService::OnEvent(
             m_remoteManipulations.erase(worldEntityId);
             m_pendingRemoteManipulations.erase(worldEntityId);
         }
+
+        // A stable placed reference with ownership is still someone else's
+        // property even if Better Grabbing merely moves it. Trigger Skyrim's
+        // native theft alarm at grab start so dragging it out of sight cannot
+        // bypass the crime system. Dynamic player-dropped entities are excluded.
+        if (placedReferenceId)
+            QueueGrabTheftAlarm(m_world, localFormId);
 
         LocalManipulation manipulation;
         manipulation.WorldEntityId = worldEntityId;

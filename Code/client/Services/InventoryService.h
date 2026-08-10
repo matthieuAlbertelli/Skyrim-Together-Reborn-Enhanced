@@ -83,6 +83,7 @@ private:
     void RunPendingDropStabilization() noexcept;
     void StoreAuthoritativeTransform(uint64_t aWorldEntityId, const NotifyInventoryChanges& acMessage) noexcept;
     void RunLocalWorldEntityManipulation() noexcept;
+    void RunBlockingMenuGrabRelease() noexcept;
     void ProcessNotifyWorldEntityManipulation(const NotifyWorldEntityManipulation& acMessage) noexcept;
     void BeginRemoteWorldEntityManipulation(const NotifyWorldEntityManipulation& acMessage) noexcept;
     void EndRemoteWorldEntityManipulation(const NotifyWorldEntityManipulation& acMessage) noexcept;
@@ -124,10 +125,12 @@ private:
         uint32_t LocalFormId{};
         bool Granted = false;
         bool ReleasePending = false;
+        bool ForcedReleaseRequested = false;
         GameId PlacedReferenceId{};
         WorldEntityTransform PendingReleaseTransform{};
         WorldEntityTransform LastSentTransform{};
         std::chrono::steady_clock::time_point LastSentAt{};
+        std::chrono::steady_clock::time_point ForcedReleaseRequestedAt{};
     };
 
     struct RemoteManipulation

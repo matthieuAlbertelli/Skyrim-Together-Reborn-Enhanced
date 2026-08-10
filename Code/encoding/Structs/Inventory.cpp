@@ -43,6 +43,8 @@ void Inventory::Entry::Serialize(TiltedPhoques::Buffer::Writer& aWriter) const n
 
     Serialization::WriteVarInt(aWriter, ExtraSoulLevel);
 
+    ExtraOwnerId.Serialize(aWriter);
+
     Serialization::WriteBool(aWriter, EnchantData.IsWeapon);
     Serialization::WriteBool(aWriter, ExtraEnchantRemoveUnequip);
     Serialization::WriteBool(aWriter, ExtraWorn);
@@ -73,6 +75,8 @@ void Inventory::Entry::Deserialize(TiltedPhoques::Buffer::Reader& aReader) noexc
     ExtraPoisonCount = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
 
     ExtraSoulLevel = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
+
+    ExtraOwnerId.Deserialize(aReader);
 
     EnchantData.IsWeapon = Serialization::ReadBool(aReader);
     ExtraEnchantRemoveUnequip = Serialization::ReadBool(aReader);
