@@ -2,18 +2,12 @@ name: Playable Skyrim Together Build
 
 on:
   workflow_dispatch:
-  schedule:
-    # Every Friday at 1:00 p.m. UTC
-    - cron: '0 13 * * 5'
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
 jobs:
   build-windows:
-    if: ${{ github.repository_owner == 'tiltedphoques' || github.event_name != 'schedule' }}
     uses: ./.github/workflows/windows.yml
     with:
       build-mode: 'release'
