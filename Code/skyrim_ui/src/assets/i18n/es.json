@@ -159,6 +159,7 @@
         "MODS_MISMATCH_REMOVE": "Por favor, elimina los siguientes mods para poder unirte:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Por favor, instala los siguientes mods para unirte:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Este servidor no permite {{mods}}. Por favor, elimínalos para poder unirte.",
+        "NATIVE_PLUGINS_MISSING": "Este servidor requiere los siguientes plugins de SKSE: {{plugins}}. Instálalos y actívalos antes de unirte.",
         "WRONG_PASSWORD": "La contraseña que has introducido es incorrecta.",
         "NO_REASON": "El servidor ha rechazado la conexión sin razón.",
         "SERVER_FULL": "El servidor está lleno.",

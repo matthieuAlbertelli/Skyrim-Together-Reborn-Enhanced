@@ -141,6 +141,7 @@
         "MODS_MISMATCH_REMOVE": "Verwijder de volgende mods om deel te nemen:\n{{mods}}.",
         "MODS_MISMATCH_INSTALL": "Installeer de volgende mods om deel te nemen:\n{{mods}}.",
         "CLIENT_MODS_DISALLOWED": "Deze server staat de volgende mods niet toe {{mods}}. Verwijder ze om deel te nemen.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Het ingevoerde wachtwoord is incorrect.",
         "NO_REASON": "De server heeft de verbinding zonder reden geweigerd."
       }

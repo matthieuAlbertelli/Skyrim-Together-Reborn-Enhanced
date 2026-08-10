@@ -22,6 +22,12 @@
 #include <console/ConsoleRegistry.h>
 #include <resources/ResourceCollection.h>
 
+#include <algorithm>
+#include <cctype>
+#include <string>
+#include <string_view>
+#include <vector>
+
 constexpr size_t kMaxServerNameLength = 128u;
 
 // -- Cvars --
@@ -47,6 +53,7 @@ Console::Setting bAutoPartyJoin{"Gameplay:bAutoPartyJoin", "Join parties automat
 Console::Setting bEnableModCheck{"ModPolicy:bEnableModCheck", "Bypass the checking of mods on the server", false, Console::SettingsFlags::kLocked};
 Console::Setting bAllowSKSE{"ModPolicy:bAllowSKSE", "Allow clients with SKSE active to join", true, Console::SettingsFlags::kLocked};
 Console::Setting bAllowMO2{"ModPolicy:bAllowMO2", "Allow clients running Mod Organizer 2 to join", true, Console::SettingsFlags::kLocked};
+Console::StringSetting sRequiredNativePlugins{"ModPolicy:sRequiredNativePlugins", "Comma-separated loaded SKSE plugin DLLs required by clients", "BetterGrabbing.dll", Console::SettingsFlags::kLocked};
 
 // -- Commands --
 Console::Command<> TogglePremium(
@@ -107,7 +114,7 @@ Console::Command<> ShowMoPoStatus(
             return aToggle ? "yes" : "no";
         };
 
-        spdlog::get("ConOut")->info("Modcheck enabled: {}\nSKSE allowed: {}\nMO2 allowed: {}", formatStatus(bEnableModCheck), formatStatus(bAllowSKSE), formatStatus(bAllowMO2));
+        spdlog::get("ConOut")->info("Modcheck enabled: {}\nSKSE allowed: {}\nMO2 allowed: {}\nRequired native plugins: {}", formatStatus(bEnableModCheck), formatStatus(bAllowSKSE), formatStatus(bAllowMO2), sRequiredNativePlugins.value());
     });
 
 // -- Constants --
@@ -131,6 +138,53 @@ static uint16_t GetUserTickRate()
 static bool IsMoPoActive()
 {
     return bEnableModCheck;
+}
+
+static std::vector<std::string> GetRequiredNativePlugins()
+{
+    std::vector<std::string> result;
+    std::string value = sRequiredNativePlugins.value();
+    size_t start = 0;
+
+    while (start <= value.size())
+    {
+        const size_t separator = value.find(',', start);
+        const size_t end = separator == std::string::npos ? value.size() : separator;
+        std::string entry = value.substr(start, end - start);
+
+        const size_t first = entry.find_first_not_of(" \t\r\n");
+        const size_t last = entry.find_last_not_of(" \t\r\n");
+        if (first != std::string::npos)
+            result.emplace_back(entry.substr(first, last - first + 1));
+
+        if (separator == std::string::npos)
+            break;
+        start = separator + 1;
+    }
+
+    return result;
+}
+
+static bool EqualsIgnoreCase(std::string_view acLhs, std::string_view acRhs)
+{
+    if (acLhs.size() != acRhs.size())
+        return false;
+
+    for (size_t i = 0; i < acLhs.size(); ++i)
+    {
+        const auto lhs = static_cast<unsigned char>(acLhs[i]);
+        const auto rhs = static_cast<unsigned char>(acRhs[i]);
+        if (std::tolower(lhs) != std::tolower(rhs))
+            return false;
+    }
+    return true;
+}
+
+static bool HasNativePlugin(const NativePlugins& acPlugins, const std::string& acFilename)
+{
+    return std::any_of(acPlugins.PluginList.begin(), acPlugins.PluginList.end(), [&](const NativePlugins::Entry& acEntry) {
+        return EqualsIgnoreCase(acEntry.Filename.c_str(), acFilename);
+    });
 }
 
 ServerSettings GetSettings()
@@ -855,6 +909,32 @@ void GameServer::HandleAuthenticationRequest(const ConnectionId_t aConnectionId,
         serverResponse.SKSEActive = acRequest->SKSEActive;
         serverResponse.MO2Active = acRequest->MO2Active;
         sendKick(RT::kClientModsDisallowed);
+        return;
+    }
+
+    for (const auto& requiredPlugin : GetRequiredNativePlugins())
+    {
+        if (HasNativePlugin(acRequest->UserNativePlugins, requiredPlugin))
+            continue;
+
+        NativePlugins::Entry missing;
+        missing.Filename = requiredPlugin.c_str();
+        serverResponse.RequiredNativePlugins.PluginList.push_back(std::move(missing));
+    }
+
+    if (!serverResponse.RequiredNativePlugins.PluginList.empty())
+    {
+        String missingList;
+        for (size_t i = 0; i < serverResponse.RequiredNativePlugins.PluginList.size(); ++i)
+        {
+            if (i != 0)
+                missingList += ", ";
+            missingList += serverResponse.RequiredNativePlugins.PluginList[i].Filename;
+        }
+
+        spdlog::info("[STRE][NativePluginPolicy] refusing connection {:x}: missing required native plugins: {}",
+                     aConnectionId, missingList.c_str());
+        sendKick(RT::kNativePluginsMissing);
         return;
     }
 

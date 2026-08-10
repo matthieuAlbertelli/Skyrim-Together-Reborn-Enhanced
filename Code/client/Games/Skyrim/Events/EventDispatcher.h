@@ -1,6 +1,7 @@
 #pragma once
 
 #include <TESObjectREFR.h>
+#include <NetImmerse/NiPointer.h>
 
 template <class T> struct BSTEventSink;
 
@@ -100,7 +101,14 @@ struct TESFurnitureEvent
 
 struct TESGrabReleaseEvent
 {
+    NiPointer<TESObjectREFR> ref;
+    bool grabbed;
+    uint8_t pad09;
+    uint16_t pad0A;
+    uint32_t pad0C;
 };
+
+static_assert(sizeof(TESGrabReleaseEvent) == 0x10);
 
 struct TESHitEvent
 {

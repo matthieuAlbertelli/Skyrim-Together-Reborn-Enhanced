@@ -159,6 +159,7 @@
         "MODS_MISMATCH_REMOVE": "Veuillez supprimer les mods suivants pour rejoindre ce serveur :\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Veuillez installer les mods suivants pour rejoindre ce serveur :\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Ce serveur n'autorise pas : {{mods}}. Veuillez les retirer pour rejoindre le serveur.",
+        "NATIVE_PLUGINS_MISSING": "Ce serveur requiert les plugins SKSE suivants : {{plugins}}. Installez-les et activez-les avant de rejoindre la partie.",
         "WRONG_PASSWORD": "Le mot de passe que vous avez saisi est incorrect.",
         "NO_REASON": "Le serveur a refusé la connexion sans raison.",
         "SERVER_FULL": "Le serveur est plein."

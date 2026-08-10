@@ -167,6 +167,7 @@
         "MODS_MISMATCH_REMOVE": "Katılmak için lütfen bu modları silin:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Katılmak için lütfen bu modları indirin:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Bu sunucu {{mods}} modlarını kabul etmiyor. Katılmak için lütfen siliniz.",
+        "NATIVE_PLUGINS_MISSING": "Bu sunucu şu SKSE eklentilerini gerektiriyor: {{plugins}}. Katılmadan önce yükleyip etkinleştirin.",
         "WRONG_PASSWORD": "Girdiğiniz parola yanlış.",
         "NO_REASON": "Sunucu sebep vermeden bağlantıyı reddetti.",
         "SERVER_FULL": "Sunucu Dolu.",

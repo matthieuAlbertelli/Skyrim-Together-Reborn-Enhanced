@@ -25,11 +25,99 @@
 #include <ScriptExtender.h>
 #include <Services/DiscordService.h>
 
+#include <TlHelp32.h>
+#include <algorithm>
+#include <cwctype>
+#include <filesystem>
+#include <vector>
+
 // #include <imgui_internal.h>
 
 static constexpr wchar_t kMO2DllName[] = L"usvfs_x64.dll";
 
 using TiltedPhoques::Packet;
+
+namespace
+{
+TiltedPhoques::String WideToUtf8(const std::wstring& acText)
+{
+    if (acText.empty())
+        return {};
+
+    const int length = WideCharToMultiByte(CP_UTF8, 0, acText.c_str(), static_cast<int>(acText.size()), nullptr, 0, nullptr, nullptr);
+    if (length <= 0)
+        return {};
+
+    std::string result(static_cast<size_t>(length), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, acText.c_str(), static_cast<int>(acText.size()), result.data(), length, nullptr, nullptr);
+    return TiltedPhoques::String(result.c_str());
+}
+
+TiltedPhoques::String ReadModuleVersion(const std::wstring& acPath)
+{
+    DWORD ignored = 0;
+    const DWORD size = GetFileVersionInfoSizeW(acPath.c_str(), &ignored);
+    if (size == 0)
+        return {};
+
+    std::vector<std::uint8_t> data(size);
+    if (!GetFileVersionInfoW(acPath.c_str(), 0, size, data.data()))
+        return {};
+
+    VS_FIXEDFILEINFO* pInfo = nullptr;
+    UINT infoLength = 0;
+    if (!VerQueryValueW(data.data(), L"\\", reinterpret_cast<void**>(&pInfo), &infoLength) ||
+        !pInfo || infoLength < sizeof(VS_FIXEDFILEINFO))
+    {
+        return {};
+    }
+
+    const auto version = fmt::format("{}.{}.{}.{}",
+                                     HIWORD(pInfo->dwFileVersionMS), LOWORD(pInfo->dwFileVersionMS),
+                                     HIWORD(pInfo->dwFileVersionLS), LOWORD(pInfo->dwFileVersionLS));
+    return TiltedPhoques::String(version.c_str());
+}
+
+NativePlugins CollectNativePlugins()
+{
+    NativePlugins result;
+
+    const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());
+    if (snapshot == INVALID_HANDLE_VALUE)
+        return result;
+
+    MODULEENTRY32W module{};
+    module.dwSize = sizeof(module);
+    if (Module32FirstW(snapshot, &module))
+    {
+        do
+        {
+            std::wstring path = module.szExePath;
+            std::wstring normalized = path;
+            std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](wchar_t c) { return std::towlower(c); });
+
+            if (normalized.find(L"\\data\\skse\\plugins\\") == std::wstring::npos &&
+                normalized.find(L"/data/skse/plugins/") == std::wstring::npos)
+            {
+                continue;
+            }
+
+            NativePlugins::Entry entry;
+            entry.Filename = WideToUtf8(std::filesystem::path(path).filename().wstring());
+            entry.Version = ReadModuleVersion(path);
+            if (!entry.Filename.empty())
+                result.PluginList.push_back(std::move(entry));
+        } while (Module32NextW(snapshot, &module));
+    }
+
+    CloseHandle(snapshot);
+
+    std::sort(result.PluginList.begin(), result.PluginList.end(), [](const auto& acLhs, const auto& acRhs) {
+        return _stricmp(acLhs.Filename.c_str(), acRhs.Filename.c_str()) < 0;
+    });
+    return result;
+}
+}
 
 TransportService::TransportService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
     : m_world(aWorld)
@@ -115,6 +203,11 @@ void TransportService::OnConnected()
     request.Version = BUILD_COMMIT;
     request.SKSEActive = IsScriptExtenderLoaded();
     request.MO2Active = GetModuleHandleW(kMO2DllName);
+    request.UserNativePlugins = CollectNativePlugins();
+
+    spdlog::info("[STRE][NativePluginPolicy] detected loaded SKSE plugins={}", request.UserNativePlugins.PluginList.size());
+    for (const auto& plugin : request.UserNativePlugins.PluginList)
+        spdlog::debug("[STRE][NativePluginPolicy] plugin={} version={}", plugin.Filename.c_str(), plugin.Version.c_str());
 
     request.Token = m_serverPassword;
     m_serverPassword = "";
@@ -244,6 +337,20 @@ void TransportService::HandleAuthenticationResponse(const AuthenticationResponse
             if (acMessage.SKSEActive)
                 ErrorInfo += ",";
         ErrorInfo += "\"MO2\"";
+        ErrorInfo += "]}";
+        break;
+    }
+    case AR::kNativePluginsMissing:
+    {
+        ErrorInfo += "\"error\": \"native_plugins_missing\", \"data\": {\"plugins\": [";
+        bool first = true;
+        for (const auto& plugin : acMessage.RequiredNativePlugins.PluginList)
+        {
+            if (!first)
+                ErrorInfo += ",";
+            ErrorInfo += fmt::format("\"{}\"", plugin.Filename.c_str());
+            first = false;
+        }
         ErrorInfo += "]}";
         break;
     }

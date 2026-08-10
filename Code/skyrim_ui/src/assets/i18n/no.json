@@ -163,6 +163,7 @@
         "MODS_MISMATCH_REMOVE": "Vennligst fjern følgende spillendringer for å bli med:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Vennligst installer følgende spillendringer for å bli med:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Denne serveren tilatter deg ikke å bruke {{mods}}. Vennligst fjern dem for å bli med.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Passordet er feil.",
         "NO_REASON": "Serveren avviste tilkoblingen.",
         "SERVER_FULL": "Denne serveren er full.",

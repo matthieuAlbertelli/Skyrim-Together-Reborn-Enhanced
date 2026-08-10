@@ -164,6 +164,7 @@
         "MODS_MISMATCH_REMOVE": "Bitte entferne folgende Mods, um dem Server beitreten zu können:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Bitte installiere folgende Mods, um dem Server beitreten zu können:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Dieser Server verbietet folgende Mods {{mods}}. Bitte entferne diese, um beitreten zu können.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Das eingegebene Passwort ist falsch.",
         "NO_REASON": "Der Server hat die Verbindung ohne Angabe von Gründen verweigert.",
         "SERVER_FULL": "Dieser Server ist voll."

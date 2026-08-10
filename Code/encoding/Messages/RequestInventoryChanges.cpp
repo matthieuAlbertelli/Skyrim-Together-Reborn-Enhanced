@@ -9,6 +9,7 @@ void RequestInventoryChanges::SerializeRaw(TiltedPhoques::Buffer::Writer& aWrite
     Serialization::WriteBool(aWriter, UpdateClients);
     Serialization::WriteVarInt(aWriter, DroppedFormId);
     Serialization::WriteVarInt(aWriter, WorldEntityId);
+    PlacedReferenceId.Serialize(aWriter);
     Serialization::WriteBool(aWriter, TransformUpdate);
     Serialization::WriteFloat(aWriter, PositionX);
     Serialization::WriteFloat(aWriter, PositionY);
@@ -28,6 +29,7 @@ void RequestInventoryChanges::DeserializeRaw(TiltedPhoques::Buffer::Reader& aRea
     UpdateClients = Serialization::ReadBool(aReader);
     DroppedFormId = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
     WorldEntityId = Serialization::ReadVarInt(aReader);
+    PlacedReferenceId.Deserialize(aReader);
     TransformUpdate = Serialization::ReadBool(aReader);
     PositionX = Serialization::ReadFloat(aReader);
     PositionY = Serialization::ReadFloat(aReader);

@@ -163,6 +163,7 @@
         "MODS_MISMATCH_REMOVE": "Chcete-li se připojit, odstraňte prosím následující módy:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Pro připojení si prosím nainstalujte následující módy:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Tento server zakazuje {{mods}}. Chcete-li se připojit, odstraňte je prosím.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Zadané heslo je chybné.",
         "NO_REASON": "Server odmítl připojení bez udání důvodu.",
         "SERVER_FULL": "Tento server je plný."

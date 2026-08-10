@@ -164,6 +164,7 @@
         "MODS_MISMATCH_REMOVE": "Usuń następujące mody aby dołączyć:\n{{mods}}",
         "MODS_MISMATCH_INSTALL": "Zainstaluj następujące mody abyś mógł dołączyć:\n{{mods}}",
         "CLIENT_MODS_DISALLOWED": "Ten serwer nie pozwala na mody {{mods}}. Usuń je by dołończyć.",
+        "NATIVE_PLUGINS_MISSING": "This server requires the following SKSE plugins: {{plugins}}. Install and enable them before joining.",
         "WRONG_PASSWORD": "Hasło które wpisałeś jest niepoprawne.",
         "NO_REASON": "Serwer odmówił połączenia brak powodu.",
         "SERVER_FULL": "Ten Serwer jest Pełen."

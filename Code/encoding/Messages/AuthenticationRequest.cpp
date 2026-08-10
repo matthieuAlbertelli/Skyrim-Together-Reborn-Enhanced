@@ -8,6 +8,7 @@ void AuthenticationRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter)
     Serialization::WriteString(aWriter, Token);
     Serialization::WriteString(aWriter, Version);
     UserMods.Serialize(aWriter);
+    UserNativePlugins.Serialize(aWriter);
     Serialization::WriteString(aWriter, Username);
     WorldSpaceId.Serialize(aWriter);
     CellId.Serialize(aWriter);
@@ -25,6 +26,7 @@ void AuthenticationRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReade
     Token = Serialization::ReadString(aReader);
     Version = Serialization::ReadString(aReader);
     UserMods.Deserialize(aReader);
+    UserNativePlugins.Deserialize(aReader);
     Username = Serialization::ReadString(aReader);
     WorldSpaceId.Deserialize(aReader);
     CellId.Deserialize(aReader);

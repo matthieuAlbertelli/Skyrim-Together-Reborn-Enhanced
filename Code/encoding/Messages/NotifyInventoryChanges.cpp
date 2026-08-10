@@ -7,10 +7,12 @@ void NotifyInventoryChanges::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter
     Item.Serialize(aWriter);
     Serialization::WriteBool(aWriter, Drop);
     Serialization::WriteVarInt(aWriter, WorldEntityId);
+    PlacedReferenceId.Serialize(aWriter);
     Serialization::WriteBool(aWriter, BindOnly);
     Serialization::WriteVarInt(aWriter, OriginFormId);
     Serialization::WriteBool(aWriter, Snapshot);
     Serialization::WriteBool(aWriter, TransformUpdate);
+    Serialization::WriteBool(aWriter, LifecycleOnly);
     Serialization::WriteBool(aWriter, HasTransform);
     Serialization::WriteFloat(aWriter, PositionX);
     Serialization::WriteFloat(aWriter, PositionY);
@@ -28,10 +30,12 @@ void NotifyInventoryChanges::DeserializeRaw(TiltedPhoques::Buffer::Reader& aRead
     Item.Deserialize(aReader);
     Drop = Serialization::ReadBool(aReader);
     WorldEntityId = Serialization::ReadVarInt(aReader);
+    PlacedReferenceId.Deserialize(aReader);
     BindOnly = Serialization::ReadBool(aReader);
     OriginFormId = Serialization::ReadVarInt(aReader) & 0xFFFFFFFF;
     Snapshot = Serialization::ReadBool(aReader);
     TransformUpdate = Serialization::ReadBool(aReader);
+    LifecycleOnly = Serialization::ReadBool(aReader);
     HasTransform = Serialization::ReadBool(aReader);
     PositionX = Serialization::ReadFloat(aReader);
     PositionY = Serialization::ReadFloat(aReader);

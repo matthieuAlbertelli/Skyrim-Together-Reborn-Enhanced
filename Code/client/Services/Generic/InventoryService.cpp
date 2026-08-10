@@ -8,6 +8,8 @@
 #include <Messages/NotifyEquipmentChanges.h>
 #include <Messages/DrawWeaponRequest.h>
 #include <Messages/NotifyDrawWeapon.h>
+#include <Messages/RequestWorldEntityManipulation.h>
+#include <Messages/NotifyWorldEntityManipulation.h>
 
 #include <Events/UpdateEvent.h>
 #include <Events/InventoryChangeEvent.h>
@@ -26,8 +28,11 @@
 #include <Games/ActorExtension.h>
 #include <Forms/TESNPC.h>
 #include <DefaultObjectManager.h>
+#include <Games/Events.h>
 
 #include <cmath>
+#include <algorithm>
+#include <vector>
 
 namespace
 {
@@ -36,6 +41,8 @@ namespace
 constexpr float cWorldEntityMaximumSettledDrift = 96.0f;
 constexpr float cWorldEntityMaximumSettledDriftSquared =
     cWorldEntityMaximumSettledDrift * cWorldEntityMaximumSettledDrift;
+constexpr auto cManipulationHeartbeat = std::chrono::milliseconds(500);
+constexpr wchar_t cBetterGrabbingModule[] = L"BetterGrabbing.dll";
 }
 
 InventoryService::InventoryService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
@@ -48,6 +55,14 @@ InventoryService::InventoryService(World& aWorld, entt::dispatcher& aDispatcher,
     m_equipmentConnection = m_dispatcher.sink<EquipmentChangeEvent>().connect<&InventoryService::OnEquipmentChangeEvent>(this);
     m_inventoryChangeConnection = m_dispatcher.sink<NotifyInventoryChanges>().connect<&InventoryService::OnNotifyInventoryChanges>(this);
     m_equipmentChangeConnection = m_dispatcher.sink<NotifyEquipmentChanges>().connect<&InventoryService::OnNotifyEquipmentChanges>(this);
+    m_worldEntityManipulationConnection = m_dispatcher.sink<NotifyWorldEntityManipulation>().connect<&InventoryService::OnNotifyWorldEntityManipulation>(this);
+
+    EventDispatcherManager::Get()->grabReleaseEvent.RegisterSink(this);
+}
+
+InventoryService::~InventoryService() noexcept
+{
+    EventDispatcherManager::Get()->grabReleaseEvent.UnRegisterSink(this);
 }
 
 void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
@@ -63,6 +78,8 @@ void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 
     RunPendingWorldEntitySnapshots();
     RunPendingRemoteWorldEntities();
+    RunPendingRemoteWorldEntityManipulations();
+    RunLocalWorldEntityManipulation();
     RunPendingDropStabilization();
 }
 
@@ -70,13 +87,29 @@ void InventoryService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 void InventoryService::ResetWorldSyncState() noexcept
 {
     if (m_worldEntityToFormId.empty() && m_formIdToWorldEntity.empty() && m_retiredWorldReferences.empty() &&
-        m_pendingWorldEntitySnapshots.empty() && m_pendingRemoteWorldEntities.empty() && m_pendingDropStabilization.empty())
+        m_pendingWorldEntitySnapshots.empty() && m_pendingRemoteWorldEntities.empty() && m_pendingDropStabilization.empty() &&
+        m_worldEntityMetadata.empty() && !m_localManipulation.has_value() && m_remoteManipulations.empty() &&
+        m_pendingRemoteManipulations.empty() && m_remoteAwaitingSettlementRecreate.empty())
     {
         return;
     }
 
-    spdlog::info("[STRE][WorldSync] reset reason=disconnected entities={} pendingRemote={} pendingStabilization={}",
-                 m_worldEntityToFormId.size(), m_pendingRemoteWorldEntities.size(), m_pendingDropStabilization.size());
+    spdlog::info("[STRE][WorldSync] reset reason=disconnected entities={} pendingRemote={} pendingStabilization={} manipulated={}",
+                 m_worldEntityToFormId.size(), m_pendingRemoteWorldEntities.size(), m_pendingDropStabilization.size(),
+                 m_remoteManipulations.size());
+
+    // Remote WorldEntities are disabled while another player is holding them.
+    // If the connection disappears mid-grab, re-enable the local copies so a
+    // multiplayer state transition can never leave an object invisible in solo.
+    for (const auto& [worldEntityId, remote] : m_remoteManipulations)
+    {
+        if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(remote.LocalFormId)))
+        {
+            pReference->Enable();
+            spdlog::warn("[STRE][WorldSync] manipulation_visibility_restored entity={} localForm={:08X} reason=disconnected",
+                         worldEntityId, remote.LocalFormId);
+        }
+    }
 
     m_worldEntityToFormId.clear();
     m_formIdToWorldEntity.clear();
@@ -84,6 +117,11 @@ void InventoryService::ResetWorldSyncState() noexcept
     m_pendingWorldEntitySnapshots.clear();
     m_pendingRemoteWorldEntities.clear();
     m_pendingDropStabilization.clear();
+    m_worldEntityMetadata.clear();
+    m_localManipulation.reset();
+    m_remoteManipulations.clear();
+    m_pendingRemoteManipulations.clear();
+    m_remoteAwaitingSettlementRecreate.clear();
 }
 
 void InventoryService::OnInventoryChangeEvent(const InventoryChangeEvent& acEvent) noexcept
@@ -151,10 +189,31 @@ void InventoryService::OnInventoryChangeEvent(const InventoryChangeEvent& acEven
         if (entityIt != m_formIdToWorldEntity.end())
         {
             request.WorldEntityId = entityIt->second;
+            const auto metadataIt = m_worldEntityMetadata.find(request.WorldEntityId);
+            if (metadataIt != m_worldEntityMetadata.end())
+                request.PlacedReferenceId = metadataIt->second.PlacedReferenceId;
+
             m_pendingDropStabilization.erase(request.WorldEntityId);
+            m_remoteManipulations.erase(request.WorldEntityId);
+            m_pendingRemoteManipulations.erase(request.WorldEntityId);
+            m_remoteAwaitingSettlementRecreate.erase(request.WorldEntityId);
+            m_worldEntityMetadata.erase(request.WorldEntityId);
+            if (m_localManipulation && m_localManipulation->WorldEntityId == request.WorldEntityId)
+                m_localManipulation.reset();
             m_worldEntityToFormId.erase(request.WorldEntityId);
             m_formIdToWorldEntity.erase(entityIt);
             spdlog::info("[STRE][WorldSync] pickup_request entity={} localForm={:08X}", request.WorldEntityId, acEvent.DroppedFormId);
+        }
+        else if (auto* pPickedReference = Cast<TESObjectREFR>(TESForm::GetById(acEvent.DroppedFormId));
+                 pPickedReference && !pPickedReference->IsTemporary())
+        {
+            GameId referenceId{};
+            if (m_world.GetModSystem().GetServerModId(acEvent.DroppedFormId, referenceId))
+            {
+                request.PlacedReferenceId = referenceId;
+                spdlog::info("[STRE][WorldSync] pickup_lazy_adoption_requested localForm={:08X} reference={:08X}:{:08X}",
+                             acEvent.DroppedFormId, referenceId.ModId, referenceId.BaseId);
+            }
         }
     }
 
@@ -216,9 +275,10 @@ void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& ac
         return;
     }
 
-    spdlog::info("[STRE][WorldSync] notify_receive actorServerId={} item={:X}:{:X} count={} drop={} entity={} bindOnly={} originForm={:08X}",
+    spdlog::info("[STRE][WorldSync] notify_receive actorServerId={} item={:X}:{:X} count={} drop={} entity={} placed={:08X}:{:08X} bindOnly={} lifecycleOnly={} originForm={:08X}",
                  acMessage.ServerId, acMessage.Item.BaseId.ModId, acMessage.Item.BaseId.BaseId, acMessage.Item.Count,
-                 acMessage.Drop, acMessage.WorldEntityId, acMessage.BindOnly, acMessage.OriginFormId);
+                 acMessage.Drop, acMessage.WorldEntityId, acMessage.PlacedReferenceId.ModId, acMessage.PlacedReferenceId.BaseId,
+                 acMessage.BindOnly, acMessage.LifecycleOnly, acMessage.OriginFormId);
 
     if (acMessage.BindOnly)
     {
@@ -226,26 +286,53 @@ void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& ac
             return;
         m_worldEntityToFormId[acMessage.WorldEntityId] = acMessage.OriginFormId;
         m_formIdToWorldEntity[acMessage.OriginFormId] = acMessage.WorldEntityId;
-        if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(acMessage.OriginFormId)))
-        {
-            PendingDropStabilization pending;
-            pending.LocalFormId = acMessage.OriginFormId;
-            pending.StartedAt = std::chrono::steady_clock::now();
-            pending.LastSampleAt = pending.StartedAt;
-            pending.LastX = pReference->position.x;
-            pending.LastY = pReference->position.y;
-            pending.LastZ = pReference->position.z;
-            pending.Item = acMessage.Item;
-            pending.SourceServerId = acMessage.ServerId;
-            pending.IsAuthority = true;
-            m_pendingDropStabilization[acMessage.WorldEntityId] = pending;
-        }
+        m_worldEntityMetadata[acMessage.WorldEntityId] = WorldEntityMetadata{acMessage.Item, acMessage.ServerId, {}};
+        StartSettlementTracking(acMessage.WorldEntityId, acMessage.OriginFormId, true);
         spdlog::info("[STRE][WorldSync] bound entity={} localForm={:08X} source=origin-ack", acMessage.WorldEntityId, acMessage.OriginFormId);
         return;
     }
 
+    if (acMessage.WorldEntityId != 0 && acMessage.PlacedReferenceId)
+    {
+        const bool bound = BindPlacedWorldEntity(acMessage.WorldEntityId, acMessage.PlacedReferenceId, acMessage.ServerId);
+        if (acMessage.Snapshot)
+        {
+            if (!bound)
+            {
+                m_pendingWorldEntitySnapshots.push_back(acMessage);
+                spdlog::info("[STRE][WorldSync] placed_snapshot_deferred entity={} reference={:08X}:{:08X}",
+                             acMessage.WorldEntityId, acMessage.PlacedReferenceId.ModId, acMessage.PlacedReferenceId.BaseId);
+                return;
+            }
+
+            if (acMessage.HasTransform)
+            {
+                WorldEntityTransform transform;
+                transform.PositionX = acMessage.PositionX;
+                transform.PositionY = acMessage.PositionY;
+                transform.PositionZ = acMessage.PositionZ;
+                transform.RotationX = acMessage.RotationX;
+                transform.RotationY = acMessage.RotationY;
+                transform.RotationZ = acMessage.RotationZ;
+                ApplyPlacedWorldEntityTransform(acMessage.WorldEntityId, transform, true);
+            }
+
+            spdlog::info("[STRE][WorldSync] placed_snapshot_bound entity={} reference={:08X}:{:08X} transform={}",
+                         acMessage.WorldEntityId, acMessage.PlacedReferenceId.ModId, acMessage.PlacedReferenceId.BaseId,
+                         acMessage.HasTransform);
+            return;
+        }
+    }
+
     if (acMessage.TransformUpdate && acMessage.WorldEntityId != 0)
     {
+        const auto metadataIt = m_worldEntityMetadata.find(acMessage.WorldEntityId);
+        if (metadataIt != m_worldEntityMetadata.end() && metadataIt->second.IsPlacedReference())
+        {
+            StoreAuthoritativeTransform(acMessage.WorldEntityId, acMessage);
+            return;
+        }
+
         const auto pendingIt = m_pendingRemoteWorldEntities.find(acMessage.WorldEntityId);
         if (pendingIt != m_pendingRemoteWorldEntities.end())
         {
@@ -274,7 +361,23 @@ void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& ac
             return;
         }
 
-        StoreAuthoritativeTransform(acMessage.WorldEntityId, acMessage);
+        if (m_remoteAwaitingSettlementRecreate.erase(acMessage.WorldEntityId) != 0)
+        {
+            WorldEntityTransform finalTransform;
+            finalTransform.PositionX = acMessage.PositionX;
+            finalTransform.PositionY = acMessage.PositionY;
+            finalTransform.PositionZ = acMessage.PositionZ;
+            finalTransform.RotationX = acMessage.RotationX;
+            finalTransform.RotationY = acMessage.RotationY;
+            finalTransform.RotationZ = acMessage.RotationZ;
+            QueueNetworkDrivenRecreate(acMessage.WorldEntityId, finalTransform);
+            spdlog::info("[STRE][WorldSync] manipulation_settlement_received entity={} position=({:.2f},{:.2f},{:.2f}) mode=recreate",
+                         acMessage.WorldEntityId, acMessage.PositionX, acMessage.PositionY, acMessage.PositionZ);
+        }
+        else
+        {
+            StoreAuthoritativeTransform(acMessage.WorldEntityId, acMessage);
+        }
         return;
     }
 
@@ -313,21 +416,32 @@ void InventoryService::OnNotifyInventoryChanges(const NotifyInventoryChanges& ac
         if (entityIt != m_worldEntityToFormId.end())
         {
             const uint32_t localFormId = entityIt->second;
+            const auto metadataIt = m_worldEntityMetadata.find(acMessage.WorldEntityId);
+            const bool isPlacedReference = metadataIt != m_worldEntityMetadata.end() && metadataIt->second.IsPlacedReference();
+
             if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(localFormId)))
             {
-                // Do not call Delete() here. Skyrim may recycle the dynamic FormID on
-                // the next remote drop while keeping the reference permanently marked
-                // as deleted, which leaves a visible but non-activatable object.
                 pReference->Disable();
-                m_retiredWorldReferences.insert(localFormId);
+                if (!isPlacedReference)
+                    m_retiredWorldReferences.insert(localFormId);
             }
             m_pendingDropStabilization.erase(acMessage.WorldEntityId);
             m_pendingRemoteWorldEntities.erase(acMessage.WorldEntityId);
+            m_remoteManipulations.erase(acMessage.WorldEntityId);
+            m_pendingRemoteManipulations.erase(acMessage.WorldEntityId);
+            m_remoteAwaitingSettlementRecreate.erase(acMessage.WorldEntityId);
+            m_worldEntityMetadata.erase(acMessage.WorldEntityId);
+            if (m_localManipulation && m_localManipulation->WorldEntityId == acMessage.WorldEntityId)
+                m_localManipulation.reset();
             m_formIdToWorldEntity.erase(localFormId);
             m_worldEntityToFormId.erase(entityIt);
-            spdlog::info("[STRE][WorldSync] removed entity={} localForm={:08X} mode=disabled", acMessage.WorldEntityId, localFormId);
+            spdlog::info("[STRE][WorldSync] removed entity={} localForm={:08X} mode=disabled placed={}",
+                         acMessage.WorldEntityId, localFormId, isPlacedReference);
         }
     }
+
+    if (acMessage.LifecycleOnly)
+        return;
 
     TESObjectREFR* pObject = Utils::GetByServerId<TESObjectREFR>(acMessage.ServerId);
     if (!pObject)
@@ -562,20 +676,20 @@ bool InventoryService::TryMaterializeWorldEntity(const NotifyInventoryChanges& a
 
     m_worldEntityToFormId[acMessage.WorldEntityId] = localFormId;
     m_formIdToWorldEntity[localFormId] = acMessage.WorldEntityId;
+    m_worldEntityMetadata[acMessage.WorldEntityId] = WorldEntityMetadata{acMessage.Item, acMessage.ServerId, {}};
 
     if (!acMessage.Snapshot)
+        StartSettlementTracking(acMessage.WorldEntityId, localFormId, false);
+
+    if (const auto pendingManipulation = m_pendingRemoteManipulations.find(acMessage.WorldEntityId);
+        pendingManipulation != m_pendingRemoteManipulations.end())
     {
-        PendingDropStabilization pending;
-        pending.LocalFormId = localFormId;
-        pending.StartedAt = std::chrono::steady_clock::now();
-        pending.LastSampleAt = pending.StartedAt;
-        pending.LastX = pDroppedObject->position.x;
-        pending.LastY = pDroppedObject->position.y;
-        pending.LastZ = pDroppedObject->position.z;
-        pending.Item = acMessage.Item;
-        pending.SourceServerId = acMessage.ServerId;
-        pending.IsAuthority = false;
-        m_pendingDropStabilization[acMessage.WorldEntityId] = pending;
+        const auto manipulation = pendingManipulation->second;
+        m_pendingRemoteManipulations.erase(pendingManipulation);
+        if (manipulation.Action == WorldEntityManipulationAction::Release)
+            EndRemoteWorldEntityManipulation(manipulation);
+        else if (manipulation.Action != WorldEntityManipulationAction::Rejected)
+            BeginRemoteWorldEntityManipulation(manipulation);
     }
 
     spdlog::info("[STRE][WorldSync] bound entity={} localForm={:08X} source={} directTransform={}",
@@ -593,7 +707,29 @@ void InventoryService::RunPendingWorldEntitySnapshots() noexcept
     {
         NotifyInventoryChanges snapshot = std::move(m_pendingWorldEntitySnapshots.front());
         m_pendingWorldEntitySnapshots.pop_front();
-        if (!TryMaterializeWorldEntity(snapshot))
+
+        bool resolved = false;
+        if (snapshot.PlacedReferenceId)
+        {
+            resolved = BindPlacedWorldEntity(snapshot.WorldEntityId, snapshot.PlacedReferenceId, snapshot.ServerId);
+            if (resolved && snapshot.HasTransform)
+            {
+                WorldEntityTransform transform;
+                transform.PositionX = snapshot.PositionX;
+                transform.PositionY = snapshot.PositionY;
+                transform.PositionZ = snapshot.PositionZ;
+                transform.RotationX = snapshot.RotationX;
+                transform.RotationY = snapshot.RotationY;
+                transform.RotationZ = snapshot.RotationZ;
+                resolved = ApplyPlacedWorldEntityTransform(snapshot.WorldEntityId, transform, true);
+            }
+        }
+        else
+        {
+            resolved = TryMaterializeWorldEntity(snapshot);
+        }
+
+        if (!resolved)
             m_pendingWorldEntitySnapshots.push_back(std::move(snapshot));
         ++attempts;
     }
@@ -634,6 +770,34 @@ void InventoryService::RunPendingRemoteWorldEntities() noexcept
     }
 }
 
+void InventoryService::RunPendingRemoteWorldEntityManipulations() noexcept
+{
+    constexpr size_t kMaxAttemptsPerUpdate = 8;
+    std::vector<uint64_t> pendingIds;
+    pendingIds.reserve(std::min(kMaxAttemptsPerUpdate, m_pendingRemoteManipulations.size()));
+
+    for (const auto& [worldEntityId, message] : m_pendingRemoteManipulations)
+    {
+        pendingIds.push_back(worldEntityId);
+        if (pendingIds.size() >= kMaxAttemptsPerUpdate)
+            break;
+    }
+
+    for (const uint64_t worldEntityId : pendingIds)
+    {
+        const auto it = m_pendingRemoteManipulations.find(worldEntityId);
+        if (it == m_pendingRemoteManipulations.end())
+            continue;
+
+        const NotifyWorldEntityManipulation message = it->second;
+        m_pendingRemoteManipulations.erase(it);
+        if (message.Action == WorldEntityManipulationAction::Release)
+            EndRemoteWorldEntityManipulation(message);
+        else if (message.Action != WorldEntityManipulationAction::Rejected)
+            BeginRemoteWorldEntityManipulation(message);
+    }
+}
+
 void InventoryService::RunPendingDropStabilization() noexcept
 {
     using namespace std::chrono;
@@ -667,7 +831,7 @@ void InventoryService::RunPendingDropStabilization() noexcept
             // Keep the historical fresh-reference recovery only for the authority,
             // and make it deliberately conservative. The former vertical threshold
             // could mistake a legitimate fall (notably into water) for corruption.
-            if (pending.IsAuthority && pending.RecreationAttempts == 0 && now - pending.StartedAt < 1s)
+            if (pending.IsAuthority && !pending.PlacedReferenceId && pending.RecreationAttempts == 0 && now - pending.StartedAt < 1s)
             {
                 if (auto* pPlayer = PlayerCharacter::Get())
                 {
@@ -800,6 +964,45 @@ void InventoryService::RunPendingDropStabilization() noexcept
             continue;
         }
 
+        if (pending.ForceRecreate)
+        {
+            constexpr auto kRecreateRetryInterval = 250ms;
+            constexpr auto kRecreateRetryWindow = 8000ms;
+
+            if (pending.ForcedRecreateAttempts != 0 && now - pending.LastSampleAt < kRecreateRetryInterval)
+            {
+                ++it;
+                continue;
+            }
+
+            pending.LastSampleAt = now;
+            ++pending.ForcedRecreateAttempts;
+            if (RecreateWorldEntityAtAuthoritativeTransform(it->first, pending))
+            {
+                spdlog::info("[STRE][WorldSync] manipulation_collision_restored entity={} localForm={:08X} mode=recreate attempts={}",
+                             it->first, pending.LocalFormId, pending.ForcedRecreateAttempts);
+                it = m_pendingDropStabilization.erase(it);
+                continue;
+            }
+
+            if (now - pending.StartedAt < kRecreateRetryWindow)
+            {
+                spdlog::warn("[STRE][WorldSync] manipulation_collision_restore_retry entity={} localForm={:08X} attempt={}",
+                             it->first, pending.LocalFormId, pending.ForcedRecreateAttempts);
+                ++it;
+                continue;
+            }
+
+            // Last-resort safety: a failed recreate must never leave the original
+            // representation invisible forever. Re-enable it at its previous pose.
+            pReference->Enable();
+            m_remoteManipulations.erase(it->first);
+            spdlog::error("[STRE][WorldSync] manipulation_visibility_restore_fallback entity={} localForm={:08X} attempts={}",
+                          it->first, pending.LocalFormId, pending.ForcedRecreateAttempts);
+            it = m_pendingDropStabilization.erase(it);
+            continue;
+        }
+
         const float dx = pReference->position.x - pending.AuthoritativePositionX;
         const float dy = pReference->position.y - pending.AuthoritativePositionY;
         const float dz = pReference->position.z - pending.AuthoritativePositionZ;
@@ -861,6 +1064,21 @@ void InventoryService::StoreAuthoritativeTransform(uint64_t aWorldEntityId, cons
 bool InventoryService::RecreateWorldEntityAtAuthoritativeTransform(
     uint64_t aWorldEntityId, PendingDropStabilization& arPending) noexcept
 {
+    if (arPending.PlacedReferenceId)
+    {
+        WorldEntityTransform transform;
+        transform.PositionX = arPending.AuthoritativePositionX;
+        transform.PositionY = arPending.AuthoritativePositionY;
+        transform.PositionZ = arPending.AuthoritativePositionZ;
+        transform.RotationX = arPending.AuthoritativeRotationX;
+        transform.RotationY = arPending.AuthoritativeRotationY;
+        transform.RotationZ = arPending.AuthoritativeRotationZ;
+        const bool applied = ApplyPlacedWorldEntityTransform(aWorldEntityId, transform, true);
+        if (applied)
+            m_remoteManipulations.erase(aWorldEntityId);
+        return applied;
+    }
+
     auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(arPending.LocalFormId));
     Actor* pSourceActor = Utils::GetByServerId<Actor>(arPending.SourceServerId);
     if (!pReference || !pSourceActor)
@@ -913,5 +1131,578 @@ bool InventoryService::RecreateWorldEntityAtAuthoritativeTransform(
     m_worldEntityToFormId[aWorldEntityId] = replacementFormId;
     m_formIdToWorldEntity[replacementFormId] = aWorldEntityId;
     arPending.LocalFormId = replacementFormId;
+
+    // A hidden remote grab is complete once its visible replacement exists.
+    m_remoteManipulations.erase(aWorldEntityId);
     return true;
+}
+
+WorldEntityTransform InventoryService::ReadWorldEntityTransform(const TESObjectREFR* apReference) noexcept
+{
+    WorldEntityTransform transform;
+    if (!apReference)
+        return transform;
+
+    transform.PositionX = apReference->position.x;
+    transform.PositionY = apReference->position.y;
+    transform.PositionZ = apReference->position.z;
+    transform.RotationX = apReference->rotation.x;
+    transform.RotationY = apReference->rotation.y;
+    transform.RotationZ = apReference->rotation.z;
+    return transform;
+}
+
+void InventoryService::StartSettlementTracking(
+    uint64_t aWorldEntityId, uint32_t aLocalFormId, bool aIsAuthority) noexcept
+{
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(aLocalFormId));
+    const auto metadataIt = m_worldEntityMetadata.find(aWorldEntityId);
+    if (!pReference || metadataIt == m_worldEntityMetadata.end())
+    {
+        spdlog::warn("[STRE][WorldSync] settlement_tracker_skipped entity={} localForm={:08X} reason={}",
+                     aWorldEntityId, aLocalFormId, pReference ? "missing-metadata" : "missing-reference");
+        return;
+    }
+
+    PendingDropStabilization pending;
+    pending.LocalFormId = aLocalFormId;
+    pending.StartedAt = std::chrono::steady_clock::now();
+    pending.LastSampleAt = pending.StartedAt;
+    pending.LastX = pReference->position.x;
+    pending.LastY = pReference->position.y;
+    pending.LastZ = pReference->position.z;
+    pending.Item = metadataIt->second.Item;
+    pending.SourceServerId = metadataIt->second.SourceServerId;
+    pending.PlacedReferenceId = metadataIt->second.PlacedReferenceId;
+    pending.IsAuthority = aIsAuthority;
+    m_pendingDropStabilization[aWorldEntityId] = pending;
+}
+
+bool InventoryService::QueueNetworkDrivenRecreate(
+    uint64_t aWorldEntityId, const WorldEntityTransform& acTransform) noexcept
+{
+    const auto entityIt = m_worldEntityToFormId.find(aWorldEntityId);
+    const auto metadataIt = m_worldEntityMetadata.find(aWorldEntityId);
+    if (entityIt == m_worldEntityToFormId.end() || metadataIt == m_worldEntityMetadata.end())
+    {
+        spdlog::warn("[STRE][WorldSync] manipulation_recreate_deferred entity={} reason=missing-binding-or-metadata", aWorldEntityId);
+        return false;
+    }
+    if (metadataIt->second.IsPlacedReference())
+    {
+        spdlog::warn("[STRE][WorldSync] manipulation_recreate_skipped entity={} reason=placed-reference", aWorldEntityId);
+        return false;
+    }
+
+    PendingDropStabilization pending;
+    pending.LocalFormId = entityIt->second;
+    pending.StartedAt = std::chrono::steady_clock::now();
+    pending.LastSampleAt = pending.StartedAt;
+    pending.Item = metadataIt->second.Item;
+    pending.SourceServerId = metadataIt->second.SourceServerId;
+    pending.LocalSettled = true;
+    pending.HasAuthoritativeTransform = true;
+    pending.ForceRecreate = true;
+    pending.AuthoritativePositionX = acTransform.PositionX;
+    pending.AuthoritativePositionY = acTransform.PositionY;
+    pending.AuthoritativePositionZ = acTransform.PositionZ;
+    pending.AuthoritativeRotationX = acTransform.RotationX;
+    pending.AuthoritativeRotationY = acTransform.RotationY;
+    pending.AuthoritativeRotationZ = acTransform.RotationZ;
+    m_pendingDropStabilization[aWorldEntityId] = pending;
+    return true;
+}
+
+bool InventoryService::BindPlacedWorldEntity(
+    uint64_t aWorldEntityId, const GameId& acReferenceId, uint32_t aSourceServerId) noexcept
+{
+    if (aWorldEntityId == 0 || !acReferenceId)
+        return false;
+
+    const uint32_t localFormId = m_world.GetModSystem().GetGameId(acReferenceId);
+    if (localFormId == 0)
+    {
+        spdlog::warn("[STRE][WorldSync] placed_bind_deferred entity={} reference={:08X}:{:08X} reason=unmapped-mod",
+                     aWorldEntityId, acReferenceId.ModId, acReferenceId.BaseId);
+        return false;
+    }
+
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(localFormId));
+    if (!pReference)
+    {
+        spdlog::warn("[STRE][WorldSync] placed_bind_deferred entity={} reference={:08X}:{:08X} localForm={:08X} reason=reference-unavailable",
+                     aWorldEntityId, acReferenceId.ModId, acReferenceId.BaseId, localFormId);
+        return false;
+    }
+
+    if (const auto oldBinding = m_formIdToWorldEntity.find(localFormId);
+        oldBinding != m_formIdToWorldEntity.end() && oldBinding->second != aWorldEntityId)
+    {
+        m_worldEntityToFormId.erase(oldBinding->second);
+        m_worldEntityMetadata.erase(oldBinding->second);
+        m_formIdToWorldEntity.erase(oldBinding);
+    }
+
+    m_worldEntityToFormId[aWorldEntityId] = localFormId;
+    m_formIdToWorldEntity[localFormId] = aWorldEntityId;
+
+    auto& metadata = m_worldEntityMetadata[aWorldEntityId];
+    metadata.SourceServerId = aSourceServerId;
+    metadata.PlacedReferenceId = acReferenceId;
+
+    spdlog::info("[STRE][WorldSync] placed_bound entity={} reference={:08X}:{:08X} localForm={:08X}",
+                 aWorldEntityId, acReferenceId.ModId, acReferenceId.BaseId, localFormId);
+    return true;
+}
+
+bool InventoryService::ApplyPlacedWorldEntityTransform(
+    uint64_t aWorldEntityId, const WorldEntityTransform& acTransform, bool aEnableAfter) noexcept
+{
+    const auto entityIt = m_worldEntityToFormId.find(aWorldEntityId);
+    if (entityIt == m_worldEntityToFormId.end())
+        return false;
+
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(entityIt->second));
+    if (!pReference || !pReference->parentCell)
+        return false;
+
+    NiPoint3 position{};
+    position.x = acTransform.PositionX;
+    position.y = acTransform.PositionY;
+    position.z = acTransform.PositionZ;
+
+    NiPoint3 rotation{};
+    rotation.x = acTransform.RotationX;
+    rotation.y = acTransform.RotationY;
+    rotation.z = acTransform.RotationZ;
+
+    spdlog::info("[STRE][WorldSyncDiag] placed_apply_begin entity={} localForm={:08X} disabled={} enableAfter={} primitive=stre-moveto",
+                 aWorldEntityId, entityIt->second, pReference->IsDisabled(), aEnableAfter);
+
+    // Do not call the custom SetPosition/SetAngle wrappers that were introduced by
+    // the Better Grabbing bridge. CommonLib's SetPosition is a higher-level wrapper
+    // around TESObjectREFR::MoveTo_Impl; treating relocation 19363 as
+    // void(TESObjectREFR*, const NiPoint3&) is ABI-incorrect and crashes.
+    //
+    // STR already has a reverse-engineered MoveTo wrapper with the correct internal
+    // signature. Set the desired rotation in the reference data, then let MoveTo
+    // apply position + rotation together using the existing cell/worldspace.
+    if (aEnableAfter)
+    {
+        spdlog::info("[STRE][WorldSyncDiag] placed_apply_before_enable entity={} localForm={:08X}",
+                     aWorldEntityId, entityIt->second);
+        pReference->Enable();
+        spdlog::info("[STRE][WorldSyncDiag] placed_apply_after_enable entity={} localForm={:08X}",
+                     aWorldEntityId, entityIt->second);
+    }
+
+    pReference->rotation = rotation;
+
+    spdlog::info("[STRE][WorldSyncDiag] placed_apply_before_moveto entity={} localForm={:08X} cell={:08X}",
+                 aWorldEntityId, entityIt->second, pReference->parentCell->formID);
+    pReference->MoveTo(pReference->parentCell, position);
+    spdlog::info("[STRE][WorldSyncDiag] placed_apply_after_moveto entity={} localForm={:08X} logical=({:.2f},{:.2f},{:.2f})",
+                 aWorldEntityId, entityIt->second,
+                 pReference->position.x, pReference->position.y, pReference->position.z);
+
+    spdlog::info("[STRE][WorldSyncDiag] placed_apply_complete entity={} localForm={:08X} primitive=stre-moveto",
+                 aWorldEntityId, entityIt->second);
+    return true;
+}
+
+void InventoryService::SendLocalManipulationRelease(const WorldEntityTransform& acTransform) noexcept
+{
+    if (!m_localManipulation || m_localManipulation->WorldEntityId == 0)
+        return;
+
+    const LocalManipulation manipulation = *m_localManipulation;
+
+    RequestWorldEntityManipulation request;
+    request.WorldEntityId = manipulation.WorldEntityId;
+    request.PlacedReferenceId = manipulation.PlacedReferenceId;
+    request.Action = WorldEntityManipulationAction::Release;
+    request.Transform = acTransform;
+    m_transport.Send(request);
+
+    if (manipulation.Granted)
+        StartSettlementTracking(manipulation.WorldEntityId, manipulation.LocalFormId, true);
+    else
+        m_pendingDropStabilization.erase(manipulation.WorldEntityId);
+
+    m_localManipulation.reset();
+
+    if (const auto pendingRemote = m_pendingRemoteManipulations.find(manipulation.WorldEntityId);
+        pendingRemote != m_pendingRemoteManipulations.end())
+    {
+        const auto pendingMessage = pendingRemote->second;
+        m_pendingRemoteManipulations.erase(pendingRemote);
+        if (pendingMessage.Action == WorldEntityManipulationAction::Release)
+            EndRemoteWorldEntityManipulation(pendingMessage);
+        else if (pendingMessage.Action != WorldEntityManipulationAction::Rejected)
+            BeginRemoteWorldEntityManipulation(pendingMessage);
+    }
+
+    spdlog::info("[STRE][WorldSync] manipulation_release_requested entity={} localForm={:08X} granted={}",
+                 manipulation.WorldEntityId, manipulation.LocalFormId, manipulation.Granted);
+}
+
+BSTEventResult InventoryService::OnEvent(
+    const TESGrabReleaseEvent* apEvent, const EventDispatcher<TESGrabReleaseEvent>*)
+{
+    if (!m_transport.IsConnected() || !GetModuleHandleW(cBetterGrabbingModule) || !apEvent || !apEvent->ref.object)
+        return BSTEventResult::kOk;
+
+    TESObjectREFR* pGrabbedReference = apEvent->ref.object;
+    const uint32_t localFormId = pGrabbedReference->formID;
+    const WorldEntityTransform transform = ReadWorldEntityTransform(pGrabbedReference);
+
+    if (apEvent->grabbed)
+    {
+        uint64_t worldEntityId = 0;
+        GameId placedReferenceId{};
+
+        if (const auto entityIt = m_formIdToWorldEntity.find(localFormId);
+            entityIt != m_formIdToWorldEntity.end())
+        {
+            worldEntityId = entityIt->second;
+            if (const auto metadataIt = m_worldEntityMetadata.find(worldEntityId);
+                metadataIt != m_worldEntityMetadata.end())
+            {
+                placedReferenceId = metadataIt->second.PlacedReferenceId;
+            }
+        }
+        else
+        {
+            // Dynamic drops are assigned a WorldEntity at creation time. Only
+            // stable, non-temporary placed references may be adopted lazily.
+            if (pGrabbedReference->IsTemporary() ||
+                !m_world.GetModSystem().GetServerModId(localFormId, placedReferenceId))
+            {
+                return BSTEventResult::kOk;
+            }
+        }
+
+        if (worldEntityId != 0)
+        {
+            m_pendingDropStabilization.erase(worldEntityId);
+            m_remoteManipulations.erase(worldEntityId);
+            m_pendingRemoteManipulations.erase(worldEntityId);
+        }
+
+        LocalManipulation manipulation;
+        manipulation.WorldEntityId = worldEntityId;
+        manipulation.LocalFormId = localFormId;
+        manipulation.PlacedReferenceId = placedReferenceId;
+        manipulation.LastSentTransform = transform;
+        manipulation.LastSentAt = std::chrono::steady_clock::now();
+        m_localManipulation = manipulation;
+
+        RequestWorldEntityManipulation request;
+        request.WorldEntityId = worldEntityId;
+        request.PlacedReferenceId = placedReferenceId;
+        request.Action = WorldEntityManipulationAction::Start;
+        request.Transform = transform;
+        m_transport.Send(request);
+
+        if (worldEntityId == 0)
+        {
+            spdlog::info("[STRE][WorldSync] manipulation_adoption_requested localForm={:08X} reference={:08X}:{:08X}",
+                         localFormId, placedReferenceId.ModId, placedReferenceId.BaseId);
+        }
+        else
+        {
+            spdlog::info("[STRE][WorldSync] manipulation_start_requested entity={} localForm={:08X}",
+                         worldEntityId, localFormId);
+        }
+        return BSTEventResult::kOk;
+    }
+
+    // Release may happen before the adoption grant returns on a very short grab.
+    // Preserve that release locally and send it immediately after the server grants
+    // the stable WorldEntity identity.
+    if (m_localManipulation && m_localManipulation->LocalFormId == localFormId)
+    {
+        if (m_localManipulation->WorldEntityId == 0)
+        {
+            m_localManipulation->ReleasePending = true;
+            m_localManipulation->PendingReleaseTransform = transform;
+            spdlog::info("[STRE][WorldSync] manipulation_release_deferred localForm={:08X} reason=awaiting-adoption",
+                         localFormId);
+            return BSTEventResult::kOk;
+        }
+
+        SendLocalManipulationRelease(transform);
+        return BSTEventResult::kOk;
+    }
+
+    // Defensive fallback for an already-bound entity if local manipulation state
+    // was lost during a load/menu transition.
+    const auto entityIt = m_formIdToWorldEntity.find(localFormId);
+    if (entityIt == m_formIdToWorldEntity.end())
+        return BSTEventResult::kOk;
+
+    RequestWorldEntityManipulation request;
+    request.WorldEntityId = entityIt->second;
+    if (const auto metadataIt = m_worldEntityMetadata.find(entityIt->second);
+        metadataIt != m_worldEntityMetadata.end())
+    {
+        request.PlacedReferenceId = metadataIt->second.PlacedReferenceId;
+    }
+    request.Action = WorldEntityManipulationAction::Release;
+    request.Transform = transform;
+    m_transport.Send(request);
+    spdlog::info("[STRE][WorldSync] manipulation_release_requested entity={} localForm={:08X} granted=false fallback=true",
+                 entityIt->second, localFormId);
+    return BSTEventResult::kOk;
+}
+
+void InventoryService::OnNotifyWorldEntityManipulation(
+    const NotifyWorldEntityManipulation& acMessage) noexcept
+{
+    // TransportService dispatches packets directly from OnConsume(). Any Skyrim
+    // reference mutation must therefore be marshalled through RunnerService, whose
+    // task queue is drained from the per-frame UpdateEvent.
+    m_world.GetRunner().Queue([this, message = acMessage]()
+    {
+        ProcessNotifyWorldEntityManipulation(message);
+    });
+}
+
+void InventoryService::ProcessNotifyWorldEntityManipulation(
+    const NotifyWorldEntityManipulation& acMessage) noexcept
+{
+    spdlog::info("[STRE][WorldSyncDiag] manipulation_process_on_update entity={} action={} authority={}",
+                 acMessage.WorldEntityId, static_cast<uint8_t>(acMessage.Action), acMessage.AuthorityPlayerId);
+    if (!m_transport.IsConnected() || acMessage.WorldEntityId == 0)
+        return;
+
+    const bool isLocalAuthority =
+        acMessage.AuthorityPlayerId != 0 && acMessage.AuthorityPlayerId == m_transport.GetLocalPlayerId();
+
+    if (acMessage.PlacedReferenceId)
+        BindPlacedWorldEntity(acMessage.WorldEntityId, acMessage.PlacedReferenceId);
+
+    if (acMessage.Action == WorldEntityManipulationAction::Rejected)
+    {
+        const bool matchesPendingAdoption =
+            m_localManipulation && m_localManipulation->WorldEntityId == 0 &&
+            m_localManipulation->PlacedReferenceId == acMessage.PlacedReferenceId;
+        const bool matchesKnownEntity =
+            m_localManipulation && m_localManipulation->WorldEntityId == acMessage.WorldEntityId;
+
+        if (matchesPendingAdoption || matchesKnownEntity)
+        {
+            m_localManipulation->WorldEntityId = acMessage.WorldEntityId;
+            m_localManipulation->Granted = false;
+            NotifyWorldEntityManipulation authoritative = acMessage;
+            authoritative.Action = WorldEntityManipulationAction::Release;
+            m_pendingRemoteManipulations[acMessage.WorldEntityId] = authoritative;
+        }
+
+        spdlog::warn("[STRE][WorldSync] manipulation_rejected entity={} currentAuthority={}",
+                     acMessage.WorldEntityId, acMessage.AuthorityPlayerId);
+        return;
+    }
+
+    if (acMessage.Action == WorldEntityManipulationAction::Start && isLocalAuthority)
+    {
+        if (m_localManipulation &&
+            (m_localManipulation->WorldEntityId == 0 || m_localManipulation->WorldEntityId == acMessage.WorldEntityId))
+        {
+            m_localManipulation->WorldEntityId = acMessage.WorldEntityId;
+            if (acMessage.PlacedReferenceId)
+                m_localManipulation->PlacedReferenceId = acMessage.PlacedReferenceId;
+            m_localManipulation->Granted = true;
+            m_localManipulation->LastSentTransform = acMessage.Transform;
+            m_localManipulation->LastSentAt = std::chrono::steady_clock::now();
+
+            const bool releasePending = m_localManipulation->ReleasePending;
+            const WorldEntityTransform pendingRelease = m_localManipulation->PendingReleaseTransform;
+
+            spdlog::info("[STRE][WorldSync] manipulation_granted entity={} authority={} role=local adopted={}",
+                         acMessage.WorldEntityId, acMessage.AuthorityPlayerId, acMessage.PlacedReferenceId ? true : false);
+
+            if (releasePending)
+                SendLocalManipulationRelease(pendingRelease);
+        }
+        return;
+    }
+
+    if (isLocalAuthority)
+        return;
+
+    switch (acMessage.Action)
+    {
+    case WorldEntityManipulationAction::Start:
+        BeginRemoteWorldEntityManipulation(acMessage);
+        break;
+    case WorldEntityManipulationAction::Update:
+        // Heartbeats are server-private and should never be broadcast. Ignore
+        // defensively if talking to a mixed/older development build.
+        break;
+    case WorldEntityManipulationAction::Release:
+        EndRemoteWorldEntityManipulation(acMessage);
+        break;
+    case WorldEntityManipulationAction::Rejected:
+        break;
+    }
+
+}
+
+void InventoryService::BeginRemoteWorldEntityManipulation(
+    const NotifyWorldEntityManipulation& acMessage) noexcept
+{
+    if (acMessage.PlacedReferenceId)
+        BindPlacedWorldEntity(acMessage.WorldEntityId, acMessage.PlacedReferenceId);
+
+    const bool competingLocalGrab = m_localManipulation && !m_localManipulation->Granted &&
+        (m_localManipulation->WorldEntityId == acMessage.WorldEntityId ||
+         (m_localManipulation->WorldEntityId == 0 && acMessage.PlacedReferenceId &&
+          m_localManipulation->PlacedReferenceId == acMessage.PlacedReferenceId));
+    if (competingLocalGrab)
+    {
+        // Better Grabbing is still physically holding the local copy. Defer the
+        // authoritative hide until that losing local interaction releases.
+        m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+        return;
+    }
+
+    const auto entityIt = m_worldEntityToFormId.find(acMessage.WorldEntityId);
+    if (entityIt == m_worldEntityToFormId.end())
+    {
+        m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+        return;
+    }
+
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(entityIt->second));
+    if (!pReference)
+    {
+        m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+        return;
+    }
+
+    const bool firstStart = m_remoteManipulations.find(acMessage.WorldEntityId) == m_remoteManipulations.end();
+    if (firstStart)
+    {
+        m_pendingDropStabilization.erase(acMessage.WorldEntityId);
+        pReference->Disable();
+
+        RemoteManipulation remote;
+        remote.LocalFormId = entityIt->second;
+        m_remoteManipulations[acMessage.WorldEntityId] = remote;
+
+        spdlog::info("[STRE][WorldSync] manipulation_hidden entity={} authority={} localForm={:08X} placed={}",
+                     acMessage.WorldEntityId, acMessage.AuthorityPlayerId, entityIt->second,
+                     acMessage.PlacedReferenceId ? true : false);
+    }
+
+    m_pendingRemoteManipulations.erase(acMessage.WorldEntityId);
+}
+
+void InventoryService::EndRemoteWorldEntityManipulation(
+    const NotifyWorldEntityManipulation& acMessage) noexcept
+{
+    if (acMessage.PlacedReferenceId)
+        BindPlacedWorldEntity(acMessage.WorldEntityId, acMessage.PlacedReferenceId);
+
+    const bool competingLocalGrab = m_localManipulation && !m_localManipulation->Granted &&
+        (m_localManipulation->WorldEntityId == acMessage.WorldEntityId ||
+         (m_localManipulation->WorldEntityId == 0 && acMessage.PlacedReferenceId &&
+          m_localManipulation->PlacedReferenceId == acMessage.PlacedReferenceId));
+    if (competingLocalGrab)
+    {
+        m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+        return;
+    }
+
+    const auto entityIt = m_worldEntityToFormId.find(acMessage.WorldEntityId);
+    if (entityIt == m_worldEntityToFormId.end())
+    {
+        m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+        return;
+    }
+
+    m_pendingRemoteManipulations.erase(acMessage.WorldEntityId);
+    m_pendingDropStabilization.erase(acMessage.WorldEntityId);
+
+    const auto metadataIt = m_worldEntityMetadata.find(acMessage.WorldEntityId);
+    const bool isPlacedReference =
+        metadataIt != m_worldEntityMetadata.end() && metadataIt->second.IsPlacedReference();
+
+    if (isPlacedReference)
+    {
+        if (!ApplyPlacedWorldEntityTransform(acMessage.WorldEntityId, acMessage.Transform, true))
+        {
+            m_pendingRemoteManipulations[acMessage.WorldEntityId] = acMessage;
+            spdlog::warn("[STRE][WorldSync] manipulation_reappear_deferred entity={} mode=placed-reference",
+                         acMessage.WorldEntityId);
+            return;
+        }
+
+        m_remoteManipulations.erase(acMessage.WorldEntityId);
+        m_remoteAwaitingSettlementRecreate.erase(acMessage.WorldEntityId);
+
+        if (acMessage.AuthorityPlayerId != 0)
+            StartSettlementTracking(acMessage.WorldEntityId, entityIt->second, false);
+
+        spdlog::info("[STRE][WorldSync] manipulation_released entity={} authority={} role=remote localForm={:08X} mode=placed-reference",
+                     acMessage.WorldEntityId, acMessage.AuthorityPlayerId, entityIt->second);
+        return;
+    }
+
+    // Dynamic drops keep their existing recreate path. This restores a fresh
+    // collision/Havok representation at the release transform without sharing the
+    // held object's intermediate motion.
+    if (!QueueNetworkDrivenRecreate(acMessage.WorldEntityId, acMessage.Transform))
+    {
+        if (auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(entityIt->second)))
+            pReference->Enable();
+        m_remoteManipulations.erase(acMessage.WorldEntityId);
+        m_remoteAwaitingSettlementRecreate.erase(acMessage.WorldEntityId);
+        spdlog::error("[STRE][WorldSync] manipulation_reappear_fallback entity={} localForm={:08X} reason=recreate-not-queued",
+                      acMessage.WorldEntityId, entityIt->second);
+        return;
+    }
+
+    if (acMessage.AuthorityPlayerId != 0)
+        m_remoteAwaitingSettlementRecreate.insert(acMessage.WorldEntityId);
+    else
+        m_remoteAwaitingSettlementRecreate.erase(acMessage.WorldEntityId);
+
+    spdlog::info("[STRE][WorldSync] manipulation_released entity={} authority={} role=remote localForm={:08X} mode=reappear-at-release awaitingSettlement={}",
+                 acMessage.WorldEntityId, acMessage.AuthorityPlayerId, entityIt->second, acMessage.AuthorityPlayerId != 0);
+}
+
+void InventoryService::RunLocalWorldEntityManipulation() noexcept
+{
+    using namespace std::chrono;
+
+    if (!m_localManipulation || !m_localManipulation->Granted)
+        return;
+
+    auto* pReference = Cast<TESObjectREFR>(TESForm::GetById(m_localManipulation->LocalFormId));
+    if (!pReference)
+    {
+        m_localManipulation.reset();
+        return;
+    }
+
+    const auto now = steady_clock::now();
+    if (now - m_localManipulation->LastSentAt < cManipulationHeartbeat)
+        return;
+
+    // Keep the server authority lease alive and remember the latest held pose for
+    // disconnect recovery. Updates are intentionally NOT broadcast to observers:
+    // their representation remains disabled until Release.
+    const WorldEntityTransform current = ReadWorldEntityTransform(pReference);
+
+    RequestWorldEntityManipulation request;
+    request.WorldEntityId = m_localManipulation->WorldEntityId;
+    request.PlacedReferenceId = m_localManipulation->PlacedReferenceId;
+    request.Action = WorldEntityManipulationAction::Update;
+    request.Transform = current;
+    m_transport.Send(request);
+
+    m_localManipulation->LastSentTransform = current;
+    m_localManipulation->LastSentAt = now;
 }

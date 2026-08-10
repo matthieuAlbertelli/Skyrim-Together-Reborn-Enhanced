@@ -1,4 +1,4 @@
-﻿#include <TiltedOnlinePCH.h>
+#include <TiltedOnlinePCH.h>
 
 #include <Games/References.h>
 #include <Games/Overrides.h>
@@ -143,6 +143,7 @@ void TESObjectREFR::SetRotation(float aX, float aY, float aZ) noexcept
     TiltedPhoques::ThisCall(RealRotateY, this, aY);
     TiltedPhoques::ThisCall(RealRotateZ, this, aZ);
 }
+
 
 using TiltedPhoques::Serialization;
 
