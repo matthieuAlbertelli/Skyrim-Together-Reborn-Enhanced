@@ -49,6 +49,7 @@ private:
     struct SessionWorldEntity
     {
         uint32_t SourceServerId{};
+        uint32_t AuthorityPlayerId{};
         Inventory::Entry Item{};
         bool HasTransform = false;
         float PositionX{};

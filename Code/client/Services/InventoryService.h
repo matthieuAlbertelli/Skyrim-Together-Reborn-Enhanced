@@ -71,7 +71,7 @@ private:
     void RunPendingWorldEntitySnapshots() noexcept;
     void RunPendingRemoteWorldEntities() noexcept;
     void RunPendingDropStabilization() noexcept;
-    void ApplyAuthoritativeTransform(uint64_t aWorldEntityId, const NotifyInventoryChanges& acMessage) noexcept;
+    void StoreAuthoritativeTransform(uint64_t aWorldEntityId, const NotifyInventoryChanges& acMessage) noexcept;
 
     World& m_world;
     entt::dispatcher& m_dispatcher;
@@ -99,8 +99,20 @@ private:
         float LastZ{};
         uint8_t StableSamples{};
         Inventory::Entry Item{};
+        uint32_t SourceServerId{};
+        bool IsAuthority = false;
+        bool LocalSettled = false;
+        bool HasAuthoritativeTransform = false;
+        float AuthoritativePositionX{};
+        float AuthoritativePositionY{};
+        float AuthoritativePositionZ{};
+        float AuthoritativeRotationX{};
+        float AuthoritativeRotationY{};
+        float AuthoritativeRotationZ{};
         uint8_t RecreationAttempts{};
     };
+
+    bool RecreateWorldEntityAtAuthoritativeTransform(uint64_t aWorldEntityId, PendingDropStabilization& arPending) noexcept;
 
     std::unordered_map<uint64_t, PendingDropStabilization> m_pendingDropStabilization;
 };

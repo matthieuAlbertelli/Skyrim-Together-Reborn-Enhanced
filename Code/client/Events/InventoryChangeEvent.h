@@ -38,4 +38,12 @@ struct InventoryChangeEvent
     bool UpdateClients = true;
     /// Local temporary reference created by a drop, or consumed by a pickup.
     uint32_t DroppedFormId{};
+    /// Snapshot captured immediately after Skyrim created the dropped reference.
+    bool HasDropTransform = false;
+    float DropPositionX{};
+    float DropPositionY{};
+    float DropPositionZ{};
+    float DropRotationX{};
+    float DropRotationY{};
+    float DropRotationZ{};
 };

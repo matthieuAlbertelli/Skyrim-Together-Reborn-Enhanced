@@ -1112,14 +1112,25 @@ void* TP_MAKE_THISCALL(HookDropObject, Actor, void* apResult, TESBoundObject* ap
     void* pResult = TiltedPhoques::ThisCall(RealDropObject, apThis, apResult, apObject, apExtraData, aCount, apLocation, apRotation);
 
     uint32_t droppedFormId = 0;
+    InventoryChangeEvent inventoryEvent(apThis->formID, std::move(item), true, true);
     const auto* pHandle = static_cast<const BSPointerHandle<TESObjectREFR>*>(apResult);
     if (pHandle && *pHandle)
     {
         if (auto* pDroppedObject = TESObjectREFR::GetByHandle(pHandle->handle.iBits))
+        {
             droppedFormId = pDroppedObject->formID;
+            inventoryEvent.DroppedFormId = droppedFormId;
+            inventoryEvent.HasDropTransform = true;
+            inventoryEvent.DropPositionX = pDroppedObject->position.x;
+            inventoryEvent.DropPositionY = pDroppedObject->position.y;
+            inventoryEvent.DropPositionZ = pDroppedObject->position.z;
+            inventoryEvent.DropRotationX = pDroppedObject->rotation.x;
+            inventoryEvent.DropRotationY = pDroppedObject->rotation.y;
+            inventoryEvent.DropRotationZ = pDroppedObject->rotation.z;
+        }
     }
 
-    World::Get().GetRunner().Trigger(InventoryChangeEvent(apThis->formID, std::move(item), true, true, droppedFormId));
+    World::Get().GetRunner().Trigger(std::move(inventoryEvent));
 
     return pResult;
 }

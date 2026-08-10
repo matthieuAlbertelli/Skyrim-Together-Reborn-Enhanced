@@ -42,6 +42,13 @@ void InventoryService::OnInventoryChanges(const PacketEvent<RequestInventoryChan
         }
 
         auto& entity = worldIt->second;
+        if (!acMessage.pPlayer || entity.AuthorityPlayerId != acMessage.pPlayer->GetId())
+        {
+            spdlog::warn("[STRE][WorldSync] transform_rejected entity={} reason=not-authority sender={} authority={}",
+                         message.WorldEntityId, acMessage.pPlayer ? acMessage.pPlayer->GetId() : 0, entity.AuthorityPlayerId);
+            return;
+        }
+
         entity.HasTransform = true;
         entity.PositionX = message.PositionX;
         entity.PositionY = message.PositionY;
@@ -95,22 +102,52 @@ void InventoryService::OnInventoryChanges(const PacketEvent<RequestInventoryChan
     NotifyInventoryChanges notify;
     notify.ServerId = message.ServerId;
     notify.Item = message.Item;
-    notify.Drop = bEnableItemDrops ? message.Drop : false;
+    notify.Drop = bEnableItemDrops && message.Drop && message.DroppedFormId != 0;
     notify.WorldEntityId = message.WorldEntityId;
+
+    if (bEnableItemDrops && message.Drop && message.DroppedFormId == 0)
+    {
+        spdlog::warn("[STRE][WorldSync] drop_sync_skipped actorServerId={} reason=missing-origin-reference",
+                     message.ServerId);
+    }
+    // RequestInventoryChanges already carried transform floats before World Sync.
+    // Infer their validity for an initial drop instead of extending the client->server
+    // wire format with another boolean. This keeps mixed/restarted binaries from
+    // silently mis-decoding the packet.
+    notify.HasTransform = notify.Drop;
+    notify.PositionX = message.PositionX;
+    notify.PositionY = message.PositionY;
+    notify.PositionZ = message.PositionZ;
+    notify.RotationX = message.RotationX;
+    notify.RotationY = message.RotationY;
+    notify.RotationZ = message.RotationZ;
 
     const entt::entity cOrigin = static_cast<entt::entity>(message.ServerId);
     if (notify.Drop)
     {
         notify.WorldEntityId = m_nextWorldEntityId.fetch_add(1, std::memory_order_relaxed);
-        m_worldEntities.emplace(notify.WorldEntityId, SessionWorldEntity{message.ServerId, message.Item});
+
+        SessionWorldEntity entity;
+        entity.SourceServerId = message.ServerId;
+        entity.AuthorityPlayerId = acMessage.pPlayer ? acMessage.pPlayer->GetId() : 0;
+        entity.Item = message.Item;
+        entity.HasTransform = notify.HasTransform;
+        entity.PositionX = message.PositionX;
+        entity.PositionY = message.PositionY;
+        entity.PositionZ = message.PositionZ;
+        entity.RotationX = message.RotationX;
+        entity.RotationY = message.RotationY;
+        entity.RotationZ = message.RotationZ;
+        m_worldEntities.emplace(notify.WorldEntityId, std::move(entity));
 
         NotifyInventoryChanges assignment = notify;
         assignment.BindOnly = true;
         assignment.OriginFormId = message.DroppedFormId;
         acMessage.pPlayer->Send(assignment);
 
-        spdlog::info("[STRE][WorldSync] drop_committed entity={} actorServerId={} originForm={:08X}",
-                     notify.WorldEntityId, message.ServerId, message.DroppedFormId);
+        spdlog::info("[STRE][WorldSync] drop_committed entity={} actorServerId={} originForm={:08X} initialTransform={} position=({:.2f},{:.2f},{:.2f})",
+                     notify.WorldEntityId, message.ServerId, message.DroppedFormId, notify.HasTransform,
+                     notify.PositionX, notify.PositionY, notify.PositionZ);
     }
 
     if (!GameServer::Get()->SendToPlayersInRange(notify, cOrigin, acMessage.GetSender()))
