@@ -25,8 +25,9 @@ struct Actor;
  * Responsible for periodically checking whether actor values of local actors have changed since
  * the previous frame, and if so, broadcast those values to other players within range.
  * This service is also responsible for applying incoming actor value changes.
- * Health is synced separately from other actor values, since health changes
- * need to be synced immediately.
+ * Health uses two complementary paths: immediate delta events for combat/effects,
+ * plus periodic absolute snapshots through the regular actor-value channel. The
+ * snapshots cover native regeneration and reconcile any drift from delta prediction.
  *
  * This service is also responsible for syncing the death states of individual actors.
  * The death state is perdiocally checked and compared to cached death states.
@@ -79,7 +80,7 @@ private:
     /**
      * @brief Receives health value changes and applies them locally.
      */
-    void OnHealthChangeBroadcast(const NotifyHealthChangeBroadcast& acMessage) const noexcept;
+    void OnHealthChangeBroadcast(const NotifyHealthChangeBroadcast& acMessage) noexcept;
     /**
      * @brief Receives death state changes and applies them locally.
      */
@@ -93,12 +94,20 @@ private:
      */
     void RunActorValuesUpdates() noexcept;
     /**
-     * @brief Checks and broadcasts small health changes.
+     * @brief Runs the health synchronization tick.
      *
-     * If the small health member variable has collected any health changes, this function
-     * broadcasts those changes to the other clients.
+     * Flushes accumulated low-latency deltas first, then broadcasts authoritative
+     * absolute snapshots so the latter always acts as the convergence point.
      */
-    void RunSmallHealthUpdates() noexcept;
+    void RunHealthUpdates() noexcept;
+    /**
+     * @brief Broadcasts authoritative absolute health snapshots for locally owned actors.
+     *
+     * This is the convergence path for all health changes, including native regeneration
+     * that does not pass through a stable hook. It deliberately reuses the regular actor
+     * value protocol instead of introducing a regeneration-specific message.
+     */
+    void BroadcastHealthSnapshots() noexcept;
     /**
      * @brief Checks and broadcasts death state changes.
      */
@@ -118,6 +127,9 @@ private:
     entt::dispatcher& m_dispatcher;
     TransportService& m_transport;
 
-    //! @brief Server ids and collected health changes.
+    //! @brief Server ids and collected health changes for the low-latency delta path.
     Map<uint32_t, float> m_smallHealthChanges;
+
+    //! @brief Local actor server ids that require an unconditional absolute-health reconciliation.
+    Set<uint32_t> m_pendingHealthSnapshots;
 };

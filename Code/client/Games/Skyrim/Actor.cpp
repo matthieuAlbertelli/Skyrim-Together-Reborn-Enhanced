@@ -1042,26 +1042,8 @@ void TP_MAKE_THISCALL(HookApplyActorEffect, ActiveEffect, Actor* apTarget, float
     return TiltedPhoques::ThisCall(RealApplyActorEffect, apThis, apTarget, aEffectValue, unk1);
 }
 
-TP_THIS_FUNCTION(TRegenAttributes, void*, Actor, int aId, float regenValue);
-static TRegenAttributes* RealRegenAttributes = nullptr;
-
-void* TP_MAKE_THISCALL(HookRegenAttributes, Actor, int aId, float aRegenValue)
-{
-    if (aId != ActorValueInfo::kHealth)
-    {
-        return TiltedPhoques::ThisCall(RealRegenAttributes, apThis, aId, aRegenValue);
-    }
-
-    const auto* pExTarget = apThis->GetExtension();
-    if (pExTarget->IsRemote())
-    {
-        return 0;
-    }
-
-    World::Get().GetRunner().Trigger(HealthChangeEvent(apThis->formID, aRegenValue));
-    return TiltedPhoques::ThisCall(RealRegenAttributes, apThis, aId, aRegenValue);
-}
-
+// Natural health regeneration is synchronized by ActorValueService through
+// absolute health snapshots. Do not reintroduce a native regeneration hook here.
 void TP_MAKE_THISCALL(HookAddInventoryItem, Actor, TESBoundObject* apItem, ExtraDataList* apExtraData, int32_t aCount, TESObjectREFR* apOldOwner)
 {
     if (!ScopedInventoryOverride::IsOverriden())
@@ -1296,7 +1278,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         POINTER_SKYRIMSE(TSpawnActorInWorld, s_SpawnActorInWorld, 19742);
         POINTER_SKYRIMSE(TDamageActor, s_damageActor, 37335);
         POINTER_SKYRIMSE(TApplyActorEffect, s_applyActorEffect, 35086);
-        POINTER_SKYRIMSE(TRegenAttributes, s_regenAttributes, 37448);
         POINTER_SKYRIMSE(TAddInventoryItem, s_addInventoryItem, 37525);
         POINTER_SKYRIMSE(TPickUpObject, s_pickUpObject, 37521);
         POINTER_SKYRIMSE(TDropObject, s_dropObject, 40454);
@@ -1318,7 +1299,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         RealSpawnActorInWorld = s_SpawnActorInWorld.Get();
         RealDamageActor = s_damageActor.Get();
         RealApplyActorEffect = s_applyActorEffect.Get();
-        RealRegenAttributes = s_regenAttributes.Get();
         RealAddInventoryItem = s_addInventoryItem.Get();
         RealPickUpObject = s_pickUpObject.Get();
         RealDropObject = s_dropObject.Get();
@@ -1339,22 +1319,6 @@ static TiltedPhoques::Initializer s_actorHooks(
         TP_HOOK(&RealSpawnActorInWorld, HookSpawnActorInWorld);
         TP_HOOK(&RealDamageActor, HookDamageActor);
         TP_HOOK(&RealApplyActorEffect, HookApplyActorEffect);
-        // STRE V41 swimming fix:
-        //
-        // Address Library ID 37448 currently resolves to SkyrimSE.exe
-        // RVA 0x673170, which is the native aquatic submersion-metric helper,
-        // not Actor health regeneration. Hooking it with HookRegenAttributes
-        // corrupts the aquatic-state pipeline (swimming, underwater state,
-        // drowning and clean water exit).
-        //
-        // Keep the resolver for forensic visibility, but do not install this
-        // hook until the correct regeneration relocation is identified.
-        spdlog::warn(
-            "[STRE][SwimmingFixV41] disabling RegenAttributes hook "
-            "resolvedTarget={:X}; relocation ID 37448 is invalid for this "
-            "runtime",
-            reinterpret_cast<uintptr_t>(RealRegenAttributes));
-
         TP_HOOK(&RealAddInventoryItem, HookAddInventoryItem);
         TP_HOOK(&RealPickUpObject, HookPickUpObject);
         TP_HOOK(&RealDropObject, HookDropObject);

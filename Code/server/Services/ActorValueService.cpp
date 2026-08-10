@@ -11,6 +11,11 @@
 #include <Messages/NotifyHealthChangeBroadcast.h>
 #include <Messages/NotifyDeathStateChange.h>
 
+namespace
+{
+constexpr uint32_t kHealthActorValueId = 24;
+}
+
 ActorValueService::ActorValueService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
     : m_world(aWorld)
 {
@@ -76,7 +81,9 @@ void ActorValueService::OnHealthChangeBroadcast(const PacketEvent<RequestHealthC
 {
     auto& message = acMessage.Packet;
 
-    // TODO(cosideci): should server side health not be updated?
+    // Keep the server-side snapshot coherent between absolute owner updates.
+    // This matters when an actor is spawned or enters another player's range
+    // before the next 250 ms health reconciliation arrives.
     auto actorValuesView = m_world.view<ActorValuesComponent, OwnerComponent>();
 
     auto it = actorValuesView.find(static_cast<entt::entity>(message.Id));
@@ -84,8 +91,12 @@ void ActorValueService::OnHealthChangeBroadcast(const PacketEvent<RequestHealthC
     if (it != actorValuesView.end())
     {
         auto& actorValuesComponent = actorValuesView.get<ActorValuesComponent>(*it);
-        auto currentHealth = actorValuesComponent.CurrentActorValues.ActorValuesList[24];
-        actorValuesComponent.CurrentActorValues.ActorValuesList[24] = currentHealth - message.DeltaHealth;
+        const float currentHealth = actorValuesComponent.CurrentActorValues.ActorValuesList[kHealthActorValueId];
+
+        // DeltaHealth uses signed health semantics throughout the client:
+        // damage is negative and healing is positive. Keep the server cache in
+        // the same direction; absolute health snapshots will also reconcile it.
+        actorValuesComponent.CurrentActorValues.ActorValuesList[kHealthActorValueId] = currentHealth + message.DeltaHealth;
     }
 
     NotifyHealthChangeBroadcast notify;
