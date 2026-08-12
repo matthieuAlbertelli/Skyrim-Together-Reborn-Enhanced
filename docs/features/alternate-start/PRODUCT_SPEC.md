@@ -29,6 +29,12 @@ Commencer une campagne dans une auberge, sans importer un personnage déjà avan
 - restaurer l’état après reconnexion ;
 - quitter l’auberge avec une progression vanilla cohérente.
 
+## Roster de classes v1
+
+STRE v1.0.0 cible les 21 classes définies dans [`CLASS_ROSTER_V1.md`](CLASS_ROSTER_V1.md). Ce document canonique fixe l'identité de chaque classe et ses deux compétences majeures / quatre compétences mineures.
+
+Warrior, Mage et Thief sont le premier vertical slice actuellement implémenté. Les kits, objets, quantités, sorts, capacités/perks coopératifs et quêtes personnelles des 21 classes restent gouvernés par leurs sources de conception et d'implémentation dédiées ; ils ne sont pas déduits des anciens documents sous `history/`.
+
 ## Expérience cible
 
 1. Nouvelle partie redirigée vers l’auberge.

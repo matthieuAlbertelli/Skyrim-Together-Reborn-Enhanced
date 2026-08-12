@@ -18,7 +18,7 @@ STRE v1.0.0 is the first version suitable for starting and playing a real cooper
 
 1. Complete Alternate Start.
 2. Complete character creation flow.
-3. All planned character classes.
+3. All 21 character classes in the canonical v1 roster defined by [`CLASS_ROSTER_V1.md`](docs/features/alternate-start/CLASS_ROSTER_V1.md).
 4. Starting equipment/loadouts for every class.
 5. Cooperative class abilities and perks.
 6. Personal quest content for every class.
@@ -40,7 +40,7 @@ The exact allocation of these outcomes to intermediate `0.x` releases remains pr
 
 Deliver a clean new-game path through the custom inn, exhaustive vanilla-start/Helgen bypass, RaceMenu and STRE character creation, complete reset policy, canonical build application and a coherent departure into the campaign. Preserve the explicit local fallback for solo play.
 
-The class program covers every planned class, all starting kits and schools, cooperative abilities/perks, balance/combination validation and a personal quest for each class. Logical catalog, CK records, Papyrus, UI and authoritative multiplayer application must remain one coherent contract.
+The class program covers all 21 classes in the canonical v1 roster, all starting kits and schools, cooperative abilities/perks, balance/combination validation and a personal quest for each class. Logical catalog, CK records, Papyrus, UI and authoritative multiplayer application must remain one coherent contract.
 
 ### Messire Valen, headquarters inn and housing foundation
 
