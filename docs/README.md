@@ -2,14 +2,26 @@
 
 This directory is the canonical documentation portal for Skyrim Together Reborn Enhanced.
 
+## Documentation language
+
+**English is the canonical language for engineering and project documentation.**
+This applies to architecture, ADRs, feature specifications, testing, governance,
+release policy, templates, and maintained GitHub metadata.
+
+Localized player content belongs in localization or content-specific resources.
+Dialogue, subtitles, localized display names, and other player-facing prose may
+remain in their target language, but they must not become a competing technical
+specification. Technical documents use stable identifiers and canonical English
+names, and label localized display text explicitly.
+
 ## Status vocabulary
 
-- **Implemented / Implémenté** — confirmed in current source.
-- **Validated in game / Validé en jeu** — exercised in Skyrim; scope/date must be stated.
-- **Accepted / Décidé** — product or architecture direction selected for STRE.
-- **Proposed / Proposé** — recommended design awaiting implementation or ratification.
-- **Open / À valider** — unresolved decision or prototype requirement.
-- **Historical / Historique** — dated evidence preserved for traceability, not current truth.
+- **Implemented** — confirmed in current source.
+- **Validated in game** — exercised in Skyrim; scope and date must be stated.
+- **Accepted** — product or architecture direction selected for STRE.
+- **Proposed** — recommended design awaiting implementation or ratification.
+- **Open** — unresolved decision or prototype requirement.
+- **Historical** — dated evidence preserved for traceability, not current truth.
 
 ## Sources of truth
 

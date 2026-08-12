@@ -1,56 +1,56 @@
 # Alternate Start
 
-> **Statut : Vertical slice Character Build implémenté et smoke-testé ; campagne complète en cours**
+> **Status: Character Build vertical slice implemented and smoke-tested; full campaign in progress**
 
-## Résultat actuel
+## Current outcome
 
-Le joueur peut être placé dans l’auberge, ouvrir RaceMenu, choisir une classe et des kits dans l’interface Angular, consulter le résumé puis sceller son build.
+The player can be placed in the inn, open RaceMenu, choose a class and kits in the Angular interface, review the summary, and seal the build.
 
-Le flux fonctionne :
+The flow works:
 
-- localement sans serveur;
-- en multijoueur avec validation serveur de l’inventaire et des sorts;
-- avec Warrior, Mage et Thief;
-- avec le vertical slice Destruction/Altération du Mage;
-- avec des buffs ciblés fonctionnels sur un autre joueur.
+- locally without a server;
+- in multiplayer with server validation of inventory and spells;
+- with Warrior, Mage, and Thief;
+- with the Mage Destruction/Alteration vertical slice;
+- with functional targeted buffs on another player.
 
-Le catalogue courant est `BuildVersion = 5`.
+The current catalog is `BuildVersion = 5`.
 
-Pour l’état courant du projet et les limites globales, voir [`docs/project/STATUS.md`](../../project/STATUS.md).
+For the current project state and global limitations, see [`docs/project/STATUS.md`](../../project/STATUS.md).
 
-## Sources de vérité de la feature
+## Feature sources of truth
 
-Ordre de priorité pour le comportement implémenté :
+Priority order for implemented behavior:
 
-1. `Code/common/CharacterCreation/CharacterBuildCatalog.*` — règles canoniques;
-2. `Code/skyrim_ui/src/app/data/character-loadouts.ts` — présentation/choix UI;
-3. `CK_RECORDS_M7_IMPLEMENTED.json` et `STRE_AlternateStart.esp` — records CK;
-4. `CK_IMPLEMENTATION.md` — comportement CK maintenu;
-5. `CLASS_ROSTER_V1.md` — roster produit canonique des 21 classes v1 et affectations majeures/mineures;
-6. `PRODUCT_SPEC.md` / `STATE_MODEL.md` — cible fonctionnelle;
-7. `KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx` — matrice de conception à poursuivre.
+1. `Code/common/CharacterCreation/CharacterBuildCatalog.*` — canonical rules;
+2. `Code/skyrim_ui/src/app/data/character-loadouts.ts` — UI presentation and choices;
+3. `CK_RECORDS_M7_IMPLEMENTED.json` and `STRE_AlternateStart.esp` — CK records;
+4. `CK_IMPLEMENTATION.md` — maintained CK behavior;
+5. `CLASS_ROSTER_V1.md` — canonical product roster of 21 v1 classes and their major/minor assignments;
+6. `PRODUCT_SPEC.md` and `STATE_MODEL.md` — functional target;
+7. `SKILL_EQUIPMENT_KITS_V2.xlsx` — kit design matrix to continue.
 
-Les documents sous `history/` sont des preuves/jalons datés et ne remplacent pas ces sources.
+Documents under `history/` are dated evidence and milestones; they do not replace these sources.
 
-## Documents courants
+## Current documents
 
-- `PRODUCT_SPEC.md` — cible produit;
-- `CLASS_ROSTER_V1.md` — roster canonique des 21 classes v1;
-- `SOLO_DESIGN.md` — fonctionnement sans serveur;
-- `STRE_ADAPTER_SPEC.md` — sémantique coopérative actuelle/cible;
-- `CK_IMPLEMENTATION.md` — records et flux CK;
-- `STATE_MODEL.md` — état build/campagne;
+- `PRODUCT_SPEC.md` — product target;
+- `CLASS_ROSTER_V1.md` — canonical roster of 21 v1 classes;
+- `SOLO_DESIGN.md` — operation without a server;
+- `STRE_ADAPTER_SPEC.md` — current and target cooperative semantics;
+- `CK_IMPLEMENTATION.md` — CK records and flow;
+- `STATE_MODEL.md` — build and campaign state;
 - `TEST_PLAN.md` — validation;
-- `OPEN_QUESTIONS.md` — décisions restantes;
-- `CK_RECORDS_M7_IMPLEMENTED.json` — manifest strict;
-- `KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx` — conception des kits.
+- `OPEN_QUESTIONS.md` — remaining decisions;
+- `CK_RECORDS_M7_IMPLEMENTED.json` — strict manifest;
+- `SKILL_EQUIPMENT_KITS_V2.xlsx` — kit design.
 
-## Historique
+## History
 
-- `history/M7_CK_CODE_INTEGRATION_20260727.md` — validation du jalon M7;
-- `history/SKILL_LOADOUTS_v0.1_fr.md` — ancienne conception V0.1.
+- `history/M7_CK_CODE_INTEGRATION_20260727.md` — M7 milestone validation;
+- `history/SKILL_LOADOUTS_v0.1_fr.md` — archived French V0.1 design retained as historical evidence.
 
-## Commandes de test locales
+## Local test commands
 
 ```text
 resetquest STRE_QUEST_AlternateStart
@@ -58,9 +58,9 @@ startquest STRE_QUEST_AlternateStart
 setstage STRE_QUEST_AlternateStart 10
 ```
 
-## Dépendances
+## Dependencies
 
-- `Skyrim.esm`, `Update.esm`, `Dragonborn.esm` selon les records;
-- client STRE pour l’UI native/Angular et le chemin multijoueur;
-- serveur STRE pour le chemin autoritaire;
-- aucun serveur requis pour le fallback local.
+- `Skyrim.esm`, `Update.esm`, and `Dragonborn.esm` as required by the records;
+- the STRE client for the native/Angular UI and multiplayer path;
+- the STRE server for the authoritative path;
+- no server required for the local fallback.

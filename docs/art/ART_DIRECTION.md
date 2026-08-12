@@ -1,31 +1,31 @@
-# Direction artistique
+# Art direction
 
-> **Statut : Proposition**
+> **Status: Proposal**
 
-## Principe
+## Principle
 
-STRE doit sembler avoir toujours pu appartenir à Skyrim. Les assets peuvent être plus lisibles et mieux finis que le vanilla, mais ne doivent pas rompre brutalement avec ses matériaux, proportions et densité visuelle.
+STRE should feel as though it could always have belonged in Skyrim. Assets may be clearer and more polished than vanilla assets, but must not sharply depart from Skyrim's materials, proportions, or visual density.
 
-## Mots-clés
+## Keywords
 
-Nordique, vécu, fonctionnel, tactile, sombre sans être illisible, érudit sans luxe excessif.
+Nordic, weathered, functional, tactile, dark without being unreadable, scholarly without excessive luxury.
 
-## Hub Alternate Start
+## Alternate Start hub
 
-La base de la Jument Pavoisée doit devenir distincte par :
+The Bannered Mare base should become distinct through:
 
-- table de conseil ;
-- cartes, notes et objets de recherche ;
-- zones de préparation ;
-- signalétique discrète des classes ;
-- bureau de Valen ;
-- circulation dégagée ;
-- éclairage focal sur Valen et la table.
+- a council table;
+- maps, notes, and research objects;
+- preparation areas;
+- discreet class signage;
+- Valen's desk;
+- clear circulation paths;
+- focused lighting on Valen and the table.
 
-## Contraintes
+## Constraints
 
-- préserver occlusion, room bounds et performances ;
-- limiter les meshes uniques inutiles ;
-- textures cohérentes avec la distance d’observation ;
-- éviter l’accumulation de props qui bloque 10 joueurs ;
-- toute ressource tierce possède une licence documentée.
+- preserve occlusion, room bounds, and performance;
+- limit unnecessary unique meshes;
+- keep textures appropriate for viewing distance;
+- avoid prop accumulation that obstructs 10 players;
+- document the license of every third-party resource.

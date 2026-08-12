@@ -1,22 +1,25 @@
-# ADR-0009 — Adapters first-party avant SDK tiers
+# ADR-0009 — First-Party Adapters Before a Third-Party SDK
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Une ABI ou un protocole public figé trop tôt serait coûteux à maintenir.
+Freezing a public ABI or protocol too early would be expensive to maintain.
 
-## Décision
+## Decision
 
-Implémenter Alternate Start comme adapter compilé dans STRE. Stabiliser les concepts avec au moins deux integrations avant de publier un SDK tiers expérimental.
+Implement Alternate Start as an adapter compiled into STRE. Stabilize the
+concepts with at least two integrations before publishing an experimental
+third-party SDK.
 
-## Conséquences
+## Consequences
 
-- apprentissage rapide et liberté de refactor ;
-- ouverture externe retardée ;
-- les interfaces internes doivent néanmoins être documentées et testées.
+- rapid learning and freedom to refactor;
+- delayed external access;
+- internal interfaces must still be documented and tested.
 
-## État d’implémentation
+## Implementation state
 
-Character Build/Alternate Start constitue la première intégration first-party dédiée. Les contrats génériques et le SDK tiers restent volontairement non figés.
+Character Build/Alternate Start is the first dedicated first-party integration.
+Generic contracts and the third-party SDK intentionally remain unfrozen.

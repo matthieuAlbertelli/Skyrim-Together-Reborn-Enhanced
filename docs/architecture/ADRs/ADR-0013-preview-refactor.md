@@ -1,45 +1,51 @@
-# ADR-0013 — Refactor de la preview en composants dédiés
+# ADR-0013 — Refactor Preview into Dedicated Components
 
-> **Statut : Implemented**
-> **Origine :** migration et enrichissement de l’ancien `docs/decisions/ADR-0001-preview-refactor.md`
+> **Status:** Implemented
+> **Origin:** migration and enrichment of the former
+> `docs/decisions/ADR-0001-preview-refactor.md`.
 
-## Contexte
+## Context
 
-La première implémentation de la preview 3D était fortement couplée au système d’échange. Ce couplage rendait difficile le test des responsabilités, la stabilisation du cycle de vie natif et la réutilisation par de futurs écrans STRE.
+The first 3D preview implementation was tightly coupled to Trading. This made it
+difficult to test responsibilities, stabilize the native lifecycle, and reuse
+the preview in future STRE screens.
 
-## Décision
+## Decision
 
-Extraire progressivement les responsabilités dans des composants dédiés :
+Gradually extract responsibilities into dedicated components:
 
-- `ItemPreviewController` pour l’orchestration et l’état du fitting ;
-- `ItemPreviewNativeSession` pour le cycle de vie d’`Inventory3DManager` ;
-- `ItemPreviewHostSession` pour l’ouverture et la fermeture idempotentes du host menu ;
-- `ItemPreviewHostBridge` pour le binding RAII vers le consommateur ;
-- `ItemPreviewFitSolver` pour le calcul de transformation ;
-- `ItemPreviewRasterMeasurer` pour la mesure D3D11 ;
-- `TradePreviewHostMenu` comme host Scaleform natif non visible.
+- `ItemPreviewController` for orchestration and fitting state;
+- `ItemPreviewNativeSession` for the `Inventory3DManager` lifecycle;
+- `ItemPreviewHostSession` for idempotent host-menu opening and closing;
+- `ItemPreviewHostBridge` for RAII binding to the consumer;
+- `ItemPreviewFitSolver` for transform calculation;
+- `ItemPreviewRasterMeasurer` for D3D11 measurement;
+- `TradePreviewHostMenu` as the invisible native Scaleform host.
 
-Le service de trading devient un adaptateur consommateur de ces composants plutôt que le propriétaire de toutes les responsabilités de rendu.
+The Trading service becomes an adapter that consumes these components instead
+of owning every rendering responsibility.
 
-## Conséquences positives
+## Positive consequences
 
-- responsabilités plus faciles à auditer ;
-- cycle de vie natif isolé ;
-- base réelle pour un second consommateur ;
-- préparation du futur runtime à leases ;
-- réduction du couplage avec le domaine métier Trading.
+- easier-to-audit responsibilities;
+- isolated native lifecycle;
+- a real foundation for a second consumer;
+- preparation for the future leased runtime;
+- less coupling to the Trading business domain.
 
-## Limites restantes
+## Remaining limitations
 
-- le bridge n’accepte encore qu’un seul consommateur ;
-- le host et certains logs restent nommés autour du trading ;
-- aucun contrat stable pour mods tiers n’est exposé ;
-- les tests du solver et de l’arbitrage multi-consommateurs restent à ajouter.
+- the bridge still accepts only one consumer;
+- the host and some logs remain named after Trading;
+- no stable third-party mod contract is exposed;
+- solver and multi-consumer arbitration tests remain to be added.
 
-## Relation avec les autres décisions
+## Relationship to other decisions
 
-ADR-0013 décrit le refactor **déjà implémenté**. ADR-0008 décrit l’évolution **proposée** vers un runtime multi-consommateurs à leases.
+ADR-0013 describes the **implemented** refactor. ADR-0008 describes the
+**proposed** evolution toward a leased multi-consumer runtime.
 
-## État d’implémentation complémentaire
+## Additional implementation state
 
-Character Creation est désormais un second consommateur first-party du cœur de preview. La limite mono-client du bridge et l’absence de leases restent inchangées.
+Character Creation is now a second first-party consumer of the preview core. The
+bridge's single-client limitation and lack of leases remain unchanged.

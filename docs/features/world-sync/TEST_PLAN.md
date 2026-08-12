@@ -1,16 +1,16 @@
 # World Sync — Test plan
 
-> **Statut : scénarios principaux exécutés à deux joueurs; matrice de durcissement à poursuivre**
+> **Status: Primary two-player scenarios executed; hardening matrix remains ongoing**
 
-## Prérequis
+## Prerequisites
 
-Sur les deux clients :
+On both clients:
 
-- même build STRE;
-- Better Grabbing installé et chargé pour les tests de manipulation;
-- configuration compatible avec le build testé.
+- the same STRE build;
+- Better Grabbing installed and loaded for manipulation tests;
+- configuration compatible with the tested build.
 
-Serveur :
+Server:
 
 ```ini
 [Gameplay]
@@ -20,143 +20,143 @@ bEnableItemDrops = true
 sRequiredNativePlugins = BetterGrabbing.dll
 ```
 
-Conserver pour chaque campagne :
+Record for every test campaign:
 
-- SHA Git;
-- configuration serveur;
-- runtime Skyrim;
-- versions Better Grabbing / Address Library;
-- logs client J1, client J2 et serveur;
-- sens du test;
-- résultat observé.
+- Git SHA;
+- server configuration;
+- Skyrim runtime;
+- Better Grabbing and Address Library versions;
+- client P1, client P2, and server logs;
+- test direction;
+- observed result.
 
-## A — Native plugin policy
+## A — Native-plugin policy
 
-### A1 — Plugin manquant
+### A1 — Missing plugin
 
-Client sans Better Grabbing → connexion rejetée avec erreur native-plugin explicite.
+Client without Better Grabbing → connection rejected with an explicit native-plugin error.
 
-### A2 — Plugin présent
+### A2 — Plugin present
 
-Deux clients avec Better Grabbing chargé → connexion acceptée.
+Two clients with Better Grabbing loaded → connection accepted.
 
 ## B — Dynamic dropped WorldEntities
 
-Exécuter J1→J2 puis J2→J1.
+Run P1→P2, then P2→P1.
 
-### B1 — Drop simple
+### B1 — Simple drop
 
-1. Lâcher un objet simple.
-2. L’observateur voit une seule référence.
-3. Havok s’exécute localement.
-4. Après settlement, les clients convergent.
+1. Drop a simple object.
+2. The observer sees exactly one reference.
+3. Havok runs locally.
+4. After settlement, the clients converge.
 
-### B2 — Drop au-dessus d’une surface/obstacle/eau
+### B2 — Drop above a surface, obstacle, or water
 
-Vérifier qu’aucune correction continue ne lutte contre Havok et que le transform final converge.
+Verify that no continuous correction fights Havok and that the final transform converges.
 
 ### B3 — Pickup
 
-Après settlement, l’autre joueur ramasse l’objet. Il disparaît chez tous et une seule mutation d’inventaire est appliquée.
+After settlement, the other player picks up the object. It disappears for everyone and exactly one inventory mutation is applied.
 
-## C — Better Grabbing sur WorldEntity dynamique
+## C — Better Grabbing on a dynamic WorldEntity
 
-1. Grab d’un objet synchronisé.
-2. L’observateur le voit disparaître.
-3. Le joueur peut le déplacer/faire tourner localement pendant plusieurs secondes.
-4. Aucun pose intermédiaire ne doit être visible chez l’observateur.
-5. Release.
-6. L’objet réapparaît/reprend son état distant.
-7. Havok local puis settlement final.
-8. Pickup possible ensuite.
+1. Grab a synchronized object.
+2. The observer sees it disappear.
+3. The player can move and rotate it locally for several seconds.
+4. The observer must not see any intermediate pose.
+5. Release it.
+6. The object reappears and resumes its remote state.
+7. Local Havok runs, followed by final settlement.
+8. Pickup remains possible afterward.
 
-## D — Lazy adoption d’une référence placée
+## D — Lazy adoption of a placed reference
 
-### D1 — Premier grab
+### D1 — First grab
 
-1. Choisir une bouteille/livre/assiette mobile déjà présente dans la cellule.
-2. J1 grab.
-3. J2 voit la référence locale existante disparaître.
-4. J1 déplace/release.
-5. J2 voit **la même référence**, pas un duplicate, au transform de release.
-6. Settlement final.
+1. Choose a movable bottle, book, or plate already present in the cell.
+2. P1 grabs it.
+3. P2 sees the existing local reference disappear.
+4. P1 moves and releases it.
+5. P2 sees **the same reference**, not a duplicate, at the release transform.
+6. Final settlement completes.
 
-### D2 — Re-grab opposé
+### D2 — Opposite-player re-grab
 
-J2 grab ensuite la même référence. Le serveur doit réutiliser le même `WorldEntityId`.
+P2 then grabs the same reference. The server must reuse the same `WorldEntityId`.
 
-### D3 — Pickup direct sans grab préalable
+### D3 — Direct pickup without a prior grab
 
-Ramasser une autre référence placée. L’adoption et la consommation doivent être atomiques du point de vue serveur, sans double delta d’inventaire.
+Pick up another placed reference. Adoption and consumption must be atomic from the server's perspective, with no duplicate inventory delta.
 
 ### D4 — Late join
 
-Déplacer une référence placée, laisser settle, puis connecter l’autre client. Il doit binder sa référence locale existante sans duplicate.
+Move a placed reference, let it settle, then connect the other client. It must bind its existing local reference without creating a duplicate.
 
-## E — Ownership / vol
+## E — Ownership and theft
 
-### E1 — Objet sans owner
+### E1 — Unowned object
 
-Grab → aucune alarme de vol.
+Grab → no theft alarm.
 
-### E2 — Objet possédé avec témoin
+### E2 — Owned object with a witness
 
-Grab → alarme de vol immédiate; gardes/comportement vanilla attendus.
+Grab → immediate theft alarm; vanilla guard behavior is expected.
 
-### E3 — Objet autorisé
+### E3 — Authorized object
 
-Si Skyrim considère le joueur owner/autorisé, aucun faux vol.
+If Skyrim considers the player an authorized owner, no false theft occurs.
 
-### E4 — Provenance après inventaire/drop
+### E4 — Provenance after inventory and drop
 
-Voler → inventaire → drop → pickup distant. L’ownership doit rester associé à l’instance supportée.
+Steal → inventory → drop → remote pickup. Ownership must remain associated with the supported instance.
 
-### E5 — Conteneur possédé
+### E5 — Owned container
 
-Prendre depuis un conteneur possédé puis dropper. Vérifier la provenance.
+Take an object from an owned container, then drop it. Verify provenance.
 
-## F — Dialogue / arrestation
+## F — Dialogue and arrest
 
-1. Grab d’un objet possédé devant témoin.
-2. Laisser les gardes initier un dialogue.
-3. À l’ouverture du Dialogue Menu, l’objet doit être automatiquement relâché.
-4. Les choix de dialogue doivent être utilisables immédiatement.
-5. Après le dialogue, Better Grabbing doit fonctionner normalement sur un autre objet.
-6. Vérifier qu’aucun release réseau ne reste bloqué.
+1. Grab an owned object in front of a witness.
+2. Let guards initiate dialogue.
+3. When the Dialogue Menu opens, the object must be released automatically.
+4. Dialogue choices must be usable immediately.
+5. After the dialogue, Better Grabbing must work normally on another object.
+6. Verify that no network release remains blocked.
 
 ## G — Instance metadata
 
-### G1 — Enchantement vanilla
+### G1 — Vanilla enchantment
 
-Drop/pickup d’une arme enchantée avec charge partiellement consommée.
+Drop and pick up an enchanted weapon with a partially depleted charge.
 
-### G2 — Enchantement joueur
+### G2 — Player enchantment
 
-Tester un enchantement créé par le joueur, effets + charge.
+Test a player-created enchantment, including effects and charge.
 
-### G3 — Nom personnalisé
+### G3 — Custom name
 
-**Limite connue :** ne pas considérer ce scénario validé tant que `ExtraTextDisplayData` n’est pas supporté.
+**Known limitation:** do not consider this scenario validated until `ExtraTextDisplayData` is supported.
 
-## H — Concurrence / recovery
+## H — Concurrency and recovery
 
-- deux joueurs tentent de grab la même WorldEntity;
-- autorité se déconnecte pendant le grab;
-- observateur se déconnecte/reconnecte pendant le grab;
-- release très rapide avant fin de lazy adoption;
-- changement de cellule après settlement;
-- late join après plusieurs drops;
-- répétition alternée J1/J2 sur la même référence.
+- two players attempt to grab the same WorldEntity;
+- the authority disconnects during the grab;
+- the observer disconnects and reconnects during the grab;
+- release occurs very quickly before lazy adoption finishes;
+- cell change after settlement;
+- late join after several drops;
+- alternating P1/P2 repetitions on the same reference.
 
-## I — Références à risque
+## I — High-risk references
 
-À valider avant extension de support :
+Validate before extending support:
 
-- références scriptées;
-- enable-parent;
-- références de quête;
-- ownership faction complexe;
-- objets activables avec side effects;
-- cellules qui reset.
+- scripted references;
+- enable-parent references;
+- quest references;
+- complex faction ownership;
+- activatable objects with side effects;
+- cells that reset.
 
-Ces cas ne doivent pas être annoncés comme garantis avant validation spécifique.
+These cases must not be advertised as guaranteed before specific validation.

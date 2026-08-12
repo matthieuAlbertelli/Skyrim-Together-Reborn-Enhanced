@@ -1,30 +1,33 @@
-# Architecture de la plateforme Item Preview
+# Item Preview Platform Architecture
 
-> **Statut : Cœur réutilisé par deux consommateurs / runtime à leases proposé**
+> **Status:** core reused by two consumers; leased runtime proposed.
 
-## État actuel
+## Current state
 
-Le code possède des composants génériques solides :
+The code has solid generic components:
 
-- session native ;
-- contrôleur ;
-- solver ;
-- mesure raster ;
-- host session ;
-- host bridge RAII.
+- native session;
+- controller;
+- solver;
+- raster measurement;
+- host session;
+- RAII host bridge.
 
-Deux consommateurs first-party sont actifs :
+Two first-party consumers are active:
 
-- `TradeItemPreviewService` pour les échanges ;
-- Character Creation pour les équipements de classe et de compétence.
+- `TradeItemPreviewService` for Trading;
+- Character Creation for class and skill equipment.
 
-Chaque consommateur résout un objet Skyrim réel, fournit une région Angular/CEF et utilise le même pipeline de chargement, mesure et cadrage.
+Each consumer resolves a real Skyrim object, supplies an Angular/CEF region, and
+uses the same loading, measurement, and framing pipeline.
 
-## Problème restant
+## Remaining problem
 
-`ItemPreviewHostBridge` n’accepte toujours qu’un `ItemPreviewHostClient` à la fois. La réutilisation séquentielle est validée, mais le runtime ne gère ni concurrence, ni priorité, ni ownership explicite, ni timeout de ressource.
+`ItemPreviewHostBridge` still accepts only one `ItemPreviewHostClient` at a time.
+Sequential reuse is validated, but the runtime handles neither concurrency,
+priority, explicit ownership, nor resource timeout.
 
-## API cible
+## Target API
 
 ```cpp
 struct ItemPreviewRequest
@@ -50,16 +53,16 @@ public:
 };
 ```
 
-## Arbitrage
+## Arbitration
 
-- une seule session native active ;
-- priorité explicite ;
-- préemption notifiée ;
-- fermeture idempotente ;
-- restitution de la surface et de l’input ;
-- aucun consommateur ne manipule directement le host menu.
+- one active native session;
+- explicit priority;
+- notified preemption;
+- idempotent closing;
+- restoration of the surface and input;
+- no consumer manipulates the host menu directly.
 
-## Séparation cible
+## Target separation
 
 ```text
 ItemPreviewRuntime
@@ -72,24 +75,25 @@ ItemPreviewRuntime
 └─ Telemetry
 ```
 
-Trading et Character Creation deviennent des adapters consommateurs du runtime.
+Trading and Character Creation become runtime consumer adapters.
 
-## API pour mods tiers
+## Third-party mod API
 
-1. stabiliser les leases entre les consommateurs first-party ;
-2. ajouter une capability interne `item-preview/1` ;
-3. fournir un bridge UI/Mod Adapter par `GameId` canonique ;
-4. publier un SDK tiers versionné.
+1. stabilize leases between first-party consumers;
+2. add an internal `item-preview/1` capability;
+3. provide a UI/Mod Adapter bridge using canonical `GameId` values;
+4. publish a versioned third-party SDK.
 
-Un mod externe ne doit jamais recevoir de pointeur Skyrim natif ni appeler `Inventory3DManager` directement.
+An external mod must never receive a native Skyrim pointer or call
+`Inventory3DManager` directly.
 
-## Tests requis
+## Required tests
 
-- solver pur : tailles extrêmes, bords écran, clamps ;
-- acquisition/release idempotente ;
-- préemption Trading ↔ Character Creation ;
-- fermeture pendant reload ;
-- changement rapide d’item ;
-- resize de région ;
-- perte du device ou absence du manager ;
-- conflit avec menus natifs.
+- pure solver: extreme sizes, screen edges, and clamps;
+- idempotent acquisition and release;
+- Trading ↔ Character Creation preemption;
+- closing during reload;
+- rapid item changes;
+- region resizing;
+- device loss or missing manager;
+- conflicts with native menus.

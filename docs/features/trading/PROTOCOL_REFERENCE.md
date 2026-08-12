@@ -1,54 +1,54 @@
-# Trading — Référence protocole
+# Trading — Protocol Reference
 
-> **Statut : Implémenté**
+> **Status:** implemented.
 
-## Identifiants
+## Identifiers
 
-| Champ | Type | Rôle |
+| Field | Type | Role |
 |---|---|---|
-| `SessionId` | uint64 | transaction logique |
-| `Revision` | uint64 | version de l’offre globale |
-| `ApplyId` | uint64 | tentative d’application |
-| `ReconcileId` | uint64 | tentative de réconciliation |
+| `SessionId` | uint64 | logical transaction |
+| `Revision` | uint64 | global offer version |
+| `ApplyId` | uint64 | application attempt |
+| `ReconcileId` | uint64 | reconciliation attempt |
 | `PlayerId` | uint32 | participant |
 | `ItemId` | uint64 | `ModId << 32 | BaseId` |
 
-## Client → serveur
+## Client → server
 
-| Message | Données | Précondition |
+| Message | Data | Precondition |
 |---|---|---|
-| Invite | target player | aucun trade actif |
-| InviteResponse | session, accepted | destinataire |
-| OfferUpdate | session, expected revision, full offer | négociation |
-| Confirm | session, revision | révision courante |
-| Cancel | session | participant, non applying |
-| ApplyResult | session, revision, apply id, result | application attendue |
-| ReconcileResult | session, revision, apply/reconcile ids, result | réconciliation attendue |
+| Invite | target player | no active trade |
+| InviteResponse | session, accepted | recipient |
+| OfferUpdate | session, expected revision, full offer | negotiating |
+| Confirm | session, revision | current revision |
+| Cancel | session | participant, not applying |
+| ApplyResult | session, revision, apply ID, result | expected application |
+| ReconcileResult | session, revision, apply/reconcile IDs, result | expected reconciliation |
 
-## Serveur → client
+## Server → client
 
-| Message | Rôle |
+| Message | Role |
 |---|---|
-| Invite | afficher l’invitation |
-| Started | créer le contexte local |
-| State | snapshot autoritaire de session |
-| Apply | mutations signées locales |
-| Reconcile | quantités cibles absolues |
-| Cancelled | motif d’annulation |
+| Invite | display invitation |
+| Started | create local context |
+| State | authoritative session snapshot |
+| Apply | signed local mutations |
+| Reconcile | absolute target quantities |
+| Cancelled | cancellation reason |
 
-## Bornes
+## Bounds
 
-- 64 lignes par offre ;
-- 64 mutations par plan ;
-- 64 cibles par réconciliation ;
-- décodeur invalide la structure si la borne est dépassée.
+- 64 lines per offer;
+- 64 mutations per plan;
+- 64 targets per reconciliation;
+- decoder invalidates the structure when a bound is exceeded.
 
-## Compatibilité future
+## Future compatibility
 
-Tout changement de structure doit préciser :
+Every structural change specifies:
 
-- version de protocole ;
-- clients minimum ;
-- stratégie de downgrade ;
-- comportement d’un serveur ancien ;
-- tests de round-trip et malformed payload.
+- protocol version;
+- minimum clients;
+- downgrade strategy;
+- behavior of an older server;
+- round-trip and malformed-payload tests.

@@ -1,47 +1,47 @@
-# Alternate Start — STRE Integration Spec
+# Alternate Start — STRE integration specification
 
-> **Statut : Character Build first-party implémenté / adapter de campagne générique proposé**
+> **Status: First-party Character Build implemented; generic campaign adapter proposed**
 
-## Identité
+## Identity
 
-- plugin requis : `STRE_AlternateStart.esp` ;
-- intégration actuelle : services C++ first-party compilés ;
-- catalogue : `BuildVersion = 5` ;
-- adapter ID cible : `stre.alternate-start` ;
-- version d’adapter cible : `1`.
+- required plugin: `STRE_AlternateStart.esp`;
+- current integration: compiled first-party C++ services;
+- catalog: `BuildVersion = 5`;
+- target adapter ID: `stre.alternate-start`;
+- target adapter version: `1`.
 
-## Capabilities actuelles
+## Current capabilities
 
-| Capability | Autorité | État canonique |
+| Capability | Authority | Canonical state |
 |---|---|---|
-| `player.character-build/5` | serveur ou fallback local | race, classe, sélections, inventaire, sorts, hashes |
-| `player.character-build-state/1` | serveur | revision, Accepted/Applied |
-| `player.targeted-buff/1` | moteur/STRE MagicService | buffs alliés reconnus |
+| `player.character-build/5` | server or local fallback | race, class, selections, inventory, spells, hashes |
+| `player.character-build-state/1` | server | revision, Accepted/Applied |
+| `player.targeted-buff/1` | engine/STRE MagicService | recognized ally buffs |
 
-Messages actuels :
+Current messages:
 
-- `CharacterBuildRequest` ;
-- `CharacterBuildResponse` ;
-- `CharacterBuildAppliedRequest` ;
+- `CharacterBuildRequest`;
+- `CharacterBuildResponse`;
+- `CharacterBuildAppliedRequest`;
 - `NotifyCharacterBuildState`.
 
-## Sémantique actuelle
+## Current semantics
 
-Le client envoie uniquement des identifiants logiques. Le serveur construit le build canonique. Le client applique puis confirme avec les hashes. Le chemin hors ligne réutilise le même catalogue sans serveur.
+The client sends only logical identifiers. The server constructs the canonical build. The client applies it, then confirms with hashes. The offline path reuses the same catalog without a server.
 
-## Capabilities de campagne cibles
+## Target campaign capabilities
 
-| Capability | Autorité | État canonique |
+| Capability | Authority | Canonical state |
 |---|---|---|
-| `campaign.bootstrap/1` | serveur | campagne, roster, manager |
-| `character.binding/1` | serveur | personnage autorisé par joueur |
-| `campaign.phase/1` | serveur | phase et version |
-| `group.ready-check/1` | serveur | ready par joueur |
-| `narrative.introduction/1` | serveur | started/completed |
-| `campaign.departure/1` | serveur | autorisation |
-| `narrative.dragonborn/1` | serveur secret | identité/révélation |
+| `campaign.bootstrap/1` | server | campaign, roster, manager |
+| `character.binding/1` | server | character authorized for each player |
+| `campaign.phase/1` | server | phase and version |
+| `group.ready-check/1` | server | ready state for each player |
+| `narrative.introduction/1` | server | started/completed |
+| `campaign.departure/1` | server | authorization |
+| `narrative.dragonborn/1` | server secret | identity/reveal |
 
-## Intents futurs
+## Future intents
 
 - `CreateCampaign`
 - `JoinCampaign`
@@ -51,33 +51,33 @@ Le client envoie uniquement des identifiants logiques. Le serveur construit le b
 - `ReportLocalSceneCompleted`
 - `RequestDeparture`
 
-La sélection de classe/build est déjà couverte par le protocole spécifique M7 ; sa migration vers une enveloppe générique n’est pas obligatoire avant que le runtime générique soit stabilisé.
+Class and build selection is already covered by the M7-specific protocol; migration to a generic envelope is not required before the generic runtime is stable.
 
-## Application locale
+## Local application
 
-Actuellement :
+Currently:
 
-- nettoyer le personnage ;
-- ajouter/équiper les objets ;
-- ajouter les sorts ;
-- vérifier les hashes ;
-- afficher l’état UI.
+- clean the character;
+- add and equip items;
+- add spells;
+- verify hashes;
+- display UI state.
 
-Futur :
+Future:
 
-- téléporter au marqueur attribué ;
-- lancer/arrêter la scène locale ;
-- activer la porte ;
-- restaurer la phase après reconnexion.
+- teleport to the assigned marker;
+- start and stop the local scene;
+- enable the door;
+- restore the phase after reconnecting.
 
-## Reconnexion
+## Reconnection
 
-Non implémentée pour les builds. Le futur snapshot devra contenir phase, roster, binding, build, classes, ready states et flags narratifs, puis être appliqué sans rejouer les événements déjà consommés.
+Build reconnection is not implemented. A future snapshot must contain the phase, roster, binding, build, classes, ready states, and narrative flags, then apply them without replaying already-consumed events.
 
-## Défaillance
+## Failure behavior
 
-- mismatch de `BuildVersion` : rejet explicite ;
-- plugin ou FormID local manquant : rejet explicite ;
-- hash inventaire/sorts incorrect : rejet explicite ;
-- mode solo hors connexion : fallback local ;
-- future campagne adapter incompatible : refuser l’entrée plutôt qu’un état hybride silencieux.
+- `BuildVersion` mismatch: explicit rejection;
+- missing local plugin or FormID: explicit rejection;
+- incorrect inventory or spell hash: explicit rejection;
+- offline single-player mode: local fallback;
+- incompatible future campaign adapter: reject entry instead of silently producing hybrid state.

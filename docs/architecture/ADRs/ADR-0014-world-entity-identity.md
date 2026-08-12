@@ -1,19 +1,21 @@
-# ADR-0014 — Identité réseau indépendante des FormID locaux
+# ADR-0014 — Network Identity Independent of Local FormIDs
 
-- **Statut : Accepted**
-- **Date : 2026-07-30**
+- **Status:** Accepted
+- **Date:** 2026-07-30
 
-## Contexte
+## Context
 
-Les références temporaires créées par Skyrim reçoivent des FormID locaux différents sur chaque client et peuvent changer après un chargement.
+Temporary references created by Skyrim receive different local FormIDs on each
+client and may change after loading.
 
-## Décision
+## Decision
 
-Toute entité dynamique synchronisée reçoit un `WorldEntityId` attribué par le serveur. Les FormID locaux sont conservés uniquement dans un registre de liaison client versionné par génération.
+Every synchronized dynamic entity receives a server-assigned `WorldEntityId`.
+Local FormIDs are kept only in a client binding registry versioned by generation.
 
-## Conséquences
+## Consequences
 
-- les messages métier n’utilisent jamais un FormID temporaire comme identité durable ;
-- chaque client maintient `WorldEntityId ↔ FormID local` ;
-- les liaisons sont reconstruites après chargement ;
-- les ambiguïtés de rattachement sont exposées comme conflits de réconciliation.
+- business messages never use a temporary FormID as durable identity;
+- every client maintains `WorldEntityId ↔ local FormID`;
+- bindings are rebuilt after loading;
+- ambiguous reattachment is exposed as a reconciliation conflict.

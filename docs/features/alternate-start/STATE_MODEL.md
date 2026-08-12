@@ -1,10 +1,10 @@
-# Alternate Start — State Model
+# Alternate Start — State model
 
-> **Statut : Build autoritaire implémenté / état de campagne proposé**
+> **Status: Authoritative build implemented; campaign state proposed**
 
-## État actuellement implémenté
+## Currently implemented state
 
-`CharacterBuildSnapshotData` représente le build canonique d’un joueur :
+`CharacterBuildSnapshotData` represents a player's canonical build:
 
 ```cpp
 struct CharacterBuildSnapshotData
@@ -20,7 +20,7 @@ struct CharacterBuildSnapshotData
 };
 ```
 
-État réseau :
+Network state:
 
 ```cpp
 enum class CharacterBuildNetworkState : uint8_t
@@ -30,17 +30,17 @@ enum class CharacterBuildNetworkState : uint8_t
 };
 ```
 
-Invariants actuels :
+Current invariants:
 
-- `BuildVersion = 5` ;
-- classe et options validées par le catalogue ;
-- inventaire et sorts dérivés côté serveur ;
-- plugin/FormID local résolu sans préfixe de load order ;
-- build `Applied` uniquement après validation des deux hashes ;
-- une fois appliqué, le build ne peut plus être remplacé pendant la session ;
-- pas de persistance durable actuelle.
+- `BuildVersion = 5`;
+- the catalog validates classes and options;
+- the server derives inventory and spells;
+- local plugin/FormID resolution does not use a load-order prefix;
+- a build becomes `Applied` only after both hashes are validated;
+- once applied, the build cannot be replaced during the session;
+- no durable persistence currently exists.
 
-## État de campagne cible
+## Target campaign state
 
 ```cpp
 struct AlternateStartState
@@ -67,13 +67,13 @@ struct PlayerBootstrapState
 };
 ```
 
-Invariants futurs :
+Future invariants:
 
-- un slot d’arrivée par joueur actif ;
-- un personnage validé par joueur/campagne ;
-- aucune classe après départ sans migration explicite ;
-- `DepartureAuthorized` implique introduction terminée et règles ready satisfaites ;
-- version monotone ;
-- événements anciens ignorés ;
-- secrets Dragonborn absents de l’état public ;
-- snapshot persisté et restaurable après reconnexion.
+- one arrival slot per active player;
+- one validated character per player and campaign;
+- no class changes after departure without an explicit migration;
+- `DepartureAuthorized` requires a completed introduction and satisfied ready rules;
+- monotonically increasing version;
+- stale events are ignored;
+- Dragonborn secrets are absent from public state;
+- snapshots are persisted and restorable after reconnecting.

@@ -1,22 +1,25 @@
-# ADR-0012 — Les scènes CK sont des projections de l’état canonique
+# ADR-0012 — CK Scenes Are Projections of Canonical State
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Une scène peut être interrompue, non visible ou manquée par un client.
+A scene can be interrupted, invisible, or missed by a client.
 
-## Décision
+## Decision
 
-La phase de campagne reste dans STRE. La scène CK rend localement cette phase et signale sa complétion ; elle n’est jamais l’unique source de vérité.
+Campaign phase remains in STRE. A CK scene renders that phase locally and
+reports its completion; it is never the sole source of truth.
 
-## Conséquences
+## Consequences
 
-- reprise après reconnexion ;
-- nécessité de scènes idempotentes et skip/resume ;
-- coordination explicite entre phase et stage local.
+- recovery after reconnection;
+- scenes must be idempotent and support skip/resume;
+- phase and local stage require explicit coordination.
 
-## État d’implémentation
+## Implementation state
 
-Le build multijoueur est canonique côté serveur et le stage CK déclenche seulement l’UI/application locale. Les futures scènes Valen et phases de campagne ne sont pas encore implémentées.
+The multiplayer build is canonical on the server, and the CK stage only triggers
+the UI and local application. Future Valen scenes and campaign phases are not yet
+implemented.

@@ -1,41 +1,41 @@
-# Valen — Brief voix
+# Valen — Voice brief
 
-> **Statut : Brief de casting**
+> **Status: Casting brief**
 
-## Profil vocal
+## Vocal profile
 
-- âge vocal 45–65 ;
-- registre médium ou grave léger ;
-- articulation précise ;
-- chaleur mesurée ;
-- capacité à passer de la gêne à la conviction ;
-- aucune imitation directe d’un personnage existant.
+- apparent vocal age 45–65;
+- mid or light-low register;
+- precise articulation;
+- measured warmth;
+- ability to move from discomfort to conviction;
+- no direct imitation of an existing character.
 
 ## Direction
 
-Valen ne prophétise pas comme un oracle. Il argumente comme un homme qui a rassemblé trop d’indices pour rester silencieux. Sa certitude concerne le danger, pas l’identité du héros.
+Valen does not prophesy like an oracle. He reasons like a man who has gathered too much evidence to remain silent. He is certain about the danger, not the hero's identity.
 
 ## Audition
 
-Demander trois lectures courtes :
+Request three short readings:
 
-1. excuse embarrassée ;
-2. explication factuelle ;
-3. conviction urgente sans crier.
+1. Embarrassed apology.
+2. Factual explanation.
+3. Urgent conviction without shouting.
 
-## Livraison
+## Delivery
 
-- une ligne par fichier ;
-- deux prises minimum pour les lignes clés ;
-- slate séparée ou metadata ;
-- aucun traitement créatif irréversible ;
-- formulaire de licence et crédit ;
-- disponibilité pour une session de retakes.
+- one line per file;
+- at least two takes for key lines;
+- separate slate or metadata;
+- no irreversible creative processing;
+- license and credit form;
+- availability for a retake session.
 
-## Critères d’acceptation
+## Acceptance criteria
 
-- bruit de fond constant et faible ;
-- pas de clipping ni plosives gênantes ;
-- ton cohérent entre sessions ;
-- diction compatible lip sync ;
-- intention conforme aux annotations.
+- consistent, low background noise;
+- no clipping or disruptive plosives;
+- consistent tone between sessions;
+- diction compatible with lip sync;
+- intent matches the annotations.

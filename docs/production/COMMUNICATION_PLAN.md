@@ -1,37 +1,40 @@
-# Plan de communication
+# Communication Plan
 
-> **Statut : Proposition**
+> **Status:** proposed.
 
-## Publics
+## Audiences
 
-### Joueurs
+### Players
 
-Promesse, fonctionnalités jouables, limites, installation et compatibilité.
+Promise, playable features, limitations, installation, and compatibility.
 
-### Développeurs STRE
+### STRE developers
 
-Architecture, ADR, issues, tests, upstream delta.
+Architecture, ADRs, issues, tests, and upstream delta.
 
-### Moddeurs CK
+### CK modders
 
-Contrats bridge, fallback solo, exemples, conventions records.
+Bridge contracts, single-player fallback, examples, and record conventions.
 
-### Artistes et audio
+### Art and audio contributors
 
-Briefs autonomes, références, formats, licences, validation.
+Standalone briefs, references, formats, licenses, and validation.
 
-### Contributeurs potentiels
+### Potential contributors
 
-Missions bornées, niveau requis, livrable d’essai, mentoring et crédits.
+Bounded assignments, required experience, trial deliverable, mentoring, and
+credits.
 
-## Rythme
+## Cadence
 
-- update mensuelle publique ;
-- démo vidéo à chaque milestone ;
-- notes techniques lors d’un ADR majeur ;
-- changelog par release ;
-- board public avec `Good First Issue`, `Needs Design`, `Blocked`.
+- monthly public update;
+- video demonstration at every milestone;
+- technical notes for major ADRs;
+- changelog for every release;
+- public board using the canonical Project Status workflow.
 
-## Message central
+## Core message
 
-« STRE construit des mécaniques coopératives robustes et une manière standard d’exprimer la sémantique multijoueur des mods Skyrim, sans sacrifier leur fonctionnement solo. »
+“STRE builds robust cooperative mechanics and a standard way to express the
+multiplayer semantics of Skyrim mods without sacrificing their single-player
+operation.”

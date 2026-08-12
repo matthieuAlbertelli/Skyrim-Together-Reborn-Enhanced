@@ -1,17 +1,17 @@
-# Modèle d’état de campagne
+# Campaign State Model
 
-> **Statut : Spécification proposée**
+> **Status:** proposed specification.
 
-## Objectifs
+## Goals
 
-- une source de vérité pour le groupe ;
-- reprise après reconnexion ;
-- distinction Session Manager / Dragonborn ;
-- transitions explicites ;
-- évolution de schéma ;
-- filtrage des informations secrètes.
+- one source of truth for the group;
+- recovery after reconnection;
+- separate Session Manager and Dragonborn roles;
+- explicit transitions;
+- schema evolution;
+- filtering of secret information.
 
-## Modèle conceptuel
+## Conceptual model
 
 ```cpp
 struct CampaignState
@@ -61,66 +61,74 @@ Lobby
 → OpenWorld
 ```
 
-Une phase peut avoir des sous-états internes, mais le modèle public doit rester lisible.
+A phase may have internal substates, but the public model must remain readable.
 
-## Transition
+## Transitions
 
-Chaque transition définit :
+Every transition defines:
 
-- phase source autorisée ;
-- préconditions ;
-- command actor ;
-- authority policy ;
-- mutations ;
-- événement ;
-- conséquence locale ;
-- stratégie de reprise.
+- allowed source phase;
+- preconditions;
+- command actor;
+- authority policy;
+- mutations;
+- event;
+- local consequence;
+- recovery strategy.
 
-Exemple `AuthorizeDeparture` :
+Example, `AuthorizeDeparture`:
 
-- source : `ReadyCheck` ;
-- préconditions : tous les joueurs obligatoires prêts, classes valides, introduction terminée ;
-- autorité : serveur ;
-- mutation : `Phase=Departure`, `DepartureAuthorized=true`, `Version++` ;
-- événement : `CampaignPhaseChanged` ;
-- effet local : activation de la porte.
+- source: `ReadyCheck`;
+- preconditions: every required player is ready, classes are valid, and the
+  introduction is complete;
+- authority: server;
+- mutation: `Phase=Departure`, `DepartureAuthorized=true`, `Version++`;
+- event: `CampaignPhaseChanged`;
+- local effect: activate the door.
 
-## Snapshot et audience
+## Snapshots and audience
 
-Le serveur produit au moins deux vues :
+The server produces at least two views:
 
-- **snapshot public de campagne** ;
-- **snapshot privé** pour les données réservées, comme l’identité du Dragonborn avant révélation.
+- **public campaign snapshot**;
+- **private snapshot** for restricted data, such as Dragonborn identity before
+  its reveal.
 
-Un client non autorisé ne doit pas recevoir la donnée secrète masquée par l’UI ; elle ne doit pas être envoyée.
+An unauthorized client must not receive secret data merely hidden by the UI; the
+data must not be sent.
 
-## Binding de personnage
+## Character binding
 
-Le personnage est lié à la campagne par une identité créée pendant le bootstrap. Le modèle doit contenir :
+A character is bound to the campaign through an identity created during
+bootstrap. The model contains:
 
-- identifiant de campagne ;
-- identifiant joueur ;
-- empreinte du personnage ;
-- statut créé/validé ;
-- classe ;
-- version de bootstrap.
+- campaign identifier;
+- player identifier;
+- character fingerprint;
+- created/validated status;
+- class;
+- bootstrap version.
 
-Un personnage externe ne peut pas rejoindre sans procédure d’import explicitement conçue.
+An external character cannot join without an explicitly designed import process.
 
-## Reconnexion
+## Reconnection
 
-1. authentification ;
-2. vérification du binding ;
-3. négociation des adapters ;
-4. snapshot public + privé ;
-5. application idempotente ;
-6. reprise de la phase locale ;
-7. événements post-snapshot seulement à partir de `Version+1`.
+1. authenticate;
+2. verify the binding;
+3. negotiate adapters;
+4. receive public and private snapshots;
+5. apply idempotently;
+6. resume the local phase;
+7. consume only post-snapshot events starting at `Version+1`.
 
 ## Late join
 
-Politique MVP recommandée : autorisé jusqu’à `ReadyCheck`, refusé après `Departure` sauf mécanisme de rattrapage ultérieur.
+Recommended MVP policy: allowed through `ReadyCheck`, rejected after `Departure`
+unless a later catch-up mechanism is provided.
 
-## Persistance
+## Persistence
 
-Le snapshot de campagne doit être sérialisable dès le MVP. Stockage recommandé : fichier atomique serveur par campagne au départ, puis base intégrée si besoin. La sauvegarde Skyrim locale reste une conséquence, pas l’unique source canonique.
+The campaign snapshot must be serializable from the MVP onward. Recommended
+initial storage is one atomic server file per campaign, with integrated database
+storage later if needed. A local Skyrim save is a consequence, not the sole
+canonical source.

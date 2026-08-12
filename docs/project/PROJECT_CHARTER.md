@@ -1,79 +1,93 @@
-# Charte du projet
+# Project Charter
 
-> **Statut : charte active**
+> **Status:** active charter.
 
 ## Mission
 
-Développer et maintenir un fork open source de Skyrim Together Reborn qui renforce la coopération immersive, fournit une base de campagne commune et construit des contrats d’adaptation maintenables pour du contenu Skyrim initialement solo.
+Develop and maintain an open-source fork of Skyrim Together Reborn that
+strengthens immersive cooperation, provides a shared campaign foundation, and
+builds maintainable adaptation contracts for originally single-player Skyrim
+content.
 
-## Périmètre
+## Scope
 
-### Inclus
+### Included
 
-- client et serveur STRE;
-- protocole réseau et états autoritaires;
-- UI coopérative;
-- synchronisation d’entités monde STRE;
-- plugin Alternate Start;
-- bridge CK/Papyrus ↔ STRE;
-- contrats d’intégration pour mods;
-- contenu narratif et artistique propre au projet;
-- outils de test, logs, documentation et packaging.
+- STRE client and server;
+- network protocol and authoritative state;
+- cooperative UI;
+- synchronization of STRE world entities;
+- Alternate Start plugin;
+- CK/Papyrus ↔ STRE bridge;
+- mod-integration contracts;
+- project-owned narrative and art content;
+- test tools, logs, documentation, and packaging.
 
-### Hors périmètre initial
+### Initially out of scope
 
-- monde persistant de type MMO;
-- compatibilité universelle sans intervention du moddeur;
-- réécriture complète de toutes les quêtes vanilla;
-- support garanti de toutes les versions Skyrim et de tous les load orders;
-- redistribution d’assets propriétaires sans autorisation.
+- an MMO-style persistent world;
+- universal compatibility without mod-author involvement;
+- a complete rewrite of every vanilla quest;
+- guaranteed support for every Skyrim version and load order;
+- redistribution of proprietary assets without permission.
 
-## Gouvernance
+## Governance
 
-### Décisions produit
+### Product decisions
 
-La direction produit tranche la vision, le périmètre et les priorités après consultation des responsables concernés.
+Product direction decides vision, scope, and priority after consulting the
+responsible contributors.
 
-### Décisions d’architecture
+### Architecture decisions
 
-Toute décision structurelle durable est consignée dans un ADR. Les détails d’une feature restent dans son répertoire canonique.
+Every durable structural decision is recorded in an ADR. Feature details remain
+in the feature's canonical directory.
 
-### Modifications de protocole
+### Protocol changes
 
-Toute modification significative d’opcode, de schéma sérialisé ou d’état persistant exige :
+Any significant change to an opcode, serialized schema, or persistent state
+requires:
 
-- bornes explicites;
-- tests de round-trip;
-- stratégie de compatibilité;
-- revue serveur/client;
-- mise à jour de la référence protocole de la feature.
+- explicit bounds;
+- round-trip tests;
+- a compatibility strategy;
+- client/server review;
+- an update to the feature's protocol reference.
 
-## Règles de fonctionnement
+## Operating rules
 
-- Une issue décrit un résultat observable.
-- Une fonctionnalité n’est pas terminée sans tests, logs utiles et documentation.
-- Une branche évite de mélanger refactor massif et changement fonctionnel sans justification.
-- Toute donnée critique possède une source de vérité et une stratégie de reprise.
-- Toute information documentaire mutable possède une seule source canonique.
-- Les documents historiques sont archivés comme tels et ne servent pas à annoncer l’état courant.
+- An issue describes an observable outcome.
+- A feature is not complete without tests, useful logs, and documentation.
+- A branch avoids mixing a large refactor with a functional change without
+  justification.
+- Every critical datum has a source of truth and a recovery strategy.
+- Every mutable documentation fact has one canonical source.
+- Historical documents are archived as such and do not announce current state.
 
-## Principes d’ingénierie
+## Engineering principles
 
-- KISS : réutiliser les mécanismes fiables du moteur et de STR avant d’inventer une couche.
-- DRY : une règle métier, un contrat protocole et un statut mutable ne doivent pas être maintenus en parallèle à plusieurs endroits.
-- API-friendly : dépendre de contrats observables/stables plutôt que d’internals tiers lorsque possible.
-- Fail closed : refuser une opération lorsque les métadonnées requises ne peuvent pas être préservées correctement.
-- Authority explicit : chaque état partagé muté possède une autorité déclarée.
-- Engine-safe : les mutations Skyrim déclenchées par le réseau sont exécutées sur un contexte moteur approprié.
+- KISS: reuse reliable engine and STR mechanisms before inventing a layer.
+- DRY: do not maintain a business rule, protocol contract, or mutable status in
+  parallel in several places.
+- API-friendly: depend on observable, stable contracts instead of third-party
+  internals where possible.
+- Fail closed: reject an operation when required metadata cannot be preserved
+  correctly.
+- Explicit authority: every mutated shared state declares its authority.
+- Engine-safe: network-triggered Skyrim mutations run in an appropriate engine
+  context.
 
-## Critères de santé
+## Health criteria
 
-- build reproductible;
-- tests automatisés pertinents;
-- upstream base identifiable;
-- décisions architecturales enregistrées;
-- roadmap liée à des résultats démontrables;
-- documentation sans sources de vérité concurrentes;
-- démos jouables à chaque jalon significatif.
+- reproducible builds;
+- relevant automated tests;
+- identifiable upstream base;
+- recorded architecture decisions;
+- a roadmap tied to demonstrable outcomes;
+- documentation without competing sources of truth;
+- playable demonstrations at every significant milestone.
 
-Pour l’état implémenté/validé, voir [`docs/project/STATUS.md`](STATUS.md). La direction produit et les release gates appartiennent à [`ROADMAP.md`](../../ROADMAP.md); l’avancement opérationnel au GitHub Project défini par [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).
+For implemented and validated state, see [`docs/project/STATUS.md`](STATUS.md).
+Product direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md);
+operational progress belongs in the GitHub Project governed by
+[`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).

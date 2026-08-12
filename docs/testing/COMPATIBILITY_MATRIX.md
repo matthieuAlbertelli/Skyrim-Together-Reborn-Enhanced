@@ -1,66 +1,66 @@
-# Matrice de compatibilité
+# Compatibility matrix
 
-> **Statut : source de vérité de compatibilité connue**
-> **Dernière mise à jour : 11 août 2026**
+> **Status: Source of truth for known compatibility**
+> **Last updated: August 11, 2026**
 
-## Plateforme de référence
+## Reference platform
 
-| Composant | Version/support observé | État |
+| Component | Observed version/support | State |
 |---|---|---|
-| Skyrim SE/AE runtime | `1.6.1170` Steam | runtime principal de développement et cible de l'alpha publique |
-| Skyrim Together Reborn upstream | baseline historique dans `UPSTREAM.md` | fork intégré dans STRE |
-| STRE | `0.2.0-alpha.1` | première alpha publique, build CI Windows validé |
-| Angular | 16.x | utilisé |
-| xmake | `3.0.9` en CI (`>= 3.0.0` projet) | build Windows validé |
-| Creation Kit | environnement compatible `1.6.1170` | utilisé |
-| SKSE64 | `2.2.6` pour Skyrim `1.6.1170` | cible d'installation alpha |
-| Better Grabbing | `1.17` | plugin externe requis par défaut pour manipulation World Sync multijoueur |
-| Address Library | `11` | dépendance externe requise; base runtime pour STRE/Better Grabbing |
+| Skyrim SE/AE runtime | `1.6.1170` Steam | primary development runtime and public-alpha target |
+| Skyrim Together Reborn upstream | historical baseline in `UPSTREAM.md` | fork integrated into STRE |
+| STRE | `0.2.0-alpha.1` | first public alpha; Windows CI build validated |
+| Angular | 16.x | in use |
+| xmake | `3.0.9` in CI (`>= 3.0.0` project) | Windows build validated |
+| Creation Kit | environment compatible with `1.6.1170` | in use |
+| SKSE64 | `2.2.6` for Skyrim `1.6.1170` | alpha installation target |
+| Better Grabbing | `1.17` | external plugin required by default for multiplayer World Sync manipulation |
+| Address Library | `11` | required external dependency; runtime base for STRE/Better Grabbing |
 
-Les versions ci-dessus sont les **cibles de release `v0.2.0-alpha.1`**. Une future release doit réviser cette table lorsqu'une dépendance ou un runtime supporté change.
+The versions above are the **`v0.2.0-alpha.1` release targets**. A future release must revise this table whenever a dependency or supported runtime changes.
 
-## Fonctionnalités
+## Features
 
-| Configuration | Trading | World Sync drops | World Sync placed/grab | Character Build solo | Character Build STRE |
+| Configuration | Trading | World Sync drops | World Sync placed/grab | Character Build single-player | Character Build STRE |
 |---|---:|---:|---:|---:|---:|
-| 1 joueur hors ligne | N/A | vanilla/local | Better Grabbing local | Oui | N/A |
-| 2 joueurs | Alpha | Validé | Validé sur cas courants | N/A | Smoke-testé |
-| 4 joueurs | À tester | À tester | À tester | N/A | À tester |
-| SkyUI | À retester | N/A | N/A | environnement dev | environnement dev |
-| Anniversary content | À tester | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 |
+| 1 offline player | N/A | vanilla/local | Better Grabbing local | Yes | N/A |
+| 2 players | Alpha | Validated | Validated on common cases | N/A | Smoke-tested |
+| 4 players | To test | To test | To test | N/A | To test |
+| SkyUI | Retest required | N/A | N/A | development environment | development environment |
+| Anniversary content | To test | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 | runtime 1.6.1170 |
 
-## World Sync validé
+## Validated World Sync behavior
 
-- drop dynamique → matérialisation distante;
-- Havok local + settlement autoritaire;
-- pickup distant;
-- grab/release d’un WorldEntity droppé;
-- lazy adoption d’une référence placée mobile;
-- grab/release placé sans crash observateur;
-- ownership déclenchant le vol vanilla au grab;
-- forced release à l’ouverture du dialogue de garde;
-- nage après correction de régression STRE.
+- dynamic drop → remote materialization;
+- local Havok plus authoritative settlement;
+- remote pickup;
+- grab/release of a dropped WorldEntity;
+- lazy adoption of a movable placed reference;
+- placed-reference grab/release without an observer crash;
+- ownership triggering vanilla theft on grab;
+- forced release when guard dialogue opens;
+- swimming after correcting the STRE regression.
 
-## World Sync à étendre
+## World Sync scope to extend
 
-- objets de quête;
-- références fortement scriptées;
-- enable-parent complexes;
-- reset de cellule;
-- noms personnalisés d’items;
-- persistence durable après restart/save branch;
-- 4 joueurs.
+- quest objects;
+- heavily scripted references;
+- complex enable-parent references;
+- cell reset;
+- custom item names;
+- durable persistence after restart or save branching;
+- 4 players.
 
-## Fiche de test d’un mod/dépendance
+## Mod/dependency test record
 
-Pour chaque mod/dépendance :
+For every mod or dependency, record:
 
-- nom/version;
-- runtime Skyrim;
-- load order si pertinent;
-- résultat solo;
-- résultat STRE;
-- conflit/workaround;
+- name and version;
+- Skyrim runtime;
+- load order when relevant;
+- single-player result;
+- STRE result;
+- conflict or workaround;
 - logs;
 - date;
-- SHA STRE.
+- STRE SHA.

@@ -1,102 +1,102 @@
-# Stratégie de test
+# Test strategy
 
-> **Statut : Mise à jour avec les tests Character Build M7**
+> **Status: Updated with M7 Character Build tests**
 
-## Pyramide
+## Test pyramid
 
-### Tests purs
+### Pure tests
 
-- automates de domaine ;
-- validation et canonicalisation ;
-- catalogues de récompenses ;
-- plans de mutation/réconciliation ;
-- hashes déterministes ;
-- solver de preview ;
-- futures transitions Campaign State.
+- domain state machines;
+- validation and canonicalization;
+- reward catalogs;
+- mutation and reconciliation plans;
+- deterministic hashes;
+- preview solver;
+- future Campaign State transitions.
 
-### Tests de sérialisation
+### Serialization tests
 
-- round-trip de tous messages ;
-- tailles maximales ;
-- payloads tronqués ;
-- enums inconnus ;
-- versions incompatibles ;
-- snapshot Character Build avec inventaire et sorts ;
-- accusé avec inventory/spell hashes.
+- round-trip every message;
+- maximum sizes;
+- truncated payloads;
+- unknown enums;
+- incompatible versions;
+- Character Build snapshot with inventory and spells;
+- acknowledgment with inventory and spell hashes.
 
-### Tests de services
+### Service tests
 
-- validation des requêtes ;
-- plugins/FormIDs locaux manquants ;
-- build Pending remplacé avant application ;
-- build Applied non remplaçable ;
-- mismatch de révision/hash ;
-- retransmissions ;
-- déconnexion et future restauration.
+- request validation;
+- missing local plugins or FormIDs;
+- Pending build replaced before application;
+- Applied build cannot be replaced;
+- revision or hash mismatch;
+- retransmission;
+- disconnect and future restoration.
 
-### Tests client/serveur
+### Client/server tests
 
-Deux processus automatisés ou harness :
+Two automated processes or a harness:
 
-- ordre et perte de messages ;
-- duplicate delivery ;
-- version mismatch ;
-- catalogues/plugin différents ;
-- reconnect ;
-- latence.
+- message order and loss;
+- duplicate delivery;
+- version mismatch;
+- different catalogs or plugins;
+- reconnect;
+- latency.
 
-### Tests en jeu
+### In-game tests
 
-- Skyrim 1.6.1170 ;
-- plugin CK ;
-- UI/preview ;
-- magie ciblée ;
-- sauvegarde/chargement ;
-- 1 puis 2 joueurs, ensuite 4/10.
+- Skyrim 1.6.1170;
+- CK plugin;
+- UI and preview;
+- targeted magic;
+- save and load;
+- 1 player, then 2 players, then 4 and 10.
 
 ## Trading
 
-Les tests existants couvrent session, application, inventory planning, protocole et réconciliation. Restent : intégration serveur/client, commit failure, disconnect à chaque étape, stress et UI e2e.
+Existing tests cover session, application, inventory planning, protocol, and reconciliation. Remaining work includes client/server integration, commit failure, disconnect at every step, stress testing, and UI end-to-end coverage.
 
 ## Character Build
 
-`Code/tests/character_build.cpp` couvre :
+`Code/tests/character_build.cpp` covers:
 
-- validation des classes/options ;
-- neuf combinaisons Mage ;
-- quantité/unicité des sorts ;
-- kit simplifié du Thief et 10 crochets ;
-- hash de sorts normalisé ;
-- sérialisation du snapshot et de l’accusé.
+- class and option validation;
+- nine Mage combinations;
+- spell count and uniqueness;
+- simplified Thief kit and 10 lockpicks;
+- normalized spell hash;
+- snapshot and acknowledgment serialization.
 
-Scripts statiques :
+Static scripts:
 
-- `audit_stre_plugin_records.py` ;
+- `audit_stre_plugin_records.py`;
 - `audit_character_build_catalog.py`.
 
-À ajouter :
+Add:
 
-- tests de service serveur dédiés aux rejets ;
-- harness client/serveur pour les hashes ;
-- tests de persistance/reconnexion ;
-- test extensible de classification des buffs ;
-- matrice en jeu de toutes les classes/options.
+- dedicated server-service rejection tests;
+- client/server hash harness;
+- persistence and reconnect tests;
+- extensible buff-classification test;
+- in-game matrix for every class and option.
 
-## Alternate Start complet
+## Complete Alternate Start
 
-Matrice future : nouveau jeu, skip Helgen, save/load, Valen, disconnect/reconnect, late join, player absent, class conflict, scene completion et departure.
+Future matrix: new game, Helgen skip, save/load, Valen, disconnect/reconnect, late join, absent player, class conflict, scene completion, and departure.
 
 ## Preview
 
-- solver avec données synthétiques ;
-- resizing ;
-- changements rapides ;
-- acquire/release ;
-- perte de host ;
-- edge clipping ;
-- conflits de surface ;
-- concurrence Trading/Character Creation.
+- solver with synthetic data;
+- resizing;
+- rapid changes;
+- acquire and release;
+- host loss;
+- edge clipping;
+- surface conflicts;
+- Trading and Character Creation concurrency.
 
-## Données de test
+## Test data
 
-Chaque scénario multi doit produire : timestamp, player IDs, build/campaign/session IDs, revisions, BuildVersion, hashes, logs client/serveur, load order et SHA de l’ESP déployé.
+Every multiplayer scenario must produce a timestamp, player IDs, build/campaign/session IDs, revisions, BuildVersion, hashes, client/server logs, load order, and SHA of the deployed ESP.

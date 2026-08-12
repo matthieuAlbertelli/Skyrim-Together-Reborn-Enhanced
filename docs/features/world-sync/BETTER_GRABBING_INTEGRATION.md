@@ -1,40 +1,40 @@
 # Better Grabbing multiplayer integration
 
-> **Statut : Implémenté et validé pour le périmètre World Sync actuel**
+> **Status: Implemented and validated for the current World Sync scope**
 
 ## Scope
 
-STRE **ne distribue pas** et **ne linke pas** le code de Better Grabbing.
+STRE **does not distribute** or **link against** Better Grabbing code.
 
-L’utilisateur installe le plugin SKSE séparément. En multijoueur, `BetterGrabbing.dll` est requis par défaut via la politique générique des plugins natifs.
+The user installs the SKSE plugin separately. In multiplayer, `BetterGrabbing.dll` is required by default through the generic native-plugin policy.
 
-## Responsabilités
+## Responsibilities
 
 ### Better Grabbing
 
-- possède l’input local de grab;
-- calcule translation/rotation locale;
-- applique son comportement local Skyrim;
-- continue de fonctionner indépendamment en solo.
+- owns local grab input;
+- computes local translation and rotation;
+- applies its local Skyrim behavior;
+- continues to work independently in single-player.
 
 ### STRE
 
-- détecte les plugins SKSE natifs chargés au handshake;
-- applique `ModPolicy:sRequiredNativePlugins`;
-- observe le lifecycle via les événements Skyrim disponibles;
-- attribue/résout le `WorldEntityId`;
-- arbitre l’autorité;
-- masque l’objet chez les observateurs pendant le grab;
-- gère release, settlement, timeout, disconnect et snapshots;
-- gère lazy adoption des références placées;
-- préserve l’ownership dans les chemins supportés;
-- force une fin de grab si un dialogue Skyrim s’ouvre pendant la manipulation.
+- detects loaded native SKSE plugins during the handshake;
+- applies `ModPolicy:sRequiredNativePlugins`;
+- observes the lifecycle through available Skyrim events;
+- assigns and resolves the `WorldEntityId`;
+- arbitrates authority;
+- hides the object for observers during the grab;
+- manages release, settlement, timeout, disconnect, and snapshots;
+- supports lazy adoption of placed references;
+- preserves ownership through supported paths;
+- forces a grab to end if a Skyrim dialogue opens during manipulation.
 
-STRE ne dépend pas du `Manager` interne de Better Grabbing.
+STRE does not depend on Better Grabbing's internal `Manager`.
 
-## Native plugin policy
+## Native-plugin policy
 
-Configuration par défaut :
+Default configuration:
 
 ```ini
 [Gameplay]
@@ -44,11 +44,11 @@ bEnableItemDrops = true
 sRequiredNativePlugins = BetterGrabbing.dll
 ```
 
-La valeur est une liste de noms de DLL SKSE chargées. Le mécanisme est générique et n’est pas un dependency manager spécifique à Better Grabbing.
+The value is a list of loaded SKSE DLL names. The mechanism is generic and is not a dependency manager specific to Better Grabbing.
 
-## Représentation distante
+## Remote representation
 
-Pendant un grab accepté :
+During an accepted grab:
 
 ```text
 authority
@@ -58,57 +58,57 @@ observer
   local WorldEntity representation hidden
 ```
 
-Les transforms intermédiaires ne sont pas diffusés pour simuler le mouvement à distance.
+Intermediate transforms are not broadcast to simulate remote movement.
 
-Au release :
+On release:
 
-- l’observateur restaure/repositionne la représentation;
-- Havok local reprend;
-- le settlement autoritaire final corrige seulement si nécessaire.
+- the observer restores and repositions the representation;
+- local Havok resumes;
+- final authoritative settlement corrects the result only when necessary.
 
-## Références placées
+## Placed references
 
-La première interaction peut envoyer :
+The first interaction can send:
 
 ```text
 WorldEntityId = 0
-PlacedReferenceId = stable GameId de la TESObjectREFR
+PlacedReferenceId = stable GameId of the TESObjectREFR
 ```
 
-Le serveur résout ou crée atomiquement un `WorldEntityId`.
+The server atomically resolves or creates a `WorldEntityId`.
 
-Chaque client lie ensuite cet ID à sa référence locale existante. **Aucun duplicate spawn**.
+Each client then binds that ID to its existing local reference. **No duplicate spawn.**
 
-Au release distant d’une référence placée, STRE utilise le `MoveTo` existant de STR sur la game thread (`RunnerService`), et non des wrappers `SetPosition`/`SetAngle` spéculatifs.
+On remote release of a placed reference, STRE uses STR's existing `MoveTo` path on the game thread (`RunnerService`) rather than speculative `SetPosition` or `SetAngle` wrappers.
 
-## Ownership / vol
+## Ownership and theft
 
-Si la référence placée a un owner et que Skyrim ne considère pas le joueur comme owner autorisé, le grab déclenche la primitive de vol Skyrim.
+If the placed reference has an owner and Skyrim does not consider the player an authorized owner, grabbing triggers Skyrim's theft primitive.
 
-La sanction, les témoins et les gardes restent ensuite gérés par les systèmes vanilla.
+Penalties, witnesses, and guards remain managed by vanilla systems.
 
 ## Dialogue safety
 
-Le `Dialogue Menu` peut s’ouvrir alors que Better Grabbing tient encore un objet.
+The `Dialogue Menu` can open while Better Grabbing still holds an object.
 
-STRE force alors la fin du grab par la primitive joueur native. Le `TESGrabReleaseEvent` normal poursuit le lifecycle WorldEntity, ce qui évite :
+STRE then forces the grab to end through the native player primitive. The normal `TESGrabReleaseEvent` continues the WorldEntity lifecycle, preventing:
 
-- contrôles de dialogue bloqués;
-- objet restant grabé après arrestation;
-- état réseau différent de l’état local.
+- blocked dialogue controls;
+- an object remaining grabbed after an arrest;
+- network state diverging from local state.
 
 ## Failure recovery
 
-- heartbeat timeout : libération de l’autorité;
-- disconnect autorité : release/recovery;
-- disconnect observateur : snapshot/rebinding à la reconnexion;
-- adoption en attente + release : release différé jusqu’à résolution;
-- dialogue pendant grab : forced release local puis lifecycle normal.
+- heartbeat timeout: release authority;
+- authority disconnect: release and recovery;
+- observer disconnect: snapshot and rebinding on reconnect;
+- pending adoption plus release: defer release until resolution;
+- dialogue during grab: forced local release followed by the normal lifecycle.
 
 ## Non-goals
 
-- réimplémenter les contrôles Better Grabbing;
-- streamer la physique tenue frame-by-frame;
-- redistribuer Better Grabbing;
-- dépendre de ses classes internes;
-- garantir toutes les configurations Better Grabbing qui modifient fortement collision/physics sans test.
+- reimplement Better Grabbing controls;
+- stream held-object physics frame by frame;
+- redistribute Better Grabbing;
+- depend on its internal classes;
+- guarantee every Better Grabbing configuration that substantially changes collision or physics without testing.

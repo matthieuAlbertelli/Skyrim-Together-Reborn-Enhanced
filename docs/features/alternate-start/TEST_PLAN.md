@@ -1,20 +1,20 @@
-# Alternate Start — Test Plan
+# Alternate Start — Test plan
 
-> **Statut : Audits automatisés et smoke tests M7 exécutés ; couverture exhaustive à poursuivre**
+> **Status: Automated audits and M7 smoke tests executed; exhaustive coverage remains**
 
-## Contrôles déjà réalisés
+## Completed checks
 
-- build Windows xmake réussi ;
-- audit strict de 47 records CK conforme ;
-- audit de 41 références catalogue/ESP conforme ;
-- tests `Code/tests/character_build.cpp` compilés ;
-- bootstrap Mage testé en jeu ;
-- buffs ciblés testés entre deux PC ;
-- fallback solo prévu dans le service et testé sur le flux de build.
+- successful Windows xmake build;
+- conforming strict audit of 47 CK records;
+- conforming audit of 41 catalog/ESP references;
+- compiled `Code/tests/character_build.cpp` tests;
+- in-game Mage bootstrap test;
+- targeted buffs tested between two PCs;
+- single-player fallback present in the service and tested through the build flow.
 
-Ces contrôles ne valent pas validation exhaustive de toutes les combinaisons.
+These checks do not constitute exhaustive validation of every combination.
 
-## Audits statiques
+## Static audits
 
 ```powershell
 py -3 .\Tools\Scripts\audit_stre_plugin_records.py `
@@ -32,7 +32,7 @@ py -3 .\Tools\Scripts\audit_character_build_catalog.py `
   --client-source .\Code\client\Services\Generic\CharacterCreationService.cpp
 ```
 
-## Smoke test local
+## Local smoke test
 
 ```text
 resetquest STRE_QUEST_AlternateStart
@@ -40,55 +40,57 @@ startquest STRE_QUEST_AlternateStart
 setstage STRE_QUEST_AlternateStart 10
 ```
 
-Vérifier : RaceMenu, UI, preview, résumé, niveau 1, inventaire exact, équipement, sorts exacts, nettoyage et absence de rejet de hash.
+Verify RaceMenu, UI, preview, summary, level 1, exact inventory, equipment, exact spells, cleanup, and absence of hash rejection.
 
-## Matrice Mage
+## Mage matrix
 
-Tester les neuf combinaisons :
+Test all nine combinations:
 
-- Feu × Protection ;
-- Feu × Exploration ;
-- Feu × Matière ;
-- Froid × Protection ;
-- Froid × Exploration ;
-- Froid × Matière ;
-- Foudre × Protection ;
-- Foudre × Exploration ;
-- Foudre × Matière.
+- Fire × Protection;
+- Fire × Exploration;
+- Fire × Matter;
+- Frost × Protection;
+- Frost × Exploration;
+- Frost × Matter;
+- Shock × Protection;
+- Shock × Exploration;
+- Shock × Matter.
 
-Chaque build doit produire exactement 7 sorts canoniques : 3 Destruction + 4 Altération.
+Each build must produce exactly 7 canonical spells: 3 Destruction plus 4 Alteration.
 
-## Tests multijoueur prioritaires
+## Priority multiplayer tests
 
-- mêmes versions client/serveur/plugin sur les deux PC ;
-- créations indépendantes avec choix différents ;
-- états Accepted puis Applied ;
-- aucun `RejectedInventoryHash` ou `RejectedSpellHash` ;
-- apparence et équipement distants ;
-- Égide minérale : `DamageResist` augmente puis revient ;
-- Souffle aquatique : effet actif puis expiration ;
-- Allègement : `CarryWeight` augmente puis revient ;
-- absence d’application sur mauvaise cible ;
-- relance/cumul contrôlé.
+- identical client/server/plugin versions on both PCs;
+- independent creations with different choices;
+- Accepted, then Applied states;
+- no `RejectedInventoryHash` or `RejectedSpellHash`;
+- remote appearance and equipment;
+- Mineral Aegis: `DamageResist` increases, then returns;
+- Water Breathing: effect active, then expires;
+- Lighten Burden: `CarryWeight` increases, then returns;
+- no application to the wrong target;
+- controlled recasting and stacking.
 
-## Tests de régression classes
+The three spell names above are translated descriptions of currently localized French display strings; runtime IDs remain unchanged.
 
-- Warrior : équipement lourd, armes, forge, pendentif ;
-- Thief : tenues, armes, 10 crochets ;
-- Mage : tenue visuelle, 7 sorts ;
-- changement de build avant accusé ;
-- second build après état Applied rejeté.
+## Class regression tests
 
-## Tests encore bloqués par les fonctionnalités absentes
+- Warrior: heavy equipment, weapons, smithing, pendant;
+- Thief: outfits, weapons, 10 lockpicks;
+- Mage: visual outfit, 7 spells;
+- build change before acknowledgment;
+- reject a second build after the Applied state.
 
-- nouveau jeu automatique et skip Helgen ;
-- Valen/scène ;
-- sortie et reprise vanilla ;
-- save/load à chaque phase ;
-- reconnexion et restauration du build ;
-- ready check, late join et Campaign State ;
-- 4 et 10 joueurs.
+## Tests still blocked by missing features
 
-## Collecte de logs
+- automatic new game and Helgen skip;
+- Valen and scene;
+- exit and vanilla resumption;
+- save/load at every phase;
+- reconnect and build restoration;
+- ready check, late join, and Campaign State;
+- 4 and 10 players.
 
-Conserver pour chaque test : date, runtime, load order, BuildVersion, client/serveur, choix logiques et lignes `CharacterBuild`/`CharacterCreation`/`MagicService`. Les rapports `_audit`, TSV et logs restent locaux et ne sont pas versionnés.
+## Log collection
+
+For every test, retain the date, runtime, load order, BuildVersion, client/server versions, logical choices, and `CharacterBuild`/`CharacterCreation`/`MagicService` lines. `_audit` reports, TSV files, and logs remain local and are not versioned.

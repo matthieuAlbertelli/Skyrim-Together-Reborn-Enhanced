@@ -1,8 +1,8 @@
-# Pipeline des assets
+# Asset pipeline
 
-> **Statut : Proposition**
+> **Status: Proposal**
 
-## Arborescence
+## Directory structure
 
 ```text
 assets/source/<discipline>/<asset>/
@@ -11,19 +11,19 @@ GameFiles/Skyrim/meshes/STRE/
 GameFiles/Skyrim/textures/STRE/
 ```
 
-## Nommage
+## Naming
 
-Préfixe `STRE_` pour records et dossiers `stre/` pour chemins lorsque possible. Aucun fichier final nommé `final2`, `new`, `test`.
+Use the `STRE_` prefix for records and `stre/` directories for paths where possible. Do not ship files named `final2`, `new`, or `test`.
 
-## Fiche de provenance
+## Provenance record
 
-Chaque asset possède : auteur, date, licence, sources utilisées, outils, version, restrictions et crédits requis.
+Every asset records its author, date, license, source material, tools, version, restrictions, and required credits.
 
 ## Validation
 
-- inspection source ;
-- export automatisable ou procédure écrite ;
-- test CK ;
-- test in-game ;
-- test packaging ;
-- revue licence.
+- inspect the source;
+- provide an automated export or written procedure;
+- test in CK;
+- test in game;
+- test packaging;
+- review the license.

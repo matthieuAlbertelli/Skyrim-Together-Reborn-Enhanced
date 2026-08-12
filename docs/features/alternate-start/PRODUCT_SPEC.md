@@ -1,82 +1,82 @@
-# Alternate Start — Product Spec
+# Alternate Start — Product specification
 
-> **Statut : Cible produit acceptée / bootstrap de personnage partiellement implémenté**
+> **Status: Product target accepted; character bootstrap partially implemented**
 
 ## Pitch
 
-Commencer une campagne dans une auberge, sans importer un personnage déjà avancé. Chaque joueur crée son apparence, choisit sa classe et ses kits, puis reçoit un build propre et cohérent avec la campagne.
+Start a campaign in an inn without importing an already-advanced character. Each player creates their appearance, chooses a class and kits, then receives a clean build consistent with the campaign.
 
-## Implémenté aujourd’hui
+## Implemented today
 
-1. Téléportation vers un siège de l’auberge via la quête CK.
-2. Ouverture de RaceMenu.
-3. Sélection Warrior, Mage ou Thief dans l’UI Angular.
-4. Sélection des kits disponibles.
-5. Preview 3D et écran de récapitulatif.
-6. Soumission finale « Sceller la destinée ».
-7. Nettoyage anti-import, niveau 1, inventaire et sorts canoniques.
-8. Chemin local hors ligne ou validation serveur en multijoueur.
-9. Buffs ciblés Altération fonctionnels sur un compagnon distant.
+1. Teleport to an inn seat through the CK quest.
+2. Open RaceMenu.
+3. Select Warrior, Mage, or Thief in the Angular UI.
+4. Select available kits.
+5. Use the 3D preview and summary screen.
+6. Submit the final “Seal your destiny” choice.
+7. Apply anti-import cleanup, level 1, canonical inventory, and canonical spells.
+8. Use the local offline path or server validation in multiplayer.
+9. Apply functional targeted Alteration buffs to a remote companion.
 
-## Objectifs produit complets
+## Complete product goals
 
-- sauter Helgen proprement ;
-- empêcher l’arrivée de personnages externes non validés ;
-- créer les personnages au même moment narratif ;
-- fonctionner en solo sans serveur STRE ;
-- offrir un hub lisible à un petit groupe ;
-- former la première intégration first-party de référence ;
-- restaurer l’état après reconnexion ;
-- quitter l’auberge avec une progression vanilla cohérente.
+- skip Helgen cleanly;
+- prevent unvalidated external characters from entering;
+- create characters at the same narrative point;
+- work in single-player without an STRE server;
+- provide a readable hub for a small group;
+- serve as the first reference first-party integration;
+- restore state after reconnecting;
+- leave the inn with coherent vanilla progression.
 
-## Roster de classes v1
+## v1 class roster
 
-STRE v1.0.0 cible les 21 classes définies dans [`CLASS_ROSTER_V1.md`](CLASS_ROSTER_V1.md). Ce document canonique fixe l'identité de chaque classe et ses deux compétences majeures / quatre compétences mineures.
+STRE v1.0.0 targets the 21 classes defined in [`CLASS_ROSTER_V1.md`](CLASS_ROSTER_V1.md). That canonical document defines each class's stable identity, canonical English name, French localized display name, and two major/four minor skills.
 
-Warrior, Mage et Thief sont le premier vertical slice actuellement implémenté. Les kits, objets, quantités, sorts, capacités/perks coopératifs et quêtes personnelles des 21 classes restent gouvernés par leurs sources de conception et d'implémentation dédiées ; ils ne sont pas déduits des anciens documents sous `history/`.
+Warrior, Mage, and Thief form the first implemented vertical slice. The kits, items, quantities, spells, cooperative abilities/perks, and personal quests for all 21 classes remain governed by their dedicated design and implementation sources; they are not inferred from old documents under `history/`.
 
-## Expérience cible
+## Target experience
 
-1. Nouvelle partie redirigée vers l’auberge.
-2. Création d’apparence à la table.
-3. Classe et kits.
-4. En STRE, création/jonction de campagne et binding du personnage.
-5. Validation de tous les builds.
-6. Introduction de Valen.
-7. Ready check.
-8. Départ collectif vers Skyrim.
+1. Redirect a new game to the inn.
+2. Create appearance at the table.
+3. Choose class and kits.
+4. In STRE, create or join a campaign and bind the character.
+5. Validate every build.
+6. Introduce Valen.
+7. Complete the ready check.
+8. Depart for Skyrim together.
 
-Les étapes 2 à 5 sont partiellement présentes ; les étapes 1, 6, 7 et 8 restent à construire complètement.
+Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be completed.
 
-## Solo
+## Single-player
 
-- même création dans l’auberge ;
-- catalogue local identique ;
-- pas de roster ni ready check obligatoire ;
-- aucune dépendance obligatoire au serveur ;
-- état conservé dans la sauvegarde Skyrim.
+- the same creation flow in the inn;
+- the same local catalog;
+- no mandatory roster or ready check;
+- no mandatory server dependency;
+- state retained in the Skyrim save.
 
-## STRE actuel
+## Current STRE behavior
 
-- validation serveur de race/classe/sélections ;
-- inventaire et sorts canoniques ;
-- hashes et accusé d’application ;
-- diffusion Pending/Applied ;
-- build non persistant au-delà de la session.
+- server validation of race, class, and selections;
+- canonical inventory and spells;
+- hashes and application acknowledgment;
+- Pending/Applied state broadcast;
+- build state does not persist beyond the session.
 
-## STRE cible
+## Target STRE behavior
 
-- campagne canonique ;
-- roster et personnages liés ;
-- phases partagées ;
-- Dragonborn assigné secrètement ;
-- départ autorisé par le serveur ;
-- snapshot et restauration après reconnexion.
+- canonical campaign;
+- roster and bound characters;
+- shared phases;
+- secretly assigned Dragonborn;
+- server-authorized departure;
+- snapshot and restoration after reconnecting.
 
-## Hors périmètre immédiat
+## Out of immediate scope
 
-- attribution dynamique du Dragonborn selon les exploits ;
-- late join après départ ;
-- import volontaire d’un personnage existant ;
-- réécriture complète de la campagne vanilla ;
-- SDK tiers stable avant plusieurs intégrations first-party.
+- dynamic Dragonborn assignment based on accomplishments;
+- late join after departure;
+- intentional import of an existing character;
+- complete rewrite of the vanilla campaign;
+- stable third-party SDK before several first-party integrations exist.

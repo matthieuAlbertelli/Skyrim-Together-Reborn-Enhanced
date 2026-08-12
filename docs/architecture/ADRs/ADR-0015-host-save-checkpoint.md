@@ -1,19 +1,22 @@
-# ADR-0015 — Sauvegarde Skyrim de l’hôte comme checkpoint canonique
+# ADR-0015 — Host Skyrim Save as Canonical Checkpoint
 
-- **Statut : Accepted**
-- **Date : 2026-07-30**
+- **Status:** Accepted
+- **Date:** 2026-07-30
 
-## Contexte
+## Context
 
-Le monde doit suivre les règles de persistance, reset et suppression du jeu solo tout en conservant les mutations multijoueurs validées.
+The world must follow single-player persistence, reset, and deletion rules while
+retaining validated multiplayer mutations.
 
-## Décision
+## Decision
 
-Le serveur STRE est autoritaire pendant la session. La sauvegarde `.ess` de l’hôte constitue le checkpoint externe canonique. Un journal STRE conserve les mutations non encore intégrées ou concernant des cellules non matérialisées chez l’hôte.
+The STRE server is authoritative during the session. The host's `.ess` save is
+the canonical external checkpoint. An STRE journal retains mutations that are
+not yet integrated or concern cells not materialized by the host.
 
-## Conséquences
+## Consequences
 
-- save/load doivent être coordonnés avec des checkpoints STRE ;
-- les règles vanilla de l’hôte pilotent les suppressions ;
-- un petit stockage STRE reste nécessaire pour la reprise après crash ;
-- les sauvegardes invitées n’ont aucune autorité sur l’état partagé.
+- save/load must coordinate with STRE checkpoints;
+- the host's vanilla rules drive deletions;
+- a small STRE store remains necessary for crash recovery;
+- guest saves have no authority over shared state.

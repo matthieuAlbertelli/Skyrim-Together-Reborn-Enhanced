@@ -1,24 +1,24 @@
-# Direction audio
+# Audio direction
 
-> **Statut : Proposition**
+> **Status: Proposal**
 
-## Intention
+## Intent
 
-Les voix doivent s’intégrer au paysage sonore de Skyrim : présence claire, dynamique contenue, peu de traitement audible et cohérence entre lignes.
+Voices should integrate with Skyrim's soundscape: clear presence, controlled dynamics, little audible processing, and consistency between lines.
 
-## Spécifications de travail
+## Working specifications
 
-- mono WAV PCM ;
-- 48 kHz / 24 bits pour les masters ;
-- silence propre mais pas de noise gate agressif ;
-- distance micro constante ;
-- aucune réverbération imprimée ;
-- traitement final et conversion gérés par l’équipe audio.
+- mono PCM WAV;
+- 48 kHz / 24-bit masters;
+- clean silence without aggressive noise gating;
+- consistent microphone distance;
+- no printed reverb;
+- final processing and conversion handled by the audio team.
 
 ## Pipeline
 
-Script verrouillé → prononciations → audition → session dirigée → sélection → nettoyage → normalisation → export CK → lip files → test en jeu → retakes.
+Locked script → pronunciations → audition → directed session → selection → cleanup → normalization → CK export → lip files → in-game test → retakes.
 
-## Prononciation
+## Pronunciation
 
-Créer un lexique partagé pour Dovahkiin, noms nordiques, lieux et termes draconiques. Chaque mot ambigu reçoit un exemple audio de référence.
+Create a shared lexicon for Dovahkiin, Nordic names, locations, and draconic terms. Every ambiguous word receives a reference audio example.

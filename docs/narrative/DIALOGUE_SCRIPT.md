@@ -1,66 +1,69 @@
-# Valen — Script de prototype
+# Valen — Prototype script
 
-> **Statut : Prototype, à réécrire après validation de la bible**
+> **Status: Prototype; rewrite after the narrative bible is approved**
 
 ## Convention
 
-Chaque ligne finale doit posséder : ID, scène, intention, émotion, condition, fichier audio et statut.
+Every final line must have an ID, scene, intent, emotion, condition, audio file, and status.
 
-## Scène 1 — Les invités
+The spoken lines below are French player-facing localization. Their surrounding production specification is canonical English documentation.
+
+## Scene 1 — The guests
 
 ### `VALEN_INTRO_001`
 
-- **Intention :** obtenir l’attention.
-- **Émotion :** calme, légèrement tendu.
-- **Texte prototype :** « Vous êtes enfin là. Tous, à ce que je vois. »
+- **Intent:** gain attention.
+- **Emotion:** calm, slightly tense.
+- **French localized prototype text:** « Vous êtes enfin là. Tous, à ce que je vois. »
 
 ### `VALEN_INTRO_002`
 
-- **Intention :** reconnaître l’omission.
-- **Émotion :** gêne sincère.
-- **Texte prototype :** « Je vous dois d’abord des excuses. Chacun de vous a reçu une invitation qui ne mentionnait personne d’autre. C’était délibéré. Ce n’était peut-être pas judicieux. »
+- **Intent:** acknowledge the omission.
+- **Emotion:** sincere discomfort.
+- **French localized prototype text:** « Je vous dois d’abord des excuses. Chacun de vous a reçu une invitation qui ne mentionnait personne d’autre. C’était délibéré. Ce n’était peut-être pas judicieux. »
 
 ### `VALEN_INTRO_003`
 
-- **Intention :** établir qu’il les connaît par réputation.
-- **Émotion :** précis.
-- **Texte prototype :** « Je ne connais aucun de vous. Pas véritablement. Je connais des récits : une route où quelqu’un aurait survécu, un témoin qui jure avoir vu l’impossible, une dette réglée là où personne n’attendait de secours. »
+- **Intent:** establish that he knows them by reputation.
+- **Emotion:** precise.
+- **French localized prototype text:** « Je ne connais aucun de vous. Pas véritablement. Je connais des récits : une route où quelqu’un aurait survécu, un témoin qui jure avoir vu l’impossible, une dette réglée là où personne n’attendait de secours. »
 
 ### `VALEN_INTRO_004`
 
-- **Intention :** présenter l’hypothèse.
-- **Émotion :** conviction retenue.
-- **Texte prototype :** « Pris séparément, ces récits ne prouvent rien. Ensemble, ils dessinent une possibilité que je ne peux plus ignorer. L’un de vous pourrait être le Dovahkiin. »
+- **Intent:** present the hypothesis.
+- **Emotion:** restrained conviction.
+- **French localized prototype text:** « Pris séparément, ces récits ne prouvent rien. Ensemble, ils dessinent une possibilité que je ne peux plus ignorer. L’un de vous pourrait être le Dovahkiin. »
 
 ### `VALEN_INTRO_005`
 
-- **Intention :** désamorcer l’élection immédiate.
-- **Émotion :** ferme.
-- **Texte prototype :** « Non, je ne sais pas lequel. Et je me méfierais de quiconque prétendrait le savoir déjà. »
+- **Intent:** defuse an immediate election.
+- **Emotion:** firm.
+- **French localized prototype text:** « Non, je ne sais pas lequel. Et je me méfierais de quiconque prétendrait le savoir déjà. »
 
 ### `VALEN_INTRO_006`
 
-- **Intention :** recentrer sur la compagnie.
-- **Émotion :** persuasive.
-- **Texte prototype :** « Une prophétie ne traverse pas Skyrim seule. Même si l’un de vous porte ce destin, il aura besoin des autres pour survivre assez longtemps afin de l’accomplir. »
+- **Intent:** refocus attention on the company.
+- **Emotion:** persuasive.
+- **French localized prototype text:** « Une prophétie ne traverse pas Skyrim seule. Même si l’un de vous porte ce destin, il aura besoin des autres pour survivre assez longtemps afin de l’accomplir. »
 
 ### `VALEN_INTRO_007`
 
-- **Intention :** lancer la préparation.
-- **Émotion :** pratique.
-- **Texte prototype :** « Parlez. Équipez-vous. Décidez de ce que chacun peut apporter aux autres. Lorsque vous serez prêts, nous parlerons de la route. »
+- **Intent:** begin preparation.
+- **Emotion:** practical.
+- **French localized prototype text:** « Parlez. Équipez-vous. Décidez de ce que chacun peut apporter aux autres. Lorsque vous serez prêts, nous parlerons de la route. »
 
-## Variantes nécessaires
+## Required variants
 
-- un seul joueur en solo ;
-- 2–4 joueurs ;
-- 5–10 joueurs ;
-- joueur reconnecté après la scène ;
-- interruption ou départ ;
-- résumé late join ;
-- réponse sceptique/hostile/curieuse sans multiplier les branches canoniques.
+- one player in single-player;
+- 2–4 players;
+- 5–10 players;
+- a player reconnecting after the scene;
+- interruption or departure;
+- late-join summary;
+- skeptical, hostile, or curious responses without multiplying canonical branches.
 
-## Production audio
+## Audio production
 
-Nom : `STRE_Valen_<Scene>_<LineId>_<Take>.wav`  
-Exemple : `STRE_Valen_Intro_001_T01.wav`.
+Name: `STRE_Valen_<Scene>_<LineId>_<Take>.wav`
+
+Example: `STRE_Valen_Intro_001_T01.wav`.

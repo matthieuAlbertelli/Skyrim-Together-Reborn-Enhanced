@@ -1,69 +1,69 @@
-# Bible narrative
+# Narrative bible
 
-> **Statut : Décisions de base validées, développement à poursuivre**
+> **Status: Foundational decisions accepted; development remains**
 
-## Prémisse
+## Premise
 
-Plusieurs inconnus reçoivent une invitation personnelle de Valen. Chacun pense avoir été convoqué seul. À leur arrivée dans une auberge isolée du flux normal de Skyrim, ils découvrent que Valen a réuni d’autres individus sur la base de rumeurs, d’exploits et de témoignages fragmentaires.
+Several strangers receive a personal invitation from Valen. Each believes they were summoned alone. When they arrive at an inn isolated from Skyrim's normal flow, they discover that Valen gathered other individuals based on rumors, accomplishments, and fragmented testimony.
 
-Valen pense que l’un d’eux pourrait être le Dovahkiin. Il ne sait pas lequel. Le groupe ne le sait pas davantage. L’histoire raconte autant la formation de la compagnie que l’émergence du Dragonborn.
+Valen believes one of them may be the Dovahkiin. He does not know which one, and neither does the group. The story concerns the company's formation as much as the Dragonborn's emergence.
 
-## Thèmes
+## Themes
 
-- destin incertain ;
-- confiance entre inconnus ;
-- force du collectif ;
-- vérité construite à partir de rumeurs ;
-- tension entre rôle choisi et rôle imposé ;
-- conséquences partagées.
+- uncertain destiny;
+- trust between strangers;
+- collective strength;
+- truth assembled from rumors;
+- tension between chosen and imposed roles;
+- shared consequences.
 
-## Ton
+## Tone
 
-Skyrimien, sérieux mais humain. Valen peut être maladroit ou excessivement convaincu sans devenir comique. La scène doit laisser de la place aux personnages joueurs et ne pas les réduire à des figurants.
+Consistent with Skyrim: serious but human. Valen may be awkward or excessively convinced without becoming comic. The scene must leave room for player characters and must not reduce them to extras.
 
-## Règles de continuité
+## Continuity rules
 
-- Valen ne connaît personnellement aucun joueur au départ.
-- Chaque invitation est individuelle.
-- Il s’excuse de n’avoir pas annoncé les autres invités.
-- Le Session Manager n’est pas nécessairement le Dragonborn.
-- Le Dragonborn est une fonction narrative, pas un privilège de l’hôte.
-- Les compagnons restent indispensables.
-- L’introduction ne doit pas contredire les faits vanilla nécessaires à la suite.
+- Valen does not personally know any player at the start.
+- Every invitation is individual.
+- He apologizes for not announcing the other guests.
+- The Session Manager is not necessarily the Dragonborn.
+- Dragonborn is a narrative function, not a host privilege.
+- Companions remain essential.
+- The introduction must not contradict vanilla facts needed later.
 
-## Structure de l’introduction
+## Introduction structure
 
-### Beat 1 — Arrivée
+### Beat 1 — Arrival
 
-Les joueurs se découvrent, observent l’auberge et comprennent qu’ils ont été réunis.
+The players discover one another, observe the inn, and understand that they have been brought together.
 
-### Beat 2 — Explication de Valen
+### Beat 2 — Valen's explanation
 
-Valen présente ses sources, sa théorie et l’urgence sans prétendre détenir une certitude.
+Valen presents his sources, theory, and urgency without claiming certainty.
 
 ### Beat 3 — Friction
 
-Les joueurs peuvent douter, se moquer, demander des preuves ou accepter. Le système coopératif doit tolérer différentes réactions locales tout en conservant une progression canonique.
+Players may doubt, mock, ask for proof, or accept. The cooperative system must tolerate different local reactions while retaining canonical progression.
 
 ### Beat 4 — Formation
 
-Le groupe choisit ses rôles/classes et se prépare. Valen présente cette complémentarité comme une nécessité, pas un menu abstrait.
+The group chooses roles and classes, then prepares. Valen presents this complementarity as a necessity, not an abstract menu.
 
-### Beat 5 — Départ
+### Beat 5 — Departure
 
-La compagnie quitte l’auberge. La révélation du Dragonborn est reportée.
+The company leaves the inn. The Dragonborn reveal is deferred.
 
 ## Late join
 
-Avant le départ, un joueur tardif reçoit :
+Before departure, a late player receives:
 
-- une arrivée contextualisée ;
-- un résumé bref ;
-- les choix nécessaires ;
-- la phase canonique actuelle.
+- a contextualized arrival;
+- a brief summary;
+- the necessary choices;
+- the current canonical phase.
 
-Après le départ, le MVP recommande de refuser le late join plutôt que de produire une incohérence narrative.
+After departure, the MVP should reject late join instead of producing narrative inconsistency.
 
-## Dialogue collectif
+## Group dialogue
 
-La phase de campagne est partagée, mais le rendu peut rester local. Les réponses ne doivent devenir votes collectifs que lorsqu’elles modifient réellement l’état canonique.
+The campaign phase is shared, but rendering may remain local. Responses should become group votes only when they actually change canonical state.

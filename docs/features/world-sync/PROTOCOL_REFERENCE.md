@@ -1,61 +1,65 @@
-# World Sync — Protocol reference
+# World Sync — Protocol Reference
 
-> **Statut : Implémenté pour le périmètre WorldEntity actuel**
+> **Status:** implemented for the current WorldEntity scope.
 
-Ce document décrit les contrats spécifiques World Sync. Les règles générales de protocole sont dans [`docs/architecture/NETWORK_PROTOCOL.md`](../../architecture/NETWORK_PROTOCOL.md).
+This document defines World Sync-specific contracts. General protocol rules are
+in [`docs/architecture/NETWORK_PROTOCOL.md`](../../architecture/NETWORK_PROTOCOL.md).
 
-## Types partagés
+## Shared types
 
 ### `WorldEntityId`
 
-Identifiant serveur stable d’une instance monde pendant la session.
+Server-stable identifier for a world instance during a session.
 
 ### `WorldEntityTransform`
 
-Regroupe position et rotation utilisées par les messages WorldEntity.
+Groups the position and rotation used by WorldEntity messages.
 
 ### `PlacedReferenceId`
 
-`GameId` server-space de la **référence** Skyrim placée, distinct du `BaseForm` de l’objet.
+Server-space `GameId` of the placed Skyrim **reference**, distinct from the
+object's `BaseForm`.
 
-Il sert à l’adoption lazy et à la déduplication serveur.
+It supports lazy adoption and server deduplication.
 
 ## Inventory/world lifecycle
 
-Les messages d’inventaire existants portent les extensions World Sync nécessaires.
+Existing inventory messages carry required World Sync extensions.
 
 ### `RequestInventoryChanges`
 
-Champs World Sync pertinents :
+Relevant World Sync fields:
 
-- données d’item;
-- indication drop/pickup selon le flux existant;
-- transform de création/finalisation quand applicable;
-- `PlacedReferenceId` pour l’adoption d’une référence non temporaire.
+- item data;
+- drop/pickup indication according to the existing flow;
+- creation or finalization transform where applicable;
+- `PlacedReferenceId` when adopting a non-temporary reference.
 
 ### `NotifyInventoryChanges`
 
-Peut porter :
+May carry:
 
 - `WorldEntityId`;
 - `PlacedReferenceId`;
-- lifecycle physique;
+- physical lifecycle;
 - `LifecycleOnly`.
 
-`LifecycleOnly` permet de retirer/mettre à jour la représentation physique sans appliquer une seconde mutation d’inventaire lorsque le flux vanilla/activation possède déjà cette mutation.
+`LifecycleOnly` removes or updates the physical representation without applying
+a second inventory mutation when the vanilla/activation flow already owns that
+mutation.
 
 ## Manipulation
 
 ### `RequestWorldEntityManipulation`
 
-Porte notamment :
+Carries, among other fields:
 
-- `WorldEntityId` (0 lors d’une première adoption placée);
-- `PlacedReferenceId` si nécessaire;
+- `WorldEntityId` (0 during first adoption of a placed reference);
+- `PlacedReferenceId` where necessary;
 - `Action`;
 - `WorldEntityTransform`.
 
-Actions actuelles :
+Current actions:
 
 ```text
 Start
@@ -64,15 +68,17 @@ Release
 Rejected
 ```
 
-`Update` est utilisé comme heartbeat privé d’autorité; il n’implique pas un streaming visuel des poses aux observateurs.
+`Update` is used as a private authority heartbeat; it does not imply visual pose
+streaming to observers.
 
 ### `NotifyWorldEntityManipulation`
 
-Diffuse les transitions nécessaires aux observateurs et à l’autorité.
+Broadcasts transitions required by observers and the authority.
 
-Pour une référence placée, `PlacedReferenceId` permet au client de lier le `WorldEntityId` à sa référence locale existante.
+For a placed reference, `PlacedReferenceId` lets the client bind the
+`WorldEntityId` to its existing local reference.
 
-## Autorité serveur
+## Server authority
 
 ```text
 FREE
@@ -84,37 +90,40 @@ SETTLING(authorityPlayerId)
 FREE
 ```
 
-Règles :
+Rules:
 
-- un second `Start` concurrent est rejeté;
-- heartbeat et release ne sont acceptés que de l’autorité;
-- timeout/disconnect libère l’autorité;
-- le transform final de settlement devient la référence de convergence.
+- reject a concurrent second `Start`;
+- accept heartbeat and release only from the authority;
+- timeout or disconnect releases authority;
+- the final settlement transform becomes the convergence reference.
 
 ## Snapshot
 
-Le snapshot WorldEntity doit permettre de reconstruire :
+A WorldEntity snapshot reconstructs:
 
-- identité;
-- item/instance metadata nécessaire;
-- origine dynamique ou référence placée;
-- transform canonique pertinent;
-- lifecycle courant.
+- identity;
+- required item and instance metadata;
+- dynamic origin or placed reference;
+- relevant canonical transform;
+- current lifecycle.
 
-Un snapshot ne doit pas créer une seconde référence locale pour un `PlacedReferenceId` déjà présent.
+A snapshot must not create a second local reference for an existing
+`PlacedReferenceId`.
 
 ## Ownership metadata
 
-L’owner est sérialisé dans `Inventory::Entry` via un `GameId` stable quand disponible.
+The owner is serialized in `Inventory::Entry` through a stable `GameId` where
+available.
 
-L’ownership fait partie des métadonnées d’instance à préserver; il ne doit pas être remplacé par un simple booléen “stolen”.
+Ownership is instance metadata that must be preserved; it must not be replaced
+by a simple “stolen” boolean.
 
-## Compatibilité
+## Compatibility
 
-Toute modification de ces structures exige au minimum :
+Every change to these structures requires at least:
 
-- round-trip encode/decode;
-- test d’un client autorité et d’un observateur;
-- test de lazy adoption;
-- test de snapshot/late join si l’état sérialisé change;
-- comportement fail-closed si une ancienne voie ne sait pas conserver une nouvelle métadonnée.
+- encode/decode round trip;
+- one authority-client and observer test;
+- lazy-adoption test;
+- snapshot/late-join test when serialized state changes;
+- fail-closed behavior when an old path cannot retain new metadata.

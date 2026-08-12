@@ -1,19 +1,21 @@
-# ADR-0011 — Canal CEF dédié aux fonctionnalités STRE
+# ADR-0011 — Dedicated CEF Command Channel for STRE Features
 
-- **Statut : Proposed**
-- **Date : 2026-07-19**
+- **Status:** Proposed
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Le trading multiplexe actuellement ses actions sur `toggleDebugUI('__trade__', ...)`.
+Trading currently multiplexes its actions through
+`toggleDebugUI('__trade__', ...)`.
 
-## Décision
+## Decision
 
-Créer un canal natif typé et versionné, par exemple `streCommand(namespace, action, payload)` et des événements correspondants.
+Create a typed, versioned native channel, such as
+`streCommand(namespace, action, payload)`, with corresponding events.
 
-## Conséquences
+## Consequences
 
-- contrat lisible et extensible ;
-- validation centralisée ;
-- migration du frontend ;
-- compatibilité temporaire à prévoir.
+- readable, extensible contract;
+- centralized validation;
+- frontend migration;
+- temporary compatibility must be planned.

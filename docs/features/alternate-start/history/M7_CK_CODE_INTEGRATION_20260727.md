@@ -1,56 +1,58 @@
-# M7 — Intégration des records CK dans le build autoritaire
+# M7 — CK record integration into the authoritative build
 
-> **Statut documentaire : preuve historique datée.** Pour l'état courant, voir
-> [`docs/project/STATUS.md`](../../../project/STATUS.md) et le
-> [README Alternate Start](../README.md).
+> **Document status: dated historical evidence.** For current state, see
+> [`docs/project/STATUS.md`](../../../project/STATUS.md) and the
+> [Alternate Start README](../README.md).
 
-## Statut
+## Status
 
-> **Implémenté, compilé et smoke-testé en jeu le 27 juillet 2026.**
+> **Implemented, compiled, and smoke-tested in game on July 27, 2026.**
 
-Le jalon intègre les vêtements, enchantements et sorts de `STRE_AlternateStart.esp` dans le catalogue partagé, le protocole réseau, le serveur, le client et l’UI.
+This milestone integrated clothing, enchantments, and spells from `STRE_AlternateStart.esp` into the shared catalog, network protocol, server, client, and UI.
 
 ```text
 BuildVersion = 5
 ```
 
-## Validation effectuée
+## Validation performed
 
-- build Windows/xmake réussi ;
-- manifest strict : 47 records attendus conformes ;
-- catalogue/ESP : 41 références conformes ;
-- Character Build Mage appliqué en jeu ;
-- inventaire et spell hashes acceptés par le serveur ;
-- buffs ciblés appliqués et synchronisés sur un autre joueur après correction de l’allowlist STRE.
+- successful Windows/xmake build;
+- strict manifest: 47 expected records conform;
+- catalog/ESP: 41 references conform;
+- Mage Character Build applied in game;
+- inventory and spell hashes accepted by the server;
+- targeted buffs applied to and synchronized with another player after correcting the STRE allowlist.
 
-Les anomalies CK initiales (doublon, nom de Souffle aquatique, effets d’Égide) ont été corrigées et ne sont plus des actions ouvertes.
+The initial CK anomalies (duplicate record, Water Breathing name, and Aegis effects) were corrected and are no longer open actions.
 
-## Équipements intégrés
+## Integrated equipment
 
 ### Warrior
 
-- tenue et bottes de forgeron ;
-- équipement lourd et choix d’armes vanilla ;
-- pendentif de garde faiblement enchanté pour l’option correspondante ;
-- kits de matériaux de forge.
+- blacksmith outfit and boots;
+- vanilla heavy equipment and weapon choices;
+- weakly enchanted guard pendant for the corresponding option;
+- smithing material kits.
 
 ### Mage
 
-- tenue et bottes d’enchanteur, purement visuelles ;
-- aucune amélioration d’Enchantement portée par la robe ;
-- sorts canoniques selon Destruction × Altération.
+- Enchanting outfit and boots, purely visual;
+- no Enchanting improvement carried by the robe;
+- canonical spells based on Destruction × Alteration.
 
 ### Thief
 
-- 10 crochets vanilla ;
-- tenue de foule ;
-- tenue noble ;
-- tenue discrète ;
-- armes/équipement selon les sélections.
+- 10 vanilla lockpicks;
+- crowd outfit;
+- noble outfit;
+- discreet outfit;
+- weapons and equipment based on selections.
 
-La tenue d’apothicaire existe dans l’ESP et les previews, mais n’est pas encore accordée par une classe actuellement exposée.
+The apothecary outfit exists in the ESP and previews but is not yet granted by a currently exposed class.
 
-## Sorts intégrés
+## Integrated spells
+
+The following spell names are the French localized display strings recorded at the milestone; their technical record IDs were not changed.
 
 ### Destruction
 
@@ -71,7 +73,7 @@ Foudre
 - Rune électrique mineure
 ```
 
-### Altération
+### Alteration
 
 ```text
 Protection et contrôle
@@ -93,68 +95,68 @@ Manipulation de la matière
 - Allègement
 ```
 
-Chaque combinaison produit 7 sorts canoniques : 3 Destruction + 4 Altération.
+Each combination produces 7 canonical spells: 3 Destruction plus 4 Alteration.
 
-## Buffs ciblés coopératifs
+## Cooperative targeted buffs
 
-Les trois buffs alliés utilisent dans le `SPEL` et le `MGEF` :
+All three ally buffs use these values in both `SPEL` and `MGEF`:
 
 ```text
 Casting Type : Fire and Forget
 Delivery     : Target Actor
 ```
 
-`Contact` ne caste pas correctement pour ce type de sort lancé à la main.
+`Contact` does not cast correctly for this type of manually cast spell.
 
-Le hook `MagicTarget` de Skyrim Together n’autorise les effets sur un joueur distant que pour les soins ou les sorts reconnus comme buffs. `MagicItem::IsBuffSpell()` résout donc via `STRE_AlternateStart.esp` :
+Skyrim Together's `MagicTarget` hook permits effects on a remote player only for healing or spells recognized as buffs. `MagicItem::IsBuffSpell()` therefore resolves these records through `STRE_AlternateStart.esp`:
 
-- `STRE_SPEL_Alteration_Protection_AllyMineralAegis` ;
-- `STRE_SPEL_Alteration_Exploration_AllyWaterbreathing` ;
+- `STRE_SPEL_Alteration_Protection_AllyMineralAegis`;
+- `STRE_SPEL_Alteration_Exploration_AllyWaterbreathing`;
 - `STRE_SPEL_Alteration_Matter_AllyFeather`.
 
-Les IDs sont locaux au plugin ; aucun préfixe de load order chargé n’est codé en dur.
+The IDs are local to the plugin; no loaded load-order prefix is hard-coded.
 
-## Protocole autoritaire des sorts
+## Authoritative spell protocol
 
-`CharacterBuildSnapshotData` contient :
+`CharacterBuildSnapshotData` contains:
 
 ```text
 CanonicalSpells
 SpellHash
 ```
 
-Le serveur :
+The server:
 
-1. valide les sélections ;
-2. résout plugin et FormID local ;
-3. trie et déduplique les sorts ;
-4. calcule un hash FNV normalisé ;
-5. envoie le snapshot canonique ;
-6. valide le `SpellHash` dans l’accusé.
+1. validates selections;
+2. resolves the plugin and local FormID;
+3. sorts and deduplicates spells;
+4. computes a normalized FNV hash;
+5. sends the canonical snapshot;
+6. validates `SpellHash` in the acknowledgment.
 
-Le client :
+The client:
 
-1. retire les sorts importés ;
-2. résout les `GameId` en FormIDs chargés ;
-3. vérifie le type `SpellItem` ;
-4. exécute `player.addspell` via `Script::CompileAndRun` ;
-5. vérifie la présence réelle ;
-6. accuse inventaire et sorts.
+1. removes imported spells;
+2. resolves `GameId` values into loaded FormIDs;
+3. verifies the `SpellItem` type;
+4. runs `player.addspell` through `Script::CompileAndRun`;
+5. verifies actual presence;
+6. acknowledges inventory and spells.
 
-Le même catalogue est appliqué hors ligne.
+The same catalog is applied offline.
 
-## Contrôles automatisés
+## Automated checks
 
-`Code/tests/character_build.cpp` couvre :
+`Code/tests/character_build.cpp` covers:
 
-- les neuf combinaisons Destruction × Altération ;
-- unicité et nombre de sorts ;
-- package simplifié du Thief ;
-- 10 crochets ;
-- normalisation du hash ;
-- sérialisation snapshot/accusé.
+- all nine Destruction × Alteration combinations;
+- spell uniqueness and count;
+- simplified Thief package;
+- 10 lockpicks;
+- hash normalization;
+- snapshot and acknowledgment serialization.
 
-Audits :
+Audits:
 
 ```powershell
 py -3 .\Tools\Scripts\audit_stre_plugin_records.py `
@@ -172,17 +174,17 @@ py -3 .\Tools\Scripts\audit_character_build_catalog.py `
   --client-source .\Code\client\Services\Generic\CharacterCreationService.cpp
 ```
 
-Résultats validés :
+Validated results:
 
 ```text
-Records attendus : 47
-Résultat : conforme.
+Expected records: 47
+Result: conforming.
 
-Références contrôlées : 41
-Résultat : conforme.
+Checked references: 41
+Result: conforming.
 ```
 
-## Logs de succès
+## Success logs
 
 ```text
 [STRE][CharacterBuild][Server] Build accepted ... spellCount=7 spellHash=...
@@ -192,14 +194,14 @@ Résultat : conforme.
 [STRE][CharacterBuild][Server] Build applied ... spellHash=... level=1
 ```
 
-Pour un buff distant, le flux magique doit produire les événements de cible/synchronisation STRE correspondants.
+For a remote buff, the magic flow must produce the corresponding STRE target and synchronization events.
 
-## Limites connues
+## Known limitations
 
-- builds non persistés durablement après reconnexion ;
-- reset incomplet des compétences, perks et historiques d’attributs ;
-- Invocation, Illusion et Restauration non accordées ;
-- kits d’Enchantement non matérialisés ;
-- manteaux élémentaires partagés reportés ;
-- allowlist des buffs spécifique aux trois FormIDs M7 ;
-- validation en jeu encore smoke-level, pas matrice exhaustive de toutes les classes et combinaisons.
+- builds are not durably persisted after reconnecting;
+- incomplete reset of skills, perks, and attribute history;
+- Conjuration, Illusion, and Restoration are not granted;
+- Enchanting kits are not materialized;
+- shared elemental cloaks are deferred;
+- buff allowlist is specific to the three M7 FormIDs;
+- in-game validation remains at smoke-test level, not an exhaustive matrix of every class and combination.

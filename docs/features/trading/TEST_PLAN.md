@@ -1,19 +1,21 @@
 # Trading — Test Plan
 
-> **Statut : Tests unitaires existants / intégration à compléter**
+> **Status:** unit tests exist; integration remains incomplete.
 
-## Couverture existante
+## Existing coverage
 
-44 cas de test couvrent : automate, canonicalisation, révisions, validations inventory, mutation planning, application, réconciliation et sérialisation.
+Forty-four test cases cover the state machine, canonicalization, revisions,
+inventory validation, mutation planning, application, reconciliation, and
+serialization.
 
-## Priorité suivante
+## Next priority
 
-- harness client/serveur complet ;
-- paquets dupliqués/réordonnés ;
-- timeout apply/reconcile ;
-- disconnect initiator/recipient à chaque état ;
-- commit serveur en échec ;
-- journal client retransmis après plusieurs opérations ;
-- test de charge d’updates d’offre ;
-- UI Playwright en mode browser ;
-- test in-game des types d’objets exclus.
+- complete client/server harness;
+- duplicated and reordered packets;
+- apply and reconcile timeouts;
+- initiator and recipient disconnect at every state;
+- failed server commit;
+- client journal retransmitted after several operations;
+- offer-update load test;
+- Playwright UI test in browser mode;
+- in-game test of excluded item types.

@@ -1,10 +1,12 @@
 # Trading
 
-> **Statut : Implémenté en alpha**
+> **Status:** implemented in alpha.
 
-Le trading est le premier vertical slice d’architecture distribuée STRE. Il combine domaine pur, serveur autoritaire, protocole, application locale idempotente, réconciliation, UI CEF et preview 3D.
+Trading is STRE's first distributed-architecture vertical slice. It combines a
+pure domain, authoritative server, protocol, idempotent local application,
+reconciliation, CEF UI, and 3D preview.
 
-Documents :
+Documents:
 
 - `PRODUCT_SPEC.md`
 - `TECHNICAL_DESIGN.md`

@@ -1,63 +1,63 @@
 # Definition of Done
 
-> **Statut : Politique de livraison active**
+> **Status:** active delivery policy.
 
-## Fonctionnalité STRE Core
+## STRE Core feature
 
-- invariants et autorité documentés ;
-- handlers idempotents ;
-- protocole borné et versionné ;
-- tests unitaires et d’intégration ;
-- logs structurés ;
-- déconnexion/reconnexion traitée ;
-- documentation et ADR à jour ;
-- build Debug et Release vérifié.
+- documented invariants and authority;
+- idempotent handlers;
+- bounded, versioned protocol;
+- unit and integration tests;
+- structured logs;
+- handled disconnect and reconnect;
+- current documentation and ADRs;
+- verified Debug and Release builds.
 
-## Fonctionnalité CK/Papyrus
+## CK/Papyrus feature
 
-- fonctionne en solo ;
-- records préfixés ;
-- propriétés configurables ;
-- pas de FormID hardcodé ;
-- save/load testé ;
-- navmesh et portes vérifiés ;
-- bridge absent géré ;
-- logs temporaires nettoyés ou catégorisés.
+- works in single-player;
+- prefixed records;
+- configurable properties;
+- no hard-coded FormID;
+- tested save/load;
+- verified navmesh and doors;
+- handles an absent bridge;
+- temporary logs removed or categorized.
 
 ## UI
 
-- contrat natif typé ;
-- clavier et manette ;
-- 16:9, 21:9 et scaling ;
-- états loading/error/empty ;
-- listeners nettoyés ;
-- localisation ;
-- captures approuvées.
+- typed native contract;
+- keyboard and controller support;
+- 16:9, 21:9, and scaling coverage;
+- loading, error, and empty states;
+- cleaned-up listeners;
+- localization;
+- approved captures.
 
 ## Art
 
-- sources + exports ;
-- provenance/licence ;
-- budget respecté ;
-- test in-game ;
-- aucune couture ou collision bloquante ;
-- screenshots de validation.
+- sources and exports;
+- provenance and license;
+- respected budget;
+- in-game test;
+- no blocking seam or collision;
+- validation screenshots.
 
 ## Audio
 
-- script ID complet ;
-- master propre ;
-- format final ;
-- lip/subtitles ;
-- test in-game ;
-- retakes clos ;
-- licence signée.
+- complete script ID;
+- clean master;
+- final format;
+- lip files and subtitles;
+- in-game test;
+- completed retakes;
+- signed license.
 
 ## Documentation
 
-- public identifié ;
-- owner ;
-- statut ;
-- liens sources/issues ;
-- exemples vérifiés ;
-- aucune promesse supérieure à l’implémentation réelle.
+- identified audience;
+- owner;
+- status;
+- source and issue links;
+- verified examples;
+- no promise beyond actual implementation.

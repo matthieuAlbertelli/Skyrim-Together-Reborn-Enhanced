@@ -1,15 +1,17 @@
 # Item Preview
 
-> **Statut : Cœur interne implémenté et réutilisé ; plateforme concurrente/SDK proposés**
+> **Status:** internal core implemented and reused; concurrent platform and SDK
+> proposed.
 
-Consommateurs first-party actuels :
+Current first-party consumers:
 
-- Trading ;
+- Trading;
 - Character Creation.
 
-Documents :
+Documents:
 
-- `CURRENT_API.md` — ce que le code permet réellement ;
-- `SDK_PROPOSAL.md` — contrat futur ;
-- `TEST_PLAN.md` — couverture requise ;
-- `../../architecture/ITEM_PREVIEW_PLATFORM.md` — architecture et évolution à leases.
+- `CURRENT_API.md` — what the code actually supports;
+- `SDK_PROPOSAL.md` — future contract;
+- `TEST_PLAN.md` — required coverage;
+- `../../architecture/ITEM_PREVIEW_PLATFORM.md` — architecture and evolution
+  toward leases.

@@ -1,20 +1,20 @@
-# Pipeline d’intégration voix
+# Voice-integration pipeline
 
-> **Statut : Proposition**
+> **Status: Proposal**
 
-## Étapes
+## Steps
 
-1. Export du script validé avec IDs.
-2. Enregistrement et contrôle qualité.
-3. Nettoyage non destructif.
-4. Loudness cohérent avec les voix vanilla de référence.
-5. Conversion au format requis par Skyrim.
-6. Nommage selon les topics/voicetypes.
-7. Génération des fichiers lipsync.
-8. Intégration CK.
-9. Test distance, sous-titres, interruptions et multijoueur.
-10. Rapport de lignes manquantes/retakes.
+1. Export the approved script with IDs.
+2. Record and perform quality control.
+3. Apply non-destructive cleanup.
+4. Match loudness to reference vanilla voices.
+5. Convert to Skyrim's required format.
+6. Name files according to topics and voice types.
+7. Generate lip-sync files.
+8. Integrate in CK.
+9. Test distance, subtitles, interruptions, and multiplayer.
+10. Report missing lines and retakes.
 
-## Table de suivi
+## Tracking table
 
-Colonnes : `LineId`, `Quest`, `Topic`, `Emotion`, `Actor`, `Take`, `Selected`, `Processed`, `Lip`, `CK`, `InGame`, `Retake`.
+Columns: `LineId`, `Quest`, `Topic`, `Emotion`, `Actor`, `Take`, `Selected`, `Processed`, `Lip`, `CK`, `InGame`, `Retake`.

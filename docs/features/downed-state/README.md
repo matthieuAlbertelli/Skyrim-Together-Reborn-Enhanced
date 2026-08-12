@@ -1,5 +1,6 @@
 # Downed State
 
-> **Statut : Concept validé, non implémenté**
+> **Status:** accepted concept; not implemented.
 
-Le système remplace mort/respawn immédiat par Agonie, Hors combat et relève après combat. Voir `PRODUCT_SPEC.md`.
+The system replaces immediate death/respawn with Downed, Out of Combat, and
+post-combat revival states. See `PRODUCT_SPEC.md`.

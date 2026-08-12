@@ -1,67 +1,70 @@
-# World Sync — Technical design
+# World Sync — Technical Design
 
-> **Statut : Implémenté pour dropped items + lazy placed-reference adoption**
+> **Status:** implemented for dropped items and lazy placed-reference adoption.
 
-## Responsabilités
+## Responsibilities
 
-### Serveur
+### Server
 
-Le serveur possède :
+The server owns:
 
-- allocation/résolution de `WorldEntityId`;
-- index `PlacedReferenceId -> WorldEntityId`;
+- `WorldEntityId` allocation and resolution;
+- the `PlacedReferenceId -> WorldEntityId` index;
 - lifecycle;
-- autorité de manipulation;
-- état de settlement;
-- snapshot de session.
+- manipulation authority;
+- settlement state;
+- session snapshot.
 
 ### Client
 
-Le client possède :
+The client owns:
 
-- binding `WorldEntityId <-> référence Skyrim locale`;
-- matérialisation des drops;
-- résolution d’une référence placée existante;
-- observation des événements de grab/release;
-- Havok local;
-- sampling de stabilité;
-- application des corrections ponctuelles.
+- `WorldEntityId <-> local Skyrim reference` binding;
+- dropped-item materialization;
+- resolution of an existing placed reference;
+- observation of grab and release events;
+- local Havok;
+- stability sampling;
+- application of point-in-time corrections.
 
-## Identité
+## Identity
 
-### Drop dynamique
+### Dynamic drop
 
-Une référence temporaire créée par Skyrim n’a pas le même FormID chez tous les clients.
+A temporary reference created by Skyrim does not have the same FormID on every
+client.
 
-STRE lui attribue donc un `WorldEntityId` stable côté session.
+STRE therefore assigns it a session-stable `WorldEntityId`.
 
-### Référence placée
+### Placed reference
 
-La clé de déduplication serveur est :
+The server deduplication key is:
 
 ```text
-PlacedReferenceId = GameId de la TESObjectREFR
+PlacedReferenceId = GameId of the TESObjectREFR
 ```
 
-Le serveur adopte la référence à la première interaction réseau pertinente. Chaque client résout ensuite sa propre référence locale correspondante.
+The server adopts the reference at the first relevant network interaction. Each
+client then resolves its corresponding local reference.
 
-## Drop et settlement
+## Drop and settlement
 
-Le client autorité laisse Havok évoluer localement puis observe la stabilité.
+The authority client lets Havok evolve locally, then observes stability.
 
-Le settlement est borné :
+Settlement is bounded:
 
-- sampling périodique;
-- durée minimale avant stabilité;
-- durée maximale avec fallback sur le dernier transform connu;
-- envoi d’un transform final;
-- correction distante uniquement si la divergence dépasse la tolérance définie.
+- periodic sampling;
+- minimum duration before stability;
+- maximum duration with fallback to the last known transform;
+- one final transform;
+- remote correction only when divergence exceeds the defined tolerance.
 
-L’objectif est de converger sans appeler continuellement `MoveTo`/équivalent pendant la simulation.
+The goal is convergence without continuously calling `MoveTo` or an equivalent
+during simulation.
 
 ## Manipulation
 
-État logique :
+Logical state:
 
 ```text
 FREE
@@ -73,60 +76,66 @@ SETTLING(authorityPlayerId)
 FREE
 ```
 
-Pendant `MANIPULATED` :
+During `MANIPULATED`:
 
-- Better Grabbing gère le déplacement local;
-- le serveur reçoit seulement les informations nécessaires au lifecycle/heartbeat;
-- les observateurs cachent leur représentation;
-- aucun transform intermédiaire n’est streamé aux observateurs.
+- Better Grabbing handles local movement;
+- the server receives only lifecycle and heartbeat information;
+- observers hide their representation;
+- no intermediate transform is streamed to observers.
 
-Au release :
+On release:
 
-- un drop dynamique reprend son chemin normal de matérialisation/Havok;
-- une référence placée est repositionnée via le chemin `TESObjectREFR::MoveTo` déjà présent dans STR;
-- l’appel moteur est exécuté via `RunnerService`/`OnUpdate`;
-- le settlement final reprend ensuite.
+- a dynamic drop resumes its normal materialization and Havok path;
+- a placed reference is repositioned through STR's existing
+  `TESObjectREFR::MoveTo` path;
+- the engine call runs through `RunnerService`/`OnUpdate`;
+- final settlement then resumes.
 
 ## Engine safety
 
-Ne pas réintroduire des wrappers `SetPosition`/`SetAngle` basés sur une signature d’adresse supposée.
+Do not reintroduce `SetPosition`/`SetAngle` wrappers based on an assumed address
+signature.
 
-Le crash observateur de référence placée a démontré que cette ABI était incorrecte. Le chemin validé est la primitive `MoveTo` STR existante, appelée sur le contexte de jeu approprié.
+The placed-reference observer crash demonstrated that this ABI was incorrect.
+The validated path is STR's existing `MoveTo` primitive called in the appropriate
+game context.
 
 ## Ownership
 
-`Inventory::Entry` porte un owner server-space lorsqu’il peut être résolu.
+`Inventory::Entry` carries a server-space owner when it can be resolved.
 
-Conséquences :
+Consequences:
 
-- instances identiques avec owners différents ne fusionnent pas;
-- l’owner peut survivre aux chemins inventory/world supportés;
-- `ExtraOwnership` est restauré lors d’une reconstruction appropriée;
-- le grab d’une référence placée non autorisée déclenche `StealAlarm`.
+- identical instances with different owners do not merge;
+- the owner can survive supported inventory/world paths;
+- `ExtraOwnership` is restored during appropriate reconstruction;
+- grabbing an unauthorized placed reference triggers `StealAlarm`.
 
-Un simple booléen `IsStolen` n’est pas utilisé comme source de vérité.
+A simple `IsStolen` boolean is not used as the source of truth.
 
-## Dialogue / forced release
+## Dialogue and forced release
 
-Le `Dialogue Menu` Skyrim n’est pas suffisant pour arrêter Better Grabbing à lui seul.
+Skyrim's `Dialogue Menu` alone does not reliably stop Better Grabbing.
 
-Quand ce menu s’ouvre pendant une manipulation locale, STRE demande une fin de grab native. Le `TESGrabReleaseEvent` existant poursuit ensuite le lifecycle réseau normal, y compris lorsqu’une adoption était encore en attente.
+When that menu opens during local manipulation, STRE requests a native grab end.
+The existing `TESGrabReleaseEvent` then continues the normal network lifecycle,
+including when adoption was still pending.
 
-## Snapshot / late join
+## Snapshot and late join
 
-Un client rejoignant après création/adoption doit :
+A client joining after creation or adoption must:
 
-- recevoir l’état WorldEntity courant;
-- matérialiser les drops nécessaires;
-- lier les références placées existantes sans duplication;
-- appliquer le transform canonique utile;
-- ne jamais recréer une entité déjà consommée.
+- receive current WorldEntity state;
+- materialize required drops;
+- bind existing placed references without duplication;
+- apply the relevant canonical transform;
+- never recreate an already consumed entity.
 
-## Non-goals actuels
+## Current non-goals
 
-- simulation physique serveur;
-- streaming frame-by-frame des rigid bodies;
-- duplication des références vanilla placées;
-- scan préalable de toutes les références mobiles;
-- persistence disque complète;
-- synchronisation de tous les ExtraData Skyrim sans politique explicite.
+- server physics simulation;
+- frame-by-frame rigid-body streaming;
+- duplication of placed vanilla references;
+- advance scanning of every movable reference;
+- complete disk persistence;
+- synchronization of every Skyrim ExtraData type without an explicit policy.

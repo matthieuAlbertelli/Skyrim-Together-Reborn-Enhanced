@@ -1,64 +1,64 @@
-# Alternate Start — Design solo
+# Alternate Start — Single-player design
 
-> **Statut : Fallback de build local implémenté / bootstrap complet du nouveau jeu proposé**
+> **Status: Local build fallback implemented; complete new-game bootstrap proposed**
 
-## Principe
+## Principle
 
-Le plugin CK et Character Creation doivent rester utilisables sans serveur STRE. Le même catalogue de classes, objets et sorts est appliqué localement.
+The CK plugin and Character Creation must remain usable without an STRE server. The same catalog of classes, items, and spells is applied locally.
 
-## Implémenté
+## Implemented
 
-- quête et cellule Alternate Start ;
-- déplacement vers la table ;
-- RaceMenu ;
-- UI de classe et loadouts ;
-- nettoyage du personnage ;
-- application locale de l’inventaire, des sorts et de l’équipement ;
-- niveau 1 ;
-- aucun appel serveur obligatoire quand STRE n’est pas connecté.
+- Alternate Start quest and cell;
+- movement to the table;
+- RaceMenu;
+- class and loadout UI;
+- character cleanup;
+- local application of inventory, spells, and equipment;
+- level 1;
+- no mandatory server call when STRE is disconnected.
 
-## À implémenter pour un vrai nouveau jeu solo
+## Required for a complete single-player new game
 
-- intercepter le démarrage avant la séquence du convoi ;
-- neutraliser ou avancer proprement les états vanilla liés à Helgen ;
-- initialiser l’introduction ;
-- ouvrir la porte de sortie après validation ;
-- garantir la route vers la quête principale.
+- intercept startup before the cart sequence;
+- cleanly neutralize or advance the vanilla states associated with Helgen;
+- initialize the introduction;
+- open the exit door after validation;
+- guarantee a route back to the main quest.
 
-## État local
+## Local state
 
-Éléments actuels :
+Current elements:
 
-- `STRE_QUEST_AlternateStart` ;
-- aliases joueur/siège ;
-- état local de Character Creation dans le service client.
+- `STRE_QUEST_AlternateStart`;
+- player and seat aliases;
+- local Character Creation state in the client service.
 
-Éléments futurs possibles :
+Possible future elements:
 
-- global de phase ;
-- alias Valen ;
-- introduction terminée ;
-- départ effectué.
+- phase global;
+- Valen alias;
+- introduction completed;
+- departure completed.
 
-## Classes et paquetages
+## Classes and packages
 
-Le comportement réellement appliqué est défini par :
+The behavior actually applied is defined by:
 
-- `CharacterBuildCatalog.*` ;
-- `character-loadouts.ts` ;
+- `CharacterBuildCatalog.*`;
+- `character-loadouts.ts`;
 - `CK_RECORDS_M7_IMPLEMENTED.json`.
 
-La conception élargie reste dans [`KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx`](KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx). [`SKILL_LOADOUTS_v0.1_fr.md`](history/SKILL_LOADOUTS_v0.1_fr.md) est une archive V0.1 et ne doit pas remplacer le catalogue courant.
+Expanded design remains in [`SKILL_EQUIPMENT_KITS_V2.xlsx`](SKILL_EQUIPMENT_KITS_V2.xlsx). [`SKILL_LOADOUTS_v0.1_fr.md`](history/SKILL_LOADOUTS_v0.1_fr.md) is an archived French V0.1 design and must not replace the current catalog.
 
-## Sortie et reprise vanilla
+## Exit and vanilla resumption
 
-La porte future ne devra s’activer qu’après validation locale du build. La reprise doit être testée sur :
+The future door must activate only after local build validation. Resumption must be tested against:
 
-- quête principale ;
-- dragons et cris ;
-- progression vers Blanche-Rive ;
-- guerre civile et quêtes sensibles au passage de Helgen.
+- the main quest;
+- dragons and shouts;
+- progression toward Whiterun;
+- the Civil War and quests sensitive to Helgen progression.
 
-## Sauvegarde
+## Saving
 
-Les états solo doivent rester dans la sauvegarde Skyrim. Aucun blocage ne doit apparaître si STRE est installé puis indisponible lors d’un chargement ultérieur.
+Single-player states must remain in the Skyrim save. No blocker should occur if STRE is installed and later unavailable when the save is loaded.

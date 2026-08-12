@@ -1,19 +1,20 @@
-# ADR-0004 — Snapshot complet plus événements incrémentaux
+# ADR-0004 — Full Snapshot Plus Incremental Events
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Un client reconnecté ne peut pas dépendre d’événements qu’il a manqués.
+A reconnecting client cannot depend on events it missed.
 
-## Décision
+## Decision
 
-Chaque adapter expose un snapshot canonique versionné. Après application du snapshot, le client consomme les événements strictement postérieurs à cette version.
+Every adapter exposes a versioned canonical snapshot. After applying the
+snapshot, the client consumes only events strictly newer than that version.
 
-## Conséquences
+## Consequences
 
-- reprise déterministe ;
-- coût de sérialisation et migration ;
-- handlers d’événements idempotents ;
-- tests de snapshot obligatoires.
+- deterministic recovery;
+- serialization and migration cost;
+- idempotent event handlers;
+- mandatory snapshot tests.

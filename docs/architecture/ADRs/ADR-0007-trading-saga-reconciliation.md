@@ -1,19 +1,22 @@
-# ADR-0007 — Le trading est une saga compensée
+# ADR-0007 — Trading Is a Compensating Saga
 
-- **Statut : Implemented**
-- **Date : 2026-07-19**
+- **Status:** Implemented
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Deux inventaires Skyrim locaux et un état serveur ne peuvent pas être modifiés par une transaction ACID unique.
+Two local Skyrim inventories and server state cannot be modified by one ACID
+transaction.
 
-## Décision
+## Decision
 
-Le serveur valide un plan, les clients appliquent leur part et journalisent le résultat, puis le serveur commit. En cas d’incertitude, une réconciliation par quantités absolues restaure la convergence.
+The server validates a plan, clients apply their portion and record the result,
+then the server commits. Under uncertainty, reconciliation using absolute
+quantities restores convergence.
 
-## Conséquences
+## Consequences
 
-- robustesse aux retransmissions ;
-- complexité de protocoles `ApplyId/ReconcileId` ;
-- l’atomicité doit être communiquée comme logique, non ACID ;
-- tests de panne indispensables.
+- resilient retransmission;
+- `ApplyId/ReconcileId` protocol complexity;
+- atomicity must be described as logical, not ACID;
+- failure tests are essential.

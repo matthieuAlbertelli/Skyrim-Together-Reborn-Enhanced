@@ -1,56 +1,62 @@
 # World Sync
 
-> **Statut : Implémenté et validé en jeu pour le périmètre décrit**
-> **Validation principale : 10 août 2026**
+> **Status:** implemented and validated in game for the documented scope.
+> **Primary validation:** August 10, 2026.
 
-World Sync fournit une identité et un lifecycle réseau aux objets physiques qui doivent exister de manière cohérente chez plusieurs joueurs, tout en laissant Skyrim simuler localement la physique.
+World Sync provides network identity and lifecycle to physical objects that must
+exist consistently for several players while allowing Skyrim to simulate physics
+locally.
 
-## Comportement utilisateur actuel
+## Current user behavior
 
-### Objet lâché par un joueur
+### Object dropped by a player
 
 ```text
-drop local
-→ création WorldEntity
-→ matérialisation distante
-→ Havok local sur chaque client
-→ settlement par l'autorité
-→ correction ponctuelle uniquement si divergence significative
+local drop
+→ create WorldEntity
+→ remote materialization
+→ local Havok on every client
+→ settlement by the authority
+→ point-in-time correction only for significant divergence
 ```
 
-### Objet déjà présent dans le monde
+### Object already present in the world
 
 ```text
-première interaction réseau pertinente
-→ lazy adoption via PlacedReferenceId
-→ WorldEntityId serveur unique
-→ binding sur la TESObjectREFR locale existante
+first relevant network interaction
+→ lazy adoption through PlacedReferenceId
+→ unique server WorldEntityId
+→ bind to the existing local TESObjectREFR
 ```
 
-Aucun scan global des cellules n’est requis.
+No global cell scan is required.
 
-### Grab avec Better Grabbing
+### Grab with Better Grabbing
 
 ```text
-grab local
-→ autorité serveur
-→ objet masqué chez les observateurs
-→ déplacement local uniquement
+local grab
+→ server authority
+→ object hidden for observers
+→ local movement only
 → release
-→ réapparition/repositionnement distant
-→ Havok local
-→ settlement final
+→ remote reappearance/repositioning
+→ local Havok
+→ final settlement
 ```
 
-STRE ne redistribue pas Better Grabbing. Le plugin SKSE est une dépendance multijoueur externe contrôlée via la politique générique `NativePlugins`.
+STRE does not redistribute Better Grabbing. The SKSE plugin is an external
+multiplayer dependency controlled through the generic `NativePlugins` policy.
 
-### Ownership / vol
+### Ownership and theft
 
-L’ownership est transporté comme provenance (`ExtraOwnerId`) dans les chemins supportés. Grabber une référence possédée sans être autorisé déclenche le comportement de vol Skyrim.
+Ownership is carried as provenance (`ExtraOwnerId`) through supported paths.
+Grabbing an owned reference without authorization triggers Skyrim's theft
+behavior.
 
-Si un dialogue s’ouvre pendant un grab, STRE force la fin propre du grab afin que les contrôles/dialogues restent utilisables.
+If dialogue opens during a grab, STRE cleanly ends the grab so controls and
+dialogue remain usable.
 
-## Sources de vérité
+## Sources of truth
 
 - [Technical design](TECHNICAL_DESIGN.md)
 - [Protocol reference](PROTOCOL_REFERENCE.md)
@@ -58,20 +64,21 @@ Si un dialogue s’ouvre pendant un grab, STRE force la fin propre du grab afin 
 - [Test plan](TEST_PLAN.md)
 - [ADR-0017](../../architecture/ADRs/ADR-0017-world-entity-authority-local-havok.md)
 
-## Principes
+## Principles
 
-- `WorldEntityId` est l’identité réseau de l’instance monde.
-- Un FormID temporaire local n’est jamais l’identité réseau.
-- Une référence placée conserve sa référence Skyrim locale; elle n’est pas dupliquée.
-- Le serveur arbitre lifecycle/authority.
-- Havok reste local.
-- Le réseau force une convergence finale, pas une simulation physique frame-by-frame.
-- Les mutations Skyrim reçues du réseau passent par un contexte moteur sûr.
-- Une opération incapable de préserver une métadonnée requise doit échouer explicitement.
+- `WorldEntityId` is the network identity of a world instance.
+- A temporary local FormID is never the network identity.
+- A placed reference retains its local Skyrim reference and is not duplicated.
+- The server arbitrates lifecycle and authority.
+- Havok remains local.
+- The network enforces final convergence, not frame-by-frame physics simulation.
+- Network-triggered Skyrim mutations run in a safe engine context.
+- An operation that cannot preserve required metadata fails explicitly.
 
-## Limites connues
+## Known limitations
 
-- noms personnalisés (`ExtraTextDisplayData`) non synchronisés;
-- persistance durable après redémarrage/save branch non implémentée;
-- couverture in-game encore à étendre pour objets de quête et références fortement scriptées;
-- le modèle n’est pas encore généralisé à tous les types d’entités monde.
+- custom names (`ExtraTextDisplayData`) are not synchronized;
+- durable persistence after restart or save branch is not implemented;
+- in-game coverage still needs expansion for quest objects and heavily scripted
+  references;
+- the model is not yet generalized to every world-entity type.

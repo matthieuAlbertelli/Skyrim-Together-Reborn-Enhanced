@@ -1,22 +1,25 @@
-# ADR-0006 — Aucun FormID plugin codé en dur
+# ADR-0006 — No Hard-Coded Plugin FormIDs
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Les FormIDs dépendent du load order et rendent les intégrations fragiles.
+FormIDs depend on load order and make integrations fragile.
 
-## Décision
+## Decision
 
-Utiliser propriétés Papyrus, références configurées, Editor IDs contrôlés et résolution via mod/base id lorsque nécessaire.
+Use Papyrus properties, configured references, controlled Editor IDs, and
+resolution by mod/base ID where necessary.
 
-## Conséquences
+## Consequences
 
-- installation plus robuste ;
-- configuration initiale plus explicite ;
-- besoin d’outils de validation des propriétés.
+- more robust installation;
+- more explicit initial configuration;
+- property-validation tools are required.
 
-## État d’implémentation
+## Implementation state
 
-Le catalogue M7 résout `PluginName + LocalFormId`, les aliases CK fournissent les références de siège et les audits recoupent les IDs locaux. Aucun préfixe de load order chargé n’est utilisé pour les records STRE.
+The M7 catalog resolves `PluginName + LocalFormId`, CK aliases provide seat
+references, and audits cross-check local IDs. No loaded load-order prefix is
+used for STRE records.

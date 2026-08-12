@@ -1,66 +1,70 @@
 # Trading — Product Spec
 
-> **Statut : Fonctionnalité alpha implémentée, spécification consolidée**
+> **Status:** implemented alpha feature; consolidated specification.
 
-## Problème
+## Problem
 
-Skyrim Together Reborn ne fournit pas un flux d’échange joueur-à-joueur sécurisé et compréhensible. Déposer des objets au sol est peu fiable, peu immersif et ne donne aucune garantie de consentement mutuel.
+Skyrim Together Reborn does not provide a secure, understandable player-to-player
+trade flow. Dropping objects on the ground is unreliable, not very immersive,
+and provides no mutual-consent guarantee.
 
-## Objectif utilisateur
+## User goal
 
-Deux joueurs proches peuvent ouvrir une transaction, composer leurs offres, inspecter les objets, confirmer la même révision puis recevoir un résultat clair : terminé, annulé ou échoué.
+Two nearby players can open a transaction, compose their offers, inspect items,
+confirm the same revision, and receive a clear result: completed, cancelled, or
+failed.
 
-## Flux principal
+## Main flow
 
-1. Le joueur A active le joueur B et demande un échange.
-2. B accepte ou refuse dans les 30 secondes.
-3. Les deux joueurs ajoutent ou retirent des quantités.
-4. Toute modification annule les confirmations précédentes.
-5. Les deux joueurs confirment la même révision.
-6. Le serveur valide les inventaires et verrouille la transaction.
-7. Chaque client applique son plan local.
-8. Le serveur confirme ou déclenche une réconciliation.
-9. L’UI affiche l’état terminal.
+1. Player A activates Player B and requests a trade.
+2. B accepts or rejects within 30 seconds.
+3. Both players add or remove quantities.
+4. Any modification clears previous confirmations.
+5. Both players confirm the same revision.
+6. The server validates inventories and locks the transaction.
+7. Each client applies its local plan.
+8. The server confirms or starts reconciliation.
+9. The UI displays the terminal state.
 
-## Règles alpha actuelles
+## Current alpha rules
 
-Un objet n’est transférable que s’il :
+An item is transferable only if it:
 
-- existe en quantité positive ;
-- n’est pas un objet de quête ;
-- n’est pas équipé ;
-- ne porte pas de charge, enchantement custom, poison, âme ou santé/durabilité extra ;
-- n’est pas ambigu dans l’inventaire logique ;
-- peut être représenté par le couple canonique mod/base id.
+- exists in a positive quantity;
+- is not a quest item;
+- is not equipped;
+- has no charge, custom enchantment, poison, soul, or extra health/durability;
+- is not ambiguous in the logical inventory;
+- can be represented by the canonical mod/base ID pair.
 
-Les offres et plans sont limités à 64 lignes.
+Offers and plans are limited to 64 lines.
 
-## États UX
+## UX states
 
-- invitation reçue ;
-- invitation sortante ;
-- synchronisation ;
-- négociation ;
-- verrouillé ;
-- application ;
-- terminé ;
-- annulé ;
-- échec.
+- invitation received;
+- outgoing invitation;
+- synchronization;
+- negotiation;
+- locked;
+- application;
+- completed;
+- cancelled;
+- failed.
 
-## Non-objectifs de l’alpha
+## Alpha non-goals
 
-- échange d’or ;
-- split avancé de stacks avec instances distinctes ;
-- objets enchantés uniques ;
-- persistance après restart serveur ;
-- transactions multi-joueurs ;
+- gold trading;
+- advanced splitting of stacks with distinct instances;
+- unique enchanted items;
+- persistence across server restart;
+- multi-player transactions;
 - marketplace.
 
-## Critères d’acceptation
+## Acceptance criteria
 
-- impossible de confirmer une offre périmée ;
-- impossible d’échanger avec soi-même ou avec un joueur occupé ;
-- retransmettre une commande identique ne double pas les objets ;
-- un échec partiel mène à une réconciliation ou à un état explicite ;
-- fermer/revenir sur l’UI ne modifie pas l’état serveur ;
-- l’aperçu 3D ne bloque pas l’input après fermeture.
+- a stale offer cannot be confirmed;
+- a player cannot trade with themselves or a busy player;
+- retransmitting an identical command does not duplicate items;
+- partial failure leads to reconciliation or an explicit state;
+- closing and reopening the UI does not change server state;
+- the 3D preview does not block input after closing.
