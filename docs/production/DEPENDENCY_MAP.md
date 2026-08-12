@@ -1,8 +1,8 @@
-# Carte des dépendances
+# Dependency Map
 
-> **Statut : relations structurelles courantes**
+> **Status:** current structural relationships.
 
-Ce document décrit **les dépendances entre sous-systèmes**, pas leur avancement.
+This document describes **dependencies between subsystems**, not their progress.
 
 ## World Sync
 

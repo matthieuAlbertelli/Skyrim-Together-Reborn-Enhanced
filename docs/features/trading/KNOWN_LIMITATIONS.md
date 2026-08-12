@@ -1,29 +1,29 @@
-# Trading — Limites connues
+# Trading — Known Limitations
 
-> **Statut : Constaté / à suivre**
+> **Status:** observed and tracked.
 
-## Fonctionnelles
+## Functional
 
-- pas d’or ;
-- pas d’objets de quête ;
-- pas d’objets équipés ;
-- pas d’instances complexes ou enchantées ;
-- pas de split d’instances hétérogènes ;
-- une seule session par joueur ;
-- pas de reprise après restart serveur.
+- no gold;
+- no quest items;
+- no equipped items;
+- no complex or enchanted instances;
+- no splitting of heterogeneous instances;
+- one session per player;
+- no recovery after server restart.
 
 ## Architecture
 
-- `IsMvpTransferable` est dupliqué client/serveur ;
-- l’UI native utilise un multiplexage sur `toggleDebugUI` ;
-- l’inventaire client reste une frontière fragile vis-à-vis du moteur ;
-- la véritable atomicité est remplacée par saga + réconciliation ;
-- les tests sont surtout unitaires, pas end-to-end réseau.
+- `IsMvpTransferable` is duplicated on client and server;
+- the native UI multiplexes through `toggleDebugUI`;
+- client inventory remains a fragile engine boundary;
+- a saga plus reconciliation replaces true atomicity;
+- tests are mostly unit-level rather than end-to-end network tests.
 
 ## UX
 
-- messages d’erreur encore techniques ;
-- absence de représentation explicite du délai d’invitation ;
-- navigation manette à valider ;
-- accessibilité et localisation incomplètes ;
-- comportement sur ultra-wide à tester.
+- error messages remain technical;
+- invitation timeout is not represented explicitly;
+- controller navigation remains to be validated;
+- accessibility and localization remain incomplete;
+- ultra-wide behavior remains to be tested.

@@ -1,9 +1,9 @@
-# Audits historiques
+# Historical audits
 
-> **Statut : archive**
+> **Status: Archive**
 
-`docs/audit/` contient des constats datés utiles à la traçabilité. Ils ne décrivent pas automatiquement l’état courant.
+`docs/audit/` contains dated findings retained for traceability. They do not automatically describe the current state.
 
-La source de vérité courante est [`docs/project/STATUS.md`](../project/STATUS.md).
+The current source of truth is [`docs/project/STATUS.md`](../project/STATUS.md).
 
-Les audits/snapshots anciens sont placés sous `history/` avec leur date dans le nom lorsque nécessaire.
+Older audits and snapshots live under `history/`, with a date in the filename when needed.

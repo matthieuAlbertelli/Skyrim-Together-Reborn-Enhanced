@@ -1,31 +1,33 @@
 # Downed State — Product Spec
 
-> **Statut : Vision validée, non implémentée dans l’archive**
+> **Status:** accepted vision; not implemented in the archived code.
 
-## Automate
+## State machine
 
 ```text
-En forme
-→ Agonie (30 secondes)
-→ Hors combat
-→ Soins prolongés après la fin du combat
-→ En forme
+Healthy
+→ Downed (30 seconds)
+→ Out of Combat
+→ Prolonged treatment after combat ends
+→ Healthy
 ```
 
-## Objectif
+## Goal
 
-Remplacer le respawn immédiat par une conséquence coopérative lisible. Les alliés ont une fenêtre pour intervenir ; après 30 secondes, le joueur reste hors combat jusqu’à la fin de l’affrontement.
+Replace immediate respawn with a readable cooperative consequence. Allies have a
+window in which to intervene; after 30 seconds, the player remains out of combat
+until the encounter ends.
 
-## Règles
+## Rules
 
-- soins pendant l’agonie peuvent relever ;
-- passé le délai, les soins de combat ne relèvent plus ;
-- le joueur hors combat ne revient qu’après fin de combat et soins prolongés ;
-- l’état est partagé et autoritaire ;
-- déconnexion/reconnexion conserve l’état ;
-- pas de téléportation magique automatique.
+- healing during Downed can revive the player;
+- after the timeout, combat healing can no longer revive the player;
+- an out-of-combat player returns only after combat ends and prolonged treatment;
+- state is shared and authoritative;
+- disconnect/reconnect preserves state;
+- no automatic magical teleportation.
 
-## Capabilities futures
+## Future capabilities
 
 - `player.down-state/1`
 - `group.revive/1`

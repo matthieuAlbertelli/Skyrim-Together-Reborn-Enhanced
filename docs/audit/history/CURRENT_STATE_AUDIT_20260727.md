@@ -1,162 +1,162 @@
-# Audit de l’état actuel
+# Current-state audit
 
-> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour l'état
-> courant.** Voir [`docs/project/STATUS.md`](../../project/STATUS.md).
-> **Baseline historique :** audit source du 19 juillet 2026
-> **Version déclarée :** `0.1.0-alpha.1`
+> **Status: Historical snapshot as of July 27, 2026; non-canonical for current
+> state.** See [`docs/project/STATUS.md`](../../project/STATUS.md).
+> **Historical baseline:** source audit from July 19, 2026
+> **Declared version:** `0.1.0-alpha.1`
 
-## Résumé exécutif
+## Executive summary
 
-STRE possède désormais deux verticales techniques actives :
+At the snapshot date, STRE had two active technical verticals:
 
-1. un système de trading joueur-à-joueur autoritaire avec saga de réconciliation ;
-2. un bootstrap de personnage Alternate Start combinant plugin Creation Kit, UI Angular/CEF, catalogue partagé et validation serveur.
+1. an authoritative player-to-player Trading system with reconciliation saga;
+2. an Alternate Start character bootstrap combining a Creation Kit plugin, Angular/CEF UI, shared catalog, and server validation.
 
-Le second point n’était pas présent dans l’archive du 19 juillet. Il a depuis été intégré au dépôt, compilé sous Windows et smoke-testé dans Skyrim, notamment pour les buffs ciblés entre deux PC.
+The second vertical was absent from the July 19 archive. It was subsequently integrated into the repository, compiled on Windows, and smoke-tested in Skyrim, including targeted buffs between two PCs.
 
 ## Trading
 
-Le trading comprend toujours :
+Trading still included:
 
-- un domaine métier indépendant ;
-- un service serveur autoritaire ;
-- un protocole dédié et borné ;
-- des plans de mutation déterministes ;
-- une application client idempotente ;
-- une réconciliation vers des quantités absolues ;
-- une UI Angular/CEF ;
-- une preview 3D native modulaire ;
-- des tests de domaine et de sérialisation.
+- an independent business domain;
+- an authoritative server service;
+- a dedicated bounded protocol;
+- deterministic mutation plans;
+- idempotent client application;
+- reconciliation to absolute quantities;
+- an Angular/CEF UI;
+- modular native 3D preview;
+- domain and serialization tests.
 
-Le modèle doit être décrit comme une **saga autoritaire compensée**, pas comme une transaction ACID distribuée.
+The model must be described as an **authoritative compensated saga**, not a distributed ACID transaction.
 
-### Limites Trading
+### Trading limitations
 
-- état de session non persisté à travers un redémarrage serveur ;
-- reconnect en cours d’échange encore à valider complètement ;
-- pas de stack splitting ni d’échange d’or ;
-- preview toujours non publiée comme SDK tiers stable.
+- session state was not persisted across a server restart;
+- reconnect during a trade still required complete validation;
+- no stack splitting or gold trading;
+- preview was not published as a stable third-party SDK.
 
 ## Item Preview
 
-Les composants internes incluent notamment :
+Internal components included:
 
-- `ItemPreviewController` ;
-- `ItemPreviewNativeSession` ;
-- `ItemPreviewHostSession` ;
-- `ItemPreviewHostBridge` ;
-- `ItemPreviewFitSolver` ;
-- `ItemPreviewRasterMeasurer` ;
+- `ItemPreviewController`;
+- `ItemPreviewNativeSession`;
+- `ItemPreviewHostSession`;
+- `ItemPreviewHostBridge`;
+- `ItemPreviewFitSolver`;
+- `ItemPreviewRasterMeasurer`;
 - `TradePreviewHostMenu`.
 
-La plateforme a désormais un second consommateur first-party dans l’écran Character Creation. Cela valide sa réutilisabilité interne, sans résoudre encore le besoin d’un lease manager multi-consommateurs ni d’une API tierce stable.
+The platform had a second first-party consumer in the Character Creation screen. This validated internal reuse without resolving the need for a multi-consumer lease manager or stable third-party API.
 
-## Alternate Start — état implémenté
+## Alternate Start — Implemented state
 
-### Plugin Creation Kit
+### Creation Kit plugin
 
-Les fichiers authored sont versionnés sous `GameFiles/Skyrim` :
+Authored files were versioned under `GameFiles/Skyrim`:
 
-- `STRE_AlternateStart.esp` ;
-- `Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc` ;
+- `STRE_AlternateStart.esp`;
+- `Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc`;
 - `Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.pex`.
 
-Éléments confirmés :
+Confirmed elements:
 
-- cellules `STRE_CELL_AlternateStart` et `STRE_CELL_DevSandbox` ;
-- quête `STRE_QUEST_AlternateStart` ;
-- étapes `0`, `10` et `20` ;
-- aliases joueur et sièges ;
-- déplacement puis assise du joueur ;
-- déclenchement de RaceMenu et de Character Creation ;
-- records custom d’équipement, enchantements, sorts et effets magiques.
+- `STRE_CELL_AlternateStart` and `STRE_CELL_DevSandbox` cells;
+- `STRE_QUEST_AlternateStart` quest;
+- stages `0`, `10`, and `20`;
+- player and seat aliases;
+- player movement, then seating;
+- RaceMenu and Character Creation trigger;
+- custom equipment, enchantment, spell, and magic-effect records.
 
-Le manifest strict `CK_RECORDS_M7_IMPLEMENTED.json` valide 47 records attendus. L’audit catalogue/ESP valide 41 références utilisées par le code.
+The strict `CK_RECORDS_M7_IMPLEMENTED.json` manifest validated 47 expected records. The catalog/ESP audit validated 41 references used by code.
 
 ### Character Creation
 
-Le client expose `UiSurface::CharacterCreation` et un `CharacterCreationService` qui orchestre :
+The client exposed `UiSurface::CharacterCreation` and a `CharacterCreationService` orchestrating:
 
-- RaceMenu ;
-- choix Warrior, Mage ou Thief ;
-- groupes de loadouts ;
-- preview 3D d’objets Skyrim réels ;
-- résumé ;
-- soumission finale ;
-- chemin local hors ligne ou chemin serveur autoritaire.
+- RaceMenu;
+- Warrior, Mage, or Thief selection;
+- loadout groups;
+- 3D preview of real Skyrim objects;
+- summary;
+- final submission;
+- local offline or authoritative server path.
 
-### Build autoritaire
+### Authoritative build
 
-Le catalogue courant est :
+The current catalog was:
 
 ```text
 BuildVersion = 5
 ```
 
-Le serveur dérive depuis les identifiants logiques :
+The server derived from logical identifiers:
 
-- l’inventaire canonique ;
-- le hash d’inventaire ;
-- la liste canonique de sorts ;
-- le hash de sorts ;
-- les métadonnées d’équipement.
+- canonical inventory;
+- inventory hash;
+- canonical spell list;
+- spell hash;
+- equipment metadata.
 
-Le client nettoie le personnage importé, applique le snapshot canonique, vérifie les objets et sorts réellement présents, puis envoie `CharacterBuildAppliedRequest`. Le serveur valide les deux hashes avant de marquer le build `Applied` et de fixer le niveau serveur à 1.
+The client cleaned the imported character, applied the canonical snapshot, verified items and spells actually present, then sent `CharacterBuildAppliedRequest`. The server validated both hashes before marking the build `Applied` and setting server level to 1.
 
-Le même catalogue est utilisé en mode hors ligne sans dépendance obligatoire au serveur.
+The same catalog was used offline with no mandatory server dependency.
 
-### Sorts Mage
+### Mage spells
 
-Les choix Destruction et Altération sont matérialisés :
+The Destruction and Alteration choices were materialized:
 
-- 3 branches de Destruction, 3 sorts chacune ;
-- 3 branches d’Altération, 4 sorts chacune ;
-- 7 sorts canoniques pour chaque combinaison Mage.
+- 3 Destruction branches with 3 spells each;
+- 3 Alteration branches with 4 spells each;
+- 7 canonical spells for every Mage combination.
 
-Les buffs suivants sont explicitement reconnus par le hook magie STRE et ont été smoke-testés sur un joueur distant :
+The following French localized buff names were explicitly recognized by the STRE magic hook and smoke-tested on a remote player:
 
-- Égide minérale ;
-- Souffle aquatique partagé ;
+- Égide minérale;
+- Souffle aquatique partagé;
 - Allègement.
 
-### Nettoyage anti-import
+### Anti-import cleanup
 
-Le flux actuel retire l’inventaire et la magie importés, dissipe les effets temporaires, remet le niveau à 1 et applique le build canonique. Il ne remet pas encore à zéro :
+The flow removed imported inventory and magic, dispelled temporary effects, restored level 1, and applied the canonical build. It did not yet reset:
 
-- les niveaux/XP des 18 compétences ;
-- les perks et points de perk ;
-- l’historique d’augmentation Santé/Magie/Vigueur.
+- levels and XP for all 18 skills;
+- perks and perk points;
+- Health/Magicka/Stamina increase history.
 
-## Limites Alternate Start
+## Alternate Start limitations
 
-- le nouveau jeu n’est pas encore automatiquement redirigé de bout en bout vers l’auberge ;
-- le skip Helgen et la reprise exhaustive des quêtes vanilla restent à implémenter/tester ;
-- Valen, la scène d’introduction et la sortie narrative ne sont pas terminés ;
-- roster, ready check, Campaign State, late join et Dragonborn secret ne sont pas implémentés ;
-- les builds ne sont pas persistés durablement après reconnexion ou redémarrage serveur ;
-- Invocation, Illusion et Restauration restent visibles dans l’UI mais sans récompenses canoniques ;
-- les kits d’Enchantement et plusieurs kits de compétences restent à matérialiser ;
-- les tests en jeu réalisés sont des smoke tests, pas encore une validation exhaustive des neuf combinaisons Mage et de toutes les classes.
+- a new game was not yet redirected end to end to the inn automatically;
+- Helgen skip and exhaustive vanilla-quest resumption remained to implement and test;
+- Valen, the introduction scene, and narrative exit were incomplete;
+- roster, ready check, Campaign State, late join, and secret Dragonborn were not implemented;
+- builds were not durably persisted after reconnect or server restart;
+- Conjuration, Illusion, and Restoration remained visible in the UI without canonical rewards;
+- Enchanting and several skill kits remained to be materialized;
+- completed in-game tests were smoke tests, not exhaustive validation of all nine Mage combinations and every class.
 
-## Architecture réellement validée
+## Architecture actually validated
 
-Le dépôt démontre aujourd’hui deux patrons first-party autoritaires :
+At the snapshot date, the repository demonstrated two authoritative first-party patterns:
 
-- saga de trading avec réconciliation ;
-- build de personnage avec snapshot canonique et accusé d’application.
+- Trading saga with reconciliation;
+- Character Build with canonical snapshot and application acknowledgment.
 
-Le Mod Integration Framework générique, le bridge Papyrus public et Campaign State restent des architectures proposées. Il ne faut pas présenter le service Character Build comme un SDK générique déjà stabilisé.
+The generic Mod Integration Framework, public Papyrus bridge, and Campaign State remained proposed architectures. Character Build must not be presented as an already-stable generic SDK.
 
-## Recommandations immédiates
+## Immediate recommendations at the snapshot date
 
-1. Automatiser le test des neuf combinaisons Mage dans le build natif et compléter les tests en jeu.
-2. Implémenter la persistance/reconnexion des builds avant d’étendre l’autorité à la campagne complète.
-3. Terminer les kits restants à partir du catalogue et du tableur V2.
-4. Mettre en place le skip Helgen et la reprise vanilla avant d’annoncer un Alternate Start complet.
-5. Ajouter Valen, le départ et le Campaign State par petits jalons testables.
-6. Remplacer l’allowlist nominale des buffs par une classification plus extensible avant un SDK tiers.
-7. Continuer l’évolution de la preview vers un gestionnaire de leases.
+1. Automate the nine Mage-combination tests in the native build and complete in-game testing.
+2. Implement build persistence and reconnect before extending authority to the complete campaign.
+3. Complete remaining kits from the catalog and V2 workbook.
+4. Implement Helgen skip and vanilla resumption before announcing a complete Alternate Start.
+5. Add Valen, departure, and Campaign State through small testable milestones.
+6. Replace the name-based buff allowlist with a more extensible classification before a third-party SDK.
+7. Continue evolving preview toward a lease manager.
 
-## Traçabilité historique
+## Historical traceability
 
-L’audit du 19 juillet 2026 constatait uniquement Trading/Preview et l’absence d’Alternate Start dans l’archive. Ce constat reste valable pour cette archive historique, mais il est superseded par l’état décrit ci-dessus. Les détails de la baseline upstream restent dans `UPSTREAM.md`.
+The July 19, 2026 audit found only Trading/Preview and no Alternate Start in the archive. That finding remains true for that historical archive but is superseded by the state described above. Upstream-baseline details remain in `UPSTREAM.md`.

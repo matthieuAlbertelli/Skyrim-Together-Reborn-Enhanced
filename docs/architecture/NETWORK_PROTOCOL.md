@@ -1,82 +1,96 @@
-# Règles du protocole réseau STRE
+# STRE Network Protocol Rules
 
-> **Statut : contrat transversal actif**
+> **Status:** active cross-cutting contract.
 
-Ce document définit les **règles communes** du protocole STRE. Les listes de messages, champs et transitions propres à une feature appartiennent à `docs/features/<feature>/PROTOCOL_REFERENCE.md`.
+This document defines the STRE protocol's **shared rules**. Feature-specific
+message lists, fields, and transitions belong in
+`docs/features/<feature>/PROTOCOL_REFERENCE.md`.
 
-## Modèle général
+## General model
 
 ```text
 Client
-  → intention / résultat d'application
+  → intent / application result
 Server
-  → validation / transition canonique
+  → validation / canonical transition
 Server
-  → notification ou snapshot
+  → notification or snapshot
 Client
-  → projection locale Skyrim/UI
+  → local Skyrim/UI projection
 ```
 
-Le client ne devient pas source de vérité d’un état partagé simplement parce qu’il l’a observé ou affiché.
+A client does not become the source of truth for shared state merely because it
+observed or displayed that state.
 
-## Catégories
+## Categories
 
-### Intentions client → serveur
+### Client → server intents
 
-Une intention décrit ce que le joueur tente de faire.
+An intent describes what the player is trying to do.
 
-Elle doit contenir uniquement les identifiants et données nécessaires à la validation, avec des collections bornées.
+It contains only the identifiers and data required for validation, with bounded
+collections.
 
-### Résultats/accusés client → serveur
+### Client → server results and acknowledgements
 
-Quand le serveur demande une application locale qui peut échouer, le client peut renvoyer un résultat corrélé afin que le serveur committe, réconcilie ou abandonne explicitement.
+When the server requests local application that can fail, the client may return
+a correlated result so the server can commit, reconcile, or explicitly abandon
+the operation.
 
-### Notifications serveur → client
+### Server → client notifications
 
-Une notification décrit une transition admise ou un état canonique. Les clients appliquent la projection locale de manière idempotente lorsque le domaine l’exige.
+A notification describes an accepted transition or canonical state. Clients
+apply the local projection idempotently when required by the domain.
 
 ### Snapshots
 
-Un système reconnectable doit avoir un chemin de snapshot canonique couvrant l’état nécessaire à la reconstruction locale.
+A reconnectable system must provide a canonical snapshot path covering the state
+required for local reconstruction.
 
-## Identité
+## Identity
 
-- les `FormID` chargés Skyrim ne sont pas des identifiants réseau génériques;
-- les formulaires persistants utilisent des identités server-space (`GameId`) lorsqu’approprié;
-- les instances monde dynamiques utilisent des identités dédiées comme `WorldEntityId`;
-- les identifiants de requête/révision doivent être explicites lorsque concurrence ou retransmission l’exigent.
+- loaded Skyrim `FormID` values are not generic network identifiers;
+- persistent forms use server-space identities (`GameId`) where appropriate;
+- dynamic world instances use dedicated identities such as `WorldEntityId`;
+- request and revision identifiers must be explicit when concurrency or
+  retransmission requires them.
 
-## Bornes et validation
+## Bounds and validation
 
-- toute collection décodée possède une borne;
-- tout enum reçu est validé;
-- toute identité est résolue avant mutation;
-- les payloads malformés sont rejetés;
-- une feature ne doit pas accepter silencieusement une donnée qu’elle ne sait pas préserver.
+- every decoded collection has a bound;
+- every received enum is validated;
+- every identity is resolved before mutation;
+- malformed payloads are rejected;
+- a feature must not silently accept data it cannot preserve.
 
 ## Threading
 
-La réception réseau n’autorise pas directement n’importe quel appel moteur Skyrim.
+Receiving a network message does not authorize arbitrary Skyrim engine calls.
 
-Les handlers qui doivent muter le jeu doivent marshaller le travail vers un contexte approprié, par exemple le chemin `RunnerService`/`OnUpdate` utilisé par STRE.
+Handlers that mutate the game must marshal work to an appropriate context, such
+as STRE's `RunnerService`/`OnUpdate` path.
 
-## Compatibilité
+## Compatibility
 
-Tout changement de schéma doit préciser :
+Every schema change specifies:
 
-- compatibilité client/serveur;
-- stratégie de rejet ou de migration;
-- tests de round-trip;
-- comportement face aux payloads anciens/malformés.
+- client/server compatibility;
+- rejection or migration strategy;
+- round-trip tests;
+- behavior for old or malformed payloads.
 
-Les changements purement append-only ne sont pas automatiquement sûrs : ils doivent rester cohérents avec les encode/decode des deux côtés.
+Append-only changes are not automatically safe: encode/decode behavior must
+remain consistent on both sides.
 
-## Références par feature
+## Feature references
 
 - [Trading protocol](../features/trading/PROTOCOL_REFERENCE.md)
 - [World Sync protocol](../features/world-sync/PROTOCOL_REFERENCE.md)
-- Alternate Start / Character Build : documenter les détails dans son répertoire feature; ne pas recopier la liste ici.
+- Alternate Start / Character Build: document details in its feature directory;
+  do not copy the message list here.
 
 ## Future Mod Integration
 
-Une future enveloppe générique d’adapter doit rester versionnée, bornée et négociable. Elle ne remplace pas les protocoles first-party avant d’avoir été validée par plusieurs intégrations réelles.
+A future generic adapter envelope must remain versioned, bounded, and
+negotiable. It does not replace first-party protocols until several real
+integrations have validated it.

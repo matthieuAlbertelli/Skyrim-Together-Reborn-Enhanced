@@ -1,28 +1,29 @@
-# Observabilité et journalisation
+# Observability and Logging
 
-> **Statut : politique transversale active; couverture à compléter par feature**
+> **Status:** active cross-cutting policy; each feature must complete its coverage.
 
-Les marqueurs précis d’une feature peuvent vivre dans son `TEST_PLAN.md`. Ce document définit ce qu’un log STRE doit permettre de diagnostiquer globalement.
+Feature-specific markers may live in its `TEST_PLAN.md`. This document defines
+what STRE logs must diagnose globally.
 
-## Identifiants corrélables
+## Correlatable identifiers
 
-Une transition critique doit inclure, selon le sous-système :
+A critical transition includes, as applicable:
 
 - subsystem;
-- player/server ID;
-- session/build/WorldEntity ID;
-- request/apply/reconcile ID lorsque présent;
-- revision/version;
-- `GameId` / `PlacedReferenceId` lorsqu’ils sont nécessaires à l’identité;
-- résultat ou code de rejet;
-- fallback/timeout explicite;
-- durée lorsque pertinente.
+- player or server ID;
+- session, build, or WorldEntity ID;
+- request, apply, or reconcile ID when present;
+- revision or version;
+- `GameId` or `PlacedReferenceId` when required for identity;
+- result or rejection code;
+- explicit fallback or timeout;
+- duration when relevant.
 
-## Sous-systèmes actuels
+## Current subsystems
 
 ### World Sync
 
-Les logs doivent permettre de corréler :
+Logs must correlate:
 
 ```text
 client authority
@@ -30,65 +31,67 @@ client authority
 ↔ observer client
 ```
 
-sur :
+across:
 
-- création/adoption;
-- binding/materialization;
+- creation and adoption;
+- binding and materialization;
 - manipulation authority;
-- hide/release;
+- hide and release;
 - settlement;
 - reconciliation;
-- ownership/theft;
+- ownership and theft;
 - forced release;
-- timeout/disconnect.
+- timeout and disconnect.
 
 ### Trading
 
-Les IDs de session, revision, apply et reconcile doivent permettre de suivre une saga complète et son recovery.
+Session, revision, apply, and reconcile IDs must trace a complete saga and its
+recovery.
 
 ### Character Build
 
-Les logs doivent permettre de rapprocher :
+Logs must correlate:
 
 - logical selections;
-- BuildVersion;
-- inventory/spell hashes;
-- accepted/applied/rejected;
-- résolution de formulaire;
-- application locale.
+- `BuildVersion`;
+- inventory and spell hashes;
+- accepted, applied, and rejected outcomes;
+- form resolution;
+- local application.
 
 ### Item Preview
 
-Les logs détaillés de rendering/raster doivent rester filtrables et ne pas masquer les transitions fonctionnelles.
+Detailed rendering and raster logs must remain filterable and must not obscure
+functional transitions.
 
-## Niveaux
+## Levels
 
-- `info` — transition normale importante;
-- `warn` — fallback, timeout, stale state, incompatibilité récupérable;
-- `error` — invariant brisé, application impossible, snapshot incohérent;
-- `debug/trace` — détails haute fréquence/diagnostic ponctuel.
+- `info` — important normal transition;
+- `warn` — fallback, timeout, stale state, or recoverable incompatibility;
+- `error` — broken invariant, impossible application, or inconsistent snapshot;
+- `debug/trace` — high-frequency detail or targeted diagnostics.
 
-## Logs temporaires
+## Temporary logs
 
-Un diagnostic très verbeux ajouté pour isoler un crash doit être :
+Very verbose diagnostics added to isolate a crash must be:
 
-- retiré après validation;
-- ou converti en log stable de niveau adapté;
-- ou conservé uniquement derrière un niveau debug/trace.
+- removed after validation;
+- converted into an appropriately leveled stable log;
+- or retained only behind a debug/trace level.
 
-Les marqueurs de hotfix ne doivent pas devenir une API documentaire permanente.
+Hotfix markers must not become a permanent documentation API.
 
 ## Support bundle
 
-Pour une reproduction multijoueur, conserver au minimum :
+For a multiplayer reproduction, retain at least:
 
-- SHA STRE;
-- runtime Skyrim;
-- configuration serveur;
-- versions/plugins SKSE pertinents;
-- load order lorsque pertinent;
-- logs client de chaque joueur;
-- log serveur;
-- étapes et heure du test.
+- STRE SHA;
+- Skyrim runtime;
+- server configuration;
+- relevant SKSE plugin versions;
+- load order where relevant;
+- each player's client logs;
+- server log;
+- test steps and time.
 
-Les données secrètes futures de campagne doivent être filtrées des bundles standard.
+Future campaign secrets must be filtered from standard bundles.

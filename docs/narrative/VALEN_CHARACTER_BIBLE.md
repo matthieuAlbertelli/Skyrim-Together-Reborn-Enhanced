@@ -1,67 +1,69 @@
-# Valen — Bible personnage
+# Valen — Character bible
 
-> **Statut : Proposition créative à valider**
+> **Status: Creative proposal awaiting validation**
 
-## Fonction narrative
+## Narrative function
 
-Valen est le catalyseur de la compagnie. Il rassemble des personnes qui ne se seraient pas rencontrées, formule l’hypothèse du Dovahkiin et donne une structure initiale à la campagne sans en devenir le héros.
+Valen is the company's catalyst. He brings together people who would not otherwise have met, formulates the Dovahkiin hypothesis, and gives the campaign its initial structure without becoming its hero.
 
-## Profil
+## Profile
 
-- **Âge apparent :** 45–60 ans.
-- **Origine proposée :** érudit itinérant ayant travaillé pour plusieurs cours ou institutions sans y rester.
-- **Statut :** suffisamment instruit pour lire les signes, pas assez puissant pour agir seul.
-- **Compétence :** collecte de témoignages, histoire draconique, réseaux de voyageurs.
-- **Faiblesse :** tendance à relier des indices ténus et à sous-estimer le coût humain de sa théorie.
+- **Apparent age:** 45–60.
+- **Proposed origin:** itinerant scholar who worked for several courts or institutions without remaining at any.
+- **Status:** educated enough to read the signs, not powerful enough to act alone.
+- **Expertise:** collecting testimony, draconic history, and traveler networks.
+- **Weakness:** a tendency to connect tenuous evidence and underestimate the human cost of his theory.
 
 ## Motivation
 
-Valen croit qu’un événement majeur approche et que les institutions officielles réagiront trop tard. Il préfère réunir dix faux candidats plutôt que manquer le véritable Dovahkiin.
+Valen believes a major event is approaching and official institutions will react too late. He would rather gather ten false candidates than miss the true Dovahkiin.
 
-## Ce qu’il sait
+## What he knows
 
-- des rumeurs distinctes concernant chaque invité ;
-- des anomalies et récits qu’il relie au retour des dragons ;
-- les bases historiques du Dragonborn ;
-- les tensions politiques de Skyrim.
+- distinct rumors about every guest;
+- anomalies and accounts that he connects to the dragons' return;
+- the historical foundations of the Dragonborn;
+- Skyrim's political tensions.
 
-## Ce qu’il ignore
+## What he does not know
 
-- l’identité réelle du Dragonborn ;
-- la fiabilité complète de ses sources ;
-- la manière exacte dont la compagnie accomplira son rôle ;
-- les conséquences de son intervention.
+- the Dragonborn's true identity;
+- the complete reliability of his sources;
+- exactly how the company will fulfill its role;
+- the consequences of his intervention.
 
-## Manière de parler
+## Manner of speaking
 
-- phrases structurées et précises ;
-- vocabulaire érudit mais compréhensible ;
-- évite les grandes prophéties vagues ;
-- reconnaît ses incertitudes ;
-- peut accélérer lorsqu’il défend sa théorie ;
-- humour sec très ponctuel.
+- structured, precise sentences;
+- scholarly but understandable vocabulary;
+- avoids grand, vague prophecies;
+- acknowledges uncertainty;
+- may accelerate when defending his theory;
+- very occasional dry humor.
 
-## Relation au groupe
+## Relationship with the group
 
-Au départ : observateur et recruteur.  
-Ensuite : conseiller, archiviste et point de retour possible.  
-Il ne commande pas automatiquement les joueurs.
+Initially: observer and recruiter.
 
-## Apparence
+Later: adviser, archivist, and possible point of return.
 
-- silhouette immédiatement lisible ;
-- vêtements de voyage érudits, fonctionnels et usés ;
-- un objet-signature : carnet, tube à cartes, pendentif ou fragment gravé ;
-- pas de tenue luxueuse intacte ;
-- couleurs terre, laine, cuir, accent discret distinctif.
+He does not automatically command the players.
 
-## Gestuelle
+## Appearance
 
-- regarde alternativement chaque membre du groupe ;
-- manipule notes ou cartes lorsqu’il hésite ;
-- se redresse lorsqu’il parle du Dovahkiin ;
-- évite l’animation de mage générique permanente.
+- immediately readable silhouette;
+- functional, worn scholarly travel clothes;
+- one signature object: notebook, map tube, pendant, or engraved fragment;
+- no pristine luxury clothing;
+- earth colors, wool, leather, and a discreet distinctive accent.
 
-## Arc potentiel
+## Gestures
 
-Valen peut passer de la certitude intellectuelle à l’acceptation que la prophétie ne suffit pas : c’est la compagnie, et non un élu isolé, qui rend la victoire possible.
+- looks between the group's members;
+- handles notes or maps when uncertain;
+- straightens when speaking about the Dovahkiin;
+- avoids a constant generic-mage animation.
+
+## Potential arc
+
+Valen may move from intellectual certainty to accepting that prophecy is insufficient: the company, rather than an isolated chosen one, makes victory possible.

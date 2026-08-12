@@ -1,35 +1,38 @@
-# Bridge Creation Kit / Papyrus ↔ STRE
+# Creation Kit / Papyrus ↔ STRE Bridge
 
-> **Statut : Intégration first-party partielle implémentée / API générique proposée**
+> **Status:** partial first-party integration implemented; generic API proposed.
 
-## État actuel
+## Current state
 
-Alternate Start utilise aujourd’hui une intégration dédiée :
-
-```text
-Quête CK et TESQuestStageEvent
-→ CharacterCreationService natif
-→ UI Character Creation
-→ application locale ou CharacterBuildRequest
-→ résultat canonique appliqué dans Skyrim
-```
-
-Le stage `20` de `STRE_QUEST_AlternateStart` déclenche le flux natif/Angular. Les objets, sorts et effets sont authored dans `STRE_AlternateStart.esp`. Le catalogue et le serveur restent la source de vérité des récompenses multijoueur.
-
-Cette intégration valide les principes du bridge, mais **n’expose pas encore** une API Papyrus générique `STREBridge` utilisable par des mods tiers.
-
-## Règle de flux cible
+Alternate Start currently uses a dedicated integration:
 
 ```text
-Papyrus observe une interaction
-→ envoie une intention au bridge
-→ STRE valide et modifie l’état canonique
-→ STRE diffuse un événement
-→ bridge déclenche un événement Papyrus local
-→ le script applique la conséquence visuelle ou Skyrim
+CK quest and TESQuestStageEvent
+→ native CharacterCreationService
+→ Character Creation UI
+→ local application or CharacterBuildRequest
+→ canonical result applied in Skyrim
 ```
 
-## API minimale indicative
+Stage `20` of `STRE_QUEST_AlternateStart` triggers the native/Angular flow.
+Objects, spells, and effects are authored in `STRE_AlternateStart.esp`. The
+catalog and server remain the source of truth for multiplayer rewards.
+
+This integration validates the bridge principles, but it does **not yet expose**
+a generic Papyrus `STREBridge` API for third-party mods.
+
+## Target flow rule
+
+```text
+Papyrus observes an interaction
+→ sends an intent to the bridge
+→ STRE validates and changes canonical state
+→ STRE broadcasts an event
+→ the bridge triggers a local Papyrus event
+→ the script applies the visual or Skyrim consequence
+```
+
+## Illustrative minimum API
 
 ```papyrus
 Bool Function IsAvailable() Global
@@ -40,7 +43,7 @@ Int Function GetCanonicalVersion(String adapterId) Global
 String Function GetSnapshotJson(String adapterId) Global
 ```
 
-Événements proposés :
+Proposed events:
 
 ```papyrus
 Event OnSTREAdapterReady(String adapterId, Int version)
@@ -49,13 +52,15 @@ Event OnSTREIntentRejected(String requestId, String errorCode, String details)
 Event OnSTRESnapshotApplied(String adapterId, Int version)
 ```
 
-Le JSON peut servir au prototypage, mais les payloads doivent rester bornés et validés.
+JSON may be used for prototyping, but payloads must remain bounded and validated.
 
-## Mode solo
+## Single-player mode
 
-Le plugin Alternate Start doit continuer à fonctionner sans serveur. Le flux M7 utilise le même catalogue localement ; un futur bridge générique devra retourner un état indisponible sans bloquer Papyrus.
+The Alternate Start plugin must continue to work without a server. The M7 flow
+uses the same catalog locally; a future generic bridge must report unavailable
+state without blocking Papyrus.
 
-Patron cible :
+Target pattern:
 
 ```papyrus
 If STREBridge.IsAvailable()
@@ -65,18 +70,19 @@ Else
 EndIf
 ```
 
-## Threading et cadence
+## Threading and cadence
 
-- callbacks Papyrus planifiés sur le contexte sûr du jeu ;
-- aucun polling par frame ;
-- observations événementielles ou périodiques limitées ;
-- aucun appel réseau bloquant Papyrus.
+- schedule Papyrus callbacks on a safe game context;
+- do not poll every frame;
+- use event-driven or bounded periodic observation;
+- never block Papyrus on a network call.
 
-## Références CK
+## CK references
 
-- EditorID préfixés `STRE_` ;
-- propriétés/aliases pour les références de quête ;
-- plugin + FormID local stable pour le catalogue natif ;
-- aucun préfixe de load order codé en dur ;
-- PSC et PEX versionnés tant que la compilation Papyrus n’est pas automatisée ;
-- stages de quête locaux considérés comme déclencheurs/projections, pas comme état canonique de campagne.
+- prefix Editor IDs with `STRE_`;
+- use properties and aliases for quest references;
+- use a stable plugin and local FormID for the native catalog;
+- never hard-code a load-order prefix;
+- version PSC and PEX files while Papyrus compilation is not automated;
+- treat local quest stages as triggers and projections, not canonical campaign
+  state.

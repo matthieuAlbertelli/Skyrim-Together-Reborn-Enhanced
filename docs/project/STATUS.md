@@ -1,114 +1,131 @@
-# État courant de STRE
+# Current STRE Status
 
-> **Statut : source de vérité de l’état implémenté/validé**
-> **Dernière mise à jour : 12 août 2026**
+> **Status:** source of truth for implemented and validated state.
+> **Last updated:** August 12, 2026.
 
-Ce document décrit **où en est réellement le dépôt**. La direction produit et les release gates appartiennent à [`ROADMAP.md`](../../ROADMAP.md), l’avancement opérationnel au GitHub Project défini par [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md), et les détails techniques aux documents de chaque feature.
+This document describes **the repository's actual current state**. Product
+direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
+operational progress belongs in the GitHub Project governed by
+[`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
+and technical detail belongs in each feature's documentation.
 
 ## World Sync
 
-### Implémenté et validé en jeu
+### Implemented and validated in game
 
-- les objets lâchés reçoivent une identité réseau stable `WorldEntityId`;
-- chaque client conserve sa simulation Havok locale;
-- le joueur à l’origine de l’action conserve l’autorité de settlement jusqu’au transform final;
-- les clients distants ne sont corrigés qu’en cas de divergence significative;
-- les snapshots permettent la matérialisation/liaison tardive des WorldEntities;
-- les références mobiles déjà présentes dans le monde sont adoptées paresseusement via leur `PlacedReferenceId`;
-- une référence placée est liée à la référence Skyrim locale existante, jamais dupliquée;
-- Better Grabbing est requis par défaut en multijoueur via la politique générique des plugins SKSE natifs;
-- pendant un grab distant, l’objet est masqué chez les observateurs plutôt que streamé en continu;
-- au release, les références placées utilisent le chemin `MoveTo` existant de STR sur la game thread via `RunnerService`;
-- l’ownership/provenance est transporté dans les chemins supportés;
-- grabber un objet possédé sans être owner déclenche le système de vol vanilla;
-- l’ouverture du `Dialogue Menu` force proprement la fin d’un grab pour éviter de bloquer les dialogues de garde/arrestation.
+- dropped objects receive a stable network identity, `WorldEntityId`;
+- each client retains its local Havok simulation;
+- the player initiating an action retains settlement authority until the final
+  transform;
+- remote clients are corrected only when divergence is significant;
+- snapshots support late materialization and binding of WorldEntities;
+- movable references already present in the world are lazily adopted through
+  their `PlacedReferenceId`;
+- a placed reference is bound to the existing local Skyrim reference and is
+  never duplicated;
+- Better Grabbing is required by default in multiplayer through the generic
+  native SKSE plugin policy;
+- during a remote grab, observers hide the object instead of continuously
+  streaming it;
+- on release, placed references use STR's existing `MoveTo` path on the game
+  thread through `RunnerService`;
+- ownership and provenance are carried through supported paths;
+- grabbing an owned object without being its owner triggers Skyrim's vanilla
+  theft system;
+- opening the `Dialogue Menu` cleanly ends a grab to avoid blocking guard or
+  arrest dialogue.
 
-### Limites connues
+### Known limitations
 
-- les noms personnalisés reposant sur `ExtraTextDisplayData` ne sont pas encore synchronisés;
-- les références scriptées/objets de quête nécessitent encore une campagne de validation dédiée;
-- la persistance durable du monde après redémarrage serveur/save branches n’est pas encore implémentée;
-- le modèle WorldEntity n’est pas encore généralisé à tous les types de références monde.
+- custom names based on `ExtraTextDisplayData` are not synchronized yet;
+- scripted references and quest objects still require a dedicated validation
+  campaign;
+- durable world persistence across server restart or save branches is not yet
+  implemented;
+- the WorldEntity model is not yet generalized to every type of world reference.
 
-Voir [`docs/features/world-sync/`](../features/world-sync/).
+See [`docs/features/world-sync/`](../features/world-sync/).
 
 ## Trading
 
-### Implémenté
+### Implemented
 
-- domaine de session dédié;
-- protocole serveur autoritaire;
-- offres révisionnées;
-- plans de mutation déterministes;
-- application client idempotente;
-- réconciliation vers des quantités absolues;
-- UI Angular/CEF;
-- preview 3D native.
+- dedicated session domain;
+- authoritative server protocol;
+- revisioned offers;
+- deterministic mutation plans;
+- idempotent client application;
+- reconciliation to absolute quantities;
+- Angular/CEF UI;
+- native 3D preview.
 
-### Limites
+### Limitations
 
-- pas encore de piles divisibles ni d’or;
-- reconnect d’un trade actif à renforcer;
-- le protocole MVP ne transporte pas toutes les métadonnées d’instance;
-- les objets portant un ownership non représentable sont rejetés plutôt que transférés en perdant leurs données.
+- divisible stacks and gold are not supported yet;
+- reconnecting an active trade needs further hardening;
+- the MVP protocol does not carry all instance metadata;
+- objects with ownership that cannot be represented are rejected instead of
+  being transferred with data loss.
 
-Voir [`docs/features/trading/`](../features/trading/).
+See [`docs/features/trading/`](../features/trading/).
 
 ## Item Preview
 
-### Implémenté
+### Implemented
 
-- session native;
-- contrôleur;
-- host bridge/session;
-- solver de cadrage;
-- mesure raster;
-- consommateurs Trading et Character Creation.
+- native session;
+- controller;
+- host bridge and session;
+- framing solver;
+- raster measurement;
+- Trading and Character Creation consumers.
 
-### Limite structurante
+### Structural limitation
 
-Le bridge reste mono-consommateur actif. Un système de leases/ownership explicite reste nécessaire avant de parler d’API tierce stable.
+The bridge still supports only one active consumer. An explicit lease and
+ownership system remains necessary before declaring a stable third-party API.
 
-Voir [`docs/features/item-preview/`](../features/item-preview/).
+See [`docs/features/item-preview/`](../features/item-preview/).
 
 ## Alternate Start / Character Build
 
-### Implémenté et smoke-testé
+### Implemented and smoke-tested
 
-- plugin `STRE_AlternateStart.esp` versionné avec PSC/PEX;
-- auberge, quête, aliases et sièges;
-- RaceMenu + Character Creation Angular;
-- catalogue partagé Warrior/Mage/Thief;
-- inventaire et sorts canoniques;
-- hashes et accusé d’application;
-- fallback local sans serveur;
-- Destruction/Altération Mage;
-- buffs coopératifs ciblés testés entre deux PC.
+- versioned `STRE_AlternateStart.esp` with PSC/PEX files;
+- inn, quest, aliases, and seats;
+- RaceMenu and Angular Character Creation;
+- shared Warrior/Mage/Thief catalog;
+- canonical inventory and spells;
+- hashes and application acknowledgement;
+- local fallback without a server;
+- Mage Destruction and Alteration;
+- targeted cooperative buffs tested between two PCs.
 
-Le catalogue courant utilise `BuildVersion = 5`.
+The current catalog uses `BuildVersion = 5`.
 
-### Limites
+### Limitations
 
-- interception complète du nouveau jeu/skip Helgen à terminer;
-- Valen et départ narratif non finalisés;
-- persistance/reconnexion des builds non durable;
-- plusieurs écoles/kits restent à matérialiser;
-- reset des compétences/perks/historique d’attributs encore incomplet.
+- complete new-game interception and Helgen bypass remain unfinished;
+- Valen and the narrative departure are not finalized;
+- build persistence and reconnection are not durable;
+- several schools and kits remain to be materialized;
+- skill, perk, and attribute-history reset remains incomplete.
 
-Voir [`docs/features/alternate-start/`](../features/alternate-start/).
+See [`docs/features/alternate-start/`](../features/alternate-start/).
 
-## Régressions importantes corrigées
+## Important fixed regressions
 
-- régression de nage apparue pendant les travaux STRE;
-- crash observateur lors du repositionnement d’une référence placée;
-- état de grab bloqué pendant les dialogues de garde/arrestation;
-- dépendance Google Fonts bloquant les builds Angular hors ligne.
+- a swimming regression introduced during STRE work;
+- an observer crash while repositioning a placed reference;
+- a stuck grab state during guard or arrest dialogue;
+- a Google Fonts dependency that blocked offline Angular builds.
 
-## Règle de communication
+## Communication rule
 
-Ne pas déduire l’état du projet depuis un ancien rapport de jalon ou un audit daté.
+Do not infer project state from an old milestone report or dated audit.
 
-- **État courant :** ce document.
-- **Direction produit et release gates :** [`ROADMAP.md`](../../ROADMAP.md).
-- **Avancement opérationnel :** GitHub Project, selon [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).
-- **Historique :** [`CHANGELOG.md`](../../CHANGELOG.md) et `docs/audit/`.
+- **Current state:** this document.
+- **Product direction and release gates:** [`ROADMAP.md`](../../ROADMAP.md).
+- **Operational progress:** the GitHub Project governed by
+  [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).
+- **History:** [`CHANGELOG.md`](../../CHANGELOG.md) and `docs/audit/`.

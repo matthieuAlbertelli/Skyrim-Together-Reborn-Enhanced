@@ -1,10 +1,11 @@
-# Vue d’ensemble du système
+# System Overview
 
-> **Statut : architecture transversale courante**
+> **Status:** current cross-cutting architecture.
 
-Ce document décrit les frontières générales. Les détails d’une feature appartiennent à `docs/features/<feature>/`.
+This document describes general boundaries. Feature details belong in
+`docs/features/<feature>/`.
 
-## Vue générale
+## Overview
 
 ```text
 Skyrim / Creation Kit / SKSE plugins
@@ -27,15 +28,17 @@ Skyrim / UI / local engine simulation
 
 ## Runtime
 
-Les `World` client et serveur enregistrent leurs services dans le contexte EnTT. Le bus `entt::dispatcher` relie messages réseau, updates et événements de jeu.
+Client and server `World` instances register their services in the EnTT context.
+The `entt::dispatcher` bus connects network messages, updates, and game events.
 
-Les messages sont des types statiques enregistrés dans les factories du protocole.
+Messages are static types registered in protocol factories.
 
-## Verticales first-party actuelles
+## Current first-party verticals
 
 ### World Sync
 
-World Sync ajoute une identité stable aux instances monde synchronisées sans tenter de transformer le serveur en moteur Havok.
+World Sync adds stable identity to synchronized world instances without trying
+to turn the server into a Havok engine.
 
 ```text
 Skyrim object event
@@ -46,7 +49,7 @@ Skyrim object event
 → authoritative settlement
 ```
 
-Voir [`features/world-sync/README.md`](../features/world-sync/README.md).
+See [`features/world-sync/README.md`](../features/world-sync/README.md).
 
 ### Trading
 
@@ -59,7 +62,7 @@ Angular action
 → client inventory/UI projection
 ```
 
-Voir [`features/trading/`](../features/trading/).
+See [`features/trading/`](../features/trading/).
 
 ### Alternate Start / Character Build
 
@@ -72,48 +75,56 @@ CK quest/RaceMenu
 → local application + acknowledgement
 ```
 
-Voir [`features/alternate-start/`](../features/alternate-start/).
+See [`features/alternate-start/`](../features/alternate-start/).
 
 ### Item Preview
 
-La preview est une ressource native interne partagée par Trading et Character Creation. Sa cible de lease/arbitration est documentée séparément.
+Preview is an internal native resource shared by Trading and Character Creation.
+Its lease and arbitration target is documented separately.
 
-Voir [`ITEM_PREVIEW_PLATFORM.md`](ITEM_PREVIEW_PLATFORM.md).
+See [`ITEM_PREVIEW_PLATFORM.md`](ITEM_PREVIEW_PLATFORM.md).
 
-## Frontières
+## Boundaries
 
 ### Skyrim adapters
 
-Responsables des appels engine-facing, résolution de formulaires, événements TES, matérialisation et application locale.
+Responsible for engine-facing calls, form resolution, TES events,
+materialization, and local application.
 
-Ils ne doivent pas devenir la source canonique d’un état partagé uniquement parce qu’ils détiennent une référence native.
+They must not become the canonical source of shared state merely because they
+hold a native reference.
 
 ### STRE client services
 
-Responsables de l’orchestration locale, de la traduction événement → intention et de l’application des résultats/snapshots.
+Responsible for local orchestration, event-to-intent translation, and applying
+results and snapshots.
 
-Une mutation moteur déclenchée par le réseau doit être marshalled sur un contexte sûr lorsque nécessaire.
+A network-triggered engine mutation must be marshalled to a safe context where
+necessary.
 
 ### Shared domain/protocol
 
-Responsable des identités portables, structures sérialisées, règles métier partagées et bornes.
+Responsible for portable identities, serialized structures, shared business
+rules, and bounds.
 
-Aucun pointeur Skyrim natif ne traverse cette frontière.
+No native Skyrim pointer crosses this boundary.
 
 ### STRE server
 
-Responsable de la validation et de l’autorité des états partagés explicitement confiés au serveur.
+Responsible for validating and authoritatively owning shared state explicitly
+entrusted to the server.
 
-## Principes transverses
+## Cross-cutting principles
 
-- autorité explicite;
-- identité réseau distincte des FormID locaux lorsque nécessaire;
-- KISS : utiliser le moteur local pour ce qu’il fait déjà correctement;
-- DRY : une règle ou un état mutable ne possède qu’une source de vérité;
-- fail closed si une opération ne sait pas préserver les métadonnées requises;
-- snapshots pour les systèmes qui doivent reconstruire un état après join/reconnect;
-- aucune API tierce annoncée stable avant validation first-party suffisante.
+- explicit authority;
+- network identity distinct from local FormIDs where necessary;
+- KISS: use the local engine for what it already does correctly;
+- DRY: one source of truth for every rule or mutable state;
+- fail closed when an operation cannot preserve required metadata;
+- snapshots for systems that must reconstruct state after join/reconnect;
+- no third-party API is declared stable before sufficient first-party validation.
 
-## Architecture future
+## Future architecture
 
-Campaign State, persistence durable et Mod Integration Runtime générique étendront ces mêmes frontières sans remplacer les contrats first-party déjà éprouvés.
+Campaign State, durable persistence, and a generic Mod Integration Runtime will
+extend these same boundaries without replacing proven first-party contracts.

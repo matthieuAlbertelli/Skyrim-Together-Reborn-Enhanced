@@ -1,19 +1,21 @@
-# ADR-0010 — Les secrets narratifs sont filtrés côté serveur
+# ADR-0010 — Narrative Secrets Are Filtered by the Server
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Masquer l’identité du Dragonborn uniquement dans l’UI ne protège pas la donnée contre les logs ou l’inspection mémoire.
+Hiding the Dragonborn's identity only in the UI does not protect it from logs or
+memory inspection.
 
-## Décision
+## Decision
 
-Le serveur produit des vues de snapshot par audience. Un client non autorisé ne reçoit jamais la donnée secrète.
+The server produces audience-specific snapshot views. An unauthorized client
+never receives secret data.
 
-## Conséquences
+## Consequences
 
-- meilleure intégrité narrative ;
-- schemas publics/privés ou champs filtrables ;
-- tests d’audience ;
-- logs serveur protégés.
+- stronger narrative integrity;
+- public/private schemas or filterable fields;
+- audience tests;
+- protected server logs.

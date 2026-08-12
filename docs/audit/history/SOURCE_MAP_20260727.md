@@ -1,9 +1,9 @@
-# Carte du code audité
+# Audited source map
 
-> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour l'état
-> courant.** Voir [`docs/project/STATUS.md`](../../project/STATUS.md).
+> **Status: Historical snapshot as of July 27, 2026; non-canonical for current
+> state.** See [`docs/project/STATUS.md`](../../project/STATUS.md).
 
-## Domaine Trading
+## Trading domain
 
 - `Code/common/Trade/TradeTypes.h`
 - `Code/common/Trade/TradeSession.*`
@@ -11,7 +11,7 @@
 - `Code/common/Trade/TradeApplication.*`
 - `Code/common/Trade/TradeReconciliation.*`
 
-## Trading serveur et client
+## Trading server and client
 
 - `Code/server/Services/TradeService.*`
 - `Code/client/Services/TradeService.h`
@@ -21,15 +21,15 @@
 
 ## Alternate Start / Character Build
 
-### Catalogue partagé
+### Shared catalog
 
 - `Code/common/CharacterCreation/CharacterBuildCatalog.h`
 - `Code/common/CharacterCreation/CharacterBuildCatalog.cpp`
 
-Le catalogue courant utilise `BuildVersion = 5` et construit :
+The catalog at the snapshot date used `BuildVersion = 5` and constructed:
 
-- `ItemGrant` ;
-- `EquipmentGrant` ;
+- `ItemGrant`;
+- `EquipmentGrant`;
 - `SpellGrant`.
 
 ### Client
@@ -38,13 +38,13 @@ Le catalogue courant utilise `BuildVersion = 5` et construit :
 - `Code/client/Services/Generic/CharacterCreationService.cpp`
 - `Code/client/Games/Skyrim/Forms/MagicItem.cpp`
 
-### Serveur
+### Server
 
 - `Code/server/Services/CharacterBuildService.h`
 - `Code/server/Services/CharacterBuildService.cpp`
 - `Code/server/Components/CharacterBuildComponent.h`
 
-### Protocole
+### Protocol
 
 - `Code/encoding/Messages/CharacterBuildRequest.*`
 - `Code/encoding/Messages/CharacterBuildResponse.*`
@@ -55,7 +55,7 @@ Le catalogue courant utilise `BuildVersion = 5` et construit :
 ### UI
 
 - `Code/skyrim_ui/src/app/data/character-loadouts.ts`
-- composants et services Character Creation sous `Code/skyrim_ui/src/app/`.
+- Character Creation components and services under `Code/skyrim_ui/src/app/`.
 
 ### Creation Kit
 
@@ -64,7 +64,7 @@ Le catalogue courant utilise `BuildVersion = 5` et construit :
 - `GameFiles/Skyrim/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.pex`
 - `GameFiles/STRE_AlternateStart.manifest.txt`
 
-### Audits et tests
+### Audits and tests
 
 - `Code/tests/character_build.cpp`
 - `Tools/Scripts/audit_stre_plugin_records.py`
@@ -87,7 +87,7 @@ Le catalogue courant utilise `BuildVersion = 5` et construit :
 - `Code/skyrim_ui/src/app/services/trade-ui.service.ts`
 - `Code/skyrim_ui/src/app/models/trade.ts`
 
-## Tests Trading
+## Trading tests
 
 - `Code/tests/trade.cpp`
 - `Code/tests/trade_inventory.cpp`
@@ -95,11 +95,11 @@ Le catalogue courant utilise `BuildVersion = 5` et construit :
 - `Code/tests/trade_reconciliation.cpp`
 - `Code/tests/trade_messages.cpp`
 
-## Documentation canonique
+## Canonical documentation at the snapshot date
 
-- `README.md`, `CHANGELOG.md` et `ROADMAP.md` servent de points d’entrée publics ;
-- `docs/features/trading/` documente Trading ;
-- `docs/features/item-preview/` documente la preview ;
-- `docs/features/alternate-start/` documente Alternate Start et Character Build ;
-- `docs/audit/CURRENT_STATE_AUDIT.md` décrit l’état courant ;
-- `docs/README.md` est l’index documentaire canonique.
+- `README.md`, `CHANGELOG.md`, and `ROADMAP.md` were public entry points;
+- `docs/features/trading/` documented Trading;
+- `docs/features/item-preview/` documented preview;
+- `docs/features/alternate-start/` documented Alternate Start and Character Build;
+- the dated current-state audit is retained as [`CURRENT_STATE_AUDIT_20260727.md`](CURRENT_STATE_AUDIT_20260727.md);
+- `docs/README.md` was the canonical documentation index.

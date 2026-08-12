@@ -1,10 +1,11 @@
-# Matrice RACI
+# RACI Matrix
 
-> **Statut : proposition organisationnelle**
+> **Status:** organizational proposal.
 
-Abréviations : **R** réalise, **A** répond du résultat, **C** consulté, **I** informé.
+Abbreviations: **R** responsible, **A** accountable, **C** consulted,
+**I** informed.
 
-| Livrable | Produit | Architecture | STRE Core | Mod Integration | CK | Narrative | Art | Audio | UI | QA |
+| Deliverable | Product | Architecture | STRE Core | Mod Integration | CK | Narrative | Art | Audio | UI | QA |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Vision / roadmap | A/R | C | C | C | C | C | I | I | C | C |
 | World Sync | C | A | R | I | I | I | I | I | I | R |
@@ -12,12 +13,12 @@ Abréviations : **R** réalise, **A** répond du résultat, **C** consulté, **I
 | Preview Platform | C | A | R | C | I | I | I | I | C | R |
 | Mod Integration Framework | C | A | R | R | C | I | I | I | C | C |
 | Campaign State | C | A | R | R | C | C | I | I | C | C |
-| Plugin Alternate Start solo | C | C | I | C | A/R | C | C | C | C | R |
-| Adaptation Alternate Start STRE | C | A | R | R | R | I | I | I | C | R |
-| Skip Helgen | A | C | I | C | R | C | I | I | I | R |
-| Valen — concept narratif | A | I | I | I | C | R | C | C | I | C |
-| Valen — modèle | C | I | I | I | C | C | A/R | I | I | C |
-| Valen — voix | C | I | I | I | C | A/C | I | R | I | C |
+| Single-player Alternate Start plugin | C | C | I | C | A/R | C | C | C | C | R |
+| STRE Alternate Start adaptation | C | A | R | R | R | I | I | I | C | R |
+| Helgen bypass | A | C | I | C | R | C | I | I | I | R |
+| Valen — narrative concept | A | I | I | I | C | R | C | C | I | C |
+| Valen — model | C | I | I | I | C | C | A/R | I | I | C |
+| Valen — voice | C | I | I | I | C | A/C | I | R | I | C |
 | Release | A | C | R | C | R | I | I | I | R | C |
 
-Les détails de progression ne sont pas maintenus dans la RACI; voir `ROADMAP.md`.
+Progress details are not maintained in the RACI matrix; see `ROADMAP.md`.

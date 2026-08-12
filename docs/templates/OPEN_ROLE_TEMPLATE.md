@@ -1,21 +1,21 @@
-# <Rôle> — Mission
+# <Role> — Assignment
 
-## Contexte
+## Context
 
-## Résultat attendu
+## Expected outcome
 
-## Périmètre
+## Scope
 
-## Hors périmètre
+## Out of scope
 
-## Compétences
+## Skills
 
-## Livrables
+## Deliverables
 
-## Dépendances
+## Dependencies
 
-## Critères d’acceptation
+## Acceptance criteria
 
-## Livrable d’essai
+## Trial deliverable
 
-## Licence, crédits et modalités
+## License, credits, and terms

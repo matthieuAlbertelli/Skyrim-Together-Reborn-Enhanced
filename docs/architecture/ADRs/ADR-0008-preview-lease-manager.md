@@ -1,19 +1,20 @@
-# ADR-0008 — La preview native devient une ressource à leases
+# ADR-0008 — Native Preview Becomes a Leased Resource
 
-- **Statut : Proposed**
-- **Date : 2026-07-19**
+- **Status:** Proposed
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Le bridge actuel n’accepte qu’un client et reste nominalement lié au trading.
+The current bridge accepts only one client and remains nominally tied to Trading.
 
-## Décision
+## Decision
 
-Introduire un `ItemPreviewRuntime` qui attribue une lease à un owner, arbitre les priorités et encapsule entièrement le host menu et la session native.
+Introduce an `ItemPreviewRuntime` that grants a lease to an owner, arbitrates
+priority, and fully encapsulates the host menu and native session.
 
-## Conséquences
+## Consequences
 
-- réutilisation réelle par plusieurs features ;
-- préemption et ownership testables ;
-- migration de `TradeItemPreviewService` ;
-- API externe possible sans exposer les pointeurs natifs.
+- genuine reuse by several features;
+- testable preemption and ownership;
+- migration of `TradeItemPreviewService`;
+- a possible external API without exposing native pointers.

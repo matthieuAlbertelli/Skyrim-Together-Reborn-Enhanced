@@ -1,25 +1,26 @@
-# ADR-0016 — État courant, journal et outbox transactionnelle
+# ADR-0016 — Current State, Journal, and Transactional Outbox
 
-- **Statut : Accepted**
-- **Date : 2026-07-30**
+- **Status:** Accepted
+- **Date:** 2026-07-30
 
-## Contexte
+## Context
 
-Un Event Sourcing intégral augmenterait fortement la complexité. Une écriture d’état suivie d’un envoi réseau non atomique créerait toutefois des fenêtres de perte ou de duplication.
+Full Event Sourcing would greatly increase complexity. However, a state write
+followed by a non-atomic network send would create loss or duplication windows.
 
-## Décision
+## Decision
 
-Le stockage futur combine :
+Future storage combines:
 
-- état courant normalisé ;
-- journal append-only des mutations validées ;
-- outbox de réplication écrite dans la même transaction.
+- normalized current state;
+- an append-only journal of validated mutations;
+- a replication outbox written in the same transaction.
 
-Les commandes sont idempotentes et contrôlées par révision optimiste.
+Commands are idempotent and guarded by optimistic revision checks.
 
-## Conséquences
+## Consequences
 
-- lecture directe de l’état courant ;
-- reprise après crash sans reconstruire tout le monde ;
-- retransmission réseau sûre ;
-- nécessité de migrations de schéma et de tests d’injection de fautes.
+- direct current-state reads;
+- crash recovery without rebuilding the entire world;
+- safe network retransmission;
+- schema migrations and fault-injection tests are required.

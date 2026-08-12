@@ -1,70 +1,70 @@
-# Alternate Start — Questions ouvertes
+# Alternate Start — Open questions
 
-> **Statut : Décisions restantes après M7**
+> **Status: Decisions remaining after M7**
 
-## Décisions résolues
+## Resolved decisions
 
-- le plugin doit fonctionner sans serveur STRE ;
-- le client envoie des sélections logiques, jamais l’inventaire final ;
-- le serveur construit inventaire et sorts canoniques ;
-- les FormIDs sont résolus par plugin + ID local ;
-- le nettoyage anti-import est destructif par conception ;
-- Crochetage donne 10 crochets vanilla ;
-- les tenues d’une même compétence diffèrent visuellement, pas par des bonus sans rapport ;
-- l’Enchanteur reçoit une tenue visuelle et des objets magiques désenchantables ;
-- les buffs alliés utilisent `Target Actor`, pas `Contact`.
+- the plugin must work without an STRE server;
+- the client sends logical selections, never the final inventory;
+- the server constructs canonical inventory and spells;
+- FormIDs are resolved by plugin plus local ID;
+- anti-import cleanup is destructive by design;
+- Lockpicking grants 10 vanilla lockpicks;
+- outfits for the same skill differ visually, not through unrelated bonuses;
+- Enchanting receives a visual outfit and disenchantable magic items;
+- ally buffs use `Target Actor`, not `Contact`.
 
-## Persistance et reconnexion
+## Persistence and reconnection
 
-- format de sauvegarde serveur du build ;
-- relation entre save Skyrim et snapshot STRE ;
-- restauration avant ou après spawn du personnage ;
-- migration entre `BuildVersion` ;
-- politique si le plugin/catalogue a changé.
+- server save format for the build;
+- relationship between the Skyrim save and STRE snapshot;
+- restoration before or after character spawn;
+- migration between `BuildVersion` values;
+- policy when the plugin or catalog changes.
 
-## Reset de personnage
+## Character reset
 
-- niveaux et XP des 18 compétences ;
-- perks acquis et points de perk ;
-- historique Santé/Magie/Vigueur ;
-- politique sur pouvoirs raciaux et effets permanents de mods.
+- levels and XP for all 18 skills;
+- acquired perks and perk points;
+- Health/Magicka/Stamina history;
+- policy for racial powers and permanent effects from mods.
 
-## Nouveau jeu et skip Helgen
+## New game and Helgen skip
 
-- point d’interception exact ;
-- stages/globals vanilla à modifier ;
-- déblocage dragons/cris ;
-- compatibilité avec autres alternate starts ;
-- route de reprise de la quête principale.
+- exact interception point;
+- vanilla stages and globals to modify;
+- unlocking dragons and shouts;
+- compatibility with other alternate starts;
+- route back to the main quest.
 
-## Kits restants
+## Remaining kits
 
-- contenu exact des trois kits d’Enchantement ;
-- Invocation, Illusion et Restauration ;
-- tenue/kit des compétences utilitaires non matérialisées ;
-- équilibrage après tests en jeu ;
-- politique de désenchantement et cumul des enchantements faibles.
+- exact contents of the three Enchanting kits;
+- Conjuration, Illusion, and Restoration;
+- outfits and kits for utility skills not yet materialized;
+- balance after in-game tests;
+- disenchantment policy and stacking of weak enchantments.
 
-## Campagne
+## Campaign
 
-- modèle de roster et character binding ;
-- ready check ;
-- cutoff late join ;
-- Dragonborn absent ou déconnecté ;
-- doublons de classe ;
-- changement/respec avant et après départ.
+- roster and character-binding model;
+- ready check;
+- late-join cutoff;
+- absent or disconnected Dragonborn;
+- duplicate classes;
+- changing or respeccing before and after departure.
 
-## Dialogues et Valen
+## Dialogue and Valen
 
-- scène locale identique ou synchronisation temporelle ;
-- réponses locales, vote ou leader ;
-- skip collectif ;
-- résumé pour late join ;
-- limites à 2, 4 et 10 joueurs.
+- identical local scene or time synchronization;
+- local responses, voting, or leader choice;
+- group skip;
+- summary for late join;
+- limits at 2, 4, and 10 players.
 
-## Sorts coopératifs
+## Cooperative spells
 
-- remplacer l’allowlist nominale de `MagicItem::IsBuffSpell` par keyword/capability ;
-- définir friendly fire et stacking ;
-- manteaux élémentaires partagés ;
-- autorité et réplication des futurs effets scriptés.
+- replace the name-based `MagicItem::IsBuffSpell` allowlist with a keyword or capability;
+- define friendly fire and stacking;
+- shared elemental cloaks;
+- authority and replication for future scripted effects.

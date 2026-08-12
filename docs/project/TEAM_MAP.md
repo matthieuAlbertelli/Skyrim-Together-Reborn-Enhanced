@@ -1,45 +1,46 @@
-# Carte des équipes
+# Team Map
 
-> **Statut : proposition organisationnelle**
+> **Status:** organizational proposal.
 
-| Équipe | Mission | Livrables principaux | Interfaces critiques |
+| Team | Mission | Primary deliverables | Critical interfaces |
 |---|---|---|---|
-| Direction produit | Vision, priorités, arbitrages | Vision, roadmap, critères d’acceptation | Toutes les équipes |
-| STRE Core | Runtime client/serveur, réseau, World Sync, persistance | Services, protocoles, snapshots, logs | QA, Mod Integration |
-| Mod Integration | Contrats/runtime d’adaptation | Adapter API, registry, bridge CK | STRE Core, moddeurs |
-| Alternate Start CK | Contenu jouable solo et intégration Skyrim | ESP, quêtes, scènes, Papyrus, cellules | Narrative, Mod Integration |
-| Narrative | Cohérence, scripts, personnages | Bible narrative, dialogues | CK, Audio, Art |
-| Character Art | Personnages | concepts, modèles, textures | Narrative, CK |
-| Environment Art | Espaces/props | dressing, lumière, optimisation | CK, QA |
-| Audio | Casting, voix, traitement | masters, lip files, nomenclature | Narrative, CK |
-| UI/UX | Interfaces coopératives | flux, Angular/CEF, accessibilité | STRE Client, QA |
-| QA & Compatibility | Validation solo/réseau/load order | plans, matrice, rapports | Toutes les équipes |
-| Build & Release | CI, packages, versions | artefacts, changelog, releases | STRE Core, CK |
-| Community & Docs | Onboarding et communication | README, guides, contribution | Direction produit |
+| Product Direction | Vision, priorities, and arbitration | Vision, roadmap, acceptance criteria | All teams |
+| STRE Core | Client/server runtime, networking, World Sync, persistence | Services, protocols, snapshots, logs | QA, Mod Integration |
+| Mod Integration | Adaptation contracts and runtime | Adapter API, registry, CK bridge | STRE Core, modders |
+| Alternate Start CK | Playable single-player content and Skyrim integration | ESP, quests, scenes, Papyrus, cells | Narrative, Mod Integration |
+| Narrative | Continuity, scripts, characters | Narrative bible, dialogue | CK, Audio, Art |
+| Character Art | Characters | Concepts, models, textures | Narrative, CK |
+| Environment Art | Spaces and props | Dressing, lighting, optimization | CK, QA |
+| Audio | Casting, voice, processing | Masters, lip files, naming | Narrative, CK |
+| UI/UX | Cooperative interfaces | Flows, Angular/CEF, accessibility | STRE Client, QA |
+| QA & Compatibility | Single-player, network, and load-order validation | Plans, matrix, reports | All teams |
+| Build & Release | CI, packages, versions | Artifacts, changelog, releases | STRE Core, CK |
+| Community & Docs | Onboarding and communication | README, guides, contribution | Product Direction |
 
-## Cellules transverses
+## Cross-functional groups
 
 ### World Sync
 
-STRE Core + QA. Les intégrations SKSE externes restent des dépendances, pas des sous-modules du cœur.
+STRE Core and QA. External SKSE integrations remain dependencies, not core
+submodules.
 
 ### Trading
 
-STRE Core + UI/UX + QA.
+STRE Core, UI/UX, and QA.
 
 ### Alternate Start
 
-Alternate Start CK + Mod Integration + STRE Core + Narrative + Art + Audio + QA.
+Alternate Start CK, Mod Integration, STRE Core, Narrative, Art, Audio, and QA.
 
 ### Preview Platform
 
-STRE Client + UI/UX + Mod Integration.
+STRE Client, UI/UX, and Mod Integration.
 
-## Responsabilité minimale
+## Minimum ownership
 
-Chaque domaine actif doit avoir :
+Every active domain must have:
 
-- un owner fonctionnel;
-- un responsable technique/créatif;
-- un reviewer secondaire;
-- une documentation canonique clairement localisée.
+- a functional owner;
+- a technical or creative lead;
+- a secondary reviewer;
+- clearly located canonical documentation.

@@ -1,29 +1,30 @@
-# Registre des risques techniques
+# Technical Risk Register
 
-> **Statut : source de vérité des risques techniques actifs**
-> **Dernière mise à jour : 10 août 2026**
+> **Status:** source of truth for active technical risks.
+> **Last updated:** August 10, 2026.
 
-| ID | Risque | Impact | Mitigation courante |
+| ID | Risk | Impact | Current mitigation |
 |---|---|---:|---|
-| R-01 | Divergence importante avec upstream | Élevé | patches isolés, ADR, intégrations régulières |
-| R-02 | Mutation moteur depuis un mauvais thread | Élevé | marshalling via `RunnerService`/game update |
-| R-03 | Wrapper reverse-engineered avec ABI supposée | Critique | préférer primitives STR validées; preuve de signature avant nouveau wrapper |
-| R-04 | Havok distant combattu par du streaming de transforms | Élevé | ADR-0017 : Havok local + settlement ponctuel |
-| R-05 | Référence placée dupliquée à l’adoption | Élevé | `PlacedReferenceId -> WorldEntityId` + binding local existant |
-| R-06 | Objet scripté/quest affecté par hide/enable/reposition | Élevé | campagne de validation dédiée avant support garanti |
-| R-07 | Métadonnées d’instance perdues pendant transfert | Élevé | `Inventory::Entry` enrichi + fail-closed quand un protocole ne sait pas préserver |
-| R-08 | Nom personnalisé perdu | Moyen | `ExtraTextDisplayData` explicitement non supporté tant que crash-safe |
-| R-09 | WorldEntity state perdu après restart/save branch | Élevé | future persistence/checkpoint versionnée |
-| R-10 | Better Grabbing change son comportement/API interne | Moyen | dépendre d’événements/comportements Skyrim, pas de ses internals |
-| R-11 | Plugin natif requis manquant/incompatible | Élevé | generic NativePlugins policy; version constraints à étudier |
-| R-12 | Trading saga laisse un état incertain en panne | Élevé | idempotence + réconciliation absolue |
-| R-13 | Preview mono-client bloque concurrence réelle | Élevé | futur lease manager |
-| R-14 | Character Build perdu après reconnect/restart | Élevé | persistence/versioning avant Campaign State complet |
-| R-15 | Skip Helgen laisse le vanilla incohérent | Élevé | matrice de stages/globals et tests de reprise |
-| R-16 | Nettoyage anti-import incomplet | Élevé | politique skills/perks/attributes + tests avant/après |
-| R-17 | Buffs distants reposent sur allowlist nominale | Moyen | capability/classification extensible avant expansion |
-| R-18 | Documentation se désynchronise par duplication | Élevé | source-of-truth matrix + feature-local docs + history archive |
+| R-01 | Significant upstream divergence | High | isolated patches, ADRs, regular integrations |
+| R-02 | Engine mutation from the wrong thread | High | marshal through `RunnerService`/game update |
+| R-03 | Reverse-engineered wrapper with assumed ABI | Critical | prefer validated STR primitives; require signature evidence before a new wrapper |
+| R-04 | Remote Havok fought by transform streaming | High | ADR-0017: local Havok and point-in-time settlement |
+| R-05 | Placed reference duplicated during adoption | High | `PlacedReferenceId -> WorldEntityId` and binding to the existing local reference |
+| R-06 | Scripted or quest object affected by hide/enable/reposition | High | dedicated validation campaign before guaranteed support |
+| R-07 | Instance metadata lost during transfer | High | enriched `Inventory::Entry`; fail closed when a protocol cannot preserve data |
+| R-08 | Custom name lost | Medium | explicitly unsupported `ExtraTextDisplayData` until crash-safe |
+| R-09 | WorldEntity state lost after restart or save branch | High | future versioned persistence and checkpoints |
+| R-10 | Better Grabbing changes behavior or internal API | Medium | depend on Skyrim events and behavior, not internals |
+| R-11 | Required native plugin missing or incompatible | High | generic NativePlugins policy; version constraints remain to be studied |
+| R-12 | Trading saga leaves uncertain state on failure | High | idempotence and absolute reconciliation |
+| R-13 | Single-client preview blocks real concurrency | High | future lease manager |
+| R-14 | Character Build lost after reconnect or restart | High | persistence and versioning before complete Campaign State |
+| R-15 | Helgen bypass leaves vanilla state inconsistent | High | stage/global matrix and recovery tests |
+| R-16 | Incomplete anti-import cleanup | High | skills/perks/attributes policy and before/after tests |
+| R-17 | Remote buffs rely on a nominal allowlist | Medium | extensible capability classification before expansion |
+| R-18 | Documentation diverges through duplication | High | source-of-truth matrix, feature-local docs, history archive |
 
-## Règle
+## Rule
 
-Un risque résolu n’est pas maintenu indéfiniment ici comme état actif. Sa résolution appartient au changelog, à l’ADR ou à l’historique Git selon le cas.
+A resolved risk is not kept here indefinitely as active state. Its resolution
+belongs in the changelog, an ADR, or Git history as appropriate.

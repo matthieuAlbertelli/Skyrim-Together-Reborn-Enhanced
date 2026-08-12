@@ -1,8 +1,8 @@
-# Alternate Start — Implémentation Creation Kit
+# Alternate Start — Creation Kit implementation
 
-> **Statut : Bootstrap et records M7 implémentés ; introduction/skip Helgen à poursuivre**
+> **Status: Bootstrap and M7 records implemented; introduction and Helgen skip remain**
 
-## Fichiers versionnés
+## Versioned files
 
 ```text
 GameFiles/Skyrim/STRE_AlternateStart.esp
@@ -11,9 +11,9 @@ GameFiles/Skyrim/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.pex
 GameFiles/STRE_AlternateStart.manifest.txt
 ```
 
-Les PSC seuls ne sont pas exécutés par Skyrim : le PEX compilé doit être récupéré et déployé.
+PSC files alone are not executed by Skyrim: the compiled PEX must be retrieved and deployed.
 
-## Records principaux confirmés
+## Confirmed primary records
 
 - `STRE_CELL_AlternateStart`
 - `STRE_CELL_DevSandbox`
@@ -21,64 +21,64 @@ Les PSC seuls ne sont pas exécutés par Skyrim : le PEX compilé doit être ré
 - `STRE_FURN_PlayerSeat01`
 - `STRE_FURN_PlayerSeat02`
 
-Aliases utilisés :
+Aliases used:
 
 - `Alias_Player`
 - `Alias_PlayerSeat01`
 
-Étapes de quête :
+Quest stages:
 
-- `0` — initialisation ;
-- `10` — déplacement/assise du joueur ;
-- `20` — déclenchement Character Creation.
+- `0` — initialization;
+- `10` — move and seat the player;
+- `20` — trigger Character Creation.
 
-La quête est volontairement exclue de la synchronisation générique des quêtes.
+The quest is intentionally excluded from generic quest synchronization.
 
-## Flux actuel
+## Current flow
 
 ```text
 setstage 10
-→ MoveTo vers le siège via alias
-→ attente de l’état assis
-→ passage au stage 20
-→ TESQuestStageEvent reçu par CharacterCreationService
-→ RaceMenu puis UI Angular
+→ MoveTo the seat through its alias
+→ wait for the seated state
+→ advance to stage 20
+→ CharacterCreationService receives TESQuestStageEvent
+→ RaceMenu, then Angular UI
 ```
 
-Ne jamais coder en dur un FormID chargé dépendant du load order. Les références CK utilisent aliases/propriétés ; le catalogue natif utilise nom de plugin + FormID local.
+Never hard-code a loaded FormID that depends on load order. CK references use aliases and properties; the native catalog uses plugin name plus local FormID.
 
-## Records M7
+## M7 records
 
-Le manifest `CK_RECORDS_M7_IMPLEMENTED.json` couvre 47 records attendus :
+The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 47 expected records:
 
-- cellules, quête et références de sièges ;
-- tenues et bottes ;
-- enchantements faibles ;
-- sorts de Destruction et Altération ;
-- effets magiques ciblables pour les buffs alliés.
+- cells, quest, and seat references;
+- outfits and boots;
+- weak enchantments;
+- Destruction and Alteration spells;
+- targetable magic effects for ally buffs.
 
-Les trois buffs alliés doivent conserver un couple compatible dans le `SPEL` et le `MGEF` :
+The three ally buffs must retain compatible values in both `SPEL` and `MGEF`:
 
 ```text
 Casting Type : Fire and Forget
 Delivery     : Target Actor
 ```
 
-`Contact` ne convient pas à ces sorts lancés à la main.
+`Contact` is not appropriate for these manually cast spells.
 
 ## Navmesh
 
-La cellule contient plusieurs fragments de navmesh. Éviter de dépendre d’un pathfinding PNJ complexe tant que la cellule n’a pas reçu un audit CK complet. Toute modification de mobilier ou porte doit être suivie d’un test de circulation.
+The cell contains several navmesh fragments. Avoid relying on complex NPC pathfinding until the cell has received a complete CK audit. Every furniture or door change must be followed by a navigation test.
 
-## Restant à implémenter
+## Remaining implementation
 
-- interception propre du nouveau jeu ;
-- skip Helgen et états vanilla associés ;
-- Valen, scènes, dialogues et aliases ;
-- porte de sortie et reprise de la quête principale ;
-- marqueurs/placements pour davantage de joueurs ;
-- scripts de campagne et bridge générique ;
-- compilation Papyrus automatisée.
+- clean new-game interception;
+- Helgen skip and associated vanilla state;
+- Valen, scenes, dialogue, and aliases;
+- exit door and main-quest resumption;
+- markers and placements for more players;
+- campaign scripts and generic bridge;
+- automated Papyrus compilation.
 
 ## Audits
 
@@ -98,9 +98,9 @@ py -3 .\Tools\Scripts\audit_character_build_catalog.py `
   --client-source .\Code\client\Services\Generic\CharacterCreationService.cpp
 ```
 
-Les rapports `_audit/*.tsv` et logs sont générés localement et ne doivent pas être commités.
+Reports under `_audit/*.tsv` and logs are generated locally and must not be committed.
 
-## Test local
+## Local test
 
 ```text
 resetquest STRE_QUEST_AlternateStart

@@ -1,28 +1,28 @@
-# ADR-XXXX — <Décision>
+# ADR-XXXX — <Decision>
 
-- **Statut :** Proposed / Accepted / Superseded / Rejected
-- **Date :**
-- **Décideurs :**
-- **Issue / discussion :**
+- **Status:** Proposed / Accepted / Superseded / Rejected
+- **Date:**
+- **Decision makers:**
+- **Issue / discussion:**
 - **Supersedes :** None / ADR-XXXX
 - **Superseded by :** None / ADR-XXXX
 
-## Contexte
+## Context
 
-## Forces de décision
+## Decision forces
 
-## Options considérées
+## Options considered
 
-## Décision
+## Decision
 
-## Conséquences positives
+## Positive consequences
 
-## Conséquences négatives
+## Negative consequences
 
-## Plan de migration
+## Migration plan
 
 ## Validation
 
-## Notes d'implémentation
+## Implementation notes
 
 <!-- Optional. Link to STATUS.md or issues; do not turn the ADR into a progress tracker. -->

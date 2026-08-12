@@ -1,27 +1,30 @@
 # STRE Mod Integration Framework
 
-> **Statut : Architecture proposée, avec premier pattern first-party validé par Character Build**
-> **Patterns :** Microkernel / Plugin Architecture, Ports and Adapters, Adapter, Observer/Event Bus, Command, Strategy, Anti-Corruption Layer
+> **Status:** proposed architecture, with the first first-party pattern validated
+> by Character Build.
+> **Patterns:** Microkernel / Plugin Architecture, Ports and Adapters, Adapter,
+> Observer/Event Bus, Command, Strategy, Anti-Corruption Layer.
 
-## Objectif
+## Goal
 
-Permettre au développeur d’un mod solo de déclarer :
+Let a single-player mod developer declare:
 
-- quelles fonctionnalités de son mod ont un sens coopératif ;
-- quels états STRE doit surveiller ;
-- quelles actions sont des intentions ;
-- qui possède l’autorité ;
-- quelles données sont répliquées ;
-- comment appliquer un résultat canonique ;
-- comment restaurer un joueur après reconnexion.
+- which mod features have cooperative meaning;
+- which state STRE must monitor;
+- which actions are intents;
+- who owns authority;
+- which data is replicated;
+- how to apply a canonical result;
+- how to restore a player after reconnection.
 
-Le framework ne rend pas automatiquement tout mod compatible. Il fournit une **ingénierie d’interface** standard pour écrire l’adaptation.
+The framework does not make every mod compatible automatically. It provides a
+standard **interface-engineering** model for writing the adaptation.
 
-## Vocabulaire
+## Vocabulary
 
 ### Capability
 
-Fonctionnalité coopérative nommée et versionnée, par exemple :
+A named, versioned cooperative feature, for example:
 
 - `campaign.start/1`
 - `player.class-selection/1`
@@ -30,37 +33,41 @@ Fonctionnalité coopérative nommée et versionnée, par exemple :
 
 ### Intent
 
-Demande produite par un joueur ou un mod local : `SelectClass(Paladin)`, `SetReady(true)`, `RequestDeparture`.
+A request produced by a player or local mod, such as `SelectClass(Paladin)`,
+`SetReady(true)`, or `RequestDeparture`.
 
 ### Command
 
-Forme validable et routable de l’intention envoyée à l’autorité.
+The validatable, routable form of an intent sent to the authority.
 
 ### Canonical State
 
-État de référence partagé, versionné et sérialisable.
+Shared reference state that is versioned and serializable.
 
 ### Event
 
-Résultat accepté et ordonné : `PlayerClassChanged`, `CampaignPhaseChanged`.
+An accepted, ordered result, such as `PlayerClassChanged` or
+`CampaignPhaseChanged`.
 
 ### Local Effect
 
-Conséquence appliquée dans Skyrim : équiper un set, lancer une scène, ouvrir une porte.
+A consequence applied in Skyrim: equip a set, play a scene, or open a door.
 
 ### Snapshot
 
-État complet nécessaire pour rejoindre ou se resynchroniser.
+The complete state required to join or resynchronize.
 
 ### Authority Policy
 
-Stratégie indiquant qui décide : serveur, campagne, joueur propriétaire, vote ou leader.
+A strategy specifying who decides: server, campaign, owning player, vote, or
+leader.
 
 ### Replication Policy
 
-Stratégie indiquant qui reçoit la donnée : tous, groupe, propriétaire, rôle privilégié.
+A strategy specifying who receives data: everyone, the group, the owner, or a
+privileged role.
 
-## Contrat conceptuel
+## Conceptual contract
 
 ```cpp
 class IStreModAdapter
@@ -76,46 +83,49 @@ public:
 };
 ```
 
-Ce contrat reste directionnel. Le vertical slice Character Build a validé les concepts de sélection logique, snapshot canonique, hash et application locale, mais pas encore un adapter registry ni une ABI publique. L’ABI exacte ne doit pas être figée avant une seconde intégration first-party et la persistance/reconnexion.
+This contract remains directional. The Character Build vertical slice validated
+logical selections, canonical snapshots, hashing, and local application, but not
+an adapter registry or public ABI. The exact ABI must not be frozen before a
+second first-party integration and persistence/reconnection.
 
-## Runtime proposé
+## Proposed runtime
 
 ### Adapter Registry
 
-- identifiant stable ;
-- version adapter ;
-- version minimale STRE ;
-- mod Skyrim requis ;
-- dépendances ;
-- capabilities ;
-- statut actif/incompatible.
+- stable identifier;
+- adapter version;
+- minimum STRE version;
+- required Skyrim mod;
+- dependencies;
+- capabilities;
+- active/incompatible status.
 
 ### Intent Router
 
-- valide forme, taille et permission ;
-- associe player/campaign context ;
-- applique rate limits ;
-- envoie une commande autoritaire.
+- validates shape, size, and permission;
+- associates player and campaign context;
+- applies rate limits;
+- sends an authoritative command.
 
 ### Canonical State Store
 
-- état par campagne et capability ;
-- version monotone ;
-- hash optionnel ;
-- sérialisation ;
-- snapshots ;
+- state by campaign and capability;
+- monotonic version;
+- optional hash;
+- serialization;
+- snapshots;
 - migrations.
 
 ### Event Dispatcher
 
-- ordre par capability ;
-- idempotence ;
-- replay depuis snapshot/version ;
-- erreurs structurées.
+- ordering by capability;
+- idempotence;
+- replay from snapshot/version;
+- structured errors.
 
 ### Policy Engine
 
-Politiques initiales :
+Initial policies:
 
 - `ServerAuthoritative`
 - `PlayerOwnedServerValidated`
@@ -125,32 +135,36 @@ Politiques initiales :
 
 ### Compatibility Gate
 
-Avant activation :
+Before activation:
 
-- vérifier plugin et version ;
-- vérifier adapter et schema ;
-- comparer les hashes/configurations ;
-- refuser proprement ou passer en mode solo selon policy.
+- verify plugin and version;
+- verify adapter and schema;
+- compare hashes and configurations;
+- reject cleanly or enter single-player mode according to policy.
 
-## Phasage recommandé
+## Recommended phases
 
-### Phase 1 — First-party compile-time — en cours
+### Phase 1 — First-party compile-time — in progress
 
-Services C++ compilés dans STRE avec messages dédiés. Character Build/Alternate Start constitue le premier exemple livré : catalogue partagé, inventaire et sorts canoniques, hashes et fallback local. Il ne fournit pas encore le registry générique décrit ci-dessus.
+C++ services compiled into STRE with dedicated messages. Character Build and
+Alternate Start are the first delivered example: a shared catalog, canonical
+inventory and spells, hashes, and local fallback. They do not yet provide the
+generic registry described above.
 
 ### Phase 2 — Data-driven
 
-Manifest YAML/JSON, schemas versionnés et bridge Papyrus plus générique.
+YAML/JSON manifests, versioned schemas, and a more generic Papyrus bridge.
 
-### Phase 3 — SDK tiers expérimental
+### Phase 3 — Experimental third-party SDK
 
-API documentée, exemples, validation de manifest, compatibilité de versions.
+Documented API, examples, manifest validation, and version compatibility.
 
-### Phase 4 — ABI/plugin natif éventuel
+### Phase 4 — Possible native ABI/plugin
 
-Uniquement après plusieurs adapters et besoins stabilisés. Éviter de promettre une ABI C++ binaire trop tôt.
+Only after several adapters and stabilized requirements. Do not promise a binary
+C++ ABI too early.
 
-## Manifeste indicatif
+## Illustrative manifest
 
 ```yaml
 adapter:
@@ -174,28 +188,30 @@ state:
   events: incremental
 ```
 
-## Contraintes de sécurité
+## Security constraints
 
-- aucune exécution arbitraire reçue du réseau ;
-- adapters identifiés et versions vérifiées ;
-- tailles bornées ;
-- permissions par capability ;
-- données secrètes filtrées par audience ;
-- logs sans exposer les secrets narratifs aux clients non autorisés ;
-- le serveur ne fait pas confiance aux stages Papyrus déclarés par un client.
+- no arbitrary execution received from the network;
+- identified adapters and verified versions;
+- bounded sizes;
+- per-capability permissions;
+- audience-filtered secret data;
+- logs do not expose narrative secrets to unauthorized clients;
+- the server does not trust Papyrus stages reported by a client.
 
-## Preuve first-party actuelle
+## Current first-party evidence
 
-Deux clients peuvent déjà créer des builds différents, recevoir un inventaire et des sorts canoniques, puis appliquer des buffs ciblés. Cette preuve couvre l’autorité d’un build, pas encore l’état de campagne.
+Two clients can already create different builds, receive canonical inventory and
+spells, and apply targeted buffs. This evidence covers build authority, but not
+campaign state.
 
-## Définition de réussite du framework MVP
+## MVP framework success definition
 
-Deux clients avec Alternate Start :
+Two clients with Alternate Start:
 
-1. chargent le même adapter ;
-2. rejoignent une campagne ;
-3. publient leur état prêt ;
-4. reçoivent une phase canonique ;
-5. un client se déconnecte ;
-6. il revient et applique un snapshot ;
-7. la scène ne se rejoue pas deux fois.
+1. load the same adapter;
+2. join a campaign;
+3. publish their ready state;
+4. receive a canonical phase;
+5. one client disconnects;
+6. that client returns and applies a snapshot;
+7. the scene does not play twice.

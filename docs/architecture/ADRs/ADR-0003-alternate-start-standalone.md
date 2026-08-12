@@ -1,22 +1,28 @@
-# ADR-0003 — Alternate Start reste jouable sans STRE
+# ADR-0003 — Alternate Start Remains Playable Without STRE
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Le plugin sert à sauter Helgen et doit également constituer une intégration de référence.
+The plugin bypasses Helgen and must also serve as a reference integration.
 
-## Décision
+## Decision
 
-Le contenu CK conserve un chemin solo complet. Le bridge STRE est optionnel et détecté à l’exécution. Aucun stage essentiel ne dépend d’une réponse réseau lorsque STRE est absent.
+CK content retains a complete single-player path. The STRE bridge is optional
+and detected at runtime. No essential stage depends on a network response when
+STRE is absent.
 
-## Conséquences
+## Consequences
 
-- adoption plus large et meilleur découplage ;
-- nécessité de tester deux modes ;
-- certaines mécaniques purement coopératives ont une variante ou restent inactives en solo.
+- wider adoption and better decoupling;
+- two modes must be tested;
+- some purely cooperative mechanics have a variant or remain inactive in
+  single-player.
 
-## État d’implémentation
+## Implementation state
 
-Le chemin Character Build local utilise le même catalogue sans serveur. Le nouveau jeu/skip Helgen complet reste à implémenter ; l’ADR est donc validé pour le build, pas encore pour toute l’expérience Alternate Start.
+The local Character Build path uses the same catalog without a server. The
+complete new-game and Helgen-bypass flow remains unimplemented; the ADR is
+therefore validated for the build, but not for the entire Alternate Start
+experience.

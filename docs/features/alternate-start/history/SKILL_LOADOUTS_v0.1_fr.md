@@ -1,8 +1,14 @@
-# Alternate Start — Paquetages de compétences
+# Alternate Start — Skill loadouts (archived French V0.1 design)
 
-> **Statut : Archive de conception V0.1 — non canonique pour l’implémentation M7**
+> **Status: Archived V0.1 design; non-canonical for the M7 implementation.**
 >
-> Ce document conserve l’exploration initiale des 18 compétences et des classes Morrowind. Les récompenses réellement appliquées sont définies par `CharacterBuildCatalog.*`, présentées dans `character-loadouts.ts` et recoupées avec `CK_RECORDS_M7_IMPLEMENTED.json`. Le tableur V2 sert de base aux kits futurs. Ne pas utiliser les quantités, noms d’objets ou sorts de ce fichier comme preuve de l’état actuel.
+> **Language exception:** the original French text is retained below as dated historical design evidence. Translating its 18-skill reward catalog would create disproportionate drift risk because the material is obsolete and non-canonical. Current implemented rewards are defined by `CharacterBuildCatalog.*`, presented in `character-loadouts.ts`, and cross-checked against `CK_RECORDS_M7_IMPLEMENTED.json`. The V2 workbook is the design basis for future kits. Do not use any quantity, item name, or spell in this archive as evidence of current behavior.
+>
+> **English summary:** this document explored a skill-driven loadout system in which every class selected two major and four minor skills, and each selected skill contributed equipment, spells, consumables, or orientation choices. Its values were provisional and required in-game prototyping. It is preserved only to explain early design history.
+
+---
+
+## Original French archive
 
 ## Objectif
 

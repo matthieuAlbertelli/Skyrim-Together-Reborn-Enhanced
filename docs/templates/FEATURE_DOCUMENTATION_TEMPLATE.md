@@ -1,8 +1,8 @@
 # <Feature> — Documentation Template
 
-> **Statut : Proposed / Implemented / Deprecated**  
-> **Owner :**  
-> **Milestone :**
+> **Status:** Proposed / Implemented / Deprecated
+> **Owner:**
+> **Milestone:**
 
 ## User problem
 

@@ -1,61 +1,61 @@
-# Valen — Brief Character Art
+# Valen — Character art brief
 
-> **Statut : Brief de recrutement**
+> **Status: Recruitment brief**
 
-## Objectif
+## Objective
 
-Créer un PNJ original, identifiable et crédible dans Skyrim, capable de soutenir des dialogues en plan moyen et gros plan.
+Create an original, recognizable NPC who is credible in Skyrim and can support dialogue in medium shots and close-ups.
 
 ## Silhouette
 
-- taille moyenne ;
-- posture légèrement voûtée par le voyage et le travail ;
-- manteau ou surcouche asymétrique ;
-- accessoire-signature visible ;
-- aucune armure de héros.
+- average height;
+- posture slightly hunched from travel and work;
+- asymmetrical coat or outer layer;
+- visible signature accessory;
+- no heroic armor.
 
-## Visage
+## Face
 
-- âge 45–60 ;
-- regard attentif, fatigué mais vif ;
-- traits marqués sans caricature ;
-- barbe ou cheveux pratiques, non aristocratiques ;
-- possibilité de lip sync correcte.
+- apparent age 45–60;
+- attentive gaze, tired but alert;
+- pronounced features without caricature;
+- practical, non-aristocratic hair or beard;
+- capable of acceptable lip synchronization.
 
 ## Costume
 
-- laine, cuir, toile ;
-- zones réparées ;
-- sacoche, carnet ou cartes ;
-- palette brune/grise avec accent désaturé ;
-- cohérence avec une personne qui voyage mais passe du temps dans des archives.
+- wool, leather, and canvas;
+- visibly repaired areas;
+- satchel, notebook, or maps;
+- brown/gray palette with a desaturated accent;
+- consistent with someone who travels but spends time in archives.
 
-## Livrables
+## Deliverables
 
-1. planche de références ;
-2. concepts face/profil/3-4 ;
-3. validation silhouette ;
-4. modèle et textures ;
-5. exports compatibles Skyrim ;
-6. plugin/records ou instructions d’intégration ;
-7. captures en jeu sous plusieurs lumières ;
-8. sources et licence.
+1. Reference board.
+2. Front, profile, and three-quarter concepts.
+3. Silhouette approval.
+4. Model and textures.
+5. Skyrim-compatible exports.
+6. Plugin/records or integration instructions.
+7. In-game captures under several lighting conditions.
+8. Sources and license.
 
-## Contraintes techniques à préciser avant production
+## Technical constraints to define before production
 
-- pipeline head part / FaceGen ;
-- résolution textures ;
-- meshes custom ou réutilisation ;
-- compatibilité corps/tenues ;
-- poids et partitions ;
-- génération FaceGen ;
-- dépendances éventuelles.
+- head-part and FaceGen pipeline;
+- texture resolution;
+- custom meshes or reuse;
+- body and outfit compatibility;
+- weights and partitions;
+- FaceGen generation;
+- possible dependencies.
 
-## Critères d’acceptation
+## Acceptance criteria
 
-- pas de neck seam visible ;
-- visage stable en jeu ;
-- lip sync et expressions lisibles ;
-- silhouette distincte à 8–10 mètres ;
-- performance comparable à un PNJ vanilla ;
-- aucune dépendance non déclarée.
+- no visible neck seam;
+- stable face in game;
+- readable lip sync and expressions;
+- distinct silhouette at 8–10 meters;
+- performance comparable to a vanilla NPC;
+- no undeclared dependency.

@@ -1,11 +1,11 @@
 # Trading — Technical Design
 
-> **Statut : Implémenté**
+> **Status:** implemented.
 
 ## Architecture
 
 ```text
-Trade domain (pur)
+Trade domain (pure)
 ├─ Session
 ├─ Inventory planning
 ├─ Application
@@ -29,7 +29,7 @@ Client
 └─ Angular Trade UI
 ```
 
-## Automate
+## State machine
 
 ```text
 PendingAcceptance
@@ -53,36 +53,42 @@ Applying
 
 ## Idempotence
 
-- offre identique : succès sans changement ;
-- acceptation répétée : succès sans changement ;
-- confirmation répétée de la même révision : succès sans changement ;
-- application client : résultat mémorisé par `ApplyId` ;
-- réconciliation client : résultat mémorisé par `ReconcileId` ;
-- snapshots d’offre complets plutôt que deltas UI.
+- identical offer: success without change;
+- repeated acceptance: success without change;
+- repeated confirmation of the same revision: success without change;
+- client application: result remembered by `ApplyId`;
+- client reconciliation: result remembered by `ReconcileId`;
+- complete offer snapshots instead of UI deltas.
 
-## Validation d’inventaire
+## Inventory validation
 
-Le serveur construit un `InventorySnapshot` par joueur, valide les lignes, détecte ambiguïtés et incompatibilités, puis crée deux `PlayerMutationPlan`. Les offres réciproques du même item sont nettées de façon déterministe.
+The server builds one `InventorySnapshot` per player, validates lines, detects
+ambiguity and incompatibility, then creates two `PlayerMutationPlan` values.
+Reciprocal offers for the same item are netted deterministically.
 
-## Application et commit
+## Application and commit
 
-Le serveur envoie à chaque participant uniquement son plan. Les clients appliquent les mutations à l’inventaire Skyrim local et renvoient un résultat structuré. Lorsque les deux réussissent, le serveur applique le plan à ses `InventoryComponent`.
+The server sends each participant only their plan. Clients apply mutations to
+their local Skyrim inventory and return a structured result. When both succeed,
+the server applies the plan to its `InventoryComponent` values.
 
-## Réconciliation
+## Reconciliation
 
-Une baseline absolue est capturée au début de l’application. En cas d’incertitude, le serveur construit ou réutilise un `ReconciliationPlan` contenant les quantités cibles par item. Les clients convergent vers ces valeurs, plutôt que de rejouer un delta.
+An absolute baseline is captured at the start of application. Under uncertainty,
+the server creates or reuses a `ReconciliationPlan` containing target quantities
+per item. Clients converge to those values instead of replaying a delta.
 
-## Nettoyage
+## Cleanup
 
-- session terminale retenue brièvement pour absorber les messages tardifs ;
-- index joueur/session libéré ;
-- applications et baselines supprimées ;
-- expiration périodique.
+- retain a terminal session briefly to absorb late messages;
+- release the player/session index;
+- remove applications and baselines;
+- expire periodically.
 
-## Points d’extension
+## Extension points
 
-- `TransferPolicy` pour sortir `IsMvpTransferable` des services ;
-- `InventoryAdapter` pour rendre l’application testable sans Skyrim ;
-- persistance optionnelle des sagas ;
-- telemetry structurée ;
-- capability `player-trade/1` du futur framework.
+- `TransferPolicy` to move `IsMvpTransferable` out of services;
+- `InventoryAdapter` to test application without Skyrim;
+- optional saga persistence;
+- structured telemetry;
+- future framework capability `player-trade/1`.

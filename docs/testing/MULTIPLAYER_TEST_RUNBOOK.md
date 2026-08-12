@@ -1,22 +1,22 @@
-# Runbook de test multijoueur
+# Multiplayer test runbook
 
-> **Statut : Procédure active pour les smoke tests à deux PC ; automatisation future**
+> **Status: Active procedure for two-PC smoke tests; future automation planned**
 
-## Préparation
+## Preparation
 
-- mêmes commits client/serveur ;
-- même `BuildVersion` ;
-- même `STRE_AlternateStart.esp` vérifié par SHA-256 ;
-- même load order et masters ;
-- serveur redémarré ;
-- logs vidés/archivés ;
-- horloges système proches ;
-- identifiants joueurs notés ;
-- scénario et résultat attendu partagés.
+- identical client and server commits;
+- identical `BuildVersion`;
+- identical `STRE_AlternateStart.esp`, verified by SHA-256;
+- identical load order and masters;
+- restarted server;
+- cleared or archived logs;
+- closely synchronized system clocks;
+- recorded player identifiers;
+- shared scenario and expected result.
 
-## Test Character Build
+## Character Build test
 
-Sur chaque PC :
+On each PC:
 
 ```text
 resetquest STRE_QUEST_AlternateStart
@@ -24,9 +24,9 @@ startquest STRE_QUEST_AlternateStart
 setstage STRE_QUEST_AlternateStart 10
 ```
 
-Choisir des builds différents et noter : classe, options Destruction/Altération, revision, inventoryHash et spellHash.
+Choose different builds and record the class, Destruction/Alteration options, revision, inventoryHash, and spellHash.
 
-Résultat attendu :
+Expected result:
 
 ```text
 Build accepted
@@ -35,7 +35,7 @@ Applied acknowledgement sent
 Build applied
 ```
 
-Aucune ligne :
+None of these lines should appear:
 
 ```text
 RejectedInventoryHash
@@ -44,31 +44,31 @@ spell resolution failed
 build rejected
 ```
 
-## Test des buffs ciblés
+## Targeted-buff test
 
-- conserver `Fire and Forget` + `Target Actor` dans SPEL/MGEF ;
-- viser l’autre joueur à courte portée ;
-- lancer Égide, Souffle aquatique ou Allègement ;
-- comparer `DamageResist`, état WaterBreathing ou `CarryWeight` avant/après ;
-- vérifier l’expiration ;
-- collecter les événements MagicService/add target.
+- retain `Fire and Forget` plus `Target Actor` in SPEL/MGEF;
+- target the other player at close range;
+- cast the localized Mineral Aegis, Water Breathing, or Lighten Burden spell;
+- compare `DamageResist`, WaterBreathing state, or `CarryWeight` before and after;
+- verify expiration;
+- collect MagicService and add-target events.
 
-## Pendant le test
+## During the test
 
-Marquer : T0 connexion, T1 création, T2 scellement, T3 buff, T4 anomalie, T5 fin. Conserver player IDs, server IDs, revisions et timestamps.
+Mark T0 connection, T1 creation, T2 sealing, T3 buff, T4 anomaly, and T5 end. Retain player IDs, server IDs, revisions, and timestamps.
 
-## Collecte
+## Evidence collection
 
-- `tp_client.log` de chaque joueur ;
-- log serveur ;
-- vidéo/capture si UI ou rendu ;
-- save concernée ;
-- liste des mods/load order ;
-- SHA-256 de l’ESP ;
-- étapes exactes ;
-- résultat reproductible ou non.
+- `tp_client.log` from each player;
+- server log;
+- video or screenshot for UI or rendering issues;
+- relevant save;
+- mod list and load order;
+- ESP SHA-256;
+- exact steps;
+- whether the result is reproducible.
 
-## Filtre PowerShell utile
+## Useful PowerShell filter
 
 ```powershell
 Select-String `
@@ -78,15 +78,15 @@ Select-Object -Last 400 |
 ForEach-Object { $_.Line }
 ```
 
-## Scénarios de panne futurs
+## Future failure scenarios
 
-- tuer un client pendant Pending ;
-- couper le réseau avant l’accusé ;
-- reconnecter ;
-- redémarrer serveur ;
-- mismatch de BuildVersion ;
-- ESP différent ;
-- envoyer un doublon ;
-- plugin/master absent.
+- terminate a client while Pending;
+- disconnect the network before acknowledgment;
+- reconnect;
+- restart the server;
+- use a mismatched BuildVersion;
+- use a different ESP;
+- send a duplicate;
+- remove a plugin or master.
 
-Les scénarios de reconnexion/restauration ne peuvent être déclarés réussis tant que la persistance des builds n’est pas implémentée.
+Reconnect and restoration scenarios cannot be declared successful until build persistence is implemented.

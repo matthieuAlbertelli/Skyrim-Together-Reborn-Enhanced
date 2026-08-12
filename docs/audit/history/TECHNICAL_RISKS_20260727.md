@@ -1,34 +1,34 @@
-# Registre des risques techniques
+# Technical risk register
 
-> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour les
-> risques actifs.** Voir [`docs/production/RISK_REGISTER.md`](../../production/RISK_REGISTER.md).
+> **Status: Historical snapshot as of July 27, 2026; non-canonical for active
+> risks.** See [`docs/production/RISK_REGISTER.md`](../../production/RISK_REGISTER.md).
 
-| ID | Risque | Probabilité | Impact | État / mesure recommandée |
+| ID | Risk | Probability | Impact | State / recommended mitigation |
 |---|---|---:|---:|---|
-| R-01 | Le bridge de preview mono-client bloque un vrai usage concurrent | Élevée | Élevé | Second consommateur first-party validé, mais lease manager toujours requis |
-| R-02 | Réutilisation de `toggleDebugUI` comme canal de production | Élevée | Moyen | API CEF dédiée et typée |
-| R-03 | Divergence importante avec upstream difficile à rebaser | Moyenne | Élevé | registre des patches, ADR, merges fréquents |
-| R-04 | État trading uniquement en mémoire lors d’un crash serveur | Moyenne | Élevé | journal transactionnel ou politique d’abandon explicite |
-| R-05 | Mutation d’inventaire distribuée non atomique au sens strict | Moyenne | Élevé | documenter le modèle saga + réconciliation, tests de panne |
-| R-06 | Versionnement protocole absent pour futurs adapters dynamiques | Élevée | Élevé | enveloppe versionnée avant SDK tiers |
-| R-07 | Papyrus/CK deviennent source de vérité implicite | Moyenne | Élevé | conserver l’intention locale et l’état canonique serveur |
-| R-08 | Skip Helgen laisse des quêtes vanilla dans un état incohérent | Élevée | Élevé | matrice de stages/globals et tests de reprise |
-| R-09 | Personnages externes/cheatés rejoignent une campagne | Moyenne | Élevé | nettoyage + build canonique implémentés ; binding persistant encore requis |
-| R-10 | Valen/scène suppose un seul `Game.GetPlayer()` | Élevée | Moyen | aliases locaux + coordination STRE |
-| R-11 | Saturation de l’auberge à 10 joueurs | Moyenne | Moyen | marqueurs explicites, navmesh, tests de circulation |
-| R-12 | Licences d’assets/voix insuffisamment explicites | Moyenne | Élevé | contributor agreement et fiche de provenance |
-| R-13 | Documentation française limite les contributeurs internationaux | Moyenne | Moyen | anglais canonique public, français de travail ou traduction |
-| R-14 | Export source exclut des dossiers source nommés Debug | Constaté | Faible | corriger le filtre du script |
-| R-15 | Build de personnage perdu après reconnect ou redémarrage serveur | Élevée | Élevé | persistance versionnée + restauration idempotente |
-| R-16 | Les buffs distants reposent sur une allowlist nominale de FormID locaux | Moyenne | Moyen | classification par keyword/capability avant extension à de nombreux mods |
-| R-17 | Nettoyage incomplet des compétences/perks/statistiques historiques | Élevée | Élevé | jalon de reset contrôlé, tests avant/après et politique explicite |
-| R-18 | `Script::CompileAndRun` dépend d’un Address Library ID runtime | Moyenne | Élevé | conserver validation 1.6.1170, fallback documenté et logs explicites |
+| R-01 | The single-client preview bridge blocks real concurrent use | High | High | A second first-party consumer was validated, but a lease manager is still required |
+| R-02 | Reuse of `toggleDebugUI` as a production channel | High | Medium | Dedicated typed CEF API |
+| R-03 | Substantial divergence from upstream becomes difficult to rebase | Medium | High | Patch register, ADRs, and frequent merges |
+| R-04 | Trading state exists only in memory during a server crash | Medium | High | Transaction journal or explicit abandonment policy |
+| R-05 | Distributed inventory mutation is not strictly atomic | Medium | High | Document saga and reconciliation model; add failure tests |
+| R-06 | Protocol versioning is absent for future dynamic adapters | High | High | Versioned envelope before a third-party SDK |
+| R-07 | Papyrus/CK become an implicit source of truth | Medium | High | Retain local intent and canonical server state |
+| R-08 | Helgen skip leaves vanilla quests inconsistent | High | High | Stage/global matrix and resumption tests |
+| R-09 | External or cheated characters join a campaign | Medium | High | Cleanup and canonical build implemented; persistent binding still required |
+| R-10 | Valen/scene assumes a single `Game.GetPlayer()` | High | Medium | Local aliases plus STRE coordination |
+| R-11 | The inn becomes saturated with 10 players | Medium | Medium | Explicit markers, navmesh, and circulation tests |
+| R-12 | Asset/voice licenses are insufficiently explicit | Medium | High | Contributor agreement and provenance record |
+| R-13 | French documentation limits international contributors | Medium | Medium | Public canonical English; working French or translation |
+| R-14 | Source export excludes source directories named Debug | Observed | Low | Correct the script filter |
+| R-15 | Character build is lost after reconnect or server restart | High | High | Versioned persistence plus idempotent restoration |
+| R-16 | Remote buffs depend on a name-based allowlist of local FormIDs | Medium | Medium | Keyword/capability classification before extending to many mods |
+| R-17 | Incomplete cleanup of historical skills, perks, and statistics | High | High | Controlled reset milestone, before/after tests, and explicit policy |
+| R-18 | `Script::CompileAndRun` depends on a runtime Address Library ID | Medium | High | Retain 1.6.1170 validation, documented fallback, and explicit logs |
 
-## Décisions de réduction prioritaires
+## Priority risk-reduction decisions
 
-- Le trading est une **saga compensée**, pas une transaction ACID distribuée.
-- Le build canonique réduit le risque d’import cheaté, sans encore constituer un reset exhaustif du personnage.
-- La persistance des builds doit précéder le Campaign State complet.
-- Le SDK de mods doit commencer par des intégrations first-party compilées pour éviter de figer trop tôt une ABI.
-- La preview doit devenir une ressource arbitrée avant d’être annoncée comme API tierce.
-- La classification des sorts coopératifs doit devenir extensible avant l’ajout massif de sorts custom.
+- Trading is a **compensated saga**, not a distributed ACID transaction.
+- The canonical build reduces cheated-import risk but is not yet an exhaustive character reset.
+- Build persistence must precede the complete Campaign State.
+- The mod SDK should begin with compiled first-party integrations to avoid freezing an ABI too early.
+- Preview must become an arbitrated resource before it is advertised as a third-party API.
+- Cooperative-spell classification must become extensible before adding many custom spells.

@@ -1,65 +1,82 @@
-# Vision produit STRE
+# STRE Product Vision
 
-> **Statut : Décision produit**
+> **Status:** product decision.
 
 ## Ambition
 
-Créer l’expérience coopérative de Skyrim que des groupes de joueurs pourraient vivre comme une véritable campagne commune : des inconnus deviennent une compagnie, leurs rôles se complètent, leurs décisions produisent un état partagé et le monde reste reconnaissable comme Skyrim.
+Create the Skyrim cooperative experience that groups of players can live as a
+genuine shared campaign: strangers become a company, their roles complement one
+another, their decisions produce shared state, and the world remains recognizably
+Skyrim.
 
-## Proposition de valeur
+## Value proposition
 
-STRE apporte trois niveaux de valeur :
+STRE provides three levels of value:
 
-1. **Des mécaniques coopératives absentes de STR**, comme le trading sécurisé, l’agonie, la relève et les classes coopératives.
-2. **Une campagne structurée**, avec un démarrage collectif, un hub narratif et une progression canonique partagée.
-3. **Une plateforme d’intégration**, permettant à un développeur de mod d’expliquer comment la logique solo de son mod doit s’exprimer dans une session STRE.
+1. **Cooperative mechanics absent from STR**, such as secure trading, the downed
+   state, revival, and cooperative classes.
+2. **A structured campaign**, with a shared start, a narrative hub, and shared
+   canonical progression.
+3. **An integration platform** that lets a mod developer describe how a mod's
+   single-player logic should behave in an STRE session.
 
-## Principes non négociables
+## Non-negotiable principles
 
-### Skyrim d’abord
+### Skyrim first
 
-Le joueur doit continuer à reconnaître le rythme, les systèmes et les sensations de Skyrim. STRE ajoute une couche coopérative ; il ne remplace pas le jeu par une logique de MMO.
+Players must continue to recognize Skyrim's pacing, systems, and feel. STRE adds
+a cooperative layer; it does not replace the game with MMO logic.
 
-### Coopération plutôt que punition
+### Cooperation over punishment
 
-Les mécaniques doivent créer des occasions d’aider, protéger, relever, équiper ou coordonner les autres joueurs. La difficulté ne doit pas reposer sur des sanctions arbitraires.
+Mechanics should create opportunities to help, protect, revive, equip, or
+coordinate other players. Difficulty must not rely on arbitrary penalties.
 
-### Autorité explicite
+### Explicit authority
 
-Tout état pouvant diverger entre clients doit avoir une autorité identifiée : serveur, campagne, joueur propriétaire ou politique déclarée.
+Every state that can diverge between clients must have an identified authority:
+the server, campaign, owning player, or a declared policy.
 
-### Mod solo autonome
+### Standalone single-player mods
 
-Un mod compatible STRE doit pouvoir conserver un mode solo fonctionnel. L’adaptateur STRE enrichit sa sémantique ; il ne doit pas rendre STRE obligatoire lorsque le contenu peut fonctionner seul.
+An STRE-compatible mod should retain a functional single-player mode. The STRE
+adapter enriches its semantics; it must not make STRE mandatory when the content
+can operate independently.
 
-### Modulaire et maintenable
+### Modular and maintainable
 
-Le cœur réseau, le domaine métier, l’intégration Skyrim, l’UI et le contenu CK doivent rester séparés. Les fonctionnalités doivent être testables indépendamment et documentées par contrat.
+The network core, business domain, Skyrim integration, UI, and CK content must
+remain separate. Features must be independently testable and documented by
+contract.
 
-### Résilience réseau
+### Network resilience
 
-Les systèmes doivent tolérer les doublons, retards, pertes temporaires, reconnexions et snapshots. Une scène visible localement ne constitue jamais à elle seule la vérité canonique.
+Systems must tolerate duplicates, delays, temporary loss, reconnections, and
+snapshots. A scene visible locally is never, by itself, canonical truth.
 
-### Compatibilité upstream pragmatique
+### Pragmatic upstream compatibility
 
-Le fork doit suivre Skyrim Together Reborn lorsque le coût est raisonnable. Les divergences structurantes doivent être isolées, documentées et faciles à rebaser.
+The fork should track Skyrim Together Reborn when the cost is reasonable.
+Structural divergences must be isolated, documented, and easy to rebase.
 
-## Public cible
+## Target audience
 
-- groupes de 2 à 4 joueurs pour l’expérience principale ;
-- capacité technique prévue jusqu’à environ 10 joueurs pour les hubs et événements ;
-- moddeurs Creation Kit et Papyrus ;
-- développeurs C++ réseau et reverse engineering Skyrim ;
-- artistes, scénaristes, comédiens, sound designers et testeurs.
+- groups of two to four players for the primary experience;
+- planned technical capacity for approximately ten players in hubs and events;
+- Creation Kit and Papyrus modders;
+- C++ network and Skyrim reverse-engineering developers;
+- artists, writers, voice actors, sound designers, and testers.
 
-## Ce que STRE n’est pas
+## What STRE is not
 
-- un MMO persistant à grande échelle ;
-- une promesse de compatibilité automatique avec tous les mods ;
-- une synchronisation naïve de chaque variable locale ;
-- un remplacement de la responsabilité du développeur de mod ;
-- une campagne centrée exclusivement sur le joueur techniquement hôte.
+- a large-scale persistent MMO;
+- a promise of automatic compatibility with every mod;
+- naive synchronization of every local variable;
+- a replacement for the mod developer's responsibility;
+- a campaign centered exclusively on the technically hosting player.
 
-## Indicateur de réussite
+## Success criterion
 
-STRE réussit lorsque deux à dix joueurs peuvent commencer ensemble, comprendre qui décide quoi, vivre des systèmes coopératifs sans désynchronisation visible et reprendre leur campagne après une reconnexion sans manipulations manuelles.
+STRE succeeds when two to ten players can begin together, understand who decides
+what, experience cooperative systems without visible desynchronization, and
+resume their campaign after reconnecting without manual intervention.

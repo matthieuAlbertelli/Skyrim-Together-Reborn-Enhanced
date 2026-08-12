@@ -1,59 +1,66 @@
-# Item Preview — API interne actuelle
+# Item Preview — Current Internal API
 
-> **Statut : Implémenté pour Trading et Character Creation, non stable pour tiers**
+> **Status:** implemented for Trading and Character Creation; not stable for
+> third parties.
 
-## Consommateurs
+## Consumers
 
 ### Trading
 
-`TradeItemPreviewService` résout un `Trade::ItemId`, construit l’entrée native et pilote la preview.
+`TradeItemPreviewService` resolves a `Trade::ItemId`, builds the native entry,
+and controls the preview.
 
 ### Character Creation
 
-`CharacterCreationService` associe des `previewKey` à des formulaires vanilla ou `STRE_AlternateStart.esp`, puis transmet la sélection et la région au pipeline de preview.
+`CharacterCreationService` maps `previewKey` values to vanilla forms or
+`STRE_AlternateStart.esp`, then sends the selection and region to the preview
+pipeline.
 
-## Cœur générique
+## Generic core
 
 ### `ItemPreviewController`
 
-Conserve sélection, région, révisions, fitting, reload et état actif.
+Stores selection, region, revisions, fitting, reload, and active state.
 
 ### `ItemPreviewNativeSession`
 
-Encapsule `Inventory3DManager::Begin3D`, load/restart/clear et `End3D`.
+Encapsulates `Inventory3DManager::Begin3D`, load/restart/clear, and `End3D`.
 
 ### `ItemPreviewHostSession`
 
-Automate atomique de show/hide qui absorbe les messages concurrents.
+An atomic show/hide state machine that absorbs concurrent messages.
 
 ### `ItemPreviewHostBridge`
 
-Singleton thread-safe auquel un seul `ItemPreviewHostClient` peut être lié. `ItemPreviewHostBinding` gère bind/unbind en RAII.
+A thread-safe singleton to which only one `ItemPreviewHostClient` can be bound.
+`ItemPreviewHostBinding` manages bind/unbind through RAII.
 
 ### `ItemPreviewFitSolver`
 
-Fonction pure calculant position et échelle à partir des bounds raster.
+A pure function that calculates position and scale from raster bounds.
 
 ### `ItemPreviewRasterMeasurer`
 
-Capture D3D11 avant/après et mesure le modèle dans la région cible.
+Captures D3D11 before and after rendering and measures the model in the target
+region.
 
-## Ce que cette API permet déjà
+## What this API already supports
 
-- partager le pipeline entre deux fonctionnalités first-party ;
-- afficher des objets Skyrim réels dans une région Angular ;
-- recalculer le cadrage après resize ou changement rapide ;
-- tester le solver indépendamment ;
-- isoler le host menu du consommateur.
+- share the pipeline between two first-party features;
+- display real Skyrim objects in an Angular region;
+- recalculate framing after resize or rapid changes;
+- test the solver independently;
+- isolate the host menu from the consumer.
 
-## Ce qu’elle ne garantit pas
+## What it does not guarantee
 
-- coexistence concurrente de plusieurs consommateurs ;
-- leases, ownership ou priorité ;
-- ABI stable ;
-- appel depuis Papyrus ou un mod externe ;
-- compatibilité inter-version ;
-- sécurité d’un payload réseau tiers ;
-- preview 3D appropriée pour tous les `MagicItem`.
+- concurrent coexistence of several consumers;
+- leases, ownership, or priority;
+- a stable ABI;
+- calls from Papyrus or an external mod;
+- cross-version compatibility;
+- safety for a third-party network payload;
+- a useful 3D preview for every `MagicItem`.
 
-La communication publique doit employer **« fondation d’API interne réutilisable »**, pas **« SDK de mods tiers »**.
+Public communication must say **“reusable internal API foundation”**, not
+**“third-party mod SDK.”**

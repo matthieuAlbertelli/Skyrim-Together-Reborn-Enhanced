@@ -1,20 +1,23 @@
-# ADR-0001 — Ports and Adapters pour les intégrations de mods
+# ADR-0001 — Ports and Adapters for Mod Integrations
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-STRE veut permettre à un mod solo de décrire sa sémantique multijoueur sans intégrer chaque détail de ce mod dans le cœur réseau.
+STRE wants to let a single-player mod describe its multiplayer semantics without
+integrating every detail of that mod into the network core.
 
-## Décision
+## Decision
 
-Adopter une Plugin Architecture/Microkernel dans laquelle chaque intégration est un `STRE Mod Adapter`. Le cœur expose des ports : capabilities, intents, état canonique, événements, snapshots et policies. Les adapters traduisent les concepts du mod.
+Adopt a Plugin Architecture/Microkernel in which every integration is an
+`STRE Mod Adapter`. The core exposes ports for capabilities, intents, canonical
+state, events, snapshots, and policies. Adapters translate the mod's concepts.
 
-## Conséquences
+## Consequences
 
-- séparation claire et testabilité ;
-- fonctionnement solo préservé ;
-- coût initial de conception du runtime ;
-- besoin de versionner les contrats ;
-- aucune promesse de compatibilité automatique.
+- clear separation and testability;
+- preserved single-player operation;
+- initial runtime design cost;
+- contracts must be versioned;
+- no promise of automatic compatibility.

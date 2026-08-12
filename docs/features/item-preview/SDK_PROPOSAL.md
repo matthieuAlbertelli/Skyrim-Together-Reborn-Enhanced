@@ -1,16 +1,19 @@
-# Item Preview — Proposition de SDK
+# Item Preview — SDK Proposal
 
-> **Statut : Proposition ; démonstrateur Character Creation réalisé sans SDK public**
+> **Status:** proposed; Character Creation demonstration completed without a
+> public SDK.
 
-## Preuve actuelle
+## Current evidence
 
-Character Creation affiche déjà les équipements de départ via le même cœur natif que Trading. Cette preuve valide la réutilisation interne, mais utilise encore les services first-party et le bridge mono-client.
+Character Creation already displays starting equipment through the same native
+core as Trading. This validates internal reuse, but still uses first-party
+services and the single-client bridge.
 
-## Capability cible
+## Target capability
 
 `stre.item-preview/1`
 
-## Requête logique
+## Logical request
 
 ```json
 {
@@ -22,24 +25,24 @@ Character Creation affiche déjà les équipements de départ via le même cœur
 }
 ```
 
-## Cycle de vie cible
+## Target lifecycle
 
-1. `AcquirePreview` → token ;
-2. `UpdatePreview` → item/région ;
-3. `PreviewSuspended` si préempté ;
-4. `PreviewResumed` ;
-5. `ReleasePreview` ;
-6. release automatique à la destruction ou timeout.
+1. `AcquirePreview` → token;
+2. `UpdatePreview` → item and region;
+3. `PreviewSuspended` when preempted;
+4. `PreviewResumed`;
+5. `ReleasePreview`;
+6. automatic release on destruction or timeout.
 
 ## Permissions
 
-- capability/version compatibles ;
-- item résolu localement ;
-- surface UI autorisée ;
-- rate limit ;
-- aucun accès à un pointeur ou une texture native.
+- compatible capability and version;
+- locally resolved item;
+- authorized UI surface;
+- rate limit;
+- no access to a native pointer or texture.
 
-## Erreurs
+## Errors
 
 - `UNSUPPORTED`
 - `RESOURCE_BUSY`
@@ -50,6 +53,7 @@ Character Creation affiche déjà les équipements de départ via le même cœur
 - `HOST_MENU_FAILURE`
 - `DEVICE_FAILURE`
 
-## Prochain démonstrateur
+## Next demonstration
 
-Faire fonctionner Trading et Character Creation avec de vrais leases, puis provoquer et vérifier une préemption contrôlée. Ce test doit précéder toute annonce de SDK tiers.
+Run Trading and Character Creation with real leases, then induce and verify
+controlled preemption. This test must precede any third-party SDK announcement.

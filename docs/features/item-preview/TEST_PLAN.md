@@ -1,44 +1,45 @@
 # Item Preview — Test Plan
 
-> **Statut : Smoke-tested dans Trading et Character Creation ; tests automatisés à compléter**
+> **Status:** smoke-tested in Trading and Character Creation; automated tests
+> remain incomplete.
 
-## Déjà observé en jeu
+## Already observed in game
 
-- objets réels chargés dans Trading ;
-- objets réels chargés dans Character Creation ;
-- cadrage automatique ;
-- changements rapides de sélection ;
-- régions Angular mises à jour ;
-- reload natif lorsque nécessaire.
+- real objects loaded in Trading;
+- real objects loaded in Character Creation;
+- automatic framing;
+- rapid selection changes;
+- updated Angular regions;
+- native reload where necessary.
 
-## Solver pur
+## Pure solver
 
-- modèles très petits/grands ;
-- centres décalés ;
-- edges ;
-- scale min/max ;
-- invalid bounds ;
-- convergence après raffinements.
+- very small and very large models;
+- offset centers;
+- edges;
+- minimum and maximum scale;
+- invalid bounds;
+- convergence after refinements.
 
 ## Runtime
 
-- begin/end idempotents ;
-- host show/hide réordonné ;
-- item change pendant mesure ;
-- region revision stale ;
-- reload pending annulé ;
-- manager absent ;
-- bind concurrent ;
-- future lease preemption ;
-- passage Trading → Character Creation → Trading.
+- idempotent begin/end;
+- reordered host show/hide;
+- item change during measurement;
+- stale region revision;
+- cancelled pending reload;
+- missing manager;
+- concurrent bind;
+- future lease preemption;
+- Trading → Character Creation → Trading transition.
 
-## Rendu
+## Rendering
 
-- 1080p, 1440p, 4K ;
-- 16:9, 21:9 ;
-- UI scale ;
-- armes, armures, livres, potions, petits objets ;
-- objets avec bounds atypiques ;
-- tenues STRE ;
-- conflit avec inventaire/crafting menus ;
-- comportement explicite pour les sorts sans modèle 3D utile.
+- 1080p, 1440p, and 4K;
+- 16:9 and 21:9;
+- UI scaling;
+- weapons, armor, books, potions, and small objects;
+- objects with atypical bounds;
+- STRE outfits;
+- conflict with inventory and crafting menus;
+- explicit behavior for spells without a useful 3D model.

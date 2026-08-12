@@ -1,19 +1,21 @@
-# ADR-0002 — État de campagne autoritaire côté serveur
+# ADR-0002 — Server-Authoritative Campaign State
 
-- **Statut : Accepted**
-- **Date : 2026-07-19**
+- **Status:** Accepted
+- **Date:** 2026-07-19
 
-## Contexte
+## Context
 
-Les phases, classes, ready states, bindings et secrets narratifs peuvent diverger si les clients décident indépendamment.
+Phases, classes, ready states, bindings, and narrative secrets can diverge if
+clients decide independently.
 
-## Décision
+## Decision
 
-Le serveur conserve l’état canonique de campagne. Le Session Manager possède des permissions administratives mais n’est pas la source technique finale.
+The server stores canonical campaign state. The Session Manager has
+administrative permissions but is not the final technical source of truth.
 
-## Conséquences
+## Consequences
 
-- reconnexion et arbitrage cohérents ;
-- dépendance au serveur pour les transitions coopératives ;
-- nécessité d’une persistance et d’un snapshot ;
-- les scripts CK appliquent des conséquences, pas la vérité canonique.
+- consistent reconnection and arbitration;
+- cooperative transitions depend on the server;
+- persistence and snapshots are required;
+- CK scripts apply consequences, not canonical truth.
