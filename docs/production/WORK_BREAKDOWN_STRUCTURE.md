@@ -2,7 +2,7 @@
 
 > **Statut : découpage structurel; ne contient pas l’avancement**
 
-Le WBS décrit **ce qui compose le projet**. L’état `done/todo` appartient uniquement à [`ROADMAP.md`](../../ROADMAP.md).
+Le WBS décrit **ce qui compose le projet**. La direction produit et les release gates appartiennent à [`ROADMAP.md`](../../ROADMAP.md), l’état implémenté/validé à [`docs/project/STATUS.md`](../project/STATUS.md), et l’avancement opérationnel au GitHub Project défini par [`GITHUB_GOVERNANCE.md`](GITHUB_GOVERNANCE.md).
 
 ## 1. STRE Core
 

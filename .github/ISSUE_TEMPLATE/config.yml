@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature idea
+    url: https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/discussions/categories/ideas
+    about: Propose and refine new ideas with the community before they become actionable issues.
+  - name: Help and setup questions
+    url: https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/discussions/categories/q-a
+    about: Ask for installation, configuration, compatibility, or gameplay help.
+  - name: Security vulnerability
+    url: https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/security/advisories/new
+    about: Report a vulnerability privately instead of opening a public issue.

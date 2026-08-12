@@ -1,9 +1,9 @@
 # État courant de STRE
 
 > **Statut : source de vérité de l’état implémenté/validé**
-> **Dernière mise à jour : 10 août 2026**
+> **Dernière mise à jour : 12 août 2026**
 
-Ce document décrit **où en est réellement le dépôt**. Les priorités futures appartiennent à [`ROADMAP.md`](../../ROADMAP.md); les détails techniques appartiennent aux documents de chaque feature.
+Ce document décrit **où en est réellement le dépôt**. La direction produit et les release gates appartiennent à [`ROADMAP.md`](../../ROADMAP.md), l’avancement opérationnel au GitHub Project défini par [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md), et les détails techniques aux documents de chaque feature.
 
 ## World Sync
 
@@ -109,5 +109,6 @@ Voir [`docs/features/alternate-start/`](../features/alternate-start/).
 Ne pas déduire l’état du projet depuis un ancien rapport de jalon ou un audit daté.
 
 - **État courant :** ce document.
-- **Priorités :** [`ROADMAP.md`](../../ROADMAP.md).
+- **Direction produit et release gates :** [`ROADMAP.md`](../../ROADMAP.md).
+- **Avancement opérationnel :** GitHub Project, selon [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).
 - **Historique :** [`CHANGELOG.md`](../../CHANGELOG.md) et `docs/audit/`.

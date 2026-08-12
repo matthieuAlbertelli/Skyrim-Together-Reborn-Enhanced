@@ -76,4 +76,4 @@ Toute modification significative d’opcode, de schéma sérialisé ou d’état
 - documentation sans sources de vérité concurrentes;
 - démos jouables à chaque jalon significatif.
 
-Pour l’avancement courant, voir [`docs/project/STATUS.md`](STATUS.md) et [`ROADMAP.md`](../../ROADMAP.md).
+Pour l’état implémenté/validé, voir [`docs/project/STATUS.md`](STATUS.md). La direction produit et les release gates appartiennent à [`ROADMAP.md`](../../ROADMAP.md); l’avancement opérationnel au GitHub Project défini par [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md).

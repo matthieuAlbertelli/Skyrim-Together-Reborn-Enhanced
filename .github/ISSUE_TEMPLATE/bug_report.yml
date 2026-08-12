@@ -1,0 +1,178 @@
+name: Bug report
+description: Report a reproducible problem with Skyrim Together Reborn Enhanced
+title: "[Bug]: "
+labels:
+  - "type: bug"
+  - "needs: reproduction"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve STRE. Modded setups are welcome: include the mod or collection details you have so maintainers can compare environments.
+
+        For setup questions, use [GitHub Discussions](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/discussions/categories/q-a). Report security vulnerabilities privately through the [security advisory form](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/security/advisories/new).
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed passwords, tokens, private server addresses, and other sensitive information from the attachments.
+          required: true
+
+  - type: input
+    id: stre_version
+    attributes:
+      label: STRE version or build
+      description: Use the release version, commit, or Actions build identifier when available.
+      placeholder: v0.2.0-alpha.1
+    validations:
+      required: true
+
+  - type: input
+    id: skyrim_runtime
+    attributes:
+      label: Skyrim runtime/version
+      description: This is the game runtime version, not the Creation Kit version.
+      placeholder: 1.6.1170
+    validations:
+      required: true
+
+  - type: dropdown
+    id: session_mode
+    attributes:
+      label: Session type
+      options:
+        - Solo
+        - Multiplayer
+        - Both solo and multiplayer
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: player_count
+    attributes:
+      label: Number of players
+      description: Optional. For multiplayer reports, the total number connected helps compare synchronization impact.
+      placeholder: "2"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: perspective
+    attributes:
+      label: Your perspective
+      description: Optional. For multiplayer reports, the observer's role helps diagnose differing player views.
+      options:
+        - Solo player
+        - Host or party leader
+        - Client
+        - Observer or another player
+        - Not sure
+    validations:
+      required: false
+
+  - type: dropdown
+    id: mods_installed
+    attributes:
+      label: Other mods installed
+      description: Mods do not disqualify the report. This information helps compare environments.
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: mod_list
+    attributes:
+      label: Mod list or collection
+      description: Paste the relevant list, collection link, profile name, or load-order information when available.
+      placeholder: Collection/profile and versions, or attach a text export
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Concise description
+      description: Summarize the problem and when it occurs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened instead? Note whether different players saw different results.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Exact reproduction steps
+      description: Start from launching or loading the game and number each action.
+      placeholder: |
+        1. Launch STRE and load ...
+        2. Connect two players ...
+        3. Interact with ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Reproduction frequency
+      options:
+        - Every time
+        - Often
+        - Sometimes
+        - Once
+        - Not tested again
+    validations:
+      required: true
+
+  - type: textarea
+    id: recovery
+    attributes:
+      label: Reload/reconnect result
+      description: Optional. If tested, state whether reloading, changing cells, reconnecting, or restarting the server resolves the problem.
+      placeholder: Reconnecting restores the door state for both players; reloading the save does not.
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Drag relevant client/server logs here, or paste a short redacted excerpt. Attach full logs when possible.
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or video
+      description: Drag files here or provide a link. Multiple-player views are especially useful for synchronization problems.
+
+  - type: textarea
+    id: save_file
+    attributes:
+      label: Save file
+      description: Drag a save here when the problem depends on campaign or world state. Remove personal information first.
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add anything else that could help reproduce or diagnose the problem.

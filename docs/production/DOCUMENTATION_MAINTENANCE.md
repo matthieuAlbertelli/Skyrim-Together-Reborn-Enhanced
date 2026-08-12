@@ -13,7 +13,9 @@ Mutable information must have exactly one canonical location.
 | Information | Source of truth |
 |---|---|
 | Current implementation/validation | `docs/project/STATUS.md` |
-| Priority/progress | `ROADMAP.md` |
+| Product direction/release objectives/gates | `ROADMAP.md` |
+| Live issue/work progress | GitHub Project, governed by `docs/production/GITHUB_GOVERNANCE.md` |
+| GitHub labels/triage/delivery policy | `docs/production/GITHUB_GOVERNANCE.md` |
 | Release history | `CHANGELOG.md` |
 | Compatibility | `docs/testing/COMPATIBILITY_MATRIX.md` |
 | Technical risks | `docs/production/RISK_REGISTER.md` |
@@ -55,7 +57,8 @@ Git history is sufficient for one-time migration/hotfix instructions that have n
 ## No-duplicate rules
 
 - no `docs/features/foo.md` next to `docs/features/foo/README.md`;
-- no second progress list outside `ROADMAP.md`;
+- no transient task status or progress percentages in Markdown; live work belongs in the GitHub Project;
+- no second product roadmap or release-gate list outside `ROADMAP.md`;
 - no second current-state summary outside `docs/project/STATUS.md`;
 - no copy of a feature protocol in `architecture/NETWORK_PROTOCOL.md`;
 - no copy of feature acceptance scenarios in `docs/testing/ACCEPTANCE_TESTS.md`;
