@@ -1,6 +1,7 @@
 # Audit de l’état actuel
 
-> **Statut : État courant au 27 juillet 2026**
+> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour l'état
+> courant.** Voir [`docs/project/STATUS.md`](../../project/STATUS.md).
 > **Baseline historique :** audit source du 19 juillet 2026
 > **Version déclarée :** `0.1.0-alpha.1`
 

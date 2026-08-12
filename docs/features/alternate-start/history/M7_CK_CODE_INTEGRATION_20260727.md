@@ -1,5 +1,9 @@
 # M7 — Intégration des records CK dans le build autoritaire
 
+> **Statut documentaire : preuve historique datée.** Pour l'état courant, voir
+> [`docs/project/STATUS.md`](../../../project/STATUS.md) et le
+> [README Alternate Start](../README.md).
+
 ## Statut
 
 > **Implémenté, compilé et smoke-testé en jeu le 27 juillet 2026.**

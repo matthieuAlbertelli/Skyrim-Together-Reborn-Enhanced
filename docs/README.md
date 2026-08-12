@@ -22,8 +22,11 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 | Project scope/governance | [`project/PROJECT_CHARTER.md`](project/PROJECT_CHARTER.md) |
 | Product direction/release objectives/gates | [`ROADMAP.md`](../ROADMAP.md) |
 | Live issue/work progress and GitHub operations | GitHub Project + [`production/GITHUB_GOVERNANCE.md`](production/GITHUB_GOVERNANCE.md) |
+| Development handoff contract | [`CONTRIBUTING.md`](../CONTRIBUTING.md#development-handoff-contract) |
+| Versioning, tags and release mechanics | [`production/RELEASE_PROCESS.md`](production/RELEASE_PROCESS.md) |
 | Release history | [`CHANGELOG.md`](../CHANGELOG.md) |
 | Cross-feature architecture | [`architecture/`](architecture/) |
+| Architecture decision policy/index | [`architecture/ADRs/README.md`](architecture/ADRs/README.md) + [`production/DECISION_REGISTER.md`](production/DECISION_REGISTER.md) |
 | Feature behavior/design | [`features/<feature>/`](features/) |
 | Cross-feature test policy | [`testing/`](testing/) |
 | Compatibility | [`testing/COMPATIBILITY_MATRIX.md`](testing/COMPATIBILITY_MATRIX.md) |
@@ -53,7 +56,7 @@ Player-facing installation details belong in `docs/user/INSTALLATION.md`. Featur
 - [Item Preview Platform](architecture/ITEM_PREVIEW_PLATFORM.md)
 - [Observability](architecture/OBSERVABILITY.md)
 - [Upstream strategy](architecture/UPSTREAM_STRATEGY.md)
-- [Architecture Decision Records](architecture/ADRs/)
+- [Architecture Decision Records](architecture/ADRs/README.md)
 
 ## Features
 
@@ -83,6 +86,8 @@ Each feature owns its product/technical/protocol/test details. Global architectu
 - [Contributor role profiles](production/OPEN_ROLES.md)
 - [Documentation maintenance](production/DOCUMENTATION_MAINTENANCE.md)
 - [GitHub governance](production/GITHUB_GOVERNANCE.md)
+- [Versioning and release process](production/RELEASE_PROCESS.md)
+- [Development handoff contract](../CONTRIBUTING.md#development-handoff-contract)
 
 ## Narrative, art and audio
 

@@ -56,7 +56,7 @@ Si un dialogue s’ouvre pendant un grab, STRE force la fin propre du grab afin 
 - [Protocol reference](PROTOCOL_REFERENCE.md)
 - [Better Grabbing integration](BETTER_GRABBING_INTEGRATION.md)
 - [Test plan](TEST_PLAN.md)
-- [ADR-0014](../../architecture/ADRs/ADR-0014-world-entity-authority-local-havok.md)
+- [ADR-0017](../../architecture/ADRs/ADR-0017-world-entity-authority-local-havok.md)
 
 ## Principes
 

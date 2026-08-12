@@ -1,6 +1,6 @@
 # ADR-0001 — Ports and Adapters pour les intégrations de mods
 
-- **Statut : Accepted (direction proposée à ratifier)**
+- **Statut : Accepted**
 - **Date : 2026-07-19**
 
 ## Contexte

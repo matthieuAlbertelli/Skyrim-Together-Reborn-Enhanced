@@ -45,6 +45,30 @@ Use Conventional Commit prefixes such as `feat:`, `fix:`, `refactor:`, `docs:`, 
 
 See [GitHub governance](docs/production/GITHUB_GOVERNANCE.md) for artifact ownership, labels, Projects, Milestones and release flow. For setup help, see [SUPPORT.md](SUPPORT.md); report vulnerabilities through [SECURITY.md](SECURITY.md), never a public issue.
 
+## Development handoff contract
+
+An implementation handoff starts from one canonical GitHub issue. Before coding,
+the issue and its linked design must make the following discoverable:
+
+- the observable outcome and the scope that is deliberately excluded;
+- current evidence, accepted behavior and the canonical specifications/ADRs;
+- the owning domain, authority boundary and relevant upstream constraint;
+- parent/sub-issue structure and explicit blockers;
+- acceptance criteria, failure behavior and compatibility or migration impact;
+- the automated checks and manual host/client/observer evidence required;
+- documentation, changelog, version/schema and release-gate impact.
+
+The implementer confirms a clean branch from current `origin/main`, reads the
+linked sources, and moves the issue through the Project workflow without copying
+that transient state into Markdown. Work stays on a focused branch, uses
+Conventional Commits and reaches `main` through a pull request with the required
+checks and resolved review conversations. Structural decisions add or supersede
+an ADR; they do not silently rewrite one. A handoff is incomplete when the next
+person must infer authority, acceptance, dependencies or validation from code.
+
+The issue owns live delivery status. The PR owns the proposed diff and evidence.
+Canonical documents own durable behavior and policy.
+
 ## Pull-request requirements
 
 A PR should state:

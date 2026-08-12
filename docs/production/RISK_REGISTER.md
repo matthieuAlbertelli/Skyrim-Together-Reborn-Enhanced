@@ -8,7 +8,7 @@
 | R-01 | Divergence importante avec upstream | Élevé | patches isolés, ADR, intégrations régulières |
 | R-02 | Mutation moteur depuis un mauvais thread | Élevé | marshalling via `RunnerService`/game update |
 | R-03 | Wrapper reverse-engineered avec ABI supposée | Critique | préférer primitives STR validées; preuve de signature avant nouveau wrapper |
-| R-04 | Havok distant combattu par du streaming de transforms | Élevé | ADR-0014 : Havok local + settlement ponctuel |
+| R-04 | Havok distant combattu par du streaming de transforms | Élevé | ADR-0017 : Havok local + settlement ponctuel |
 | R-05 | Référence placée dupliquée à l’adoption | Élevé | `PlacedReferenceId -> WorldEntityId` + binding local existant |
 | R-06 | Objet scripté/quest affecté par hide/enable/reposition | Élevé | campagne de validation dédiée avant support garanti |
 | R-07 | Métadonnées d’instance perdues pendant transfert | Élevé | `Inventory::Entry` enrichi + fail-closed quand un protocole ne sait pas préserver |

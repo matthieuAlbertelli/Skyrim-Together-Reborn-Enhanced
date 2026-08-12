@@ -48,7 +48,7 @@ Le comportement réellement appliqué est défini par :
 - `character-loadouts.ts` ;
 - `CK_RECORDS_M7_IMPLEMENTED.json`.
 
-La conception élargie reste dans [`KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx`](KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx). [`SKILL_LOADOUTS_fr.md`](SKILL_LOADOUTS_fr.md) est une archive V0.1 et ne doit pas remplacer le catalogue courant.
+La conception élargie reste dans [`KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx`](KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx). [`SKILL_LOADOUTS_v0.1_fr.md`](history/SKILL_LOADOUTS_v0.1_fr.md) est une archive V0.1 et ne doit pas remplacer le catalogue courant.
 
 ## Sortie et reprise vanilla
 
