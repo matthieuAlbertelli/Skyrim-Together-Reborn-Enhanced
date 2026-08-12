@@ -80,6 +80,19 @@ STRE_AlternateStart.esp
   ↔ tests/audits
 ```
 
+v1 class expansion gate:
+
+```text
+#14 canonical roster decision (closed)
+  + #29 reproducible current BuildVersion 5 validation baseline
+  → per-class kit/ability implementation (#15–#17 and #32–#49)
+  → #18 personal-quest program integration
+  → #30 end-to-end v1 evidence
+```
+
+Issue #29 and its draft validation PR remain the development handoff. This map
+records the dependency only; it does not change their scope or live state.
+
 ## Campaign
 
 ```text
