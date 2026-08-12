@@ -16,12 +16,15 @@ Mutable information must have exactly one canonical location.
 | Product direction/release objectives/gates | `ROADMAP.md` |
 | Live issue/work progress | GitHub Project, governed by `docs/production/GITHUB_GOVERNANCE.md` |
 | GitHub labels/triage/delivery policy | `docs/production/GITHUB_GOVERNANCE.md` |
+| Development handoff contract | `CONTRIBUTING.md` |
+| Versioning, tags and release mechanics | `docs/production/RELEASE_PROCESS.md` |
 | Release history | `CHANGELOG.md` |
 | Compatibility | `docs/testing/COMPATIBILITY_MATRIX.md` |
 | Technical risks | `docs/production/RISK_REGISTER.md` |
 | Upstream baseline SHA/version | `UPSTREAM.md` |
 | Feature-specific protocol/tests/design | `docs/features/<feature>/` |
 | Cross-feature architecture policy | `docs/architecture/` + ADRs |
+| ADR lifecycle and numbering | `docs/architecture/ADRs/README.md` + `docs/production/DECISION_REGISTER.md` |
 
 Other documents link to these sources instead of copying their mutable content.
 

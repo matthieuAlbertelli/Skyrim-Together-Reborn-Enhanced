@@ -1,6 +1,7 @@
 # Registre des risques techniques
 
-> **Statut : Audit mis à jour le 27 juillet 2026**
+> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour les
+> risques actifs.** Voir [`docs/production/RISK_REGISTER.md`](../../production/RISK_REGISTER.md).
 
 | ID | Risque | Probabilité | Impact | État / mesure recommandée |
 |---|---|---:|---:|---|

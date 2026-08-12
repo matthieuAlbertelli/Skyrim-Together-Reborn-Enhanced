@@ -1,4 +1,4 @@
-# ADR-0014 — WorldEntity authority with local Havok
+# ADR-0017 — WorldEntity authority with local Havok
 
 > **Status:** Accepted
 > **Date:** 2026-08-10

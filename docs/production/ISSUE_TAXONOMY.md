@@ -1,30 +1,13 @@
-# Taxonomie des issues
+# Issue Taxonomy (superseded proposal)
 
-> **Statut : Proposition**
+> **Status:** superseded. This file is retained only as a compatibility pointer
+> for old links.
 
-## Type
+The former label proposal in this file was never the live STRE taxonomy. The
+canonical labels, workflow states, priority rules, Issue Forms, Project and
+Milestone ownership model are defined in
+[`GITHUB_GOVERNANCE.md`](GITHUB_GOVERNANCE.md).
 
-`feature`, `bug`, `refactor`, `docs`, `test`, `art`, `audio`, `narrative`, `build`, `compatibility`.
-
-## Area
-
-`core-client`, `core-server`, `protocol`, `mod-integration`, `ck`, `papyrus`, `ui`, `preview`, `trade`, `campaign`, `valen`, `qa`.
-
-## Workflow
-
-`needs-triage`, `needs-design`, `ready`, `in-progress`, `blocked`, `needs-review`, `needs-test`, `done`.
-
-## Difficulty
-
-`good-first-issue`, `mentored`, `advanced`, `specialist`.
-
-## Issue minimale
-
-- résultat observable ;
-- contexte ;
-- reproduction ou user flow ;
-- autorité affectée ;
-- dépendances ;
-- critères d’acceptation ;
-- logs/captures ;
-- Definition of Done applicable.
+Use the repository's current labels and forms rather than recreating historical
+labels such as `needs-triage`, `protocol`, `qa` or `compatibility`. Git history
+preserves the original proposal if it is needed for archaeology.

@@ -17,7 +17,7 @@ GitHub provides STRE's live operational view without becoming a second product s
 | GitHub Issue | One bug, feature, technical-debt item, documentation outcome, or other actionable unit |
 | Parent issue and sub-issues | Decomposition of a large system or epic |
 | Pull request | Implementation and review unit |
-| Git tag `vX.Y.Z` | Immutable released source version |
+| Git tag `stre-vX.Y.Z` | Immutable STRE released source version |
 | GitHub Release | Distributed player release and release assets |
 
 Markdown must not copy transient Project state, progress percentages, assignee state, or issue-by-issue completion. Link to the Project or Milestone instead. Update `STATUS.md` only when implementation or validation evidence changes; update `ROADMAP.md` only when product direction or a release gate changes.
@@ -31,6 +31,13 @@ Feature ideas begin in GitHub Discussions / Ideas. When an idea is accepted and 
 Blank community issues remain disabled. GitHub still presents the blank issue option to users with Write, Maintain or Admin access as a maintainers-only escape hatch for repository administration and planned work; maintainers then apply the same type, priority, area, origin and milestone rules.
 
 Large systems use a parent issue with independently reviewable sub-issues. A shared architectural family should be created only after evidence supports it; similar symptoms must not be forced into separate ad-hoc fixes or a speculative common cause.
+
+Use GitHub's native `blocked by` relationships for **completion dependencies**:
+the blocked issue cannot satisfy its acceptance criteria until the blocker is
+complete. Do not encode every collaboration or shared file as a dependency, do
+not duplicate parent/sub-issue decomposition as blocker edges, and do not create
+cycles for contracts that must be designed together. The maintained high-level
+graph lives in [`DEPENDENCY_MAP.md`](DEPENDENCY_MAP.md).
 
 ## Label taxonomy
 
@@ -65,6 +72,7 @@ Use the smallest useful set from:
 - `area: actors`
 - `area: mounts`
 - `area: alternate-start`
+- `area: campaign`
 - `area: classes`
 - `area: quests`
 - `area: valen`
@@ -116,6 +124,13 @@ Use built-in issue fields plus Milestone, labels and parent/sub-issue relationsh
 
 The `v1.0.0` Milestone contains work required by the release definition in `ROADMAP.md`. Earlier `0.x` milestones are deliberately provisional and should be created only when their scope is justified by an achievable integration/release slice.
 
+The permanent inherited-STR stabilization track uses evidence-first symptom
+issues. A release-specific parent may group those symptoms for triage and release
+disposition without changing their priority or claiming a shared root cause.
+When evidence supports a common authority, lifecycle, persistence,
+reconciliation, or presentation contract, create one systemic design/fix unit
+and retain the symptom issues for reproduction and acceptance evidence.
+
 An issue moves to `Done` only when its implementation/review unit has landed and its acceptance evidence is recorded. Released state is represented separately by an immutable version tag and GitHub Release.
 
 ## Pull requests
@@ -148,22 +163,28 @@ When at least one additional active maintainer or reviewer can provide meaningfu
 3. Pull requests implement and validate the work.
 4. `STATUS.md` records the resulting implemented/validated state.
 5. A release candidate is evaluated against the Roadmap gates and compatibility evidence.
-6. The accepted source is tagged `vX.Y.Z`.
+6. The accepted source is tagged `stre-vX.Y.Z`.
 7. A GitHub Release distributes the player artifact, release notes and required installation information.
 
 A tag is never repointed to a different source state. Advanced or nightly artifacts are not presented as immutable player releases.
 
-## One-time GitHub UI setup
+STRE uses the `stre-v` namespace because this fork retains upstream
+TiltedEvolution tags such as `v1.0.0`; an unqualified future STRE `v1.0.0` tag
+would collide with inherited history. Historical STRE tags
+`v0.1.0-alpha.1` and `v0.2.0-alpha.1` remain immutable legacy names. Product
+versions in `VERSION` and `CHANGELOG.md` do not include the Git namespace prefix.
 
-Repository maintainers must complete these settings outside versioned files:
+## Remote configuration baseline
 
-1. Create any missing labels in this taxonomy with the exact spelling above before relying on Issue Form auto-labelling. Migrate open issues, then retire inherited aliases such as `bug`, `documentation`, `enhancement` and `question` so they do not compete with the type taxonomy; retain existing exact matches such as `good first issue` and `help wanted`.
-2. Enable GitHub Discussions and create `Ideas` and `Q&A` categories so the Issue chooser and support links resolve.
-3. Create the `v1.0.0` Milestone and link its description to `ROADMAP.md`; avoid fabricated `0.x` scopes.
-4. Create the `STRE — Road to v1.0.0` Project, link it to the repository, configure `Triage`, `Backlog`, `Ready`, `In progress`, `Review`, `Testing`, `Blocked` and `Done`, and add the accepted v1 issues.
-5. Create one issue per observable STR stabilization symptom listed in `ROADMAP.md`. Use parent/sub-issues only after investigation supports a common architectural family, and assign final priority from reproduced campaign impact.
-6. Protect `main` using the current single-maintainer policy above: require pull requests and relevant successful checks, require resolved conversations, prohibit force-push/deletion, and prevent direct normal pushes with an appropriate exceptional-recovery bypass. Add mandatory independent approval when another active reviewer is available. Automatic merge is not required.
-7. Enable private vulnerability reporting and verify the private advisory link in `SECURITY.md`.
-8. Review repository roles, default branch, merge methods and issue/Discussion permissions against the project charter.
+The repository configuration must preserve the policy above:
 
-Changes to these settings should be reviewed like repository policy changes even when GitHub does not store them in the repository.
+1. Issue Forms use the exact canonical labels; inherited aliases do not compete with the type taxonomy.
+2. Discussions exposes `Ideas` and `Q&A`, and support/security routes point to their intended channels.
+3. The `v1.0.0` Milestone links its release gate to `ROADMAP.md`.
+4. `STRE — Road to v1.0.0` tracks accepted v1 issues with `Triage`, `Backlog`, `Ready`, `In progress`, `Review`, `Testing`, `Blocked` and `Done` states.
+5. Inherited STR symptoms remain actionable issues. A finite v1 stabilization parent may organize them without replacing the permanent upstream track.
+6. `main` retains the single-maintainer protection policy above, including required Windows/Linux checks, resolved conversations, and force-push/deletion protection.
+7. Private vulnerability reporting remains enabled and the private advisory link in `SECURITY.md` remains valid.
+8. Repository roles, default branch, merge methods and permissions remain consistent with the project charter.
+
+Changes to these settings are reviewed like repository policy changes even when GitHub does not store them in the repository. The GitHub Project owns live item state; this section defines the durable configuration contract rather than mirroring current counts.

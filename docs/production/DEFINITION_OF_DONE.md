@@ -1,6 +1,6 @@
 # Definition of Done
 
-> **Statut : Proposition à adopter**
+> **Statut : Politique de livraison active**
 
 ## Fonctionnalité STRE Core
 

@@ -107,6 +107,6 @@ A release candidate may be produced when the complete v1 product definition is f
 
 ### v1.0.0 release
 
-The `v1.0.0` release is cut only when the release-candidate evidence satisfies every product outcome above and no known `priority: P0` issue remains open. The accepted source receives the immutable `v1.0.0` tag; the GitHub Release distributes the player artifact and release notes.
+The `v1.0.0` release is cut only when the release-candidate evidence satisfies every product outcome above and no known `priority: P0` issue remains open. The accepted source receives the immutable `stre-v1.0.0` tag; the GitHub Release distributes the player artifact and release notes. The `stre-v` namespace distinguishes STRE releases from inherited upstream tags; mechanics are defined in [`RELEASE_PROCESS.md`](docs/production/RELEASE_PROCESS.md).
 
 The WBS describes structural decomposition without progress state: see [Work Breakdown Structure](docs/production/WORK_BREAKDOWN_STRUCTURE.md).

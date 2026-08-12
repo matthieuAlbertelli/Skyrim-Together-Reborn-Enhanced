@@ -3,6 +3,9 @@
 - **Statut :** Proposed / Accepted / Superseded / Rejected
 - **Date :**
 - **Décideurs :**
+- **Issue / discussion :**
+- **Supersedes :** None / ADR-XXXX
+- **Superseded by :** None / ADR-XXXX
 
 ## Contexte
 
@@ -19,3 +22,7 @@
 ## Plan de migration
 
 ## Validation
+
+## Notes d'implémentation
+
+<!-- Optional. Link to STATUS.md or issues; do not turn the ADR into a progress tracker. -->

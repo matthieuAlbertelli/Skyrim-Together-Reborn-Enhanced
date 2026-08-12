@@ -1,6 +1,7 @@
 # Carte du code audité
 
-> **Statut : État courant au 27 juillet 2026**
+> **Statut : Snapshot historique au 27 juillet 2026 — non canonique pour l'état
+> courant.** Voir [`docs/project/STATUS.md`](../../project/STATUS.md).
 
 ## Domaine Trading
 

@@ -4,8 +4,8 @@
 
 | Besoin | Document principal | Validation |
 |---|---|---|
-| État courant | [`CURRENT_STATE_AUDIT.md`](../audit/CURRENT_STATE_AUDIT.md) | Architecture + Produit |
-| Character Build M7 | [`M7_CK_CODE_INTEGRATION.md`](../features/alternate-start/M7_CK_CODE_INTEGRATION.md) | C++ + CK + QA |
+| État courant | [`STATUS.md`](../project/STATUS.md) | Architecture + Produit |
+| Character Build M7 (historique) | [`M7_CK_CODE_INTEGRATION_20260727.md`](../features/alternate-start/history/M7_CK_CODE_INTEGRATION_20260727.md) | C++ + CK + QA |
 | Records CK M7 | [`CK_RECORDS_M7_IMPLEMENTED.json`](../features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json) | CK + C++ |
 | Ingénierie Framework | [`MOD_INTEGRATION_FRAMEWORK.md`](../architecture/MOD_INTEGRATION_FRAMEWORK.md) | Architecture + STRE Core |
 | Bridge CK | [`CK_STRE_BRIDGE.md`](../architecture/CK_STRE_BRIDGE.md) | Mod Integration + CK |
