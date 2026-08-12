@@ -99,7 +99,7 @@ Do not create labels such as `status: todo`, `in progress`, or `done`. Workflow 
 
 ## Project and milestone flow
 
-The `STRE road to v1.0.0` Project is the live operational board and the sole owner of transient workflow state.
+The `STRE — Road to v1.0.0` Project is the live operational board and the sole owner of transient workflow state.
 
 | State | Meaning |
 |---|---|
@@ -160,7 +160,7 @@ Repository maintainers must complete these settings outside versioned files:
 1. Create any missing labels in this taxonomy with the exact spelling above before relying on Issue Form auto-labelling. Migrate open issues, then retire inherited aliases such as `bug`, `documentation`, `enhancement` and `question` so they do not compete with the type taxonomy; retain existing exact matches such as `good first issue` and `help wanted`.
 2. Enable GitHub Discussions and create `Ideas` and `Q&A` categories so the Issue chooser and support links resolve.
 3. Create the `v1.0.0` Milestone and link its description to `ROADMAP.md`; avoid fabricated `0.x` scopes.
-4. Create the `STRE road to v1.0.0` Project, link it to the repository, configure `Triage`, `Backlog`, `Ready`, `In progress`, `Review`, `Testing`, `Blocked` and `Done`, and add the accepted v1 issues.
+4. Create the `STRE — Road to v1.0.0` Project, link it to the repository, configure `Triage`, `Backlog`, `Ready`, `In progress`, `Review`, `Testing`, `Blocked` and `Done`, and add the accepted v1 issues.
 5. Create one issue per observable STR stabilization symptom listed in `ROADMAP.md`. Use parent/sub-issues only after investigation supports a common architectural family, and assign final priority from reproduced campaign impact.
 6. Protect `main` using the current single-maintainer policy above: require pull requests and relevant successful checks, require resolved conversations, prohibit force-push/deletion, and prevent direct normal pushes with an appropriate exceptional-recovery bypass. Add mandatory independent approval when another active reviewer is available. Automatic merge is not required.
 7. Enable private vulnerability reporting and verify the private advisory link in `SECURITY.md`.
