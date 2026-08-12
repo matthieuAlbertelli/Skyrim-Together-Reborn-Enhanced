@@ -75,8 +75,16 @@ Read [System overview](docs/architecture/SYSTEM_OVERVIEW.md), [Network protocol 
 - [Support](SUPPORT.md)
 - [Security policy](SECURITY.md)
 
-Detailed design documentation is currently written primarily in French. Code identifiers, commit messages and public issue titles should remain in English.
+English is the canonical language for STRE engineering and project documentation. Localized player-facing content may use its target language.
 
+## Contributing
+
+New to STRE?
+
+1. Read [Contributing](CONTRIBUTING.md).
+2. Review the [current project status](docs/project/STATUS.md).
+3. Choose your [onboarding path](docs/production/ONBOARDING_PATHS.md).
+4. Pick an actionable issue from the GitHub Project.
 ## Build and development
 
 See [Building STRE](docs/development/BUILDING.md), [Contributing](CONTRIBUTING.md) and [Code guidelines](CODE_GUIDELINES.md).
