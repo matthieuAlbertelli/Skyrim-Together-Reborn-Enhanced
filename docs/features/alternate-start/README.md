@@ -26,14 +26,16 @@ Ordre de priorité pour le comportement implémenté :
 2. `Code/skyrim_ui/src/app/data/character-loadouts.ts` — présentation/choix UI;
 3. `CK_RECORDS_M7_IMPLEMENTED.json` et `STRE_AlternateStart.esp` — records CK;
 4. `CK_IMPLEMENTATION.md` — comportement CK maintenu;
-5. `PRODUCT_SPEC.md` / `STATE_MODEL.md` — cible fonctionnelle;
-6. `KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx` — matrice de conception à poursuivre.
+5. `CLASS_ROSTER_V1.md` — roster produit canonique des 21 classes v1 et affectations majeures/mineures;
+6. `PRODUCT_SPEC.md` / `STATE_MODEL.md` — cible fonctionnelle;
+7. `KITS_EQUIPEMENT_PAR_COMPETENCE_V2.xlsx` — matrice de conception à poursuivre.
 
 Les documents sous `history/` sont des preuves/jalons datés et ne remplacent pas ces sources.
 
 ## Documents courants
 
 - `PRODUCT_SPEC.md` — cible produit;
+- `CLASS_ROSTER_V1.md` — roster canonique des 21 classes v1;
 - `SOLO_DESIGN.md` — fonctionnement sans serveur;
 - `STRE_ADAPTER_SPEC.md` — sémantique coopérative actuelle/cible;
 - `CK_IMPLEMENTATION.md` — records et flux CK;
