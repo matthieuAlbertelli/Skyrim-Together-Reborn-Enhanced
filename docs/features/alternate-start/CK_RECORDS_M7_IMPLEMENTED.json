@@ -303,6 +303,24 @@
         "duration": 30,
         "conditionCount": 0
       }
+    ],
+    "STRE_SPEL_Alteration_Exploration_AllyWaterbreathing": [
+      {
+        "effectEditorId": "STRE_MGEF_Alteration_Exploration_AllyWaterbreathing",
+        "magnitude": 0.0,
+        "area": 0,
+        "duration": 60,
+        "conditionCount": 0
+      }
+    ],
+    "STRE_SPEL_Alteration_Matter_AllyFeather": [
+      {
+        "effectEditorId": "STRE_MGEF_Alteration_Matter_AllyFeather",
+        "magnitude": 50.0,
+        "area": 0,
+        "duration": 60,
+        "conditionCount": 0
+      }
     ]
   }
 }
