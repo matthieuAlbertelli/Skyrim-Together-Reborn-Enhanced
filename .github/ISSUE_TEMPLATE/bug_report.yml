@@ -56,16 +56,16 @@ body:
     id: player_count
     attributes:
       label: Number of players
-      description: Include every player connected when the problem occurred; enter 1 for solo.
+      description: Optional. For multiplayer reports, the total number connected helps compare synchronization impact.
       placeholder: "2"
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: perspective
     attributes:
       label: Your perspective
-      description: Choose the role of the player who observed the problem.
+      description: Optional. For multiplayer reports, the observer's role helps diagnose differing player views.
       options:
         - Solo player
         - Host or party leader
@@ -73,7 +73,7 @@ body:
         - Observer or another player
         - Not sure
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: mods_installed
@@ -148,10 +148,10 @@ body:
     id: recovery
     attributes:
       label: Reload/reconnect result
-      description: State whether reloading a save, changing cells, reconnecting, or restarting the server resolves the problem.
+      description: Optional. If tested, state whether reloading, changing cells, reconnecting, or restarting the server resolves the problem.
       placeholder: Reconnecting restores the door state for both players; reloading the save does not.
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs
