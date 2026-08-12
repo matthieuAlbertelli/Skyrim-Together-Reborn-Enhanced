@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="docs/banner.png" alt="Skyrim Together Reborn Enhanced">
+  <img src="docs/assets/stre-banner-video.gif"
+       alt="Skyrim Together Reborn Enhanced"
+       width="100%">
 </p>
 
 # Skyrim Together Reborn Enhanced
