@@ -19,8 +19,9 @@ This directory is the canonical documentation portal for Skyrim Together Reborn 
 | Player installation | [`user/INSTALLATION.md`](user/INSTALLATION.md) |
 | Current implementation/validation status | [`project/STATUS.md`](project/STATUS.md) |
 | Product vision | [`project/VISION.md`](project/VISION.md) |
-| Scope/governance | [`project/PROJECT_CHARTER.md`](project/PROJECT_CHARTER.md) |
-| Priorities/progress | [`ROADMAP.md`](../ROADMAP.md) |
+| Project scope/governance | [`project/PROJECT_CHARTER.md`](project/PROJECT_CHARTER.md) |
+| Product direction/release objectives/gates | [`ROADMAP.md`](../ROADMAP.md) |
+| Live issue/work progress and GitHub operations | GitHub Project + [`production/GITHUB_GOVERNANCE.md`](production/GITHUB_GOVERNANCE.md) |
 | Release history | [`CHANGELOG.md`](../CHANGELOG.md) |
 | Cross-feature architecture | [`architecture/`](architecture/) |
 | Feature behavior/design | [`features/<feature>/`](features/) |
@@ -79,8 +80,9 @@ Each feature owns its product/technical/protocol/test details. Global architectu
 - [Decision register](production/DECISION_REGISTER.md)
 - [RACI](production/RACI.md)
 - [Onboarding paths](production/ONBOARDING_PATHS.md)
-- [Open roles](production/OPEN_ROLES.md)
+- [Contributor role profiles](production/OPEN_ROLES.md)
 - [Documentation maintenance](production/DOCUMENTATION_MAINTENANCE.md)
+- [GitHub governance](production/GITHUB_GOVERNANCE.md)
 
 ## Narrative, art and audio
 

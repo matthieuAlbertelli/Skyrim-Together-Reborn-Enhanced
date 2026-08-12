@@ -10,9 +10,10 @@ Read the documents relevant to your role:
 2. [Project charter](docs/project/PROJECT_CHARTER.md)
 3. [Current project status](docs/project/STATUS.md)
 4. [System overview](docs/architecture/SYSTEM_OVERVIEW.md)
-5. [Role-specific onboarding paths](docs/production/ONBOARDING_PATHS.md)
+5. [GitHub governance](docs/production/GITHUB_GOVERNANCE.md)
+6. [Role-specific onboarding paths](docs/production/ONBOARDING_PATHS.md)
 
-Open work packages are listed in [Open contributor missions](docs/production/OPEN_ROLES.md).
+[Contributor role profiles](docs/production/OPEN_ROLES.md) describe recurring skills and contribution areas. Live work belongs to the GitHub Project and actionable issues labelled `help wanted` or `good first issue`.
 
 ## Technical environment
 
@@ -29,22 +30,36 @@ Recommended branches:
 - `refactor/<topic>`
 - `docs/<topic>`
 - `test/<topic>`
+- `chore/<topic>`
 - `art/<topic>`
 - `audio/<topic>`
 
 Use Conventional Commit prefixes such as `feat:`, `fix:`, `refactor:`, `docs:`, `test:` and `chore:`.
 
+## Issues, ideas and priority
+
+- Report reproducible defects through the STRE bug Issue Form. Modded reports are welcome when the environment is described.
+- Start feature proposals in [GitHub Discussions / Ideas](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/discussions/categories/ideas); accepted ideas become actionable issues.
+- Do not assign your own P0–P3 priority or speculate about the owning subsystem. Maintainers apply the label taxonomy after triage.
+- Use parent issues and sub-issues to decompose large systems without turning a PR into an epic.
+
+See [GitHub governance](docs/production/GITHUB_GOVERNANCE.md) for artifact ownership, labels, Projects, Milestones and release flow. For setup help, see [SUPPORT.md](SUPPORT.md); report vulnerabilities through [SECURITY.md](SECURITY.md), never a public issue.
+
 ## Pull-request requirements
 
 A PR should state:
 
+- the related issue, or why a trivial documentation-only change does not need one;
 - the problem and expected user outcome;
+- the solution and important trade-offs;
 - the modified subsystems;
 - the authority for any new shared state;
 - protocol, compatibility and upstream implications;
 - tests added or the reason they are not applicable;
+- manual in-game validation across relevant host/client/observer roles;
 - diagnostic logs or traces introduced;
 - screenshots/video for UI, Creation Kit, art or animation work;
+- canonical documentation impact;
 - the ADR affected by structural decisions.
 
 ## C++ and networking

@@ -1,79 +1,59 @@
-# Missions ouvertes
+# Contributor Role Profiles
 
-> **Statut : Modèle d’appel à contribution mis à jour après M7**
+> **Status:** stable capability reference; not a live work or assignment tracker.
 
-Chaque mission doit être publiée avec un owner, un canal de contact, une licence de contribution et un jalon cible.
+This page describes recurring contribution profiles for STRE. It does not claim that a particular task is open, assigned or scheduled.
 
-## Ingénieur·e STRE — Build persistence and Campaign State
+- Product direction and release gates live in [`ROADMAP.md`](../../ROADMAP.md).
+- Implemented/validated state lives in [`docs/project/STATUS.md`](../project/STATUS.md).
+- Live opportunities belong to the GitHub Project and actionable issues labelled `help wanted` or `good first issue`, following [`GITHUB_GOVERNANCE.md`](GITHUB_GOVERNANCE.md).
 
-**Point de départ :** Character Build v5 valide déjà race, classe, inventaire, sorts et hashes pendant une session.
+Every actionable contribution should have an owner/reviewer, target Milestone when applicable, acceptance evidence and clear asset/licensing requirements.
 
-**Mission :** rendre ce build restaurable puis construire l’état de campagne minimal.
+## C++ network and persistence engineering
 
-**Travail attendu :**
+Typical scope includes versioned storage, character/campaign binding, canonical snapshots, reconnect/idempotency, migration, bounded serialization, actor/world lifecycle, shared-state authority and recovery tests.
 
-- stockage versionné ;
-- character binding ;
-- migration de BuildVersion ;
-- snapshot/reconnect idempotent ;
-- roster et phase ;
-- ready check ;
-- tests de redémarrage et mismatch de plugin/catalogue.
+Useful experience: C++20, EnTT, distributed systems, protocol design, persistence and multiplayer diagnostics.
 
-**Compétences :** C++20, architecture distribuée, EnTT, sérialisation, persistance et tests réseau.
+## C++ gameplay systems and native integration
 
-## Ingénieur·e C++ — Magic capability extensible
+Typical scope includes Skyrim-facing adapters, cooperative capability classification, target validation, stacking/friendly-fire rules, game-thread marshalling, native-plugin integration, item preview lifecycle and focused native tests.
 
-**Point de départ :** trois buffs STRE sont reconnus dans `MagicItem::IsBuffSpell()` par plugin + FormID local.
+Useful experience: reverse engineering, SKSE/CommonLibSSE-style APIs, engine-safe mutation, C++ testing and observability.
 
-**Mission :** remplacer l’allowlist par une classification robuste compatible avec davantage de sorts coopératifs.
+## Creation Kit and Papyrus development
 
-**Travail attendu :** keywords/capabilities, validation des cibles, stacking, friendly fire, logs et tests.
+Typical scope includes Alternate Start, quests/aliases/scenes, dialogue, inn and room content, navmesh, canonical records, solo fallback, Papyrus diagnostics and reproducible PSC-to-PEX delivery.
 
-## Ingénieur·e C++ — Preview Platform
+Useful experience: Skyrim Creation Kit, Papyrus, quest state, FormID-safe configuration and multiplayer-aware content authoring.
 
-**Point de départ :** Trading et Character Creation utilisent déjà la preview 3D.
+## Gameplay and class design
 
-**Mission :** ajouter leases multi-consommateurs, owner tokens, priorité, arbitrage de surface et tests du solver/lifecycle.
+Typical scope includes class identity, starting loadouts, cooperative perks/abilities, personal quests, balance, combination testing and alignment between the logical catalog, CK records, UI and authoritative application.
 
-## Moddeur·e Creation Kit — Alternate Start completion
+Useful experience: Skyrim gameplay systems, economy/balance, cooperative encounter design and structured acceptance criteria.
 
-**Point de départ :** cellule, quête, sièges, RaceMenu, tenues et sorts M7 existent.
+## Narrative, voice and character art
 
-**Mission :** terminer le vrai départ de campagne.
+Typical scope includes Messire Valen, the headquarters inn, class stories, dialogue, performance, character/environment art and coherent integration with groups of different sizes.
 
-**Travail attendu :**
+All contributions require explicit provenance, a compatible licence and review against the project narrative/art/audio direction.
 
-- interception du nouveau jeu ;
-- skip Helgen et reprise vanilla ;
-- Valen, aliases, scènes et dialogues ;
-- porte de sortie ;
-- navmesh et circulation ;
-- logs Papyrus ;
-- compilation PSC → PEX.
+## UI/UX design and implementation
 
-## Gameplay/CK Designer — Remaining starter kits
+Typical scope includes Trading, Character Creation, lobby/roster, class/room flows, recovery messaging, controller/keyboard navigation, accessibility and 16:9/21:9 validation across Angular, CEF and native bridges.
 
-**Mission :** matérialiser Invocation, Illusion, Restauration, Enchantement et les kits utilitaires restants sans objets farfelus ni abus économiques.
+Useful experience: Angular, typed event contracts, interaction design and in-game UI diagnostics.
 
-**Livrables :** records CK, catalogue, UI, preview, tests combinatoires et plan d’équilibrage.
+## Multiplayer QA
 
-## Narrative Designer — Valen et introduction
+Typical scope includes reproducible solo and multi-PC scenarios, host/client/observer comparison, clean and modded environment matrices, disconnect/reconnect/late-join coverage, logs, saves and regression evidence.
 
-**Mission :** écrire une introduction compatible avec 2 à 10 joueurs et l’ambiguïté sur le Dragonborn.
+Useful experience: disciplined reproduction, network reasoning, Skyrim mod profiles and concise issue reporting.
 
-## Comédien ou comédienne — Voix de Valen
+## Build, release and documentation
 
-**Volume initial :** prototype après verrouillage du script et intégration de la scène.
+Typical scope includes clean-machine prerequisites, CI, packaging, compatibility evidence, installation guidance, link/schema validation and keeping each mutable fact in its canonical document.
 
-## Character Artist — Valen
-
-**Mission :** créer un personnage distinct mais cohérent avec Skyrim, avec provenance/licence explicites.
-
-## UI/UX Designer
-
-**Mission :** uniformiser Trading, Character Creation, futur lobby, classes et ready check ; navigation manette et 16:9/21:9.
-
-## QA multijoueur
-
-**Mission :** construire et exécuter des scénarios reproductibles à 2 puis 4 joueurs : build matrix, targeted buffs, déconnexion/reconnexion, logs et comparaison des hashes.
+Useful experience: GitHub Actions, xmake, Windows/Linux build environments, technical writing and release verification.

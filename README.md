@@ -72,6 +72,8 @@ Read [System overview](docs/architecture/SYSTEM_OVERVIEW.md), [Network protocol 
 - [Compatibility matrix](docs/testing/COMPATIBILITY_MATRIX.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
 
 Detailed design documentation is currently written primarily in French. Code identifiers, commit messages and public issue titles should remain in English.
 
