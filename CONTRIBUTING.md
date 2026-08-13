@@ -15,6 +15,9 @@ Read the documents relevant to your role:
 
 [Contributor role profiles](docs/production/OPEN_ROLES.md) describe recurring skills and contribution areas. Live work belongs to the GitHub Project and actionable issues labelled `help wanted` or `good first issue`.
 
+Automated and AI contributors must also follow the repository-specific
+[agent guidance](AGENTS.md).
+
 ## Technical environment
 
 The repository uses C++20, xmake, Angular 16, EnTT and the Skyrim Together Reborn client/server architecture. Alternate Start additionally requires Creation Kit and Papyrus work.
