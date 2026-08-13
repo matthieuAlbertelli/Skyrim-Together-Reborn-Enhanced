@@ -18,3 +18,7 @@ narrative role revealed according to campaign rules.
 - explicit authority policies;
 - handling an absent Dragonborn remains to be defined;
 - secrets are filtered by the server.
+
+[ADR-0018](ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md) later
+resolves the v1 absence case through the same full-roster recovery lock and
+collective checkpoint restore used for any required roster member.

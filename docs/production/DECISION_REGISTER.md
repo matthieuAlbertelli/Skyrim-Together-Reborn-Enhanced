@@ -22,9 +22,10 @@ this register allocates numbers and serves only as an index.
 | ADR-0012 | CK scenes as projections of canonical state | Accepted | [ADR-0012](../architecture/ADRs/ADR-0012-ck-scenes-are-projections.md) |
 | ADR-0013 | Preview refactored into dedicated components | Implemented | [ADR-0013](../architecture/ADRs/ADR-0013-preview-refactor.md) |
 | ADR-0014 | Network identity independent of local FormIDs | Accepted | [ADR-0014](../architecture/ADRs/ADR-0014-world-entity-identity.md) |
-| ADR-0015 | Host Skyrim save as canonical checkpoint | Accepted | [ADR-0015](../architecture/ADRs/ADR-0015-host-save-checkpoint.md) |
+| ADR-0015 | Host Skyrim save as canonical checkpoint | Superseded | [ADR-0015](../architecture/ADRs/ADR-0015-host-save-checkpoint.md) |
 | ADR-0016 | Current state, journal, and transactional outbox | Accepted | [ADR-0016](../architecture/ADRs/ADR-0016-state-journal-outbox.md) |
 | ADR-0017 | WorldEntity authority with local Havok | Accepted | [ADR-0017](../architecture/ADRs/ADR-0017-world-entity-authority-local-havok.md) |
+| ADR-0018 | Fixed roster and coordinated Skyrim-save checkpoint recovery | Proposed | [ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md) |
 
 `Implemented` is retained for a few historical ADRs. For new decisions, status
 describes the decision (`Proposed`, `Accepted`, `Rejected`, or `Superseded`);
@@ -36,8 +37,7 @@ An open question is not yet an ADR. Create the ADR only when its decision forces
 and options are sufficiently established.
 
 - durable campaign and WorldEntity storage;
-- disconnected Dragonborn policy;
-- late join after departure;
+- post-v1 partial-roster progression, roster mutation, and catch-up;
 - temporal synchronization for selected scenes and dialogue;
 - officially supported Skyrim, CK, and SKSE versions;
 - final form of the third-party Papyrus bridge;

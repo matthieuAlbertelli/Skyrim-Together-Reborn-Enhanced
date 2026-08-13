@@ -89,7 +89,7 @@ P2 then grabs the same reference. The server must reuse the same `WorldEntityId`
 
 Pick up another placed reference. Adoption and consumption must be atomic from the server's perspective, with no duplicate inventory delta.
 
-### D4 — Late join
+### D4 — Late materialization
 
 Move a placed reference, let it settle, then connect the other client. It must bind its existing local reference without creating a duplicate.
 
@@ -145,7 +145,7 @@ Test a player-created enchantment, including effects and charge.
 - the observer disconnects and reconnects during the grab;
 - release occurs very quickly before lazy adoption finishes;
 - cell change after settlement;
-- late join after several drops;
+- late materialization after several drops;
 - alternating P1/P2 repetitions on the same reference.
 
 ## I — High-risk references
