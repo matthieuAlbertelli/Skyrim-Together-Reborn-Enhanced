@@ -135,8 +135,11 @@ The durable server campaign/checkpoint persistence substrate is implemented and
 automated-tested; the live fixed-roster campaign flow, coordinated native saves,
 and collective reconnect recovery remain unimplemented. `CharacterBuildService`
 continues to use session state until #28 supplies campaign identity/binding
-callers. No native `.ess` payload, save/load engine call, recovery UI, or
-WorldEntity persistence is part of this foundation.
+callers. Coordinated native-save/checkpoint work remains #55, and disconnect
+recovery lock plus collective restore/reload remains #56. No native `.ess`
+payload, save/load engine call, recovery UI, or WorldEntity persistence is part
+of this foundation; durable WorldEntity persistence remains separate future
+work rather than part of #55.
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 

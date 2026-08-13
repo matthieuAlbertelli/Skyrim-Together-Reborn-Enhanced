@@ -261,9 +261,12 @@ snapshot at the new revision. Clients then consume only events newer than that
 restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
 
 The persistence substrate is not yet called by a live fixed-roster campaign
-flow. Durable WorldEntity coverage, network checkpoint coordination, native-save
-creation/fingerprinting, disconnect recovery lock, collective client reload, and
-recovery UI remain separate work.
+flow. Issue #28 owns the live campaign/roster/readiness/phase callers. Issue #55
+owns coordinated native-save creation, identity/fingerprinting,
+acknowledgement, and `CampaignCheckpoint` coordination. Issue #56 owns
+disconnect recovery lock and collective checkpoint restore/reload gameplay.
+Durable WorldEntity persistence remains separate future work rather than part
+of #55.
 
 The standalone solo Alternate Start path remains independent of this multiplayer
 full-roster rule and continues to restore from its local Skyrim save.
