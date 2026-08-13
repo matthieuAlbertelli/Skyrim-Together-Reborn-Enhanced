@@ -26,6 +26,7 @@ this register allocates numbers and serves only as an index.
 | ADR-0016 | Current state, journal, and transactional outbox | Accepted | [ADR-0016](../architecture/ADRs/ADR-0016-state-journal-outbox.md) |
 | ADR-0017 | WorldEntity authority with local Havok | Accepted | [ADR-0017](../architecture/ADRs/ADR-0017-world-entity-authority-local-havok.md) |
 | ADR-0018 | Fixed roster and coordinated Skyrim-save checkpoint recovery | Accepted | [ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md) |
+| ADR-0019 | SQLite-backed durable server persistence | Accepted | [ADR-0019](../architecture/ADRs/ADR-0019-sqlite-durable-server-persistence.md) |
 
 `Implemented` is retained for a few historical ADRs. For new decisions, status
 describes the decision (`Proposed`, `Accepted`, `Rejected`, or `Superseded`);
@@ -36,7 +37,7 @@ progress belongs in `STATUS.md` and GitHub issues.
 An open question is not yet an ADR. Create the ADR only when its decision forces
 and options are sufficiently established.
 
-- durable campaign and WorldEntity storage;
+- durable WorldEntity storage;
 - post-v1 partial-roster progression, roster mutation, and catch-up;
 - temporal synchronization for selected scenes and dialogue;
 - officially supported Skyrim, CK, and SKSE versions;

@@ -5,6 +5,10 @@
 #include <Messages/Message.h>
 #include <World.h>
 
+#include <CampaignStore.h>
+
+#include <memory>
+
 using TiltedPhoques::ConnectionId_t;
 using TiltedPhoques::Server;
 using TiltedPhoques::String;
@@ -42,7 +46,7 @@ struct GameServer final : Server
 
     static GameServer* Get() noexcept;
 
-    void Initialize();
+    bool Initialize();
     void Kill();
 
     bool CheckMoPo();
@@ -83,6 +87,10 @@ struct GameServer final : Server
     Uptime GetUptime() const noexcept;
 
     World& GetWorld() const noexcept { return *m_pWorld; }
+    STRE::Campaign::ICampaignStore& GetCampaignStore() const noexcept
+    {
+        return *m_pCampaignStore;
+    }
 
     [[nodiscard]] const TiltedPhoques::Set<ConnectionId_t>& GetAdminSessions() const noexcept { return m_adminSessions; }
 
@@ -122,6 +130,7 @@ private:
     TiltedPhoques::Set<ConnectionId_t> m_adminSessions;
     TiltedPhoques::Map<ConnectionId_t, entt::entity> m_connectionToEntity;
 
+    std::unique_ptr<STRE::Campaign::ICampaignStore> m_pCampaignStore;
     UniquePtr<World> m_pWorld;
 
     bool m_requestStop;

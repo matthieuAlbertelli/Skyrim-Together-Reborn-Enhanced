@@ -28,7 +28,9 @@
 
 ## Persistence and checkpoints
 
-- versioned server storage schema and migrations for campaign/checkpoint state;
+- human review and acceptance of the SQLite storage decision proposed by
+  [ADR-0019](../../architecture/ADRs/ADR-0019-sqlite-durable-server-persistence.md);
+- migration policy between future campaign persistence schema/codec versions;
 - checkpoint cadence, triggers, and safe points;
 - interaction with autosaves, manual saves, combat, dialogue, and cell transitions;
 - exact native-save identity/fingerprint and dedicated-save management;

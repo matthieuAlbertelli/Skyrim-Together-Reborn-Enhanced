@@ -22,8 +22,11 @@
 #include <console/ConsoleRegistry.h>
 #include <resources/ResourceCollection.h>
 
+#include <sqlite/SqliteCampaignStore.h>
+
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -38,6 +41,11 @@ Console::Setting bPremiumTickrate{"GameServer:bPremiumMode", "Use premium tick r
 Console::StringSetting sServerName{"GameServer:sServerName", "Name that shows up in the server list", "Dedicated Together Server"};
 Console::StringSetting sAdminPassword{"GameServer:sAdminPassword", "Admin authentication password", ""};
 Console::StringSetting sPassword{"GameServer:sPassword", "Server password", ""};
+Console::StringSetting sStateDatabasePath{
+    "STRE:sStateDatabasePath",
+    "Locked path to the durable STRE server-state database",
+    "state/stre-server.sqlite3",
+    Console::SettingsFlags::kLocked};
 
 // Gameplay
 // TODO: to make this easier for users, use game names for difficulty instead of int
@@ -209,6 +217,24 @@ GameServer::GameServer(Console::ConsoleRegistry& aConsole) noexcept
     BASE_ASSERT(s_pInstance == nullptr, "Server instance already exists?");
     s_pInstance = this;
 
+    STRE::Campaign::StoreResult campaignStoreResult;
+    m_pCampaignStore = STRE::Campaign::SqliteCampaignStore::Open(
+        std::filesystem::path(sStateDatabasePath.value()),
+        campaignStoreResult);
+    if (!m_pCampaignStore)
+    {
+        spdlog::critical(
+            "[STRE][CampaignPersistence] Server startup refused path={} reason={}",
+            sStateDatabasePath.value(),
+            campaignStoreResult.Message);
+        m_requestStop = true;
+        return;
+    }
+    spdlog::info(
+        "[STRE][CampaignPersistence] Durable campaign store ready path={} schema={}",
+        sStateDatabasePath.value(),
+        STRE::Campaign::kCampaignDatabaseSchemaVersion);
+
     auto port = uServerPort.value_as<uint16_t>();
     while (!Host(port, GetUserTickRate()))
     {
@@ -257,16 +283,20 @@ GameServer* GameServer::Get() noexcept
     return s_pInstance;
 }
 
-void GameServer::Initialize()
+bool GameServer::Initialize()
 {
+    if (!m_pCampaignStore || !m_pWorld)
+        return false;
+
     if (!CheckMoPo())
-        return;
+        return false;
 
     if (bSyncPlayerCalendar)
         spdlog::warn(kCalendarSyncWarning);
 
     BindServerCommands();
     m_pWorld->GetScriptService().Initialize(*m_pResources);
+    return true;
 }
 
 void GameServer::Kill()

@@ -1,6 +1,6 @@
 # Campaign State Model
 
-> **Status:** proposed specification; not implemented.
+> **Status:** campaign runtime proposed; durable persistence substrate implemented and automated-tested.
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
@@ -244,10 +244,29 @@ local freeze/pause presentation is delegated to implementation audit.
 ## Persistence
 
 Campaign state, checkpoint metadata, roster/bindings, snapshots, revisions, and
-commit state require atomic, versioned, recoverable server persistence. Storage
-schema, migration mechanics, and durable WorldEntity coverage remain open design
-work. [ADR-0016](ADRs/ADR-0016-state-journal-outbox.md) continues to govern
-current state, journal, and transactional outbox semantics.
+commit state use the persistence port and proposed SQLite adapter described by
+[ADR-0019](ADRs/ADR-0019-sqlite-durable-server-persistence.md). The implemented
+substrate provides a versioned multi-campaign schema, explicit transactional
+migration, normalized current state, immutable snapshots, optimistic revisions,
+an append-only validated-mutation journal, and a transactional outbox. Its
+default locked server path is `state/stre-server.sqlite3`.
+
+Checkpoint rollback never rewinds the durable mutation sequence. A checkpoint
+permanently retains its exact `SourceRevision`. Restoring it is a new validated
+`RestoreCheckpoint` mutation at a revision greater than every mutation already
+recorded for that campaign. The transaction materializes the exact snapshot into
+current state, records the source checkpoint/revision and new restore revision in
+the journal, supersedes obsolete pending outbox work, and emits a canonical full
+snapshot at the new revision. Clients then consume only events newer than that
+restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
+
+The persistence substrate is not yet called by a live fixed-roster campaign
+flow. Issue #28 owns the live campaign/roster/readiness/phase callers. Issue #55
+owns coordinated native-save creation, identity/fingerprinting,
+acknowledgement, and `CampaignCheckpoint` coordination. Issue #56 owns
+disconnect recovery lock and collective checkpoint restore/reload gameplay.
+Durable WorldEntity persistence remains separate future work rather than part
+of #55.
 
 The standalone solo Alternate Start path remains independent of this multiplayer
 full-roster rule and continues to restore from its local Skyrim save.

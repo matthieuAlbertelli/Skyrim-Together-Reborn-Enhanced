@@ -89,8 +89,10 @@ do not seal the roster. After seal, the server rejects extra players, slot
 replacement, and any identity or binding mismatch. The complete expected roster
 is required before campaign runtime can be `ACTIVE`.
 
-Build persistence and campaign recovery are not implemented. Future snapshots
-remain useful for idempotent hydration and retransmission, but reconnect does not
+The durable campaign/checkpoint persistence substrate is implemented and
+automated-tested, but this live adapter is not yet wired to campaign identity,
+checkpoint coordination, or restore. Snapshots remain useful for idempotent
+hydration and retransmission, but reconnect does not
 catch one player up while the campaign continues. A required disconnect locks the
 campaign. Once the exact roster returns, the server selects the last committed
 `CampaignCheckpoint`; every client loads its slot's matching native save, the

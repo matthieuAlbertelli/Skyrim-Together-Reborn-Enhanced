@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 12, 2026.
+> **Last updated:** August 13, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -107,9 +107,43 @@ The current catalog uses `BuildVersion = 5`.
 
 - complete new-game interception and Helgen bypass remain unfinished;
 - Valen and the narrative departure are not finalized;
-- build persistence and reconnection are not durable;
+- the live Character Build service is not yet bound to durable campaign identity
+  or reconnect restoration;
 - several schools and kits remain to be materialized;
 - skill, perk, and attribute-history reset remains incomplete.
+
+### Durable campaign persistence foundation
+
+- a dedicated campaign persistence port and SQLite adapter are implemented;
+- the locked server setting defaults to `state/stre-server.sqlite3`;
+- the server opens, migrates, and integrity-checks the store before constructing
+  its `World`, and persistence startup failure fails closed;
+- schema version 1 stores multiple campaign identities, roster slots,
+  `PlayerId`/`CharacterBinding` records, versioned Character Build state,
+  audience-tagged adapter state, immutable snapshots, Candidate/Committed
+  checkpoint metadata, per-slot native-save metadata, an append-only journal,
+  and a transactional outbox;
+- optimistic revisions and `MutationId` idempotency protect atomic current-state
+  + journal + outbox mutations;
+- checkpoint restore materializes the exact immutable snapshot at a new
+  monotonic revision and supersedes obsolete pending outbox work;
+- file-backed automated tests cover restart, migration, partial-write rollback,
+  multiple campaigns, identity mismatch, checkpoint lifecycle, exact restore,
+  malformed persisted data, audience filtering, and prepared data statements;
+- runtime validation created and reopened a real schema-v1 database across a
+  clean server stop/restart, accepted a real Skyrim client connection, and
+  confirmed fail-closed startup for an intentionally incompatible schema
+  version before normal startup resumed with schema version 1.
+
+The durable server campaign/checkpoint persistence substrate is implemented and
+automated-tested and runtime-validated; the live fixed-roster campaign flow,
+coordinated native saves, and collective reconnect recovery remain unimplemented. `CharacterBuildService`
+continues to use session state until #28 supplies campaign identity/binding
+callers. Coordinated native-save/checkpoint work remains #55, and disconnect
+recovery lock plus collective restore/reload remains #56. No native `.ess`
+payload, save/load engine call, recovery UI, or WorldEntity persistence is part
+of this foundation; durable WorldEntity persistence remains separate future
+work rather than part of #55.
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 
