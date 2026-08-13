@@ -17,6 +17,7 @@
 #include <Services/OverlayService.h>
 #include <Services/ImguiService.h>
 #include <Services/DiscordService.h>
+#include <Services/CampaignRuntimeGateService.h>
 
 #include <ScriptExtender.h>
 #include <NvidiaUtil.h>
@@ -93,7 +94,9 @@ void TiltedOnlineApp::Update()
 
     *bAlwaysActive = 1;
 
-    World::Get().Update();
+    World& world = World::Get();
+    world.ctx().at<CampaignRuntimeGateService>().BeforeWorldUpdate();
+    world.Update();
 }
 
 bool TiltedOnlineApp::Attach()

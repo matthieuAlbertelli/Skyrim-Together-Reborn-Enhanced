@@ -5,6 +5,7 @@ struct MenuControls
     static MenuControls* GetInstance();
 
     void SetToggle(bool);
+    [[nodiscard]] bool GetToggle() const noexcept { return canBeOpened; }
 
 private:
     char pad_0000[128]; // 0x0000

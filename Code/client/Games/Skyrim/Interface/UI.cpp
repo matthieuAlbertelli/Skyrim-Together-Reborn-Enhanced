@@ -1,5 +1,6 @@
 #include <Games/Skyrim/Interface/IMenu.h>
 #include <Games/Skyrim/Interface/UI.h>
+#include <Games/Skyrim/Interface/Menus/CampaignGateMenu.h>
 
 #include <Misc/BSFixedString.h>
 #include <TiltedOnlinePCH.h>
@@ -484,6 +485,11 @@ static void* UI_AddToActiveQueue_Hook(UI* apSelf, IMenu* apMenu, void* apFoundIt
 {
     // If the menu is empty we let the real function handle it.
     if (!apMenu || !World::Get().GetTransport().IsConnected() || stubs::g_IsSoulsREActive)
+        return UI_AddToActiveQueue(apSelf, apMenu, apFoundItem);
+
+    // This menu is a native safety barrier, not a multiplayer convenience
+    // menu. It must retain kPausesGame even while connected.
+    if (CampaignGateMenu::IsInstance(apMenu))
         return UI_AddToActiveQueue(apSelf, apMenu, apFoundItem);
 
     // NOTE(Force): could also compare by RTTI later on...

@@ -1,6 +1,7 @@
 #include <TiltedOnlinePCH.h>
 
 #include <Services/InputService.h>
+#include <Services/CampaignRuntimeGateService.h>
 #include <Services/OverlayService.h>
 #include <Services/UiSurfaceService.h>
 
@@ -279,6 +280,20 @@ UINT GetRealACP()
 
 LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+#if (!IS_MASTER)
+    if (uMsg == WM_KEYUP)
+    {
+        if (CampaignRuntimeGateService* const pGate =
+                CampaignRuntimeGateService::TryGet())
+        {
+            if (wParam == VK_F9)
+                pGate->ArmNextLoadForDevelopment();
+            else if (wParam == VK_F10)
+                pGate->ReleaseForDevelopment();
+        }
+    }
+#endif
+
     if (!s_pUiSurface)
         return 0;
 
