@@ -38,7 +38,9 @@ Current invariants:
 - local plugin/FormID resolution does not use a load-order prefix;
 - a build becomes `Applied` only after both hashes are validated;
 - once applied, the build cannot be replaced during the session;
-- no durable persistence currently exists.
+- a durable campaign/checkpoint persistence substrate exists, but the current
+  session Character Build service is not yet bound to a live campaign identity
+  or restored from that store.
 
 ## Target campaign state
 
