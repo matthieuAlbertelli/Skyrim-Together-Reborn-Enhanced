@@ -24,6 +24,7 @@ local function build_server()
         "ESLoader",
         "BaseLib",
         "AdminProtocol",
+        "CampaignPersistence",
         "TiltedConnect"
     )
     add_packages(

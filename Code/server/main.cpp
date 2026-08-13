@@ -37,8 +37,7 @@ private:
 
 bool GameServerInstance::Initialize()
 {
-    m_gameServer.Initialize();
-    return true;
+    return m_gameServer.Initialize();
 }
 
 void GameServerInstance::Shutdown()
