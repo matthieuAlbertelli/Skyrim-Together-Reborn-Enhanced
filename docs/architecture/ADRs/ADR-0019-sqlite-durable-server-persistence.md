@@ -1,6 +1,6 @@
 # ADR-0019 — SQLite-backed durable server persistence
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-13
 - **Decision makers:** STRE maintainers
 - **Issue / discussion:** [#27 — Persist durable campaign state and CampaignCheckpoint metadata](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/27)
@@ -225,10 +225,20 @@ rollback, reopen, and incompatible-newer-schema tests.
   tests;
 - Windows and Linux server/test builds.
 
+## Validation evidence
+
+Human runtime/server validation completed successfully on August 13, 2026. A
+real dedicated server created `stre-server.sqlite3` with schema version 1 and
+the expected schema-v1 tables, accepted a real Skyrim client connection, shut
+down cleanly, and reopened the same physical database after restart. The Vortex
+staging and deployed Skyrim paths were confirmed as NTFS hardlinks to that same
+file. Setting `schema_version` to unsupported value 999 correctly refused server
+startup; restoring version 1 allowed normal startup again. Business tables were
+empty before #28/#55 wiring, as designed.
+
 ## Implementation notes
 
-The proposed adapter and automated persistence tests are tracked by #27. Live
+The accepted adapter and automated persistence tests are tracked by #27. Live
 fixed-roster creation/phase flow remains #28, coordinated native-save creation
 and acknowledgement remains #55, and disconnect/reload recovery gameplay remains
-#56. Human architecture review must accept this ADR before its decision becomes
-normative.
+#56.

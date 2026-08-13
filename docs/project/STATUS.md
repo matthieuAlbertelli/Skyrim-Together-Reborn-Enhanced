@@ -129,11 +129,15 @@ The current catalog uses `BuildVersion = 5`.
   monotonic revision and supersedes obsolete pending outbox work;
 - file-backed automated tests cover restart, migration, partial-write rollback,
   multiple campaigns, identity mismatch, checkpoint lifecycle, exact restore,
-  malformed persisted data, audience filtering, and prepared data statements.
+  malformed persisted data, audience filtering, and prepared data statements;
+- runtime validation created and reopened a real schema-v1 database across a
+  clean server stop/restart, accepted a real Skyrim client connection, and
+  confirmed fail-closed startup for an intentionally incompatible schema
+  version before normal startup resumed with schema version 1.
 
 The durable server campaign/checkpoint persistence substrate is implemented and
-automated-tested; the live fixed-roster campaign flow, coordinated native saves,
-and collective reconnect recovery remain unimplemented. `CharacterBuildService`
+automated-tested and runtime-validated; the live fixed-roster campaign flow,
+coordinated native saves, and collective reconnect recovery remain unimplemented. `CharacterBuildService`
 continues to use session state until #28 supplies campaign identity/binding
 callers. Coordinated native-save/checkpoint work remains #55, and disconnect
 recovery lock plus collective restore/reload remains #56. No native `.ess`
