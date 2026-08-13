@@ -1,4 +1,4 @@
-#include <CampaignCodec.h>
+#include <codec/CampaignCodec.h>
 
 #include <bit>
 #include <cstring>
@@ -303,7 +303,6 @@ bool WriteCharacterBuildBody(Writer& aWriter, const CharacterBuildState& acState
         aWriter.Bool(acState.Applied) &&
         aWriter.Scalar(acState.UpdatedRevision);
 }
-
 bool ReadCharacterBuildBody(Reader& aReader, CharacterBuildState& aState)
 {
     std::uint32_t count{};

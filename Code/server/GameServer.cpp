@@ -22,7 +22,7 @@
 #include <console/ConsoleRegistry.h>
 #include <resources/ResourceCollection.h>
 
-#include <SqliteCampaignStore.h>
+#include <sqlite/SqliteCampaignStore.h>
 
 #include <algorithm>
 #include <cctype>

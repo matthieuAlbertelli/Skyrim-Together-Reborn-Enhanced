@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CampaignStore.h>
+#include <CampaignTypes.h>
 
 namespace STRE::Campaign::Codec
 {
