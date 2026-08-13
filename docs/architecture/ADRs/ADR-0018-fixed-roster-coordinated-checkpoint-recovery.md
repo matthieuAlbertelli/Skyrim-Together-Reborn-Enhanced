@@ -177,6 +177,8 @@ model. That evolution is explicitly outside STRE v1.
 
 Checkpoint cadence, triggers, safe points, autosave/manual-save interaction,
 combat/dialogue/cell-transition behavior, exact save fingerprint, engine-safe
-freeze mechanism, save-failure UX, and storage schema/migrations remain
-implementation questions. No numeric protocol opcode or checkpoint cadence is
-allocated by this ADR.
+freeze mechanism, and save-failure UX remain implementation questions. SQLite
+storage schema and migration behavior are proposed separately by
+[ADR-0019](ADR-0019-sqlite-durable-server-persistence.md); this accepted ADR does
+not pre-accept that proposal. No numeric protocol opcode or checkpoint cadence is
+allocated here.
