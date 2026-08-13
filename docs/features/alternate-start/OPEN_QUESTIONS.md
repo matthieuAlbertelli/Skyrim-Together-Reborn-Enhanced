@@ -13,12 +13,24 @@
 - outfits for the same skill differ visually, not through unrelated bonuses;
 - Enchanting receives a visual outfit and disenchantable magic items;
 - ally buffs use `Target Actor`, not `Contact`.
+- the STRE server, not the host/Session Manager or a host save, is persistent
+  authority for shared campaign state;
+- a multiplayer roster is fixed and immutable after campaign start/seal;
+- campaign late join and player replacement are not supported in v1;
+- campaign progression requires the complete sealed roster;
+- a required disconnect suspends progression and collective rollback restores
+  every member from the same committed `CampaignCheckpoint`;
+- every roster member retains a native Skyrim `.ess` for local
+  Skyrim/Papyrus/quest runtime restoration; it is not shared-state authority.
 
-## Persistence and reconnection
+## Persistence and checkpoints
 
-- server save format for the build;
-- relationship between the Skyrim save and STRE snapshot;
-- restoration before or after character spawn;
+- versioned server storage schema and migrations for campaign/checkpoint state;
+- checkpoint cadence, triggers, and safe points;
+- interaction with autosaves, manual saves, combat, dialogue, and cell transitions;
+- exact native-save identity/fingerprint and dedicated-save management;
+- failure and retry policy when one player cannot save or load;
+- restoration ordering around character spawn;
 - migration between `BuildVersion` values;
 - policy when the plugin or catalog changes.
 
@@ -47,19 +59,25 @@
 
 ## Campaign
 
-- roster and character-binding model;
-- ready check;
-- late-join cutoff;
-- absent or disconnected Dragonborn;
+- exact ready-check and roster-seal/start transition;
 - duplicate classes;
 - changing or respeccing before and after departure.
+
+## Recovery presentation
+
+- engine-safe pause/freeze mechanism during recovery lock;
+- UI treatment for missing members, checkpoint progress, retry, and unavailable
+  expected saves;
+- diagnostics and privacy boundaries for roster/recovery information;
+- post-v1 partial-roster progression, roster mutation, and catch-up, if a future
+  persistence model can support them safely.
 
 ## Dialogue and Valen
 
 - identical local scene or time synchronization;
 - local responses, voting, or leader choice;
 - group skip;
-- summary for late join;
+- checkpoint-safe interruption and collective scene restore;
 - limits at 2, 4, and 10 players.
 
 ## Cooperative spells

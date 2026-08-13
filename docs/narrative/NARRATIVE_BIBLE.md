@@ -53,16 +53,18 @@ The group chooses roles and classes, then prepares. Valen presents this compleme
 
 The company leaves the inn. The Dragonborn reveal is deferred.
 
-## Late join
+## Campaign roster and interruption
 
-Before departure, a late player receives:
+The multiplayer campaign roster exists before the campaign starts. Once sealed,
+all members participate in canonical progression; no new player or replacement
+character enters the campaign in v1.
 
-- a contextualized arrival;
-- a brief summary;
-- the necessary choices;
-- the current canonical phase.
-
-After departure, the MVP should reject late join instead of producing narrative inconsistency.
+A required-member disconnect interrupts progression, including the introduction
+scene. The scene resumes only through collective restoration of the last committed
+campaign checkpoint, not through a catch-up summary for an arriving or returning
+player. Network and runtime details are governed by
+[ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
+and the [Campaign State model](../architecture/CAMPAIGN_STATE.md).
 
 ## Group dialogue
 

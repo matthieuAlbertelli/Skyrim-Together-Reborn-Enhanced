@@ -48,7 +48,7 @@ Useful experience: Angular, typed event contracts, interaction design and in-gam
 
 ## Multiplayer QA
 
-Typical scope includes reproducible solo and multi-PC scenarios, host/client/observer comparison, clean and modded environment matrices, disconnect/reconnect/late-join coverage, logs, saves and regression evidence.
+Typical scope includes reproducible solo and multi-PC scenarios, host/client/observer comparison, clean and modded environment matrices, sealed-roster rejection, disconnect/collective-restore and WorldEntity late-materialization coverage, logs, saves and regression evidence.
 
 Useful experience: disciplined reproduction, network reasoning, Skyrim mod profiles and concise issue reporting.
 

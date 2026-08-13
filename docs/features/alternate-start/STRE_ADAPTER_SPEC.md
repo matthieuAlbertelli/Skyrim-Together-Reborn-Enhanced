@@ -33,9 +33,11 @@ The client sends only logical identifiers. The server constructs the canonical b
 
 | Capability | Authority | Canonical state |
 |---|---|---|
-| `campaign.bootstrap/1` | server | campaign, roster, manager |
+| `campaign.bootstrap/1` | server | campaign, roster, roster seal, manager |
 | `character.binding/1` | server | character authorized for each player |
 | `campaign.phase/1` | server | phase and version |
+| `campaign.runtime-state/1` | server | full-roster eligibility, checkpointing, recovery lock, restore |
+| `campaign.checkpoint/1` | server | candidate/committed checkpoint, revision, expected slot/save metadata |
 | `group.ready-check/1` | server | ready state for each player |
 | `narrative.introduction/1` | server | started/completed |
 | `campaign.departure/1` | server | authorization |
@@ -44,12 +46,17 @@ The client sends only logical identifiers. The server constructs the canonical b
 ## Future intents
 
 - `CreateCampaign`
-- `JoinCampaign`
+- `JoinCampaign` (before roster seal only)
 - `BindCharacter`
+- `SealRoster`
 - `SetReady`
 - `RequestIntroductionStart`
 - `ReportLocalSceneCompleted`
 - `RequestDeparture`
+- `RequestCheckpoint`
+- `AcknowledgeCheckpointSave`
+- `RestoreCheckpoint`
+- `AcknowledgeCheckpointRestore`
 
 Class and build selection is already covered by the M7-specific protocol; migration to a generic envelope is not required before the generic runtime is stable.
 
@@ -68,11 +75,28 @@ Future:
 - teleport to the assigned marker;
 - start and stop the local scene;
 - enable the door;
-- restore the phase after reconnecting.
+- present safe recovery state when the runtime is locked;
+- save and load the dedicated native Skyrim save selected for a checkpoint;
+- restore the phase only as part of collective checkpoint recovery.
 
-## Reconnection
+## Roster and reconnection
 
-Build reconnection is not implemented. A future snapshot must contain the phase, roster, binding, build, classes, ready states, and narrative flags, then apply them without replaying already-consumed events.
+Campaign creation/join and character binding are accepted only before the roster
+seal. After seal, the server rejects extra players, slot replacement, and any
+identity or binding mismatch. The complete expected roster is required before
+campaign runtime can be `ACTIVE`.
+
+Build persistence and campaign recovery are not implemented. Future snapshots
+remain useful for idempotent hydration and retransmission, but reconnect does not
+catch one player up while the campaign continues. A required disconnect locks the
+campaign. Once the exact roster returns, the server selects the last committed
+`CampaignCheckpoint`; every client loads its slot's matching native save, the
+server restores the matching revision, and all participants acknowledge before
+the runtime returns to `ACTIVE`.
+
+This specification does not allocate protocol opcodes. See
+[ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
+and [Campaign State](../../architecture/CAMPAIGN_STATE.md).
 
 ## Failure behavior
 
@@ -81,3 +105,8 @@ Build reconnection is not implemented. A future snapshot must contain the phase,
 - incorrect inventory or spell hash: explicit rejection;
 - offline single-player mode: local fallback;
 - incompatible future campaign adapter: reject entry instead of silently producing hybrid state.
+- post-seal join, extra player, replacement player, or wrong binding: reject without
+  mutating the roster;
+- missing full roster: keep campaign progression inactive;
+- wrong, stale, or unavailable checkpoint save: remain in recovery and report an
+  actionable failure.

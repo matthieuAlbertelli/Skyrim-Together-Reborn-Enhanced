@@ -87,9 +87,41 @@ The three spell names above are translated descriptions of currently localized F
 - Valen and scene;
 - exit and vanilla resumption;
 - save/load at every phase;
-- reconnect and build restoration;
-- ready check, late join, and Campaign State;
+- sealed roster, coordinated checkpoints, disconnect recovery, and collective
+  build/campaign restoration;
 - 4 and 10 players.
+
+## Future campaign continuity matrix
+
+Roster and activation:
+
+- extra player after roster seal is rejected;
+- replacement player and wrong `CharacterBinding` are rejected;
+- activation with one missing roster member is rejected;
+- full roster activates only with every expected slot/binding.
+
+Disconnect boundaries:
+
+- disconnect during open world;
+- disconnect during combat;
+- disconnect during dialogue or a scene;
+- disconnect around a quest-stage change;
+- disconnect during checkpoint creation;
+- no persistent campaign mutation or new checkpoint is accepted while in
+  `RECOVERY_LOCK`.
+
+Checkpoint failure and restore:
+
+- one player save failure;
+- client crash during a candidate checkpoint;
+- server interruption before and after the checkpoint commit boundary;
+- a failed candidate leaves the previous committed checkpoint valid;
+- all clients load the exact checkpoint and per-slot save selected by the server;
+- wrong, stale, missing, or mismatched save metadata is rejected;
+- restored server revision matches the selected checkpoint;
+- resume occurs only after all roster members acknowledge the same restore;
+- retry and duplicate/delayed acknowledgements are idempotent;
+- no duplicate build grants occur after collective restore.
 
 ## Log collection
 

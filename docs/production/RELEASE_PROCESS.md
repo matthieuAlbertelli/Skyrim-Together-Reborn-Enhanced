@@ -97,7 +97,9 @@ Before tagging:
 2. Required PR checks are green on the accepted source.
 3. Applicable native, serialization, UI, audit and clean-install checks pass.
 4. Applicable solo and multiplayer matrices cover host/client/observer,
-   save/load, reconnect, late join and failure/recovery behavior.
+   save/load, post-seal join/replacement rejection, disconnect barriers,
+   coordinated checkpoints, collective restore and failure/recovery behavior;
+   WorldEntity validation separately covers late materialization where relevant.
 5. `COMPATIBILITY_MATRIX.md`, installation instructions and support limitations
    match the candidate.
 6. `VERSION`, `CHANGELOG.md`, release notes and package naming agree.
