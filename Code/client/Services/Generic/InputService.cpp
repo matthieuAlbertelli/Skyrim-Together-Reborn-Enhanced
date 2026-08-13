@@ -99,6 +99,38 @@ bool IsDisableKey(int aKey) noexcept
     return aKey == VK_ESCAPE;
 }
 
+#if (!IS_MASTER)
+bool ProcessCampaignGateDevelopmentControl(
+    uint16_t aKey, cef_key_event_type_t aType) noexcept
+{
+    if (aType != KEYEVENT_KEYUP)
+        return false;
+
+    CampaignRuntimeGateService* const pGate =
+        CampaignRuntimeGateService::TryGet();
+    if (!pGate)
+        return false;
+
+    if (aKey == VK_F10)
+    {
+        pGate->ReleaseForDevelopment();
+        return true;
+    }
+
+    const bool armNextLoad =
+        aKey == VK_F8 &&
+        (GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+        (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    if (armNextLoad)
+    {
+        pGate->ArmNextLoadForDevelopment();
+        return true;
+    }
+
+    return false;
+}
+#endif
+
 void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aType, bool aE0, bool aE1)
 {
     if (aType != KEYEVENT_CHAR)
@@ -158,6 +190,11 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
             }
         }
     }
+
+#if (!IS_MASTER)
+    if (ProcessCampaignGateDevelopmentControl(aKey, aType))
+        return;
+#endif
 
     if (!s_pUiSurface)
         return;
@@ -280,20 +317,6 @@ UINT GetRealACP()
 
 LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-#if (!IS_MASTER)
-    if (uMsg == WM_KEYUP)
-    {
-        if (CampaignRuntimeGateService* const pGate =
-                CampaignRuntimeGateService::TryGet())
-        {
-            if (wParam == VK_F9)
-                pGate->ArmNextLoadForDevelopment();
-            else if (wParam == VK_F10)
-                pGate->ReleaseForDevelopment();
-        }
-    }
-#endif
-
     if (!s_pUiSurface)
         return 0;
 

@@ -85,8 +85,14 @@ its normal input-capture state only after explicit development release.
 
 The controls are compiled only when `IS_MASTER` is false:
 
-- `F9`: mark exactly the next native load as `CampaignManaged`;
+- `Ctrl+Shift+F8`: mark exactly the next native load as `CampaignManaged`;
 - `F10`: explicitly release the gate after the experiment.
+
+Both controls use the existing `WM_INPUT`/`ProcessKeyboard` raw-input path that
+keeps `F2` available to CEF while Skyrim is paused. The arm chord avoids
+Skyrim's `F9` Quick Load binding. The old `WM_KEYUP` development path is not
+used because it did not deliver the release key while the native guard menu
+held the game paused.
 
 No save-name convention or persistent marker is introduced.
 
@@ -128,12 +134,19 @@ normal menu path is too late and a narrower engine gate must be investigated in
 a follow-up. If the menu is active and `GameIsPaused=true` before that first
 update, no deeper hook is justified.
 
+The first smoke run observed a small number of STRE updates before
+`GameIsPaused=true`. That observation does not by itself demonstrate a playable
+Skyrim simulation tick, so this control-only follow-up deliberately adds no
+engine hook. The final smoke test must judge the player, AI, game time, Havok,
+and active-effect clocks directly while preserving the captured ordering.
+
 ## Manual in-game procedure
 
 1. Build and deploy the non-master `SkyrimTogetherClient` from this branch.
 2. Start Skyrim with a save located in active gameplay: nearby moving NPCs,
    running game time, a visible duration effect, and interactable physics.
-3. Open `tp_client.log` for live observation and press `F9` once. Confirm
+3. Open `tp_client.log` for live observation, hold `Ctrl+Shift`, and press and
+   release `F8` once before releasing the modifiers. Confirm
    `DevArmRequested nextLoad=CampaignManaged`.
 4. Load the chosen ordinary save through Skyrim's normal load UI. The marker is
    consumed by this one load only.
@@ -143,8 +156,8 @@ update, no deeper hook is justified.
 6. During the same minute, press `F2` or right Control and verify that the CEF
    surface remains live. Attempt a server connection and verify live messages
    and recurring `TransportUpdateWhileLocked connected=true` records.
-7. Press `F10` only after collecting the evidence to release the development
-   gate.
+7. Press and release `F10` only after collecting the evidence. Confirm a
+   `Released` record and normal playable input before ending the smoke test.
 8. Extract the trace with:
 
    ```powershell
