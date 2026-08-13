@@ -95,6 +95,12 @@ consumed, and their actions run on key-up without mixing raw-input events with
 because it did not deliver the release key while the native guard menu held the
 game paused.
 
+The diagnostic build logs `F2`, `F8`, and `F10` at the `ProcessKeyboard`
+boundary before development-control dispatch. It also logs every observed
+development key and whether `CampaignRuntimeGateService::TryGet()` returned a
+service. `F2` is the known-working control sample. This instrumentation does not
+add an input path or change the F8/F10 mapping.
+
 No save-name convention or persistent marker is introduced.
 
 ## Networking hypothesis to test
@@ -116,6 +122,11 @@ Every gate record contains a monotonically increasing microsecond timestamp,
 the last STRE frame number, and the synchronized transport tick:
 
 ```text
+[STRE][RawInputProbe] virtualKey=113 type=... scanCode=... E0=... E1=...
+[STRE][RawInputProbe] virtualKey=119 type=... scanCode=... E0=... E1=...
+[STRE][RawInputProbe] virtualKey=121 type=... scanCode=... E0=... E1=...
+[STRE][RawInputProbe] CampaignGateDevControlObserved key=... type=...
+[STRE][RawInputProbe] CampaignGateDevServiceAvailable value=true
 [STRE][CampaignGate] DevArmRequested
 [STRE][CampaignGate] PreLoad
 [STRE][CampaignGate] GateArmed
@@ -143,11 +154,14 @@ and active-effect clocks directly while preserving the captured ordering.
 
 ## Manual in-game procedure
 
-1. Build and deploy the non-master `SkyrimTogetherClient` from this branch.
+1. Build and deploy the non-master `SkyrimTogether.exe` produced by the
+   `SkyrimImmersiveLauncher` target from this branch.
 2. Start Skyrim with a save located in active gameplay: nearby moving NPCs,
    running game time, a visible duration effect, and interactable physics.
-3. Open `tp_client.log` for live observation and press and release `F8` once.
-   Confirm
+3. Open `tp_client.log` for live observation. Press and release `F2` as the
+   control sample, then press and release `F8` once. Determine whether the log
+   contains F8 down/up `RawInputProbe` records, development-control observation,
+   service availability, and finally
    `DevArmRequested nextLoad=CampaignManaged`.
 4. Load the chosen ordinary save through Skyrim's normal load UI. The marker is
    consumed by this one load only.

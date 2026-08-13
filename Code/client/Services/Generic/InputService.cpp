@@ -106,10 +106,19 @@ bool ProcessCampaignGateDevelopmentControl(
     if (aKey != VK_F8 && aKey != VK_F10)
         return false;
 
+    spdlog::info(
+        "[STRE][RawInputProbe] CampaignGateDevControlObserved key={} type={}",
+        aKey,
+        static_cast<std::uint32_t>(aType));
+
+    CampaignRuntimeGateService* const pGate =
+        CampaignRuntimeGateService::TryGet();
+    spdlog::info(
+        "[STRE][RawInputProbe] CampaignGateDevServiceAvailable value={}",
+        pGate != nullptr);
+
     if (aType == KEYEVENT_KEYUP)
     {
-        CampaignRuntimeGateService* const pGate =
-            CampaignRuntimeGateService::TryGet();
         if (!pGate)
             return true;
 
@@ -182,6 +191,19 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
             }
         }
     }
+
+#if (!IS_MASTER)
+    if (aKey == VK_F2 || aKey == VK_F8 || aKey == VK_F10)
+    {
+        spdlog::info(
+            "[STRE][RawInputProbe] virtualKey={} type={} scanCode={} E0={} E1={}",
+            aKey,
+            static_cast<std::uint32_t>(aType),
+            aScanCode,
+            aE0,
+            aE1);
+    }
+#endif
 
 #if (!IS_MASTER)
     if (ProcessCampaignGateDevelopmentControl(aKey, aType))
