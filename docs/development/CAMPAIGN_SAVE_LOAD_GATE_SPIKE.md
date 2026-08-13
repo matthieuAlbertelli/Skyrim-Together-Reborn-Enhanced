@@ -85,14 +85,15 @@ its normal input-capture state only after explicit development release.
 
 The controls are compiled only when `IS_MASTER` is false:
 
-- `Ctrl+Shift+F8`: mark exactly the next native load as `CampaignManaged`;
+- `F8`: mark exactly the next native load as `CampaignManaged`;
 - `F10`: explicitly release the gate after the experiment.
 
 Both controls use the existing `WM_INPUT`/`ProcessKeyboard` raw-input path that
-keeps `F2` available to CEF while Skyrim is paused. The arm chord avoids
-Skyrim's `F9` Quick Load binding. The old `WM_KEYUP` development path is not
-used because it did not deliver the release key while the native guard menu
-held the game paused.
+keeps `F2` available to CEF while Skyrim is paused. Their raw key events are
+consumed, and their actions run on key-up without mixing raw-input events with
+`GetKeyState` modifier state. The old `WM_KEYUP` development path is not used
+because it did not deliver the release key while the native guard menu held the
+game paused.
 
 No save-name convention or persistent marker is introduced.
 
@@ -145,8 +146,8 @@ and active-effect clocks directly while preserving the captured ordering.
 1. Build and deploy the non-master `SkyrimTogetherClient` from this branch.
 2. Start Skyrim with a save located in active gameplay: nearby moving NPCs,
    running game time, a visible duration effect, and interactable physics.
-3. Open `tp_client.log` for live observation, hold `Ctrl+Shift`, and press and
-   release `F8` once before releasing the modifiers. Confirm
+3. Open `tp_client.log` for live observation and press and release `F8` once.
+   Confirm
    `DevArmRequested nextLoad=CampaignManaged`.
 4. Load the chosen ordinary save through Skyrim's normal load UI. The marker is
    consumed by this one load only.

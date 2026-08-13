@@ -103,31 +103,23 @@ bool IsDisableKey(int aKey) noexcept
 bool ProcessCampaignGateDevelopmentControl(
     uint16_t aKey, cef_key_event_type_t aType) noexcept
 {
-    if (aType != KEYEVENT_KEYUP)
+    if (aKey != VK_F8 && aKey != VK_F10)
         return false;
 
-    CampaignRuntimeGateService* const pGate =
-        CampaignRuntimeGateService::TryGet();
-    if (!pGate)
-        return false;
-
-    if (aKey == VK_F10)
+    if (aType == KEYEVENT_KEYUP)
     {
-        pGate->ReleaseForDevelopment();
-        return true;
+        CampaignRuntimeGateService* const pGate =
+            CampaignRuntimeGateService::TryGet();
+        if (!pGate)
+            return true;
+
+        if (aKey == VK_F8)
+            pGate->ArmNextLoadForDevelopment();
+        else
+            pGate->ReleaseForDevelopment();
     }
 
-    const bool armNextLoad =
-        aKey == VK_F8 &&
-        (GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
-        (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-    if (armNextLoad)
-    {
-        pGate->ArmNextLoadForDevelopment();
-        return true;
-    }
-
-    return false;
+    return true;
 }
 #endif
 
