@@ -1,6 +1,6 @@
 # ADR-0018 — Fixed roster and coordinated Skyrim-save checkpoint recovery
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-13
 - **Decision makers:** STRE maintainers
 - **Issue / discussion:** [#26 — Implement v1 cooperative campaign continuity](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/26)
@@ -50,8 +50,15 @@ The Session Manager is an administrative/logical role, not a persistence
 authority, and the host has no special save privilege. Simulation authority may
 still be delegated temporarily when a local engine must perform simulation.
 
-A multiplayer campaign defines its roster before start. Starting the campaign
-seals that roster. For STRE v1, sealed slots and their owners are immutable:
+A multiplayer campaign defines its slots, `PlayerId` values, and
+`CharacterBinding` identities in the pre-campaign lobby. The formal campaign
+start/commit atomically seals that roster before the phase can leave `Lobby` for
+`CharacterCreation`. No character creation or other campaign progression may
+occur before the seal. `Departure` and `OpenWorld` are later progression phases;
+neither is the roster-seal point.
+
+For the lifetime of that STRE v1 campaign, the sealed slots, `PlayerId` values,
+and `CharacterBinding` identities are immutable:
 
 - no new player or slot may join;
 - no player may replace another slot owner;

@@ -61,7 +61,8 @@ struct CampaignPlayerState
 `CampaignPhase` describes durable narrative/product progression:
 
 ```text
-Lobby
+Lobby (pre-campaign; roster mutable)
+→ formal campaign start/commit; roster sealed
 → CharacterCreation
 → Arrival
 → Gathering
@@ -73,6 +74,11 @@ Lobby
 ```
 
 A phase may have internal substates, but the public model must remain readable.
+
+The `Lobby` → `CharacterCreation` transition is the formal campaign start. It
+atomically sets `RosterSealed=true` before entering `CharacterCreation`. No
+campaign progression phase may be entered while the roster is unsealed.
+`Departure` and `OpenWorld` occur much later and have no roster-sealing effect.
 
 Every phase transition defines its allowed source, preconditions, command actor,
 authority policy, mutations, event, local consequence, and recovery strategy.
@@ -112,9 +118,12 @@ does not change a slot owner or grant persistence authority.
 
 ## Fixed roster and identity
 
-Before campaign start, roster configuration may add, remove, or replace proposed
-slots. Campaign start sets `RosterSealed=true`. After the seal, the ordered set of
-slots and each slot's `PlayerId` and `CharacterBinding` are immutable for STRE v1.
+While the campaign remains in the pre-campaign `Lobby`, roster configuration may
+add, remove, or replace proposed slots and bindings. The formal start/commit
+validates the intended roster, atomically sets `RosterSealed=true`, and only then
+transitions to `CharacterCreation`. After that transition, the ordered slots and
+each slot's `PlayerId` and `CharacterBinding` are immutable for the lifetime of
+the STRE v1 campaign.
 
 The full-roster predicate holds only when every expected slot is connected with
 its matching identity/binding and no unrecognized participant is admitted as a
@@ -132,7 +141,10 @@ mechanism and remains valid.
 
 ## Character binding
 
-A character is bound during bootstrap using campaign ID, slot ID, player ID,
+A stable `CharacterBinding` identity is allocated or reserved for each slot in
+the pre-campaign lobby before the roster is sealed. Character creation later
+populates and validates character/build state against that identity; it cannot
+replace the sealed binding. The binding uses campaign ID, slot ID, player ID,
 character fingerprint, created/validated status, class, and bootstrap version.
 An external character cannot enter without a separately designed import process;
 no such process is part of v1.

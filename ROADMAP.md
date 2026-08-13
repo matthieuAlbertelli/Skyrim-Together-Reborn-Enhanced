@@ -55,10 +55,12 @@ Introduce persistent, unambiguous player-to-room ownership/assignment with recon
 
 Provide the campaign-state foundations required for a real group campaign:
 durable character binding, versioned server persistence, canonical snapshots,
-shared introduction/departure phases, and a roster configured before campaign
-start then sealed for the lifetime of the v1 campaign. Campaign progression
-requires the complete roster; campaign late join, slot-owner replacement, and
-continue-without-player behavior are not supported in v1.
+shared introduction/departure phases, and a roster configured in the pre-campaign
+lobby. Formally starting/committing the campaign seals its slots, `PlayerId`
+values, and `CharacterBinding` identities before `CharacterCreation` or any other
+campaign progression; `Departure` and `OpenWorld` are not seal points. Campaign
+progression requires the complete roster; campaign late join, slot-owner
+replacement, and continue-without-player behavior are not supported in v1.
 
 Coordinate each committed `CampaignCheckpoint` across one canonical server
 revision/snapshot and one dedicated native Skyrim save for every roster slot. The

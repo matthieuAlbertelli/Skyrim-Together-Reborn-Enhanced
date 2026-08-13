@@ -48,7 +48,7 @@ The client sends only logical identifiers. The server constructs the canonical b
 - `CreateCampaign`
 - `JoinCampaign` (before roster seal only)
 - `BindCharacter`
-- `SealRoster`
+- `CommitCampaignStart` (atomically seal the roster and enter `CharacterCreation`)
 - `SetReady`
 - `RequestIntroductionStart`
 - `ReportLocalSceneCompleted`
@@ -82,9 +82,12 @@ Future:
 ## Roster and reconnection
 
 Campaign creation/join and character binding are accepted only before the roster
-seal. After seal, the server rejects extra players, slot replacement, and any
-identity or binding mismatch. The complete expected roster is required before
-campaign runtime can be `ACTIVE`.
+seal in the pre-campaign lobby. `CommitCampaignStart` atomically fixes every
+slot, `PlayerId`, and `CharacterBinding`, then enters `CharacterCreation`. No
+campaign progression may occur before that commit. `Departure` and `OpenWorld`
+do not seal the roster. After seal, the server rejects extra players, slot
+replacement, and any identity or binding mismatch. The complete expected roster
+is required before campaign runtime can be `ACTIVE`.
 
 Build persistence and campaign recovery are not implemented. Future snapshots
 remain useful for idempotent hydration and retransmission, but reconnect does not

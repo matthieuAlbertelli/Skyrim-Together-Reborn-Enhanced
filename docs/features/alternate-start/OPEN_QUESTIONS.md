@@ -15,7 +15,10 @@
 - ally buffs use `Target Actor`, not `Contact`.
 - the STRE server, not the host/Session Manager or a host save, is persistent
   authority for shared campaign state;
-- a multiplayer roster is fixed and immutable after campaign start/seal;
+- the formal multiplayer campaign start/commit seals the pre-campaign lobby
+  roster before `CharacterCreation`; `Departure`/`OpenWorld` do not seal it;
+- slots, `PlayerId` values, and `CharacterBinding` identities are then immutable
+  for that v1 campaign's lifetime;
 - campaign late join and player replacement are not supported in v1;
 - campaign progression requires the complete sealed roster;
 - a required disconnect suspends progression and collective rollback restores
@@ -59,7 +62,7 @@
 
 ## Campaign
 
-- exact ready-check and roster-seal/start transition;
+- ready-check rules after the already-sealed campaign has started;
 - duplicate classes;
 - changing or respeccing before and after departure.
 

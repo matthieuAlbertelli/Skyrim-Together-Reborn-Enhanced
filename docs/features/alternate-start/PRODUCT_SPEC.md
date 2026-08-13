@@ -39,16 +39,19 @@ Warrior, Mage, and Thief form the first implemented vertical slice. The kits, it
 ## Target experience
 
 1. Redirect a new game to the inn.
-2. Create appearance at the table.
-3. Choose class and kits.
-4. In STRE, create or join a campaign and bind the character before the roster
-   is sealed.
-5. Validate every build.
-6. Introduce Valen.
-7. Complete the ready check.
-8. Seal the full roster and depart for Skyrim together.
+2. In multiplayer, configure the pre-campaign lobby: create/join the campaign,
+   assign slots, and reserve each `PlayerId`/`CharacterBinding`.
+3. Formally start/commit the multiplayer campaign, atomically sealing the roster
+   before entering `CharacterCreation`.
+4. Create appearance at the table.
+5. Choose class and kits.
+6. Validate every build.
+7. Introduce Valen.
+8. Complete the ready check.
+9. Depart for Skyrim together without changing the sealed roster.
 
-Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be completed.
+The appearance/build steps are partially present. The campaign lobby/start/seal,
+automatic redirect, Valen, ready check, and departure remain to be completed.
 
 ## Single-player
 
@@ -69,7 +72,8 @@ Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be compl
 ## Target STRE behavior
 
 - canonical campaign;
-- roster and bound characters configured before start, then sealed and immutable;
+- roster and bound characters configured in the pre-campaign lobby, then sealed
+  by the formal start/commit before `CharacterCreation` and immutable thereafter;
 - full roster required for multiplayer campaign progression;
 - shared phases;
 - secretly assigned Dragonborn;
@@ -80,6 +84,8 @@ Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be compl
   from the same committed checkpoint;
 - rejection of campaign late join, player replacement, and wrong bindings after
   the roster seal.
+
+Departure and `OpenWorld` never seal or mutate roster ownership.
 
 The STRE server is authority for shared campaign state. Each native `.ess`
 restores its player's local Skyrim/Papyrus/quest runtime and is not shared-state

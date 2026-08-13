@@ -73,9 +73,14 @@ struct PlayerBootstrapState
 
 Future invariants:
 
-- roster slots may be configured only before the campaign seal;
+- roster slots, `PlayerId` values, and `CharacterBinding` identities are
+  configured in the pre-campaign lobby;
+- the formal start/commit atomically seals them before the phase enters
+  `CharacterCreation`; no later phase, including `Departure` or `OpenWorld`, is a
+  seal point;
 - after the seal, every slot, `PlayerId`, and `CharacterBinding` is immutable in
-  v1; campaign late join and player replacement are rejected;
+  v1 for the campaign lifetime; campaign late join and player replacement are
+  rejected;
 - one arrival slot and one validated character per expected roster member;
 - the complete sealed roster is required for campaign progression;
 - no class changes after departure without an explicit migration;
