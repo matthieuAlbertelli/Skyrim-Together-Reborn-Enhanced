@@ -1,7 +1,8 @@
 # ADR-0015 — Host Skyrim Save as Canonical Checkpoint
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-07-30
+- **Superseded by:** [ADR-0018](ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
 
 ## Context
 

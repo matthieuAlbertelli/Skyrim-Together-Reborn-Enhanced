@@ -40,6 +40,9 @@ Documents under `history/` are dated evidence and milestones; they do not replac
 - `STRE_ADAPTER_SPEC.md` — current and target cooperative semantics;
 - `CK_IMPLEMENTATION.md` — CK records and flow;
 - `STATE_MODEL.md` — build and campaign state;
+- [`../../architecture/CAMPAIGN_STATE.md`](../../architecture/CAMPAIGN_STATE.md)
+  and [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
+  — canonical multiplayer roster/checkpoint recovery contract;
 - `TEST_PLAN.md` — validation;
 - `OPEN_QUESTIONS.md` — remaining decisions;
 - `CK_RECORDS_M7_IMPLEMENTED.json` — strict manifest;

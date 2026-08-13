@@ -125,5 +125,5 @@ Every change to these structures requires at least:
 - encode/decode round trip;
 - one authority-client and observer test;
 - lazy-adoption test;
-- snapshot/late-join test when serialized state changes;
+- snapshot/late-materialization test when serialized state changes;
 - fail-closed behavior when an old path cannot retain new metadata.

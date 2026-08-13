@@ -121,7 +121,7 @@ When that menu opens during local manipulation, STRE requests a native grab end.
 The existing `TESGrabReleaseEvent` then continues the normal network lifecycle,
 including when adoption was still pending.
 
-## Snapshot and late join
+## Snapshot and late materialization
 
 A client joining after creation or adoption must:
 

@@ -96,11 +96,14 @@ records the dependency only; it does not change their scope or live state.
 ## Campaign
 
 ```text
-Character binding/persistence
-  → Campaign State
-  → roster/ready
-  → shared introduction/departure
-  → late join/reconnect
+Campaign/character identity
+  → durable campaign persistence
+  → fixed/sealed roster
+  → coordinated CampaignCheckpoint
+  → full-roster runtime gate
+  → disconnect RecoveryLock
+  → collective checkpoint restore
+  → campaign resume
 ```
 
 ## v1 release-gate coverage
@@ -119,7 +122,7 @@ does not mirror status; the Project and Milestone own live state.
 | Headquarters inn | [#22](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/22) with #23 |
 | Ten player rooms | #22 with #24 |
 | Persistent player-room assignment | #22 with #25, backed by campaign persistence #27 |
-| Campaign continuity needed by Alternate Start | [#26](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/26) with #27–#28 |
+| Campaign continuity needed by Alternate Start | [#26](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/26) with persistence #27, fixed roster #28, coordinated checkpoints [#55](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/55), collective recovery [#56](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/56), and recovery UX [#57](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/57) |
 | End-to-end release evidence | [#30](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/30) |
 | No known P0 multiplayer campaign blocker | [#51](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/51), grouping inherited symptoms #2–#6 without pre-assigning priority |
 
@@ -134,10 +137,17 @@ GitHub's native `blocked by` relationships represent only completion blockers,
 not every integration touchpoint:
 
 ```text
-#27 campaign persistence
-  ├─blocks→ #28 roster/readiness/phases
+#27 durable campaign/checkpoint state
+  ├─blocks→ #55 coordinated native saves/checkpoint commit
+  ├─blocks→ #28 fixed roster/readiness/phases
   ├─blocks→ #25 persistent room assignment
   └─blocks→ #18 persistent personal-quest program
+
+#27 → #55 ─┐
+           ├─blocks→ #56 disconnect lock/collective restore
+#28 ───────┘
+
+#56 disconnect recovery ─blocks→ #57 recovery UX/diagnostics
 
 #28 phase contract
   ├─blocks→ #20 Valen collective behavior
@@ -153,7 +163,7 @@ not every integration touchpoint:
 #19 Valen             ├─block→ #12 departure/vanilla continuity
 #28 campaign phases   ─┘
 
-#10, #11, #12, #13, #18, #19, #22 and #26
+#10, #11, #12, #13, #18, #19, #22 and #26 (including #27, #28 and #55–#57)
   └─block→ #30 end-to-end v1 Alternate Start evidence
 ```
 

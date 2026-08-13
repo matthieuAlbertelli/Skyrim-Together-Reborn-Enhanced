@@ -18,7 +18,7 @@ operational progress in the GitHub Project governed by
 | Cooperative systems | shared combat, magic, party, and quest systems; accepted future cooperative mechanics | existing services and each feature's canonical directory | the concrete domain label; no artificial generic label |
 | Alternate Start and creation | new game/Helgen, RaceMenu, creation, reset, canonical build, single-player, departure | Character Creation, Alternate Start UI, CK/Papyrus, `docs/features/alternate-start` | `area: alternate-start`, `area: ui` |
 | Class program | canonical roster, kits, abilities/perks, personal quests, and validation for 21 classes | roster/spec, shared catalogs, UI, CK/Papyrus, class issues | `area: classes`, `area: quests` |
-| Cooperative campaign | campaign/character identity, persistence, snapshots, phases, roster, readiness, reconnect, late join | Campaign State architecture and future client/server implementations | `area: campaign`, `area: networking` |
+| Cooperative campaign | campaign/character identity, persistence, coordinated checkpoints, phases, sealed roster, readiness, disconnect recovery, collective restore | Campaign State architecture and future client/server implementations | `area: campaign`, `area: networking` |
 | Valen and narrative | narrative contract, actor, voice, shared scene, phase projection | `docs/narrative`, `docs/art`, `docs/audio`, CK/Papyrus | `area: valen`, `area: quests` |
 | Headquarters and housing | hub, ten rooms, room identity, ownership/assignment, restoration | CK content, campaign/persistence, `docs/features/alternate-start` | `area: housing` |
 | UI and preview | Angular/CEF surfaces, typed commands, 3D preview, accessibility | `Code/skyrim_ui`, UI/preview services, `docs/features/item-preview` | `area: ui`; consumers add their domain |
@@ -56,7 +56,7 @@ cross-cutting layers already represented by the concrete domain,
 - 2.5 Local Havok settlement and reconciliation
 - 2.6 Ownership, provenance, and interaction
 - 2.7 Mount occupancy and presentation
-- 2.8 Snapshot and late join
+- 2.8 Snapshot and late materialization
 - 2.9 Durable world persistence and checkpoints
 - 2.10 Validation of scripted/quest references and new types
 
@@ -87,7 +87,7 @@ cross-cutting layers already represented by the concrete domain,
 - 5.5 CharacterBuild catalog, inventory, and spells
 - 5.6 Single-player fallback
 - 5.7 Valen, readiness, and departure projection
-- 5.8 Save, load, and reconnect recovery
+- 5.8 Save, load, and collective checkpoint recovery
 
 ## 6. Twenty-one-class program
 
@@ -102,11 +102,11 @@ cross-cutting layers already represented by the concrete domain,
 ## 7. Cooperative campaign
 
 - 7.1 Campaign/character identity and binding
-- 7.2 Storage, migration, and snapshots
-- 7.3 Roster and readiness
+- 7.2 Storage, migration, snapshots, and coordinated checkpoints
+- 7.3 Sealed roster, readiness, and full-roster eligibility
 - 7.4 Introduction, departure, and shared phases
 - 7.5 Session Manager/Dragonborn policy
-- 7.6 Reconnect and late join
+- 7.6 Disconnect recovery, checkpoint restore, and roster integrity
 - 7.7 Journal, outbox, and recovery
 - 7.8 Local CK/UI projection
 

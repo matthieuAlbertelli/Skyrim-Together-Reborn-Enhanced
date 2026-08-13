@@ -47,6 +47,9 @@ struct AlternateStartState
 {
     StateVersion Version;
     AlternateStartPhase Phase;
+    CampaignRuntimeState RuntimeState;
+    bool RosterSealed;
+    std::optional<CheckpointId> LastCommittedCheckpoint;
     bool IntroductionStarted;
     bool IntroductionCompleted;
     bool DepartureAuthorized;
@@ -57,6 +60,7 @@ struct AlternateStartState
 ```cpp
 struct PlayerBootstrapState
 {
+    CampaignSlotId Slot;
     PlayerId Player;
     CharacterBindingState Binding;
     bool CharacterCreated;
@@ -69,11 +73,30 @@ struct PlayerBootstrapState
 
 Future invariants:
 
-- one arrival slot per active player;
-- one validated character per player and campaign;
+- roster slots, `PlayerId` values, and `CharacterBinding` identities are
+  configured in the pre-campaign lobby;
+- the formal start/commit atomically seals them before the phase enters
+  `CharacterCreation`; no later phase, including `Departure` or `OpenWorld`, is a
+  seal point;
+- after the seal, every slot, `PlayerId`, and `CharacterBinding` is immutable in
+  v1 for the campaign lifetime; campaign late join and player replacement are
+  rejected;
+- one arrival slot and one validated character per expected roster member;
+- the complete sealed roster is required for campaign progression;
 - no class changes after departure without an explicit migration;
 - `DepartureAuthorized` requires a completed introduction and satisfied ready rules;
 - monotonically increasing version;
 - stale events are ignored;
 - Dragonborn secrets are absent from public state;
-- snapshots are persisted and restorable after reconnecting.
+- a required-member disconnect moves campaign runtime into recovery lock;
+- multiplayer recovery selects one committed `CampaignCheckpoint` and restores
+  every slot's matching native save plus the corresponding server revision;
+- campaign progression resumes only after every expected member acknowledges the
+  same restore.
+
+These fields are the Alternate Start projection of the canonical
+[Campaign State model](../../architecture/CAMPAIGN_STATE.md), not a separate
+recovery architecture. Roster, checkpoint, authority, and collective-restore
+semantics are governed by
+[ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
+The standalone solo path remains outside the multiplayer full-roster invariant.

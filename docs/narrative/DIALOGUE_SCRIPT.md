@@ -57,9 +57,9 @@ The spoken lines below are French player-facing localization. Their surrounding 
 - one player in single-player;
 - 2–4 players;
 - 5–10 players;
-- a player reconnecting after the scene;
+- collective scene restore after a roster disconnect;
 - interruption or departure;
-- late-join summary;
+- checkpoint-safe replay/resumption without duplicating canonical progression;
 - skeptical, hostile, or curious responses without multiplying canonical branches.
 
 ## Audio production

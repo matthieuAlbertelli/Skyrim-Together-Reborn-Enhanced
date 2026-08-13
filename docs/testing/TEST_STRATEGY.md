@@ -84,7 +84,10 @@ Add:
 
 ## Complete Alternate Start
 
-Future matrix: new game, Helgen skip, save/load, Valen, disconnect/reconnect, late join, absent player, class conflict, scene completion, and departure.
+Future matrix: new game, Helgen skip, save/load, Valen, full-roster activation,
+post-seal join/replacement/wrong-binding rejection, disconnect recovery,
+interrupted checkpoint, collective restore, class conflict, scene completion, and
+departure.
 
 ## Preview
 

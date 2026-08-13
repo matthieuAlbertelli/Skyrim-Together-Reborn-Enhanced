@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 12 August 2026.
+> **Last updated:** 13 August 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -26,7 +26,10 @@ STRE v1.0.0 is the first version suitable for starting and playing a real cooper
 8. The headquarters inn fully implemented.
 9. Ten player rooms in the inn.
 10. Persistent player-to-room assignment as the housing foundation.
-11. No known P0 multiplayer campaign blocker.
+11. Cooperative campaign continuity with a sealed fixed roster, full-roster
+    progression, and coordinated recovery from one committed checkpoint shared
+    by the server revision and every roster member's native Skyrim save.
+12. No known P0 multiplayer campaign blocker.
 
 Advanced housing customization can ship after v1.0.0. The v1.0 requirement is the housing foundation: rooms, ownership/assignment and persistence.
 
@@ -50,7 +53,22 @@ Introduce persistent, unambiguous player-to-room ownership/assignment with recon
 
 ### Cooperative campaign continuity
 
-Provide the campaign-state foundations required for a real group campaign: durable character binding where needed, versioned persistence, canonical snapshots, reconnect restoration, roster/readiness, shared introduction/departure phases and an explicit late-join policy.
+Provide the campaign-state foundations required for a real group campaign:
+durable character binding, versioned server persistence, canonical snapshots,
+shared introduction/departure phases, and a roster configured in the pre-campaign
+lobby. Formally starting/committing the campaign seals its slots, `PlayerId`
+values, and `CharacterBinding` identities before `CharacterCreation` or any other
+campaign progression; `Departure` and `OpenWorld` are not seal points. Campaign
+progression requires the complete roster; campaign late join, slot-owner
+replacement, and continue-without-player behavior are not supported in v1.
+
+Coordinate each committed `CampaignCheckpoint` across one canonical server
+revision/snapshot and one dedicated native Skyrim save for every roster slot. The
+server remains authority for shared STRE state; each `.ess` restores its player's
+local Skyrim/Papyrus/quest runtime. A disconnect suspends campaign progression,
+and every roster member collectively restores the same last committed checkpoint
+before the campaign resumes. A failed candidate checkpoint never replaces the
+previous committed recovery point.
 
 Validate the primary two-to-four-player campaign path before broader hub/event scale. Recovery must be designed for duplicated, delayed or missing messages instead of assuming a continuous session.
 
@@ -100,7 +118,12 @@ A release candidate may be produced when the complete v1 product definition is f
 - end-to-end Alternate Start, character creation, class, personal-quest, Valen, inn and room-assignment flows;
 - solo validation for every explicitly standalone Alternate Start path;
 - multiplayer validation across host, client and observer perspectives for campaign-critical flows;
-- persistence, reconnect, late-join and failure/recovery scenarios applicable to the v1 systems;
+- persistence and coordinated-checkpoint evidence, including partial candidate
+  failure and server/client restart from the last committed checkpoint;
+- missing-player activation, post-seal late-join, replacement, wrong-slot, wrong
+  binding, and wrong-save rejection;
+- disconnect barriers and collective restore of the full roster before campaign
+  progression resumes;
 - triage of known multiplayer divergence, crash, corruption and progression reports;
 - the supported-version matrix, installation guide and reproducible player package;
 - relevant automated tests, diagnostics and canonical documentation.

@@ -26,7 +26,8 @@ Start a campaign in an inn without importing an already-advanced character. Each
 - work in single-player without an STRE server;
 - provide a readable hub for a small group;
 - serve as the first reference first-party integration;
-- restore state after reconnecting;
+- restore an interrupted multiplayer campaign collectively from one committed
+  checkpoint;
 - leave the inn with coherent vanilla progression.
 
 ## v1 class roster
@@ -38,15 +39,19 @@ Warrior, Mage, and Thief form the first implemented vertical slice. The kits, it
 ## Target experience
 
 1. Redirect a new game to the inn.
-2. Create appearance at the table.
-3. Choose class and kits.
-4. In STRE, create or join a campaign and bind the character.
-5. Validate every build.
-6. Introduce Valen.
-7. Complete the ready check.
-8. Depart for Skyrim together.
+2. In multiplayer, configure the pre-campaign lobby: create/join the campaign,
+   assign slots, and reserve each `PlayerId`/`CharacterBinding`.
+3. Formally start/commit the multiplayer campaign, atomically sealing the roster
+   before entering `CharacterCreation`.
+4. Create appearance at the table.
+5. Choose class and kits.
+6. Validate every build.
+7. Introduce Valen.
+8. Complete the ready check.
+9. Depart for Skyrim together without changing the sealed roster.
 
-Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be completed.
+The appearance/build steps are partially present. The campaign lobby/start/seal,
+automatic redirect, Valen, ready check, and departure remain to be completed.
 
 ## Single-player
 
@@ -67,16 +72,31 @@ Steps 2 through 5 are partially present; steps 1, 6, 7, and 8 remain to be compl
 ## Target STRE behavior
 
 - canonical campaign;
-- roster and bound characters;
+- roster and bound characters configured in the pre-campaign lobby, then sealed
+  by the formal start/commit before `CharacterCreation` and immutable thereafter;
+- full roster required for multiplayer campaign progression;
 - shared phases;
 - secretly assigned Dragonborn;
 - server-authorized departure;
-- snapshot and restoration after reconnecting.
+- coordinated `CampaignCheckpoint` creation using one server revision and one
+  dedicated native Skyrim save per roster slot;
+- campaign suspension on disconnect and collective restore of every roster member
+  from the same committed checkpoint;
+- rejection of campaign late join, player replacement, and wrong bindings after
+  the roster seal.
+
+Departure and `OpenWorld` never seal or mutate roster ownership.
+
+The STRE server is authority for shared campaign state. Each native `.ess`
+restores its player's local Skyrim/Papyrus/quest runtime and is not shared-state
+authority. See [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
+and the [Campaign State model](../../architecture/CAMPAIGN_STATE.md).
 
 ## Out of immediate scope
 
 - dynamic Dragonborn assignment based on accomplishments;
-- late join after departure;
+- post-seal campaign late join or player replacement in v1;
+- partial-roster campaign progression and catch-up;
 - intentional import of an existing character;
 - complete rewrite of the vanilla campaign;
 - stable third-party SDK before several first-party integrations exist.
