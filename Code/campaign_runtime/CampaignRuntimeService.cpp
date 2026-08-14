@@ -236,11 +236,23 @@ CampaignCommandResult PersistMutation(
     return FromMutationResult(aStore.ApplyMutation(request));
 }
 
-CampaignCommandResult NoChange(StateVersion aVersion)
+CampaignCommandResult PersistAcceptedNoOp(
+    ICampaignStore& aStore,
+    const CampaignId& acCampaign,
+    StateVersion aExpectedRevision,
+    const MutationId& acMutation,
+    std::string aKind,
+    Bytes aMutationPayload)
 {
-    CampaignCommandResult result;
-    result.Version = aVersion;
-    return result;
+    CampaignMutationRequest request;
+    request.Campaign = acCampaign;
+    request.ExpectedRevision = aExpectedRevision;
+    request.Mutation = acMutation;
+    request.Kind = std::move(aKind);
+    request.AdvancesStateVersion = false;
+    request.MutationCodecVersion = 1;
+    request.MutationPayload = std::move(aMutationPayload);
+    return FromMutationResult(aStore.ApplyMutation(request));
 }
 
 std::optional<CampaignCommandResult> FindMutationReplay(
@@ -267,10 +279,8 @@ std::optional<CampaignCommandResult> FindMutationReplay(
         });
     if (record == journal.Value.end())
         return std::nullopt;
-    const bool revisionMatches =
-        aExpectedRevision != std::numeric_limits<StateVersion>::max() &&
-        record->ResultingRevision == aExpectedRevision + 1;
-    if (!revisionMatches || record->Kind != acKind ||
+    if (record->ExpectedRevision != aExpectedRevision ||
+        record->Kind != acKind ||
         record->PayloadCodecVersion != 1 || record->Payload != acPayload)
     {
         CampaignCommandResult conflict;
@@ -481,7 +491,15 @@ CampaignCommandResult CampaignRuntimeService::ReplaceRosterSlot(
         if (!changed)
             return DomainFailure(changed);
         if (!changed.Changed)
-            return NoChange(loaded.Campaign.Version);
+        {
+            return PersistAcceptedNoOp(
+                m_store,
+                acCommand.Campaign,
+                acCommand.ExpectedRevision,
+                acCommand.Mutation,
+                "ReplaceRosterSlot",
+                std::move(commandPayload));
+        }
     }
     return PersistMutation(
         m_store,
@@ -528,7 +546,9 @@ CampaignCommandResult CampaignRuntimeService::CommitCampaignStart(
     if (mode == RevisionMode::Current)
     {
         CampaignDomainResult changed = CampaignStateMachine::CommitCampaignStart(
-            loaded.Campaign, acCommand.SessionManager);
+            loaded.Campaign,
+            CampaignActor::Server(),
+            acCommand.SessionManager);
         if (!changed)
             return DomainFailure(changed);
     }
@@ -583,7 +603,15 @@ CampaignCommandResult CampaignRuntimeService::TransferSessionManager(
         if (!changed)
             return DomainFailure(changed);
         if (!changed.Changed)
-            return NoChange(loaded.Campaign.Version);
+        {
+            return PersistAcceptedNoOp(
+                m_store,
+                acCommand.Campaign,
+                acCommand.ExpectedRevision,
+                acCommand.Mutation,
+                "TransferSessionManager",
+                std::move(commandPayload));
+        }
     }
     return PersistMutation(
         m_store,
@@ -638,7 +666,15 @@ CampaignCommandResult CampaignRuntimeService::SetReady(
         if (!changed)
             return DomainFailure(changed);
         if (!changed.Changed)
-            return NoChange(loaded.Campaign.Version);
+        {
+            return PersistAcceptedNoOp(
+                m_store,
+                acCommand.Campaign,
+                acCommand.ExpectedRevision,
+                acCommand.Mutation,
+                "SetReady",
+                std::move(commandPayload));
+        }
     }
     return PersistMutation(
         m_store,

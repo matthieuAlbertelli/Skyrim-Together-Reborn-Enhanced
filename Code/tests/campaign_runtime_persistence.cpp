@@ -284,6 +284,177 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Accepted ready no-op durably reserves its MutationId",
+    "[campaign.runtime][persistence][idempotency][noop]")
+{
+    TemporaryDatabase database;
+    auto store = OpenStore(database);
+    CampaignRuntimeService service(*store);
+    REQUIRE(service.CreateLobbyCampaign(
+        MakeRuntimeCampaignCommand(1)).Succeeded());
+    REQUIRE(service.CommitCampaignStart(
+        {CampaignId{"campaign-runtime"},
+         1,
+         MutationId{"mutation-start-noop-regression"},
+         PlayerId{"player-1"}}).Succeeded());
+    REQUIRE(service.SetReady(
+        {CampaignId{"campaign-runtime"},
+         2,
+         MutationId{"mutation-ready-before-noop"},
+         MakeRuntimeIdentity(1),
+         true}).Succeeded());
+
+    const SetCampaignReadyCommand acceptedNoOp{
+        CampaignId{"campaign-runtime"},
+        3,
+        MutationId{"mutation-accepted-ready-noop"},
+        MakeRuntimeIdentity(1),
+        true};
+    CampaignCommandResult noOp = service.SetReady(acceptedNoOp);
+    REQUIRE(noOp.Succeeded());
+    REQUIRE_FALSE(noOp.Applied);
+    REQUIRE(noOp.Version == 3);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 3);
+    auto journalAfterNoOp = store->LoadJournal(
+        CampaignId{"campaign-runtime"});
+    REQUIRE(journalAfterNoOp.Succeeded());
+    REQUIRE(journalAfterNoOp.Value.size() == 4);
+    REQUIRE(journalAfterNoOp.Value.back().ExpectedRevision == 3);
+    REQUIRE(journalAfterNoOp.Value.back().ResultingRevision == 3);
+    REQUIRE(store->LoadPendingOutbox(
+        CampaignId{"campaign-runtime"}).Value.size() == 3);
+
+    CampaignCommandResult replay = service.SetReady(acceptedNoOp);
+    REQUIRE(replay.Succeeded());
+    REQUIRE(replay.IdempotentReplay);
+    REQUIRE_FALSE(replay.Applied);
+    REQUIRE(replay.Version == 3);
+    REQUIRE(store->LoadJournal(
+        CampaignId{"campaign-runtime"}).Value.size() == 4);
+
+    SetCampaignReadyCommand conflicting = acceptedNoOp;
+    conflicting.Ready = false;
+    CampaignCommandResult conflict = service.SetReady(conflicting);
+    REQUIRE(conflict.PersistenceError == StoreError::IdempotencyConflict);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 3);
+
+    CampaignCommandResult laterMutation = service.SetReady(
+        {CampaignId{"campaign-runtime"},
+         3,
+         MutationId{"mutation-ready-after-noop"},
+         MakeRuntimeIdentity(1),
+         false});
+    REQUIRE(laterMutation.Succeeded());
+    REQUIRE(laterMutation.Applied);
+    REQUIRE(laterMutation.Version == 4);
+}
+
+TEST_CASE(
+    "Accepted Session Manager self-transfer durably reserves its MutationId",
+    "[campaign.runtime][persistence][idempotency][noop]")
+{
+    TemporaryDatabase database;
+    auto store = OpenStore(database);
+    CampaignRuntimeService service(*store);
+    REQUIRE(service.CreateLobbyCampaign(
+        MakeRuntimeCampaignCommand(2)).Succeeded());
+    REQUIRE(service.CommitCampaignStart(
+        {CampaignId{"campaign-runtime"},
+         1,
+         MutationId{"mutation-start-manager-noop"},
+         PlayerId{"player-1"}}).Succeeded());
+
+    const TransferSessionManagerCommand acceptedNoOp{
+        CampaignId{"campaign-runtime"},
+        2,
+        MutationId{"mutation-manager-self-transfer"},
+        PlayerId{"player-1"},
+        PlayerId{"player-1"}};
+    CampaignCommandResult noOp =
+        service.TransferSessionManager(acceptedNoOp);
+    REQUIRE(noOp.Succeeded());
+    REQUIRE_FALSE(noOp.Applied);
+    REQUIRE(noOp.Version == 2);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 2);
+    REQUIRE(store->LoadJournal(
+        CampaignId{"campaign-runtime"}).Value.size() == 3);
+    REQUIRE(store->LoadPendingOutbox(
+        CampaignId{"campaign-runtime"}).Value.size() == 2);
+
+    CampaignCommandResult replay =
+        service.TransferSessionManager(acceptedNoOp);
+    REQUIRE(replay.Succeeded());
+    REQUIRE(replay.IdempotentReplay);
+    REQUIRE(replay.Version == 2);
+
+    TransferSessionManagerCommand conflicting = acceptedNoOp;
+    conflicting.NewManager = PlayerId{"player-2"};
+    REQUIRE(service.TransferSessionManager(conflicting).PersistenceError ==
+            StoreError::IdempotencyConflict);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 2);
+
+    CampaignCommandResult laterMutation =
+        service.TransferSessionManager(
+            {CampaignId{"campaign-runtime"},
+             2,
+             MutationId{"mutation-manager-after-noop"},
+             PlayerId{"player-1"},
+             PlayerId{"player-2"}});
+    REQUIRE(laterMutation.Succeeded());
+    REQUIRE(laterMutation.Version == 3);
+}
+
+TEST_CASE(
+    "Accepted identical roster replacement durably reserves its MutationId",
+    "[campaign.runtime][persistence][idempotency][noop]")
+{
+    TemporaryDatabase database;
+    auto store = OpenStore(database);
+    CampaignRuntimeService service(*store);
+    REQUIRE(service.CreateLobbyCampaign(
+        MakeRuntimeCampaignCommand(2)).Succeeded());
+
+    const ReplaceRosterSlotCommand acceptedNoOp{
+        CampaignId{"campaign-runtime"},
+        1,
+        MutationId{"mutation-identical-roster-replacement"},
+        MakeRuntimeSlot(1)};
+    CampaignCommandResult noOp = service.ReplaceRosterSlot(acceptedNoOp);
+    REQUIRE(noOp.Succeeded());
+    REQUIRE_FALSE(noOp.Applied);
+    REQUIRE(noOp.Version == 1);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 1);
+    REQUIRE(store->LoadJournal(
+        CampaignId{"campaign-runtime"}).Value.size() == 2);
+    REQUIRE(store->LoadPendingOutbox(
+        CampaignId{"campaign-runtime"}).Value.size() == 1);
+
+    CampaignCommandResult replay = service.ReplaceRosterSlot(acceptedNoOp);
+    REQUIRE(replay.Succeeded());
+    REQUIRE(replay.IdempotentReplay);
+    REQUIRE(replay.Version == 1);
+
+    ReplaceRosterSlotCommand conflicting = acceptedNoOp;
+    conflicting.Slot = MakeRuntimeSlot(9);
+    conflicting.Slot.Slot = CampaignSlotId{"slot-1"};
+    REQUIRE(service.ReplaceRosterSlot(conflicting).PersistenceError ==
+            StoreError::IdempotencyConflict);
+    REQUIRE(service.LoadCampaign(
+        CampaignId{"campaign-runtime"}).Campaign.Version == 1);
+
+    ReplaceRosterSlotCommand later = conflicting;
+    later.Mutation = MutationId{"mutation-roster-after-noop"};
+    CampaignCommandResult laterMutation = service.ReplaceRosterSlot(later);
+    REQUIRE(laterMutation.Succeeded());
+    REQUIRE(laterMutation.Version == 2);
+}
+
+TEST_CASE(
     "Campaign core codec preserves readiness and rejects revision mismatch",
     "[campaign.runtime][codec]")
 {

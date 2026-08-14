@@ -52,7 +52,9 @@ projection remain intentionally unwired in this increment.
 - `CreateCampaign`
 - `JoinCampaign` (before roster seal only)
 - `BindCharacter`
-- `CommitCampaignStart` (atomically seal the roster and enter `CharacterCreation`)
+- `CommitCampaignStart` (after future session-layer host-role authorization,
+  issue a server-authorized command that atomically seals the roster, establishes
+  the explicit roster-member Session Manager, and enters `CharacterCreation`)
 - `SetReady`
 - `RequestIntroductionStart`
 - `ReportLocalSceneCompleted`

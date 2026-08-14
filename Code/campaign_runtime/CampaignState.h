@@ -216,6 +216,7 @@ public:
         CampaignSlotState aSlot);
     static CampaignDomainResult CommitCampaignStart(
         CampaignAggregate& aCampaign,
+        const CampaignActor& acActor,
         const PlayerId& acSessionManager);
     static CampaignDomainResult TransferSessionManager(
         CampaignAggregate& aCampaign,

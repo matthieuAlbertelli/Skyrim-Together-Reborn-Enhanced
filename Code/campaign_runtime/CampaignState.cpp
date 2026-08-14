@@ -286,10 +286,18 @@ CampaignDomainResult CampaignStateMachine::ReplaceSlot(
 
 CampaignDomainResult CampaignStateMachine::CommitCampaignStart(
     CampaignAggregate& aCampaign,
+    const CampaignActor& acActor,
     const PlayerId& acSessionManager)
 {
     if (aCampaign.RosterSealed)
         return Failure(CampaignError::RosterSealed, "campaign roster is sealed");
+    CampaignDomainResult transition = EvaluateTransition(
+        aCampaign,
+        CampaignTransition::CommitCampaignStart,
+        acActor,
+        {});
+    if (!transition)
+        return transition;
     CampaignDomainResult roster = ValidateRoster(aCampaign.Roster, false);
     if (!roster)
         return roster;
@@ -300,13 +308,6 @@ CampaignDomainResult CampaignStateMachine::CommitCampaignStart(
             CampaignError::InvalidSessionManager,
             "Session Manager must be an expected roster member");
     }
-    CampaignDomainResult transition = EvaluateTransition(
-        aCampaign,
-        CampaignTransition::CommitCampaignStart,
-        CampaignActor::ForPlayer(acSessionManager),
-        {});
-    if (!transition)
-        return transition;
 
     aCampaign.RosterSealed = true;
     aCampaign.SessionManager = acSessionManager;
@@ -488,7 +489,7 @@ const CampaignTransitionPolicy& CampaignStateMachine::GetTransitionPolicy(
         {CampaignTransition::CommitCampaignStart,
          CampaignPhase::Lobby,
          CampaignPhase::CharacterCreation,
-         CampaignTransitionAuthority::SessionManager,
+         CampaignTransitionAuthority::Server,
          CampaignTransitionIntent::CampaignStarted,
          false,
          false,
@@ -581,17 +582,8 @@ CampaignDomainResult CampaignStateMachine::EvaluateTransition(
     {
         if (acActor.Kind != CampaignActorKind::Player || !acActor.Player)
             return Failure(CampaignError::UnauthorizedActor, "transition requires a player actor");
-        if (aTransition == CampaignTransition::CommitCampaignStart)
-        {
-            if (!IsRosterMember(acCampaign, *acActor.Player))
-            {
-                return Failure(
-                    CampaignError::UnauthorizedActor,
-                    "campaign start actor must be a proposed roster member");
-            }
-        }
-        else if (!acCampaign.SessionManager ||
-                 *acCampaign.SessionManager != *acActor.Player)
+        if (!acCampaign.SessionManager ||
+            *acCampaign.SessionManager != *acActor.Player)
         {
             return Failure(
                 CampaignError::UnauthorizedActor,

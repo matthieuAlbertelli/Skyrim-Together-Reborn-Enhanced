@@ -12,10 +12,13 @@ authority, but neither owns the persistent truth.
 `Code/campaign_runtime` implements the pure aggregate, versioned core codec,
 transition-policy boundary, exact full-roster predicate, and transactional
 service over `ICampaignStore`. `GameServer` owns that service after the durable
-store opens successfully. No second persistence layer or SQLite schema migration
-is required: normalized slots retain ownership while the versioned core payload
-stores phase, Session Manager, and per-slot readiness; every accepted mutation
-also writes the journal and a canonical snapshot intent to the outbox.
+store opens successfully. No second persistence layer is introduced: normalized
+slots retain ownership while the versioned core payload stores phase, Session
+Manager, and per-slot readiness. State-changing commands write current state,
+the journal, and a canonical snapshot intent to the outbox atomically. Accepted
+semantic no-ops reserve their `MutationId` in the same journal without advancing
+`StateVersion` or emitting redundant outbox work; schema v2 is the minimal
+transactional migration needed to represent this.
 
 Transport connectivity and campaign admission remain transient inputs rather
 than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE` through
@@ -23,12 +26,17 @@ one exact-roster predicate. The other runtime enum values are represented for
 the accepted model but are not activated by this increment.
 
 The implemented narrative mutation is the atomic
-`Lobby -> CharacterCreation` campaign start/seal. Policies for the remaining
-phase edges define their source, target, actor authority, common roster/readiness
-preconditions, and resulting intent, but deliberately refuse execution until
-their feature-owned CK/Valen/build preconditions are implemented. No campaign
-network protocol, CEF/CK projection, coordinated native save, or recovery-lock
-behavior is part of this core increment.
+`Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
+the pure-domain boundary. A future session/network caller must first prove that
+the requesting connection holds the host/Session Manager administrative role,
+then issue the server-authorized command with an explicit target Session Manager
+that belongs to the proposed roster. That transient proof is not persisted in
+the aggregate, and roster membership alone never authorizes the seal. Policies
+for the remaining phase edges define their source, target, actor authority,
+common roster/readiness preconditions, and resulting intent, but deliberately
+refuse execution until their feature-owned CK/Valen/build preconditions are
+implemented. No campaign network protocol, CEF/CK projection, coordinated
+native save, or recovery-lock behavior is part of this core increment.
 
 ## Goals
 
@@ -272,7 +280,10 @@ commit state use the persistence port and proposed SQLite adapter described by
 substrate provides a versioned multi-campaign schema, explicit transactional
 migration, normalized current state, immutable snapshots, optimistic revisions,
 an append-only validated-mutation journal, and a transactional outbox. Its
-default locked server path is `state/stre-server.sqlite3`.
+default locked server path is `state/stre-server.sqlite3`. Schema v2 keeps that
+model and permits accepted no-op journal records to share the unchanged
+canonical revision; schema-v1 stores migrate transactionally without a second
+receipt system.
 
 Checkpoint rollback never rewinds the durable mutation sequence. A checkpoint
 permanently retains its exact `SourceRevision`. Restoring it is a new validated

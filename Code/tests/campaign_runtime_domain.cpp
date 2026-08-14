@@ -64,7 +64,9 @@ TEST_CASE(
         campaign, CampaignSlotId{"slot-2"}).Succeeded());
     REQUIRE(campaign.Roster.empty());
     REQUIRE(CampaignStateMachine::CommitCampaignStart(
-        campaign, PlayerId{"player-9"}).Error ==
+        campaign,
+        CampaignActor::Server(),
+        PlayerId{"player-9"}).Error ==
         CampaignError::InvalidRoster);
 
     for (std::size_t index = 1; index <= kMaximumCampaignRosterSize; ++index)
@@ -78,7 +80,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Campaign start seals the exact roster and manager transfer preserves ownership",
+    "Server-authorized campaign start seals the roster and establishes its manager",
     "[campaign.runtime][domain][seal]")
 {
     CampaignAggregate campaign;
@@ -89,15 +91,36 @@ TEST_CASE(
         MakeRuntimeSlotState(1)};
     CampaignStateMachine::SortRoster(campaign.Roster);
 
+    REQUIRE(CampaignStateMachine::GetTransitionPolicy(
+        CampaignTransition::CommitCampaignStart).Authority ==
+        CampaignTransitionAuthority::Server);
+    REQUIRE(CampaignStateMachine::EvaluateTransition(
+        campaign,
+        CampaignTransition::CommitCampaignStart,
+        CampaignActor::ForPlayer(PlayerId{"player-1"}),
+        {}).Error == CampaignError::UnauthorizedActor);
     REQUIRE(CampaignStateMachine::CommitCampaignStart(
-        campaign, PlayerId{"not-a-member"}).Error ==
+        campaign,
+        CampaignActor::ForPlayer(PlayerId{"player-1"}),
+        PlayerId{"player-1"}).Error ==
+        CampaignError::UnauthorizedActor);
+    REQUIRE_FALSE(campaign.RosterSealed);
+    REQUIRE_FALSE(campaign.SessionManager);
+    REQUIRE(campaign.Version == 1);
+
+    REQUIRE(CampaignStateMachine::CommitCampaignStart(
+        campaign,
+        CampaignActor::Server(),
+        PlayerId{"not-a-member"}).Error ==
         CampaignError::InvalidSessionManager);
     REQUIRE_FALSE(campaign.RosterSealed);
     REQUIRE(campaign.Phase == CampaignPhase::Lobby);
     REQUIRE(campaign.Version == 1);
 
     REQUIRE(CampaignStateMachine::CommitCampaignStart(
-        campaign, PlayerId{"player-1"}).Succeeded());
+        campaign,
+        CampaignActor::Server(),
+        PlayerId{"player-1"}).Succeeded());
     REQUIRE(campaign.Version == 2);
     REQUIRE(campaign.RosterSealed);
     REQUIRE(campaign.Phase == CampaignPhase::CharacterCreation);
@@ -122,6 +145,12 @@ TEST_CASE(
         PlayerId{"player-2"}).Succeeded());
     REQUIRE(campaign.SessionManager == PlayerId{"player-2"});
     REQUIRE(campaign.Roster == sealedRoster);
+    REQUIRE(CampaignStateMachine::EvaluateTransition(
+        campaign,
+        CampaignTransition::CompleteCharacterCreation,
+        CampaignActor::ForPlayer(PlayerId{"player-2"}),
+        MakeFullPresence(campaign)).Error ==
+        CampaignError::UnauthorizedActor);
 }
 
 TEST_CASE(
@@ -278,7 +307,9 @@ TEST_CASE(
             campaign.Roster.push_back(MakeRuntimeSlotState(index));
         CampaignStateMachine::SortRoster(campaign.Roster);
         REQUIRE(CampaignStateMachine::CommitCampaignStart(
-            campaign, PlayerId{"player-1"}).Succeeded());
+            campaign,
+            CampaignActor::Server(),
+            PlayerId{"player-1"}).Succeeded());
         const auto presence = MakeFullPresence(campaign);
         REQUIRE(CampaignStateMachine::EvaluateFullRoster(
             campaign, presence).Eligible());

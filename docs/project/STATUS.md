@@ -118,13 +118,17 @@ The current catalog uses `BuildVersion = 5`.
 - the locked server setting defaults to `state/stre-server.sqlite3`;
 - the server opens, migrates, and integrity-checks the store before constructing
   its `World`, and persistence startup failure fails closed;
-- schema version 1 stores multiple campaign identities, roster slots,
+- schema version 2 stores multiple campaign identities, roster slots,
   `PlayerId`/`CharacterBinding` records, versioned Character Build state,
   audience-tagged adapter state, immutable snapshots, Candidate/Committed
   checkpoint metadata, per-slot native-save metadata, an append-only journal,
   and a transactional outbox;
 - optimistic revisions and `MutationId` idempotency protect atomic current-state
   + journal + outbox mutations;
+- accepted semantic no-ops durably reserve their `MutationId` in the same
+  append-only journal without advancing canonical state or producing redundant
+  outbox work; existing schema-v1 databases migrate transactionally to this
+  representation;
 - checkpoint restore materializes the exact immutable snapshot at a new
   monotonic revision and supersedes obsolete pending outbox work;
 - file-backed automated tests cover restart, migration, partial-write rollback,
@@ -158,10 +162,14 @@ implemented and automated-tested:
 - a mutable Lobby roster uses durable `CampaignSlotId`, `PlayerId`, and
   `CharacterBindingId` values, enforces unique non-empty identities and the v1
   ten-slot limit, and is stored in deterministic slot order;
-- `CommitCampaignStart` atomically validates and seals the exact roster,
-  establishes a roster-member Session Manager, advances
+- `CommitCampaignStart` is server-authoritative at the domain boundary and
+  atomically validates and seals the exact roster, establishes an explicitly
+  selected roster-member Session Manager, advances
   `Lobby -> CharacterCreation`, increments the state version once, journals the
   mutation, and writes a canonical snapshot intent to the transactional outbox;
+- the future session/network caller remains responsible for proving host-role
+  administration before issuing that server-authorized start; roster membership
+  alone grants no seal authority and transient session authority is not persisted;
 - post-seal roster ownership is immutable, including across Session Manager
   transfer;
 - one exact full-roster predicate distinguishes transport connectivity from
@@ -170,7 +178,8 @@ implemented and automated-tested:
 - exact per-slot readiness is durable, supports withdrawal and idempotent
   duplicates, and can be changed only by the matching sealed member;
 - optimistic revisions and journal-backed `MutationId` replay prevent stale,
-  delayed, duplicate, or out-of-order commands from regressing canonical state;
+  delayed, duplicate, or out-of-order commands from regressing canonical state,
+  including accepted readiness, self-transfer, and identical-roster no-ops;
 - the transition-policy boundary records source, target, actor authority,
   shared preconditions, and resulting intent for every canonical phase edge.
 

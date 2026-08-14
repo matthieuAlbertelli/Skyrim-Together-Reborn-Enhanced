@@ -137,7 +137,6 @@ CREATE TABLE IF NOT EXISTS campaign_journal (
     restored_from_revision INTEGER,
     created_at_unix_ms INTEGER NOT NULL,
     UNIQUE (campaign_id, mutation_id),
-    UNIQUE (campaign_id, resulting_revision),
     FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id) ON DELETE RESTRICT
 );
 
@@ -190,6 +189,63 @@ BEGIN
     SELECT RAISE(ABORT, 'campaign snapshots are immutable');
 END;
 )sql";
+
+constexpr const char* kMigration1To2Sql = R"sql(
+DROP TRIGGER IF EXISTS campaign_journal_no_update;
+DROP TRIGGER IF EXISTS campaign_journal_no_delete;
+DROP INDEX IF EXISTS idx_journal_campaign_revision;
+
+ALTER TABLE campaign_journal RENAME TO campaign_journal_v1;
+
+CREATE TABLE campaign_journal (
+    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id TEXT NOT NULL,
+    mutation_id TEXT NOT NULL,
+    expected_revision INTEGER NOT NULL CHECK (expected_revision >= 0),
+    resulting_revision INTEGER NOT NULL CHECK (resulting_revision > 0),
+    mutation_kind TEXT NOT NULL,
+    command_digest TEXT NOT NULL,
+    payload_codec_version INTEGER NOT NULL CHECK (payload_codec_version > 0),
+    payload BLOB NOT NULL,
+    restored_from_checkpoint_id TEXT,
+    restored_from_revision INTEGER,
+    created_at_unix_ms INTEGER NOT NULL,
+    UNIQUE (campaign_id, mutation_id),
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id) ON DELETE RESTRICT
+);
+
+INSERT INTO campaign_journal(
+    sequence, campaign_id, mutation_id, expected_revision, resulting_revision,
+    mutation_kind, command_digest, payload_codec_version, payload,
+    restored_from_checkpoint_id, restored_from_revision, created_at_unix_ms)
+SELECT
+    sequence, campaign_id, mutation_id, expected_revision, resulting_revision,
+    mutation_kind, command_digest, payload_codec_version, payload,
+    restored_from_checkpoint_id, restored_from_revision, created_at_unix_ms
+FROM campaign_journal_v1
+ORDER BY sequence;
+
+DROP TABLE campaign_journal_v1;
+
+CREATE INDEX idx_journal_campaign_revision
+    ON campaign_journal(campaign_id, resulting_revision);
+
+CREATE TRIGGER campaign_journal_no_update
+BEFORE UPDATE ON campaign_journal
+BEGIN
+    SELECT RAISE(ABORT, 'campaign journal is append-only');
+END;
+
+CREATE TRIGGER campaign_journal_no_delete
+BEFORE DELETE ON campaign_journal
+BEGIN
+    SELECT RAISE(ABORT, 'campaign journal is append-only');
+END;
+
+UPDATE campaigns
+SET persistence_schema_version = 2
+WHERE persistence_schema_version = 1;
+)sql";
 }
 
 StoreResult Initialize(
@@ -231,21 +287,29 @@ StoreResult Initialize(
             }
         }
 
-        Statement foreignKeys(apDatabase, "PRAGMA foreign_keys;");
-        if (!foreignKeys.Valid() || foreignKeys.Step() != SQLITE_ROW ||
-            foreignKeys.Int(0) != 1)
         {
-            return Failure(StoreError::DatabaseFailure, "SQLite foreign_keys could not be enabled");
+            Statement foreignKeys(apDatabase, "PRAGMA foreign_keys;");
+            if (!foreignKeys.Valid() || foreignKeys.Step() != SQLITE_ROW ||
+                foreignKeys.Int(0) != 1)
+            {
+                return Failure(
+                    StoreError::DatabaseFailure,
+                    "SQLite foreign_keys could not be enabled");
+            }
         }
 
         std::uint32_t userVersion{};
-        Statement versionStatement(apDatabase, "PRAGMA user_version;");
-        if (!versionStatement.Valid() || versionStatement.Step() != SQLITE_ROW ||
-            versionStatement.Int64(0) < 0)
         {
-            return BindFailure(apDatabase, "read SQLite schema version");
+            Statement versionStatement(apDatabase, "PRAGMA user_version;");
+            if (!versionStatement.Valid() ||
+                versionStatement.Step() != SQLITE_ROW ||
+                versionStatement.Int64(0) < 0)
+            {
+                return BindFailure(apDatabase, "read SQLite schema version");
+            }
+            userVersion = static_cast<std::uint32_t>(
+                versionStatement.Int64(0));
         }
-        userVersion = static_cast<std::uint32_t>(versionStatement.Int64(0));
         if (userVersion > kCampaignDatabaseSchemaVersion)
         {
             return Failure(
@@ -287,7 +351,7 @@ StoreResult Initialize(
             if (!schemaResult)
             {
                 schemaResult.Error = StoreError::MigrationFailure;
-                schemaResult.Message = "campaign schema migration 0->1 failed: " +
+                schemaResult.Message = "campaign schema migration 0->2 failed: " +
                     schemaResult.Message;
                 return schemaResult;
             }
@@ -313,7 +377,69 @@ StoreResult Initialize(
                 metadataResult.Error = StoreError::MigrationFailure;
                 return metadataResult;
             }
-            StoreResult pragmaResult = Execute(apDatabase, "PRAGMA user_version = 1;");
+            StoreResult pragmaResult = Execute(apDatabase, "PRAGMA user_version = 2;");
+            if (!pragmaResult)
+            {
+                pragmaResult.Error = StoreError::MigrationFailure;
+                return pragmaResult;
+            }
+            StoreResult commitResult = transaction.Commit();
+            if (!commitResult)
+            {
+                commitResult.Error = StoreError::MigrationFailure;
+                return commitResult;
+            }
+        }
+        else if (userVersion == 1)
+        {
+            {
+                Statement currentMetadata(
+                    apDatabase,
+                    "SELECT schema_version FROM schema_metadata WHERE singleton=1;");
+                if (!currentMetadata.Valid() ||
+                    currentMetadata.Step() != SQLITE_ROW ||
+                    currentMetadata.Int64(0) != 1)
+                {
+                    return Failure(
+                        StoreError::IncompatibleSchema,
+                        "campaign schema metadata does not match SQLite user_version before migration");
+                }
+            }
+
+            Transaction transaction(apDatabase);
+            if (!transaction.Active())
+            {
+                return Failure(
+                    StoreError::MigrationFailure,
+                    transaction.Error().Message);
+            }
+            StoreResult schemaResult = Execute(apDatabase, kMigration1To2Sql);
+            if (!schemaResult)
+            {
+                schemaResult.Error = StoreError::MigrationFailure;
+                schemaResult.Message = "campaign schema migration 1->2 failed: " +
+                    schemaResult.Message;
+                return schemaResult;
+            }
+            Statement metadata(
+                apDatabase,
+                "UPDATE schema_metadata SET schema_version=2, "
+                "migrated_at_unix_ms=?1 WHERE singleton=1;");
+            if (!metadata.Valid() || !metadata.BindInt64(1, NowUnixMs()))
+            {
+                return Failure(
+                    StoreError::MigrationFailure,
+                    DatabaseMessage(apDatabase, "write campaign schema-v2 metadata"));
+            }
+            StoreResult metadataResult = StepDone(
+                apDatabase, metadata, "write campaign schema-v2 metadata");
+            if (!metadataResult)
+            {
+                metadataResult.Error = StoreError::MigrationFailure;
+                return metadataResult;
+            }
+            StoreResult pragmaResult = Execute(
+                apDatabase, "PRAGMA user_version = 2;");
             if (!pragmaResult)
             {
                 pragmaResult.Error = StoreError::MigrationFailure;
