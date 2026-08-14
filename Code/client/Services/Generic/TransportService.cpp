@@ -1,5 +1,6 @@
 
 #include <Services/TransportService.h>
+#include <Services/CampaignRuntimeGateService.h>
 
 #include <Events/ConnectedEvent.h>
 #include <Events/ConnectionErrorEvent.h>
@@ -274,6 +275,12 @@ void TransportService::OnUpdate()
 void TransportService::HandleUpdate(const UpdateEvent& acEvent) noexcept
 {
     Update();
+
+    if (CampaignRuntimeGateService* const pGate =
+            CampaignRuntimeGateService::TryGet())
+    {
+        pGate->OnTransportUpdate(IsConnected());
+    }
 }
 
 void TransportService::HandleConnected(const ConnectedEvent& acEvent) noexcept

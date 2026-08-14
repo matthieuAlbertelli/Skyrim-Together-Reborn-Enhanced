@@ -145,6 +145,25 @@ payload, save/load engine call, recovery UI, or WorldEntity persistence is part
 of this foundation; durable WorldEntity persistence remains separate future
 work rather than part of #55.
 
+### Campaign save-load runtime gate spike
+
+The isolated #60 client spike is automated-tested and human runtime-validated:
+
+- STRE can observe the native save-load boundary and the existing post-load
+  event without pretending to be a conventional SKSE messaging plugin;
+- a local `CampaignRuntimeGate` plus a modal native guard menu freezes Skyrim
+  gameplay and vanilla menus after a managed load;
+- CEF remains available and STRE networking continues while Skyrim is paused;
+- explicit release removes the guard and Skyrim resumes normally;
+- a small number of STRE updates were observed before `GameIsPaused=true`, but
+  no free gameplay progression was observed, so no deeper engine hook is
+  justified by the evidence.
+
+The validation-only F8/F10 controls and raw-input probes were removed after the
+successful test. No production campaign save detection, automatic gate
+arming/release, checkpoint coordination, or recovery state is implemented by
+this spike; those callers remain future work under #28, #55, and #56.
+
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 
 ## Important fixed regressions

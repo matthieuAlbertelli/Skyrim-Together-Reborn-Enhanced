@@ -4,6 +4,7 @@
 
 #include <Services/DiscoveryService.h>
 #include <Services/InputService.h>
+#include <Services/CampaignRuntimeGateService.h>
 #include <Services/TransportService.h>
 #include <Services/RunnerService.h>
 #include <Services/ImguiService.h>
@@ -44,6 +45,9 @@ World::World()
     ctx().emplace<OverlayService>(*this, m_transport, m_dispatcher);
     ctx().emplace<UiSurfaceService>(ctx().at<OverlayService>());
     ctx().emplace<InputService>(ctx().at<UiSurfaceService>());
+    ctx().emplace<CampaignRuntimeGateService>(
+        *this,
+        ctx().at<UiSurfaceService>());
     ctx().emplace<CharacterService>(*this, m_dispatcher, m_transport);
     ctx().emplace<DebugService>(m_dispatcher, *this, m_transport, ctx().at<ImguiService>());
     ctx().emplace<PapyrusService>(m_dispatcher);

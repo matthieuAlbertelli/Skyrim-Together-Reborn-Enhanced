@@ -43,6 +43,10 @@ public:
     static UI* Get();
 
     bool GetMenuOpen(const BSFixedString& acName) const;
+    [[nodiscard]] bool GameIsPaused() const noexcept
+    {
+        return numPausesGame != 0;
+    }
     void CloseAllMenus();
     void DebugLogAllMenus();
 
