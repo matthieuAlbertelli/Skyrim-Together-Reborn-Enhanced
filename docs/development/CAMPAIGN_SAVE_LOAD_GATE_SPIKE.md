@@ -1,6 +1,7 @@
 # Campaign save-load gate technical spike
 
-> **Status:** compiled instrumentation awaiting in-game validation.
+> **Status:** human-validated on 14 August 2026; production campaign wiring is
+> outside this spike.
 > **Issue:** [#60](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/60)
 
 ## Question
@@ -81,44 +82,39 @@ While locked, the service reuses existing input primitives:
 The previous `MenuControls` value is restored and `UiSurfaceService` reapplies
 its normal input-capture state only after explicit development release.
 
-## Development-only controls
+## Validation-only controls
 
-The controls are compiled only when `IS_MASTER` is false:
+The human test used temporary non-production controls: `F8` marked exactly the
+next native load as `CampaignManaged`, and `F10` explicitly released the gate.
+They ran through the existing `WM_INPUT`/`ProcessKeyboard` raw-input path, with
+`F2` as the known-working CEF control sample. A diagnostic build recorded the
+virtual key, event type, scan code, E0/E1 flags, development-control dispatch,
+and service availability.
 
-- `F8`: mark exactly the next native load as `CampaignManaged`;
-- `F10`: explicitly release the gate after the experiment.
-
-Both controls use the existing `WM_INPUT`/`ProcessKeyboard` raw-input path that
-keeps `F2` available to CEF while Skyrim is paused. Their raw key events are
-consumed, and their actions run on key-up without mixing raw-input events with
-`GetKeyState` modifier state. The old `WM_KEYUP` development path is not used
-because it did not deliver the release key while the native guard menu held the
-game paused.
-
-The diagnostic build logs `F2`, `F8`, and `F10` at the `ProcessKeyboard`
-boundary before development-control dispatch. It also logs every observed
-development key and whether `CampaignRuntimeGateService::TryGet()` returned a
-service. `F2` is the known-working control sample. This instrumentation does not
-add an input path or change the F8/F10 mapping.
+Those keyboard controls and raw-input probes were removed after successful
+validation. The final spike branch does not reserve F8 or F10 and contains no
+production campaign trigger. Production arming, validation, and release must be
+driven by the future authoritative campaign/save/recovery flows; this spike does
+not implement #28, #55, or #56.
 
 No save-name convention or persistent marker is introduced.
 
-## Networking hypothesis to test
+## Networking validation
 
 `TiltedOnlineApp::Update` calls the gate probe and then `World::Update`.
 `World::Update` drains `RunnerService`, triggers `UpdateEvent`, and thereby
 calls `TransportService::HandleUpdate`. The gate logs
 `TransportUpdateWhileLocked` from that real transport callback.
 
-The unresolved engine question is whether the hooked Skyrim VM update continues
-to call `TiltedOnlineApp::Update` while `UI::GameIsPaused()` is true. Code alone
-does not prove that condition. The 60-second in-game run must show continuing
-transport heartbeat logs and live CEF/network behavior; absence of those logs
-falsifies the hypothesis.
+The in-game run confirmed that CEF remained available and STRE networking stayed
+alive while `UI::GameIsPaused()` was true. The existing update/transport path is
+therefore sufficient for this validated scenario; the spike adds no alternative
+network loop.
 
-## Expected log vocabulary
+## Validation log vocabulary
 
-Every gate record contains a monotonically increasing microsecond timestamp,
+The temporary raw-input probe recorded its direct keyboard fields. Every
+`CampaignGate` record contains a monotonically increasing microsecond timestamp,
 the last STRE frame number, and the synchronized transport tick:
 
 ```text
@@ -140,45 +136,30 @@ the last STRE frame number, and the synchronized transport tick:
 [STRE][CampaignGate] TransportUpdateWhileLocked
 ```
 
-The ordering, rather than the mere presence of the records, decides the spike.
-If `FirstWorldUpdateAfterLoad GameIsPaused=false` precedes menu activation, the
-normal menu path is too late and a narrower engine gate must be investigated in
-a follow-up. If the menu is active and `GameIsPaused=true` before that first
-update, no deeper hook is justified.
+The trace showed a small number of STRE updates before `GameIsPaused=true`.
+Direct observation nevertheless found no free gameplay progression: Skyrim
+gameplay and vanilla menus were fully frozen. This satisfies the intended
+post-load safety invariant and does not justify a deeper or more invasive engine
+hook. The spike does not claim that no engine-internal work occurs while a save
+is reconstructed or before the pause menu reports active.
 
-The first smoke run observed a small number of STRE updates before
-`GameIsPaused=true`. That observation does not by itself demonstrate a playable
-Skyrim simulation tick, so this control-only follow-up deliberately adds no
-engine hook. The final smoke test must judge the player, AI, game time, Havok,
-and active-effect clocks directly while preserving the captured ordering.
+## Human validation — passed
 
-## Manual in-game procedure
+On 14 August 2026, a deployed `SkyrimTogether.exe` was exercised in-game with a
+live save and the validation-only controls. The run confirmed:
 
-1. Build and deploy the non-master `SkyrimTogether.exe` produced by the
-   `SkyrimImmersiveLauncher` target from this branch.
-2. Start Skyrim with a save located in active gameplay: nearby moving NPCs,
-   running game time, a visible duration effect, and interactable physics.
-3. Open `tp_client.log` for live observation. Press and release `F2` as the
-   control sample, then press and release `F8` once. Determine whether the log
-   contains F8 down/up `RawInputProbe` records, development-control observation,
-   service availability, and finally
-   `DevArmRequested nextLoad=CampaignManaged`.
-4. Load the chosen ordinary save through Skyrim's normal load UI. The marker is
-   consumed by this one load only.
-5. Do not connect for 60 seconds. Verify that the player, NPC/AI, game time,
-   Havok, and effect duration remain frozen; movement, activation, combat,
-   console, save, load, and gameplay menus must be unavailable.
-6. During the same minute, press `F2` or right Control and verify that the CEF
-   surface remains live. Attempt a server connection and verify live messages
-   and recurring `TransportUpdateWhileLocked connected=true` records.
-7. Press and release `F10` only after collecting the evidence. Confirm a
-   `Released` record and normal playable input before ending the smoke test.
-8. Extract the trace with:
+- `F2` opened the STRE/CEF path;
+- the next managed load could be armed and loading the save activated
+  `CampaignRuntimeGate`;
+- Skyrim gameplay and vanilla menus were fully frozen while locked;
+- CEF remained available and STRE networking remained alive;
+- explicit gate release restored normal Skyrim gameplay.
 
-   ```powershell
-   Select-String -Path tp_client.log -Pattern '\[STRE\]\[CampaignGate\]|Load|Pause|FirstWorldUpdate'
-   ```
+The temporary F8 arm control became reliable after the F2/CEF path had been
+activated. That behavior is not a production dependency and warrants no further
+spike scope unless it later affects automatic campaign arming or release.
 
-9. Preserve the complete ordered extract, game/runtime version, branch SHA,
-   whether CEF connected, and the observed frozen/not-frozen result for each
-   item. Do not mark the spike proven from compilation or code inspection alone.
+Conclusion: the existing native load boundary, post-load event, guard menu, and
+STRE update path are sufficient for the tested invariant. No additional engine
+hook is required by this evidence. Production identity, save selection,
+checkpoint coordination, and recovery policy remain owned by #28, #55, and #56.

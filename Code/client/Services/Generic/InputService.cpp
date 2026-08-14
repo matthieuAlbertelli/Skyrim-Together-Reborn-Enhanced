@@ -1,7 +1,6 @@
 #include <TiltedOnlinePCH.h>
 
 #include <Services/InputService.h>
-#include <Services/CampaignRuntimeGateService.h>
 #include <Services/OverlayService.h>
 #include <Services/UiSurfaceService.h>
 
@@ -99,39 +98,6 @@ bool IsDisableKey(int aKey) noexcept
     return aKey == VK_ESCAPE;
 }
 
-#if (!IS_MASTER)
-bool ProcessCampaignGateDevelopmentControl(
-    uint16_t aKey, cef_key_event_type_t aType) noexcept
-{
-    if (aKey != VK_F8 && aKey != VK_F10)
-        return false;
-
-    spdlog::info(
-        "[STRE][RawInputProbe] CampaignGateDevControlObserved key={} type={}",
-        aKey,
-        static_cast<std::uint32_t>(aType));
-
-    CampaignRuntimeGateService* const pGate =
-        CampaignRuntimeGateService::TryGet();
-    spdlog::info(
-        "[STRE][RawInputProbe] CampaignGateDevServiceAvailable value={}",
-        pGate != nullptr);
-
-    if (aType == KEYEVENT_KEYUP)
-    {
-        if (!pGate)
-            return true;
-
-        if (aKey == VK_F8)
-            pGate->ArmNextLoadForDevelopment();
-        else
-            pGate->ReleaseForDevelopment();
-    }
-
-    return true;
-}
-#endif
-
 void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aType, bool aE0, bool aE1)
 {
     if (aType != KEYEVENT_CHAR)
@@ -191,24 +157,6 @@ void ProcessKeyboard(uint16_t aKey, uint16_t aScanCode, cef_key_event_type_t aTy
             }
         }
     }
-
-#if (!IS_MASTER)
-    if (aKey == VK_F2 || aKey == VK_F8 || aKey == VK_F10)
-    {
-        spdlog::info(
-            "[STRE][RawInputProbe] virtualKey={} type={} scanCode={} E0={} E1={}",
-            aKey,
-            static_cast<std::uint32_t>(aType),
-            aScanCode,
-            aE0,
-            aE1);
-    }
-#endif
-
-#if (!IS_MASTER)
-    if (ProcessCampaignGateDevelopmentControl(aKey, aType))
-        return;
-#endif
 
     if (!s_pUiSurface)
         return;
