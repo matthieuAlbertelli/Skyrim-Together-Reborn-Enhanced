@@ -1,6 +1,6 @@
 # Alternate Start — State model
 
-> **Status: Authoritative build implemented; campaign state proposed**
+> **Status: Authoritative build and server campaign core implemented; Alternate Start campaign projection pending**
 
 ## Currently implemented state
 
@@ -43,6 +43,12 @@ Current invariants:
   or restored from that store.
 
 ## Target campaign state
+
+The server-side fixed-roster aggregate, readiness model, exact-roster runtime
+eligibility, and atomic `Lobby -> CharacterCreation` seal are implemented in
+`Code/campaign_runtime`. The structure below remains the future Alternate Start
+projection of that core; it is not yet wired to the client protocol, CEF, CK, or
+the live `CharacterBuildService`.
 
 ```cpp
 struct AlternateStartState

@@ -422,6 +422,12 @@ MutationResult SqliteCampaignStore::CreateCampaign(
         StoreResult slotValidation = ValidateSlots(acRequest.Slots);
         if (!slotValidation)
             return MutationFailure(slotValidation.Error, slotValidation.Message);
+        if (acRequest.Campaign.RosterSealed && acRequest.Slots.empty())
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "a sealed campaign roster cannot be empty");
+        }
         if (acRequest.Campaign.PersistenceSchemaVersion !=
                 kCampaignDatabaseSchemaVersion ||
             acRequest.Campaign.CoreStateCodecVersion == 0 ||
@@ -767,6 +773,36 @@ MutationResult SqliteCampaignStore::ApplyMutation(
             return MutationFailure(
                 StoreError::InvalidArgument,
                 "campaign=" + acRequest.Campaign.Value + " roster seal is irreversible");
+        }
+        if (!rosterSealed && acRequest.RosterSealed &&
+            *acRequest.RosterSealed)
+        {
+            bool rosterEmpty{};
+            if (acRequest.ReplacementRoster)
+            {
+                rosterEmpty = acRequest.ReplacementRoster->empty();
+            }
+            else
+            {
+                Statement countRoster(
+                    m_pDatabase,
+                    "SELECT COUNT(*) FROM campaign_slots WHERE campaign_id=?1;");
+                if (!countRoster.Valid() ||
+                    !countRoster.BindText(1, acRequest.Campaign.Value) ||
+                    countRoster.Step() != SQLITE_ROW)
+                {
+                    return MutationFailure(
+                        StoreError::DatabaseFailure,
+                        DatabaseMessage(m_pDatabase, "validate roster before seal"));
+                }
+                rosterEmpty = countRoster.Int64(0) == 0;
+            }
+            if (rosterEmpty)
+            {
+                return MutationFailure(
+                    StoreError::InvalidArgument,
+                    "a sealed campaign roster cannot be empty");
+            }
         }
 
         if (acRequest.ReplacementRoster)

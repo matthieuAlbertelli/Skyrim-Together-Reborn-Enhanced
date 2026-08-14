@@ -25,6 +25,7 @@ local function build_server()
         "BaseLib",
         "AdminProtocol",
         "CampaignPersistence",
+        "CampaignRuntime",
         "TiltedConnect"
     )
     add_packages(

@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 13, 2026.
+> **Last updated:** August 15, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -135,15 +135,57 @@ The current catalog uses `BuildVersion = 5`.
   confirmed fail-closed startup for an intentionally incompatible schema
   version before normal startup resumed with schema version 1.
 
-The durable server campaign/checkpoint persistence substrate is implemented and
-automated-tested and runtime-validated; the live fixed-roster campaign flow,
-coordinated native saves, and collective reconnect recovery remain unimplemented. `CharacterBuildService`
-continues to use session state until #28 supplies campaign identity/binding
-callers. Coordinated native-save/checkpoint work remains #55, and disconnect
-recovery lock plus collective restore/reload remains #56. No native `.ess`
-payload, save/load engine call, recovery UI, or WorldEntity persistence is part
-of this foundation; durable WorldEntity persistence remains separate future
-work rather than part of #55.
+The durable server campaign/checkpoint persistence substrate is implemented,
+automated-tested, and runtime-validated. The fixed-roster/runtime core described
+below now uses it, while live client admission/protocol wiring, coordinated
+native saves, and collective reconnect recovery remain unimplemented.
+`CharacterBuildService` continues to use session state until later #28
+campaign-protocol and identity/binding callers are supplied. Coordinated
+native-save/checkpoint work remains #55, and disconnect recovery lock plus
+collective restore/reload remains #56. No native `.ess` payload, save/load
+engine call, recovery UI, or WorldEntity persistence is part of this
+foundation; durable WorldEntity persistence remains separate future work rather
+than part of #55.
+
+### Campaign roster/runtime core
+
+The first production increment of the server-authoritative campaign runtime is
+implemented and automated-tested:
+
+- `CampaignPhase` models the canonical Lobby-through-OpenWorld sequence, while
+  `CampaignRuntimeState` separately models roster eligibility and the future
+  checkpoint/recovery states;
+- a mutable Lobby roster uses durable `CampaignSlotId`, `PlayerId`, and
+  `CharacterBindingId` values, enforces unique non-empty identities and the v1
+  ten-slot limit, and is stored in deterministic slot order;
+- `CommitCampaignStart` atomically validates and seals the exact roster,
+  establishes a roster-member Session Manager, advances
+  `Lobby -> CharacterCreation`, increments the state version once, journals the
+  mutation, and writes a canonical snapshot intent to the transactional outbox;
+- post-seal roster ownership is immutable, including across Session Manager
+  transfer;
+- one exact full-roster predicate distinguishes transport connectivity from
+  campaign admission and rejects missing, extra, replacement, wrong-campaign,
+  wrong-slot, wrong-binding, and duplicate active identities;
+- exact per-slot readiness is durable, supports withdrawal and idempotent
+  duplicates, and can be changed only by the matching sealed member;
+- optimistic revisions and journal-backed `MutationId` replay prevent stale,
+  delayed, duplicate, or out-of-order commands from regressing canonical state;
+- the transition-policy boundary records source, target, actor authority,
+  shared preconditions, and resulting intent for every canonical phase edge.
+
+`GameServer` owns this core over the existing `ICampaignStore`, without a new
+database schema or persistence layer. Connection/admission presence is
+deliberately transient: a sealed exact roster derives `ACTIVE`; any mismatch
+derives `WAITING_FOR_ROSTER`, and future narrative transitions are gated by that
+same predicate.
+
+The only production narrative transition implemented in this increment is
+`Lobby -> CharacterCreation`. Campaign protocol messages, live connection
+admission, Character Build binding, CEF/CK/Valen projections, and later phase
+preconditions remain pending. `CHECKPOINTING`, `RECOVERY_LOCK`, and
+`RESTORING_CHECKPOINT` are represented but have no #55/#56 behavior here;
+native-save checkpoint wiring remains #55 and collective recovery remains #56.
 
 ### Campaign save-load runtime gate spike
 

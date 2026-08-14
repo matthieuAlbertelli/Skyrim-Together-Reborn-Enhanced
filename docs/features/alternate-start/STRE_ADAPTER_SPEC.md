@@ -1,6 +1,6 @@
 # Alternate Start — STRE integration specification
 
-> **Status: First-party Character Build implemented; generic campaign adapter proposed**
+> **Status: First-party Character Build and server campaign core implemented; generic campaign protocol/projection proposed**
 
 ## Identity
 
@@ -30,6 +30,10 @@ Current messages:
 The client sends only logical identifiers. The server constructs the canonical build. The client applies it, then confirms with hashes. The offline path reuses the same catalog without a server.
 
 ## Target campaign capabilities
+
+The pure server campaign core behind these capabilities is implemented over the
+durable campaign store. Network commands, opcodes, client snapshots, CEF, and CK
+projection remain intentionally unwired in this increment.
 
 | Capability | Authority | Canonical state |
 |---|---|---|

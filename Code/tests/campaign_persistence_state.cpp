@@ -76,3 +76,42 @@ TEST_CASE("Prepared data statements safely preserve quoted identities", "[campai
     oversized.Mutation = MutationId{"mutation-oversized"};
     REQUIRE(store->CreateCampaign(oversized).Error == StoreError::InvalidArgument);
 }
+
+TEST_CASE("Empty Lobby roster persists but cannot be sealed", "[campaign.persistence][identity]")
+{
+    TemporaryDatabase database;
+    auto store = OpenStore(database);
+
+    CreateCampaignRequest lobby = MakeCampaign("campaign-empty-lobby", false);
+    lobby.Slots.clear();
+    lobby.CharacterBuilds.clear();
+    lobby.AdapterStates.clear();
+    lobby.Mutation = MutationId{"mutation-create-empty-lobby"};
+    REQUIRE(store->CreateCampaign(lobby).Succeeded());
+    REQUIRE(store->LoadCampaignProjection(
+        CampaignId{"campaign-empty-lobby"},
+        ProjectionAudience::Server()).Value.Slots.empty());
+
+    CampaignMutationRequest seal;
+    seal.Campaign = CampaignId{"campaign-empty-lobby"};
+    seal.ExpectedRevision = 1;
+    seal.Mutation = MutationId{"mutation-seal-empty-lobby"};
+    seal.Kind = "CommitCampaignStart";
+    seal.MutationPayload = {0x01};
+    seal.RosterSealed = true;
+    REQUIRE(store->ApplyMutation(seal).Error == StoreError::InvalidArgument);
+    const auto unchanged = store->LoadCampaign(
+        CampaignId{"campaign-empty-lobby"});
+    REQUIRE(unchanged.Succeeded());
+    REQUIRE(unchanged.Value.CurrentRevision == 1);
+    REQUIRE_FALSE(unchanged.Value.RosterSealed);
+
+    CreateCampaignRequest invalidSealed = MakeCampaign(
+        "campaign-empty-sealed", true);
+    invalidSealed.Slots.clear();
+    invalidSealed.CharacterBuilds.clear();
+    invalidSealed.AdapterStates.clear();
+    invalidSealed.Mutation = MutationId{"mutation-create-empty-sealed"};
+    REQUIRE(store->CreateCampaign(invalidSealed).Error ==
+            StoreError::InvalidArgument);
+}
