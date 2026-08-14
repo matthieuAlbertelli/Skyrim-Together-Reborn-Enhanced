@@ -28,7 +28,7 @@ CampaignRuntimeGateService::CampaignRuntimeGateService(
     if (EventDispatcherManager* const pEvents = EventDispatcherManager::Get())
         pEvents->loadGameEvent.RegisterSink(this);
 
-    Log("Initialized", "devKeys=F9-arm,F10-release");
+    Log("Initialized");
 }
 
 CampaignRuntimeGateService::~CampaignRuntimeGateService() noexcept
@@ -43,30 +43,6 @@ CampaignRuntimeGateService::~CampaignRuntimeGateService() noexcept
 CampaignRuntimeGateService* CampaignRuntimeGateService::TryGet() noexcept
 {
     return s_pCampaignRuntimeGateService;
-}
-
-void CampaignRuntimeGateService::ArmNextLoadForDevelopment() noexcept
-{
-#if (!IS_MASTER)
-    const bool armed = m_gate.ArmNextLoad();
-    Log(armed ? "DevArmRequested" : "DevArmIgnored",
-        "nextLoad=CampaignManaged");
-#endif
-}
-
-void CampaignRuntimeGateService::ReleaseForDevelopment() noexcept
-{
-#if (!IS_MASTER)
-    if (!m_gate.Release())
-    {
-        Log("DevReleaseIgnored", "gateNotLocked=true");
-        return;
-    }
-
-    Log("Released", "authority=explicitDevRelease");
-    CampaignGateMenu::Hide();
-    RestoreInputState();
-#endif
 }
 
 bool CampaignRuntimeGateService::OnNativeLoadEnter(
