@@ -43,7 +43,9 @@ enum class CharacterCreationPhase : std::uint8_t
  * loadout selection, build validation and CEF UI hand-off. It deliberately
  * does not depend on party or quest-sync state.
  */
-class CharacterCreationService final : public BSTEventSink<TESQuestStageEvent>
+class CharacterCreationService final
+    : public BSTEventSink<TESQuestStageEvent>
+    , public BSTEventSink<TESQuestStartStopEvent>
 {
 public:
     CharacterCreationService(
@@ -99,6 +101,9 @@ public:
 
 private:
     BSTEventResult OnEvent(
+        const TESQuestStartStopEvent* apEvent,
+        const EventDispatcher<TESQuestStartStopEvent>* apSender) override;
+    BSTEventResult OnEvent(
         const TESQuestStageEvent* apEvent,
         const EventDispatcher<TESQuestStageEvent>* apSender) override;
 
@@ -106,6 +111,7 @@ private:
     void OnCharacterBuildResponse(const CharacterBuildResponse& acMessage) noexcept;
     void OnNotifyCharacterBuildState(const NotifyCharacterBuildState& acMessage) noexcept;
     void OnDisconnected(const DisconnectedEvent& acEvent) noexcept;
+    [[nodiscard]] bool ResetForFreshCharacterCreation() noexcept;
     void BeginFromStage20(TESQuest* apQuest) noexcept;
     void OpenRaceMenu() noexcept;
     void ShowRaceReview() noexcept;
@@ -195,6 +201,7 @@ private:
     bool m_serverBuildAccepted{};
     bool m_waitingForServerFinalization{};
     bool m_suppressStageRecovery{};
+    bool m_freshQuestStartPending{};
     bool m_inputSnapshotValid{};
     std::array<InputHandlerSnapshot, kLockedInputHandlerCount>
         m_inputHandlerSnapshot{};

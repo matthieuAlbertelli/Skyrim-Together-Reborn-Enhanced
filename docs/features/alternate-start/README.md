@@ -1,13 +1,16 @@
 # Alternate Start
 
-> **Status: Character Build vertical slice implemented and smoke-tested; full campaign in progress**
+> **Status: Character Build and New Game bootstrap implemented and smoke-tested; full campaign in progress**
 
 ## Current outcome
 
-The player can be placed in the inn, open RaceMenu, choose a class and kits in the Angular interface, review the summary, and seal the build.
+A fresh Skyrim **New Game** is intercepted before vanilla MQ101 stage 10, moves the player into the STRE inn, starts the existing Alternate Start quest, opens RaceMenu, then continues through class/loadout selection and build sealing.
 
 The flow works:
 
+- from the main-menu **New Game** action without starting the Helgen cart flow;
+- twice in the same Skyrim process after returning to the main menu;
+- without retriggering when an ordinary save is loaded;
 - locally without a server;
 - in multiplayer with server validation of inventory and spells;
 - with Warrior, Mage, and Thief;
@@ -39,7 +42,7 @@ Documents under `history/` are dated evidence and milestones; they do not replac
 - `SOLO_DESIGN.md` — operation without a server;
 - `STRE_ADAPTER_SPEC.md` — current and target cooperative semantics;
 - `CK_IMPLEMENTATION.md` — CK records and flow;
-- `NEW_GAME_BOOTSTRAP_SPIKE.md` — proposed CK/Papyrus New Game interception architecture and validation plan;
+- `NEW_GAME_BOOTSTRAP_SPIKE.md` — New Game interception investigation plus the validated implementation result and remaining continuity work;
 - `STATE_MODEL.md` — build and campaign state;
 - [`../../architecture/CAMPAIGN_STATE.md`](../../architecture/CAMPAIGN_STATE.md)
   and [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)

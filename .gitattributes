@@ -17,3 +17,6 @@
 
 # Custom for the project to build
 *.sh text eol=lf
+
+# Generated Creation Kit quest fragment; preserve CK formatting.
+GameFiles/Skyrim/Source/Scripts/QF_MQ101_0003372B.psc -whitespace

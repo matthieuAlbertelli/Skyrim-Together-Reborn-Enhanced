@@ -1,7 +1,9 @@
 ﻿# Fichiers geres automatiquement par build-and-deploy-dev.ps1
 # Plugin : STRE_AlternateStart.esp
 # Ne pas modifier manuellement cette liste.
+Scripts\QF_MQ101_0003372B.pex
 Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.pex
 Scripts\Source\QF_STRE_QUEST_AlternateStart_02001AF9.pex
+Source\Scripts\QF_MQ101_0003372B.psc
 Source\Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.psc
 STRE_AlternateStart.esp

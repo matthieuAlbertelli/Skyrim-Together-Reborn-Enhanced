@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "pluginName": "STRE_AlternateStart.esp",
   "requiredMasters": [
     "Skyrim.esm",
@@ -9,8 +9,9 @@
   "editorIdPrefix": "STRE_",
   "notes": [
     "Les FormID sont locaux au plugin non-ESL.",
-    "Le mode strict rejette les doublons ou records STRE inattendus.",
-    "Les noms FULL ne doivent contenir aucun espace ni retour de ligne périphérique."
+    "Le mode strict rejette les doublons ou records STRE inattendus et tout override de master non explicitement autorisé.",
+    "Les noms FULL ne doivent contenir aucun espace ni retour de ligne périphérique.",
+    "Le record NAVI Skyrim.esm [00012FB4] est une exception de baseline préexistante sans EditorID, conservée explicitement par l’audit."
   ],
   "records": [
     {
@@ -30,6 +31,11 @@
       "editorId": "STRE_CELL_DevSandbox",
       "expectedLocalFormId": "0x000012C7",
       "displayName": "STRE Developer Sandbox"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_NewGameStartMarker",
+      "expectedLocalFormId": "0x0001B771"
     },
     {
       "signature": "REFR",
@@ -304,5 +310,28 @@
         "conditionCount": 0
       }
     ]
-  }
+  },
+  "approvedMasterOverrides": [
+    {
+      "signature": "GLOB",
+      "editorId": "MQQuickstart",
+      "expectedFormId": "0x0004679E",
+      "master": "Skyrim.esm",
+      "expectedValue": 5.0
+    },
+    {
+      "signature": "QUST",
+      "editorId": "MQ101",
+      "expectedFormId": "0x0003372B",
+      "master": "Skyrim.esm"
+    }
+  ],
+  "allowedMasterRecordsWithoutEditorId": [
+    {
+      "signature": "NAVI",
+      "expectedFormId": "0x00012FB4",
+      "master": "Skyrim.esm",
+      "reason": "Pre-existing navigation-map baseline record; not introduced by the New Game bootstrap."
+    }
+  ]
 }

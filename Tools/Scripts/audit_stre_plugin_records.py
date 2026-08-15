@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit des records STRE présents dans un plugin Skyrim.
+"""Audit des records STRE et des overrides de master approuvés.
 
 Le script lit directement les en-têtes TES4/GRUP/record, décompresse les
 records marqués COMPRESSED et extrait les sous-records EDID. Il ne modifie
@@ -142,6 +142,28 @@ def _extract_full_name(payload: bytes) -> str | None:
     return _extract_text_subrecord(payload, "FULL")
 
 
+def _extract_global_value(data: bytes, record: PluginRecord) -> float | None:
+    if record.signature != "GLOB":
+        return None
+
+    data_size = _u32(data, record.offset + 4)
+    payload = _record_payload(
+        data,
+        record.offset + RECORD_HEADER_SIZE,
+        data_size,
+        record.flags,
+    )
+    for signature, subdata in _iter_subrecords(payload):
+        if signature != "FLTV":
+            continue
+        if len(subdata) != 4:
+            raise PluginParseError(
+                f"FLTV invalide dans {record.editor_id}: "
+                f"{len(subdata)} octets")
+        return struct.unpack("<f", subdata)[0]
+    return None
+
+
 def parse_plugin(path: Path) -> tuple[list[PluginRecord], bool]:
     data = path.read_bytes()
     if len(data) < RECORD_HEADER_SIZE or data[:4] != b"TES4":
@@ -266,7 +288,53 @@ def load_manifest(path: Path) -> dict:
 
     if not isinstance(manifest, dict) or not isinstance(manifest.get("records"), list):
         raise PluginParseError("Le manifest doit contenir un tableau 'records'")
+
+    for field in (
+        "approvedMasterOverrides",
+        "allowedMasterRecordsWithoutEditorId",
+    ):
+        value = manifest.get(field, [])
+        if not isinstance(value, list):
+            raise PluginParseError(
+                f"Le champ {field!r} doit être un tableau")
     return manifest
+
+
+def _master_name_for_record(
+    record: PluginRecord,
+    masters: list[str],
+) -> str | None:
+    master_index = record.form_id >> 24
+    if master_index >= len(masters):
+        return None
+    return masters[master_index]
+
+
+def _expected_master_record_key(entry: dict) -> tuple[str, int, str | None]:
+    signature = entry.get("signature")
+    expected_form_id = entry.get("expectedFormId")
+    if not isinstance(signature, str) or not signature:
+        raise PluginParseError(
+            "Un override de master doit définir 'signature'")
+    if expected_form_id is None:
+        raise PluginParseError(
+            f"L'override {signature} doit définir 'expectedFormId'")
+
+    try:
+        form_id = int(str(expected_form_id), 0)
+    except ValueError as exc:
+        raise PluginParseError(
+            f"FormID de master invalide pour {signature}: "
+            f"{expected_form_id!r}") from exc
+
+    editor_id = entry.get("editorId")
+    if editor_id is not None and (
+        not isinstance(editor_id, str) or not editor_id
+    ):
+        raise PluginParseError(
+            f"EditorID invalide pour l'override {signature}")
+
+    return signature, form_id, editor_id
 
 
 def build_cpp_lines(entry: dict, record: PluginRecord, plugin_name: str) -> list[str]:
@@ -376,6 +444,8 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest: dict | None = None
     expected: list[dict] = []
+    approved_master_overrides: list[dict] = []
+    allowed_master_records_without_editor_id: list[dict] = []
     if args.manifest:
         try:
             manifest = load_manifest(args.manifest)
@@ -383,6 +453,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERREUR: {exc}", file=sys.stderr)
             return 1
         expected = manifest["records"]
+        approved_master_overrides = manifest.get(
+            "approvedMasterOverrides", [])
+        allowed_master_records_without_editor_id = manifest.get(
+            "allowedMasterRecordsWithoutEditorId", [])
 
     report_rows: list[dict] = []
     errors = 0
@@ -398,7 +472,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if expected:
         print(f"Plugin : {args.plugin}")
-        print(f"Records attendus : {len(expected)}")
+        print(f"Records STRE attendus : {len(expected)}")
         for entry in expected:
             editor_id = entry.get("editorId")
             expected_signature = entry.get("signature")
@@ -490,6 +564,167 @@ def main(argv: list[str] | None = None) -> int:
                         "editor_id": record.editor_id,
                         "local_form_id": f"0x{record.local_form_id:08X}",
                         "loaded_form_id": f"0x{record.form_id:08X}",
+                        "offset": f"0x{record.offset:08X}",
+                        "expected_signature": "",
+                        "display_name": "",
+                        "actual_full_name": record.full_name or "",
+                    }
+                )
+
+        approved_master_entries = (
+            approved_master_overrides +
+            allowed_master_records_without_editor_id
+        )
+        approved_master_keys: set[tuple[str, int, str | None]] = set()
+
+        for entry in approved_master_entries:
+            try:
+                expected_signature, expected_form_id, expected_editor_id = (
+                    _expected_master_record_key(entry)
+                )
+            except PluginParseError as exc:
+                errors += 1
+                print(f"[MANIFEST] {exc}")
+                continue
+
+            key = (
+                expected_signature,
+                expected_form_id,
+                expected_editor_id,
+            )
+            if key in approved_master_keys:
+                errors += 1
+                print(
+                    "[MANIFEST] Override de master dupliqué: "
+                    f"{expected_signature} "
+                    f"0x{expected_form_id:08X} "
+                    f"{expected_editor_id or '<sans EDID>'}"
+                )
+                continue
+            approved_master_keys.add(key)
+
+            record = by_form_id.get(expected_form_id)
+            if record is None:
+                errors += 1
+                print(
+                    f"[OVERRIDE MANQUANT] {expected_signature:<4} "
+                    f"0x{expected_form_id:08X} "
+                    f"{expected_editor_id or '<sans EDID>'}"
+                )
+                continue
+
+            problems: list[str] = []
+            if record.signature != expected_signature:
+                problems.append(
+                    f"type={record.signature}, "
+                    f"attendu={expected_signature}"
+                )
+            if record.editor_id != expected_editor_id:
+                problems.append(
+                    f"EDID={record.editor_id!r}, "
+                    f"attendu={expected_editor_id!r}"
+                )
+
+            expected_master = entry.get("master")
+            actual_master = _master_name_for_record(
+                record, masters)
+            if expected_master and actual_master != expected_master:
+                problems.append(
+                    f"master={actual_master!r}, "
+                    f"attendu={expected_master!r}"
+                )
+
+            if "expectedValue" in entry:
+                if record.signature != "GLOB":
+                    problems.append(
+                        "expectedValue n'est valide que pour un GLOB")
+                else:
+                    try:
+                        actual_value = _extract_global_value(
+                            data, record)
+                    except PluginParseError as exc:
+                        problems.append(str(exc))
+                    else:
+                        expected_value = float(entry["expectedValue"])
+                        if actual_value is None:
+                            problems.append("FLTV absent")
+                        elif abs(actual_value - expected_value) > 0.0001:
+                            problems.append(
+                                f"value={actual_value!r}, "
+                                f"attendu={expected_value!r}"
+                            )
+
+            if problems:
+                errors += 1
+                print(
+                    f"[OVERRIDE INVALIDE] "
+                    f"0x{expected_form_id:08X}: " +
+                    "; ".join(problems)
+                )
+                continue
+
+            print(
+                f"[OK OVERRIDE] {record.signature:<4} "
+                f"{record.editor_id or '<sans EDID>':<58} "
+                f"form=0x{record.form_id:08X} "
+                f"master={actual_master or '<self>'}"
+            )
+            report_rows.append(
+                {
+                    "status": "OVERRIDE_OK",
+                    "signature": record.signature,
+                    "editor_id": record.editor_id or "",
+                    "local_form_id": (
+                        f"0x{record.local_form_id:08X}"),
+                    "loaded_form_id": (
+                        f"0x{record.form_id:08X}"),
+                    "offset": f"0x{record.offset:08X}",
+                    "expected_signature": expected_signature,
+                    "display_name": "",
+                    "actual_full_name": record.full_name or "",
+                }
+            )
+
+        if args.reject_unexpected and manifest is not None:
+            master_records = [
+                record
+                for record in records
+                if record.signature != "TES4"
+                and _master_name_for_record(record, masters) is not None
+            ]
+            unexpected_master_records = sorted(
+                (
+                    record
+                    for record in master_records
+                    if (
+                        record.signature,
+                        record.form_id,
+                        record.editor_id,
+                    ) not in approved_master_keys
+                ),
+                key=lambda record: (
+                    record.form_id,
+                    record.signature,
+                    record.editor_id or "",
+                ),
+            )
+            for record in unexpected_master_records:
+                errors += 1
+                print(
+                    f"[OVERRIDE INATTENDU] {record.signature:<4} "
+                    f"0x{record.form_id:08X} "
+                    f"{record.editor_id or '<sans EDID>'} "
+                    f"master={_master_name_for_record(record, masters)}"
+                )
+                report_rows.append(
+                    {
+                        "status": "UNEXPECTED_OVERRIDE",
+                        "signature": record.signature,
+                        "editor_id": record.editor_id or "",
+                        "local_form_id": (
+                            f"0x{record.local_form_id:08X}"),
+                        "loaded_form_id": (
+                            f"0x{record.form_id:08X}"),
                         "offset": f"0x{record.offset:08X}",
                         "expected_signature": "",
                         "display_name": "",
