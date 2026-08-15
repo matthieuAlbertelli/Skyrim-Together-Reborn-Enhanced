@@ -1,6 +1,6 @@
 # Campaign State Model
 
-> **Status:** fixed-roster/runtime core implemented and automated-tested; client protocol and later phase/recovery wiring pending.
+> **Status:** fixed-roster/runtime core and live admission protocol implemented and automated-tested; gameplay projection and later phase/recovery wiring pending.
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
@@ -20,10 +20,10 @@ semantic no-ops reserve their `MutationId` in the same journal without advancing
 `StateVersion` or emitting redundant outbox work; schema v2 is the minimal
 transactional migration needed to represent this.
 
-Transport connectivity and campaign admission remain transient inputs rather
-than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE` through
-one exact-roster predicate. The other runtime enum values are represented for
-the accepted model but are not activated by this increment.
+Transport connectivity and campaign admission are now wired as transient inputs
+rather than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE`
+through one exact-roster predicate. The other runtime enum values are represented
+for the accepted model but are not activated by this increment.
 
 The implemented narrative mutation is the atomic
 `Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
@@ -35,8 +35,48 @@ the aggregate, and roster membership alone never authorizes the seal. Policies
 for the remaining phase edges define their source, target, actor authority,
 common roster/readiness preconditions, and resulting intent, but deliberately
 refuse execution until their feature-owned CK/Valen/build preconditions are
-implemented. No campaign network protocol, CEF/CK projection, coordinated
-native save, or recovery-lock behavior is part of this core increment.
+implemented. The live protocol now exposes the implemented start transition,
+but no CEF/CK projection, coordinated native save, or recovery-lock behavior is
+part of this increment.
+
+## Live identity and admission boundary
+
+The existing STR transport authentication request now also carries one durable,
+opaque STRE `PlayerId`. Password, version, mod, and native-plugin checks remain
+access control; the `PlayerId` is metadata registered only after those checks and
+never authenticates a connection by itself. It is stored locally across game
+restart and remains distinct from username, Discord/Steam identity,
+`ConnectionId`, and transient STR `Player::GetId()`.
+
+The server's `CampaignProtocolService` adapts `World`, `Player`, and
+`PartyService` facts into a transport-independent `CampaignAdmissionService`.
+The latter stores only live connection-to-identity/admission records and invokes
+`CampaignRuntimeService` for every durable change. Party leadership and party
+membership are evaluated live; neither party IDs nor transient player IDs are
+written into campaign persistence.
+
+The live protocol implements:
+
+- leader-only campaign creation with server-generated campaign, slot, and
+  character-binding identities; its journaled initial-roster command is also
+  the durable idempotency receipt for an exact retry after server restart, but
+  transient admission is restored only when that historical tuple still exists
+  unchanged in the current canonical roster;
+- pre-seal join/leave in the current party/session;
+- pre-seal or sealed resume admission by canonical `PlayerId` plus cached
+  binding, with the slot resolved only from server state and no roster/version
+  mutation; a fresh join mutation for an existing member is rejected with an
+  explicit resume-required result;
+- leader-only campaign start/seal, deriving the durable Session Manager from
+  the admitted requester's STRE `PlayerId`;
+- admitted-member readiness whose actor tuple is derived server-side;
+- public snapshots containing ordered slots, readiness, and transient presence,
+  without other members' character bindings or secret narrative state.
+
+Disconnect removes transient admission only. A sealed incomplete roster projects
+`WAITING_FOR_ROSTER`; the exact admitted roster projects `ACTIVE`. This increment
+does not turn disconnect into `RECOVERY_LOCK`; that remains #56. The local binding
+cache is reconnect metadata only and never overrides the SQLite authority.
 
 ## Goals
 
@@ -294,11 +334,11 @@ the journal, supersedes obsolete pending outbox work, and emits a canonical full
 snapshot at the new revision. Clients then consume only events newer than that
 restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
 
-The server-owned #28 core now calls this persistence substrate for Lobby roster
-configuration, the campaign start/seal, Session Manager transfer, readiness,
-journal entries, and outbox snapshot intents. Live campaign protocol,
-connection admission, Character Build binding, and client/CK/UI projection are
-still pending #28 integration. Issue #55 owns coordinated native-save creation,
+The server-owned #28 runtime and live protocol now call this persistence
+substrate for Lobby roster configuration, the campaign start/seal, Session
+Manager transfer, readiness, journal entries, and outbox snapshot intents.
+Durable Character Build binding and client/CK/UI gameplay projection remain
+pending #28 integration. Issue #55 owns coordinated native-save creation,
 identity/fingerprinting, acknowledgement, and `CampaignCheckpoint`
 coordination. Issue #56 owns disconnect recovery lock and collective checkpoint
 restore/reload gameplay. Durable WorldEntity persistence remains separate

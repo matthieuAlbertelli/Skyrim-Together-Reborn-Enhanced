@@ -17,7 +17,9 @@ struct AuthenticationResponse final : ServerMessage
         kClientModsDisallowed,
         kWrongPassword,
         kServerFull,
-        kNativePluginsMissing
+        kNativePluginsMissing,
+        kInvalidStrePlayerId,
+        kDuplicateStrePlayerId
     };
 
     AuthenticationResponse()

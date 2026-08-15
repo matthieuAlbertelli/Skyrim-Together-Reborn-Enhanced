@@ -64,6 +64,12 @@ enum ClientOpcode : unsigned char
     kCharacterBuildRequest,
     kCharacterBuildAppliedRequest,
     kRequestWorldEntityManipulation,
+    kCampaignCreateRequest,
+    kCampaignJoinRequest,
+    kCampaignResumeRequest,
+    kCampaignStartRequest,
+    kCampaignSetReadyRequest,
+    kCampaignLeaveRequest,
     kClientOpcodeMax
 };
 
@@ -134,5 +140,7 @@ enum ServerOpcode : unsigned char
     kCharacterBuildResponse,
     kNotifyCharacterBuildState,
     kNotifyWorldEntityManipulation,
+    kCampaignCommandResponse,
+    kNotifyCampaignSnapshot,
     kServerOpcodeMax
 };

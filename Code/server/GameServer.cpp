@@ -1063,12 +1063,36 @@ void GameServer::HandleAuthenticationRequest(const ConnectionId_t aConnectionId,
         pPlayer->SetModIds(playerModsIds);
         pPlayer->SetLevel(acRequest->Level);
 
+        const auto identityRegistration =
+            m_pWorld->GetCampaignProtocolService().RegisterAuthenticatedPlayer(
+                *pPlayer, acRequest->StrePlayerId.c_str());
+        if (identityRegistration !=
+            STRE::Campaign::CampaignConnectionRegistration::Accepted)
+        {
+            const auto responseType = identityRegistration ==
+                    STRE::Campaign::CampaignConnectionRegistration::InvalidPlayerId
+                ? RT::kInvalidStrePlayerId
+                : RT::kDuplicateStrePlayerId;
+            spdlog::warn(
+                "[STRE][CampaignProtocol] refusing connection {:x}: durable PlayerId {}",
+                aConnectionId,
+                identityRegistration == STRE::Campaign::CampaignConnectionRegistration::InvalidPlayerId
+                    ? "is invalid" : "is already active");
+            sendKick(responseType);
+            m_pWorld->GetCampaignProtocolService()
+                .UnregisterAuthenticatedPlayer(*pPlayer);
+            m_pWorld->GetPlayerManager().Remove(pPlayer);
+            return;
+        }
+
         // this event is shit, needs to be fixed, i know
         auto [canceled, reason] = m_pWorld->GetScriptService().HandlePlayerJoin(aConnectionId);
         if (canceled)
         {
             spdlog::info("New player {:x} has a been rejected because \"{}\".", aConnectionId, reason.c_str());
             Kick(aConnectionId);
+            m_pWorld->GetCampaignProtocolService()
+                .UnregisterAuthenticatedPlayer(*pPlayer);
             m_pWorld->GetPlayerManager().Remove(pPlayer);
             return;
         }

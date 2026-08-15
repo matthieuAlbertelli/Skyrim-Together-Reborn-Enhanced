@@ -6,6 +6,7 @@
 #include <TiltedCore/Buffer.hpp>
 #include <Structs/GameId.h>
 #include <Structs/TimeModel.h>
+#include <Structs/Campaign.h>
 
 struct AuthenticationRequest final : ClientMessage
 {
@@ -24,7 +25,7 @@ struct AuthenticationRequest final : ClientMessage
     bool operator==(const AuthenticationRequest& achRhs) const noexcept
     {
         return GetOpcode() == achRhs.GetOpcode() && DiscordId == achRhs.DiscordId && SKSEActive == achRhs.SKSEActive && MO2Active == achRhs.MO2Active && Token == achRhs.Token && Version == achRhs.Version && UserMods == achRhs.UserMods && Username == achRhs.Username &&
-               WorldSpaceId == achRhs.WorldSpaceId && CellId == achRhs.CellId && Level == achRhs.Level
+               WorldSpaceId == achRhs.WorldSpaceId && CellId == achRhs.CellId && Level == achRhs.Level && StrePlayerId == achRhs.StrePlayerId
             && PlayerTime == achRhs.PlayerTime && UserNativePlugins == achRhs.UserNativePlugins;
     }
 
@@ -40,4 +41,6 @@ struct AuthenticationRequest final : ClientMessage
     GameId CellId{};
     uint16_t Level{};
     TimeModel PlayerTime{};
+    String StrePlayerId{};
+    bool StrePlayerIdValid{true};
 };

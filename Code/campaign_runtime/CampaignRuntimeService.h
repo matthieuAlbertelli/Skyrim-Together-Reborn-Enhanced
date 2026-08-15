@@ -39,6 +39,22 @@ struct CampaignLoadResult
     explicit operator bool() const noexcept { return Succeeded(); }
 };
 
+struct CampaignCreationLookupResult
+{
+    CampaignError Error{CampaignError::None};
+    StoreError PersistenceError{StoreError::None};
+    std::string Message;
+    std::optional<CampaignMemberIdentity> Identity;
+    StateVersion Version{};
+
+    [[nodiscard]] bool Succeeded() const noexcept
+    {
+        return Error == CampaignError::None;
+    }
+
+    explicit operator bool() const noexcept { return Succeeded(); }
+};
+
 struct CreateLobbyCampaignCommand
 {
     CampaignId Campaign;
@@ -119,6 +135,9 @@ public:
     CampaignLoadResult LoadCampaign(
         const CampaignId& acCampaign,
         const std::vector<CampaignMemberPresence>& acPresence = {}) noexcept;
+    CampaignCreationLookupResult FindCampaignCreation(
+        const PlayerId& acPlayer,
+        const MutationId& acMutation) noexcept;
 
 private:
     ICampaignStore& m_store;

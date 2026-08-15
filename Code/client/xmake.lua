@@ -61,6 +61,7 @@ target(name)
     -- rather hacky:
     add_includedirs("Games/Skyrim")
     add_deps("SkyrimEncoding")
+    add_deps("CampaignClient")
     add_deps(
         "UiProcess",
         "CommonLib",

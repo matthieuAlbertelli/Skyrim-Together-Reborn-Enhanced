@@ -1,7 +1,7 @@
 #include <CampaignRuntimeService.h>
 
 #include <algorithm>
-#include <limits>
+#include <array>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -110,6 +110,79 @@ void AppendSlot(Bytes& aPayload, const CampaignSlotRecord& acSlot)
     AppendField(aPayload, acSlot.CharacterBinding.Value);
 }
 
+bool ReadScalar(
+    const Bytes& acPayload,
+    std::size_t& aOffset,
+    std::uint32_t& aValue) noexcept
+{
+    if (aOffset > acPayload.size() ||
+        acPayload.size() - aOffset < sizeof(aValue))
+    {
+        return false;
+    }
+    aValue = 0;
+    for (std::size_t index = 0; index < sizeof(aValue); ++index)
+    {
+        aValue |= static_cast<std::uint32_t>(acPayload[aOffset++]) <<
+            (index * 8);
+    }
+    return true;
+}
+
+bool ReadField(
+    const Bytes& acPayload,
+    std::size_t& aOffset,
+    std::string& aValue) noexcept
+{
+    std::uint32_t size{};
+    if (!ReadScalar(acPayload, aOffset, size) || size > 128 ||
+        aOffset > acPayload.size() || size > acPayload.size() - aOffset)
+    {
+        return false;
+    }
+    aValue.assign(
+        reinterpret_cast<const char*>(acPayload.data() + aOffset), size);
+    aOffset += size;
+    return true;
+}
+
+bool DecodeCreateCampaignPayload(
+    const Bytes& acPayload,
+    std::vector<CampaignSlotRecord>& aRoster)
+{
+    static constexpr std::array<std::uint8_t, 8> cMagic{
+        'S', 'T', 'R', 'E', 'C', 'M', '0', '1'};
+    if (acPayload.size() < cMagic.size() ||
+        !std::equal(cMagic.begin(), cMagic.end(), acPayload.begin()))
+    {
+        return false;
+    }
+
+    std::size_t offset = cMagic.size();
+    std::string kind;
+    if (!ReadField(acPayload, offset, kind) || kind != "CreateCampaign")
+        return false;
+    while (offset < acPayload.size())
+    {
+        if (aRoster.size() >= kMaximumCampaignRosterSize)
+            return false;
+        CampaignSlotRecord slot;
+        if (!ReadField(acPayload, offset, slot.Slot.Value) ||
+            !ReadField(acPayload, offset, slot.Player.Value) ||
+            !ReadField(acPayload, offset, slot.CharacterBinding.Value))
+        {
+            return false;
+        }
+        aRoster.push_back(std::move(slot));
+    }
+
+    std::vector<CampaignSlotState> roster;
+    roster.reserve(aRoster.size());
+    for (const CampaignSlotRecord& slot : aRoster)
+        roster.push_back(ToSlotState(slot));
+    return CampaignStateMachine::ValidateRoster(roster, true).Succeeded();
+}
+
 LoadedCampaign LoadAggregate(
     ICampaignStore& aStore,
     const CampaignId& acCampaign) noexcept
@@ -174,8 +247,7 @@ CampaignCommandResult StaleRevision(
 
 enum class RevisionMode
 {
-    Current,
-    PossibleReplay
+    Current
 };
 
 bool ResolveRevisionMode(
@@ -186,12 +258,6 @@ bool ResolveRevisionMode(
     if (aCurrent == aExpected)
     {
         aMode = RevisionMode::Current;
-        return true;
-    }
-    if (aExpected != std::numeric_limits<StateVersion>::max() &&
-        aCurrent == aExpected + 1)
-    {
-        aMode = RevisionMode::PossibleReplay;
         return true;
     }
     return false;
@@ -715,6 +781,83 @@ catch (...)
     result.Error = CampaignError::PersistenceFailure;
     result.PersistenceError = StoreError::DatabaseFailure;
     result.Message = "LoadCampaign failed safely";
+    return result;
+}
+
+CampaignCreationLookupResult CampaignRuntimeService::FindCampaignCreation(
+    const PlayerId& acPlayer,
+    const MutationId& acMutation) noexcept try
+{
+    CampaignCreationLookupResult result;
+    if (acPlayer.Value.empty() || acMutation.Value.empty())
+    {
+        result.Error = CampaignError::InvalidIdentity;
+        result.PersistenceError = StoreError::InvalidArgument;
+        result.Message = "campaign creation lookup requires durable identities";
+        return result;
+    }
+
+    auto entries = m_store.LoadJournalByMutation(
+        acMutation, "CreateCampaign");
+    if (!entries)
+    {
+        result.Error = TranslateStoreError(entries.Error);
+        result.PersistenceError = entries.Error;
+        result.Message = std::move(entries.Message);
+        return result;
+    }
+    for (const JournalRecord& entry : entries.Value)
+    {
+        if (entry.ExpectedRevision != 0 || entry.ResultingRevision != 1 ||
+            entry.PayloadCodecVersion != 1 ||
+            entry.RestoredFromCheckpoint || entry.RestoredFromRevision)
+        {
+            result.Error = CampaignError::IntegrityFailure;
+            result.PersistenceError = StoreError::IntegrityFailure;
+            result.Message =
+                "campaign creation journal metadata is inconsistent";
+            return result;
+        }
+        std::vector<CampaignSlotRecord> initialRoster;
+        if (!DecodeCreateCampaignPayload(entry.Payload, initialRoster))
+        {
+            result.Error = CampaignError::IntegrityFailure;
+            result.PersistenceError = StoreError::IntegrityFailure;
+            result.Message =
+                "campaign creation journal payload is malformed";
+            return result;
+        }
+        const auto slot = std::find_if(
+            initialRoster.begin(), initialRoster.end(),
+            [&](const CampaignSlotRecord& acSlot)
+            {
+                return acSlot.Player == acPlayer;
+            });
+        if (slot == initialRoster.end())
+            continue;
+        if (result.Identity)
+        {
+            result.Error = CampaignError::IntegrityFailure;
+            result.PersistenceError = StoreError::IntegrityFailure;
+            result.Message =
+                "campaign creation mutation resolves to multiple campaigns";
+            return result;
+        }
+        result.Identity = CampaignMemberIdentity{
+            entry.Campaign,
+            slot->Slot,
+            slot->Player,
+            slot->CharacterBinding};
+        result.Version = entry.ResultingRevision;
+    }
+    return result;
+}
+catch (...)
+{
+    CampaignCreationLookupResult result;
+    result.Error = CampaignError::PersistenceFailure;
+    result.PersistenceError = StoreError::DatabaseFailure;
+    result.Message = "campaign creation lookup failed safely";
     return result;
 }
 }

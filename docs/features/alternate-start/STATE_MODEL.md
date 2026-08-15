@@ -1,6 +1,6 @@
 # Alternate Start — State model
 
-> **Status: Authoritative build and server campaign core implemented; Alternate Start campaign projection pending**
+> **Status: Authoritative build, server campaign core, and live admission protocol implemented; Alternate Start gameplay projection pending**
 
 ## Currently implemented state
 
@@ -46,9 +46,11 @@ Current invariants:
 
 The server-side fixed-roster aggregate, readiness model, exact-roster runtime
 eligibility, and atomic `Lobby -> CharacterCreation` seal are implemented in
-`Code/campaign_runtime`. The structure below remains the future Alternate Start
-projection of that core; it is not yet wired to the client protocol, CEF, CK, or
-the live `CharacterBuildService`.
+`Code/campaign_runtime`. The STR transport now carries durable player identity,
+live create/join/leave/resume/start/readiness commands, and canonical public
+snapshots. The structure below remains the future Alternate Start gameplay
+projection of that core; it is not yet wired to CEF, CK, or the live
+`CharacterBuildService`.
 
 ```cpp
 struct AlternateStartState
