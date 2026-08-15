@@ -137,7 +137,8 @@ The current catalog uses `BuildVersion = 5`.
 - runtime validation created and reopened a real schema-v1 database across a
   clean server stop/restart, accepted a real Skyrim client connection, and
   confirmed fail-closed startup for an intentionally incompatible schema
-  version before normal startup resumed with schema version 1.
+  version before normal startup resumed with schema version 1. That validation
+  occurred while schema v1 was current; the repository now uses schema v2.
 
 The durable server campaign/checkpoint persistence substrate is implemented,
 automated-tested, and runtime-validated. The fixed-roster/runtime core described
@@ -183,11 +184,13 @@ implemented and automated-tested:
 - the transition-policy boundary records source, target, actor authority,
   shared preconditions, and resulting intent for every canonical phase edge.
 
-`GameServer` owns this core over the existing `ICampaignStore`, without a new
-database schema or persistence layer. Connection/admission presence is
-deliberately transient: a sealed exact roster derives `ACTIVE`; any mismatch
-derives `WAITING_FOR_ROSTER`, and future narrative transitions are gated by that
-same predicate.
+`GameServer` owns this core over the existing `ICampaignStore`; no second
+persistence layer was introduced. The existing SQLite schema was minimally
+revised to v2 so accepted semantic no-op commands can share a resulting state
+revision while retaining unique `MutationId` values per campaign.
+Connection/admission presence is deliberately transient: a sealed exact roster
+derives `ACTIVE`; any mismatch derives `WAITING_FOR_ROSTER`, and future
+narrative transitions are gated by that same predicate.
 
 The only production narrative transition implemented in this increment is
 `Lobby -> CharacterCreation`. Campaign protocol messages, live connection
