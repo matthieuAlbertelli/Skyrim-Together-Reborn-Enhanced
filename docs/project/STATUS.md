@@ -99,13 +99,17 @@ See [`docs/features/item-preview/`](../features/item-preview/).
 - hashes and application acknowledgement;
 - local fallback without a server;
 - Mage Destruction and Alteration;
-- targeted cooperative buffs tested between two PCs.
+- targeted cooperative buffs tested between two PCs;
+- fresh New Game interception through `MQQuickstart = 5` and a dedicated MQ101 stage-0 STRE branch;
+- direct world transition to the inn before starting the Alternate Start quest;
+- same-process New Game re-entry through explicit Alternate Start quest lifecycle reset in `CharacterCreationService`;
+- ordinary save loading verified not to retrigger the bootstrap.
 
 The current catalog uses `BuildVersion = 5`.
 
 ### Limitations
 
-- complete new-game interception and Helgen bypass remain unfinished;
+- the New Game bootstrap is implemented, but Helgen/world-state continuity and vanilla main-quest handoff remain unfinished;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;

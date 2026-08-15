@@ -432,13 +432,54 @@ CharacterCreationService::CharacterCreationService(
               &CharacterCreationService::OnDisconnected>(this))
 {
     if (auto* const pEvents = EventDispatcherManager::Get())
+    {
+        pEvents->questStartStopEvent.RegisterSink(this);
         pEvents->questStageEvent.RegisterSink(this);
+    }
 }
 
 CharacterCreationService::~CharacterCreationService() noexcept
 {
     if (auto* const pEvents = EventDispatcherManager::Get())
+    {
+        pEvents->questStartStopEvent.UnRegisterSink(this);
         pEvents->questStageEvent.UnRegisterSink(this);
+    }
+}
+
+BSTEventResult CharacterCreationService::OnEvent(
+    const TESQuestStartStopEvent* apEvent,
+    const EventDispatcher<TESQuestStartStopEvent>*)
+{
+    if (!apEvent)
+        return BSTEventResult::kOk;
+
+    auto* const pQuest =
+        Cast<TESQuest>(TESForm::GetById(apEvent->formId));
+    if (!IsAlternateStartQuest(pQuest))
+        return BSTEventResult::kOk;
+
+    if (pQuest->IsStopped())
+    {
+        spdlog::info(
+            "[STRE][CharacterCreation] Alternate-start quest stop lifecycle detected");
+        return BSTEventResult::kOk;
+    }
+
+    // A new quest Start() is the durable local lifecycle boundary for a
+    // fresh STRE character creation. Returning to the main menu does not
+    // recreate this native service, and Skyrim may not emit another stage
+    // event when the quest reaches stage 20 again in the same process.
+    // Arm a reset here; BeginFromStage20() or the update recovery path will
+    // consume it on the game thread before opening RaceMenu.
+    m_freshQuestStartPending = true;
+    m_suppressStageRecovery = false;
+    m_recoveryAccumulator = 0.0;
+
+    spdlog::info(
+        "[STRE][CharacterCreation] Alternate-start quest start lifecycle detected; fresh reset armed");
+
+    return BSTEventResult::kOk;
 }
 
 BSTEventResult CharacterCreationService::OnEvent(
@@ -475,6 +516,22 @@ void CharacterCreationService::OnUpdate(
 {
     m_recoveryAccumulator += acEvent.Delta;
     m_phaseElapsed += acEvent.Delta;
+
+    if (m_freshQuestStartPending)
+    {
+        TESQuest* const pQuest = FindAlternateStartQuest();
+        if (pQuest && !pQuest->IsStopped())
+        {
+            spdlog::info(
+                "[STRE][CharacterCreation] Applying fresh quest lifecycle reset before stage recovery");
+
+            if (!ResetForFreshCharacterCreation())
+            {
+                Fail("STRE n'a pas pu réinitialiser une nouvelle création de personnage.");
+                return;
+            }
+        }
+    }
 
     if (m_phase == CharacterCreationPhase::Inactive &&
         !m_suppressStageRecovery &&
@@ -715,16 +772,57 @@ void CharacterCreationService::OnDisconnected(
     Fail("La connexion au serveur a été interrompue pendant le scellement.");
 }
 
+bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
+{
+    spdlog::info(
+        "[STRE][CharacterCreation] Fresh stage 20 bootstrap resetting previous phase={}",
+        PhaseName(m_phase));
+
+    ClearLoadoutPreview();
+
+    if (!UnlockCharacterCreationControls())
+    {
+        spdlog::error(
+            "[STRE][CharacterCreation] Fresh bootstrap reset failed reason=unlockControls");
+        return false;
+    }
+
+    m_uiSurfaceService.SetSurface(UiSurface::None);
+
+    m_pQuest = nullptr;
+    m_phase = CharacterCreationPhase::Inactive;
+    m_phaseElapsed = 0.0;
+    m_recoveryAccumulator = 0.0;
+
+    m_raceConfirmed = false;
+    m_classConfirmed = false;
+    m_selectedClassId.clear();
+
+    ResetLoadoutState();
+
+    m_error.clear();
+    m_suppressStageRecovery = false;
+    m_freshQuestStartPending = false;
+    m_lastStateJson.clear();
+
+    return true;
+}
+
 void CharacterCreationService::BeginFromStage20(
     TESQuest* apQuest) noexcept
 {
     if (!apQuest)
         return;
 
-    if (m_phase != CharacterCreationPhase::Inactive &&
-        m_phase != CharacterCreationPhase::Error)
+    if (m_freshQuestStartPending ||
+        m_phase != CharacterCreationPhase::Inactive ||
+        m_controlsLocked)
     {
-        return;
+        if (!ResetForFreshCharacterCreation())
+        {
+            Fail("STRE n'a pas pu réinitialiser une nouvelle création de personnage.");
+            return;
+        }
     }
 
     m_pQuest = apQuest;

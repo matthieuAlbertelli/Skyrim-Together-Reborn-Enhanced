@@ -81,9 +81,18 @@ The three spell names above are translated descriptions of currently localized F
 - build change before acknowledgment;
 - reject a second build after the Applied state.
 
+## New Game bootstrap regression
+
+Validated on 15 August 2026:
+
+- first New Game enters the inn and reaches Character Creation;
+- MQ101 remains at stage 0 and the STRE Alternate Start quest reaches stage 20;
+- a second New Game works after returning to the main menu without restarting Skyrim;
+- an ordinary existing save loads without retriggering the bootstrap.
+
 ## Tests still blocked by missing features
 
-- automatic new game and Helgen skip;
+- Helgen/world-state continuity and vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;
 - save/load at every phase;

@@ -1,34 +1,44 @@
 # New Game bootstrap spike
 
-> **Status: Proposed architecture — investigation only, not implemented or runtime-validated.**
+> **Status: New Game bootstrap implemented and runtime smoke-tested; vanilla departure/Helgen continuity remains open.**
 >
 > Evidence snapshot: 15 August 2026, Skyrim SE `1.6.1170.0`.
 
 ## Decision summary
 
-The first production increment should use one minimal Creation Kit override of
-vanilla `MQ101` (`Unbound`, `[QUST:0003372B]`) at its normal stage-0 log entry.
-That fragment should delegate immediately to the existing
-`STRE_QUEST_AlternateStart` bootstrap and must not advance MQ101 to stage 10.
-This is the earliest deterministic CK/Papyrus boundary before the cart setup
-runs.
+The validated production bootstrap uses the same early Creation Kit/Papyrus
+boundary identified by this spike, with one important refinement from the
+prototype: Bethesda's normal `MQQuickstart == 0` stage-0 fragment remains
+unchanged.
 
-No native executable hook is justified by the evidence in this spike. A
-standalone Start Game Enabled quest cannot prove that it runs before MQ101's
-synchronous stage-0-to-10 transition. A native hook would duplicate a boundary
-already available to the plugin and would put Skyrim quest manipulation in the
-wrong ownership layer.
+`STRE_AlternateStart.esp` instead overrides vanilla `MQQuickstart [0004679E]`
+to value `5` and adds a sixth MQ101 stage-0 log entry conditioned on
+`MQQuickstart == 5`. That STRE branch:
 
-This approach has an unavoidable compatibility cost: the plugin must override
-the MQ101 quest record and ship the generated `QF_MQ101_0003372B.pex`. Other
-mods that change MQ101 or that fragment script require an explicit patch or are
-mutually exclusive. The implementation must keep this override narrow and must
-not copy another alternate-start mod's records or scripts.
+1. sets the game hour;
+2. moves the player directly to `STRE_REFR_NewGameStartMarker` in the inn;
+3. starts `STRE_QUEST_AlternateStart`;
+4. never calls MQ101 `SetStage(10)`.
 
-The recommendation is ready for a small CK prototype, not for production
-implementation without runtime evidence. The prototype must prove the exact
-startup ordering, chargen state, alias fill, movement, and vanilla handoff
-listed in this document.
+The Alternate Start quest has stage 10 marked as Start Up Stage. Stage 10 moves
+the player to the seat, stage 20 hands off to `CharacterCreationService`, and
+RaceMenu/Angular Character Creation continues from there.
+
+No native executable hook is required. Native code participates only in the
+existing Character Creation lifecycle. Runtime testing exposed one same-process
+re-entry issue: after returning to the main menu, Skyrim can restart the quest
+and reach stage 20 without emitting another quest-stage event. The validated
+fix observes the Alternate Start quest Start/Stop lifecycle, rearms the native
+service on a fresh `Start()`, then recovers stage 20.
+
+The compatibility cost remains unavoidable: the plugin wins the MQ101 quest
+record and ships `QF_MQ101_0003372B.pex`. Other mods that change MQ101 or that
+fragment script require an explicit patch or are mutually exclusive.
+
+Runtime smoke tests validated first New Game, a second New Game in the same
+Skyrim process, and loading an ordinary existing save without retriggering the
+bootstrap. Vanilla departure, Helgen world-state projection, MQ102/MQ103
+handoff, and MQ101 stage 1000 remain separate work.
 
 ## Scope and ownership
 
@@ -90,8 +100,10 @@ The installed Bethesda-distributed Papyrus sources used for this audit were:
 - `CCStartAfterCharGenScript.psc`.
 
 The xEdit QUST definition confirms the meaning of the QUST DNAM flags and the
-stage/alias structures. The repository's strict plugin audit also passed with
-47 expected STRE records and no unexpected STRE-prefixed records.
+stage/alias structures. The repository's strict plugin audit now passes with 48 expected STRE-owned
+records, the two approved EditorID-bearing Skyrim master overrides
+(`MQQuickstart`, `MQ101`), and the pre-existing anonymous `NAVI [00012FB4]`
+baseline record. Any additional master-backed record is rejected.
 
 ### Inference that requires a runtime trace
 
@@ -103,9 +115,11 @@ plugin records or Bethesda Papyrus source. That internal call site is not
 needed by the proposed CK design, but the first prototype must log the stage-0
 entry to close the timing proof on every supported runtime.
 
-No claim in this document that is marked **Proposed** is current implementation
-truth. Current implementation remains documented only in
-[`docs/project/STATUS.md`](../../project/STATUS.md).
+Historical candidate sections below are retained as design evidence. Current
+implementation truth is recorded in
+[`docs/project/STATUS.md`](../../project/STATUS.md),
+[`CK_IMPLEMENTATION.md`](CK_IMPLEMENTATION.md), the strict manifest, and the
+versioned runtime sources.
 
 ## Verified vanilla startup path
 
@@ -136,16 +150,46 @@ MQ101 stage 0, normal-start log entry (MQQuickStart == 0)
         Helgen Keep -> MQ102A or MQ102B -> generic MQ102
 ```
 
-The STRE interception boundary is the MQ101 stage-0 normal-start log entry,
-before its call to `SetStage(10)`. Letting that call occur and trying to undo it
-later is unsafe: actor packages, aliases, controls, inventory mutations, cell
-loads, and scenes have already begun.
+The validated STRE interception boundary is MQ101 stage-0 branch selection
+before any branch calls `SetStage(10)`. Letting vanilla stage 10 occur and trying
+to undo it later is unsafe: actor packages, aliases, controls, inventory
+mutations, cell loads, and scenes have already begun.
+
+Validated STRE path:
+
+```text
+Main menu: New
+    |
+    v
+MQQuickstart = 5
+    |
+    v
+MQ101 stage 0, STRE sixth log entry
+    |
+    +-- GameHour = 7
+    +-- Player.MoveTo(STRE_REFR_NewGameStartMarker)
+    `-- STRE_QUEST_AlternateStart.Start()
+            |
+            v
+        Start Up Stage 10
+            |
+            v
+        seat -> stage 20
+            |
+            v
+        CharacterCreationService
+            |
+            v
+        RaceMenu -> Angular Character Creation
+```
+
+The vanilla `MQQuickstart == 0` fragment remains byte-semantically unchanged.
 
 ## MQ101 and Helgen dependency map
 
 | Component | Relevant vanilla responsibility | STRE consequence |
 |---|---|---|
-| MQ101 stage 0 | Selects normal or Bethesda quick-start fragment | Replace only the normal New Game branch with the STRE bridge. |
+| MQ101 stage 0 | Selects normal or Bethesda quick-start fragment | Add the STRE `MQQuickstart == 5` branch and leave Bethesda's normal branch unchanged. |
 | MQ101 stage 10 | Enters chargen and configures carts, actors, controls, camera, inventory, and initial scenes | Must never run during an STRE start. |
 | MQ101 aliases | Player, Hadvar, Ralof, Ulfric, Tullius, Alduin, carts, horses, prisoners, Helgen markers/locations, and scene actors | Do not assume all vanilla aliases were exercised merely because MQ101 started. |
 | MQ101 scenes/packages | Cart ride, town square, dragon attack, keep branches | Must remain stopped/unstarted while the player is in the STRE bootstrap. |
@@ -165,8 +209,13 @@ the intended state.
 
 ## Current STRE plugin audit
 
-`STRE_AlternateStart.esp` currently contains only the 47 records allowed by
-`CK_RECORDS_M7_IMPLEMENTED.json`. It does not override MQ101.
+`STRE_AlternateStart.esp` now contains 48 manifest-owned STRE records, including
+`STRE_REFR_NewGameStartMarker`, plus the intentional Skyrim overrides
+`MQQuickstart [0004679E]` and `MQ101 [0003372B]`. The strict audit also carries
+the pre-existing anonymous `NAVI [00012FB4]` baseline exception so that every
+other master-backed record fails `--reject-unexpected`.
+
+`MQQuickstart` is fixed to value `5`; the audit verifies that value.
 
 `STRE_QUEST_AlternateStart`:
 
@@ -201,10 +250,10 @@ the cart setup may already have mutated the game.
 
 ### C. Minimal MQ101 stage-0 CK override
 
-**Recommended.** Replace the normal-start log entry so it calls an STRE-owned
-Papyrus entry point and does not call MQ101 stage 10. Keep Bethesda's other
-debug quick-start conditions unchanged unless the CK proves that their
-condition ordering forces a narrower edit.
+**Validated with a refinement.** Keep the normal-start log entry unchanged,
+override `MQQuickstart` to `5`, and add a sixth stage-0 entry for STRE. The STRE
+branch moves the player into the inn and starts the STRE quest without calling
+MQ101 stage 10. Bethesda's existing quick-start branches remain untouched.
 
 Benefits:
 
@@ -259,7 +308,7 @@ STRE does not need Live Another Life's alternate-start scenarios.
 
 The relevant architectural pattern is narrower:
 
-1. intercept normal New Game through MQ101 before stage 10;
+1. intercept New Game through the dedicated MQ101 `MQQuickstart == 5` branch before stage 10;
 2. transfer control to an STRE-owned chargen/bootstrap quest;
 3. keep the vanilla main quest dormant during the STRE Alternate Start;
 4. reconstruct only the minimum coherent post-Helgen vanilla state required by
@@ -274,16 +323,18 @@ third-party scripts or records verbatim.
 
 ### 1. Thin vanilla bridge
 
-The MQ101 normal stage-0 fragment should contain only a delegation to an
-STRE-owned Papyrus controller. It must not own seating, UI, server state, Valen,
-class rules, or the eventual MQ102 policy.
+The implemented bridge is the dedicated sixth MQ101 stage-0 branch selected by
+`MQQuickstart == 5`. It must not own class rules, server state, Valen, or the
+eventual MQ102 policy.
 
-Proposed responsibility:
+Implemented responsibility:
 
 ```text
 MQ101 stage-0 STRE branch
-    -> trace NewGame interception
-    -> invoke STRE NewGame bootstrap controller
+    -> trace New Game interception
+    -> set GameHour
+    -> Player.MoveTo(STRE_REFR_NewGameStartMarker)
+    -> STRE_QUEST_AlternateStart.Start()
     -> do not call MQ101.SetStage(10)
 ```
 
@@ -432,21 +483,23 @@ quest authority.
 
 ## Exact artifacts likely to change in production
 
-The first implementation increment is expected to touch only the existing
-plugin artifact set and its documentation/tooling:
+The bootstrap implementation touches the existing plugin artifact set,
+Character Creation lifecycle code, and its documentation/tooling:
 
 | Artifact | Expected change |
 |---|---|
-| `GameFiles/Skyrim/STRE_AlternateStart.esp` | Add the minimal winning MQ101 QUST stage-0 override and any STRE-prefixed helper/property records proven necessary. |
+| `GameFiles/Skyrim/STRE_AlternateStart.esp` | Win `MQ101`, set `MQQuickstart` to `5`, and add `STRE_REFR_NewGameStartMarker`. |
 | `GameFiles/Skyrim/Source/Scripts/QF_MQ101_0003372B.psc` | Track the generated winning fragment source with the narrow STRE delegation. |
 | `GameFiles/Skyrim/scripts/QF_MQ101_0003372B.pex` | Ship the CK-compiled fragment used at runtime through the existing game-file packaging path. |
 | `QF_STRE_QUEST_AlternateStart_02001AF9.psc` or a small STRE controller script | Add idempotent fresh-game bootstrap entry/projection, keeping CK operations out of native code. |
-| `CK_RECORDS_M7_IMPLEMENTED.json` | Extend the manifest deliberately; the vanilla MQ101 override needs an explicit non-STRE allowlist/audit rule rather than weakening prefix checks. |
-| `Tools/Scripts/audit_stre_plugin_records.py` | If necessary, add a focused assertion for the one approved vanilla override and reject any other unexpected vanilla override. |
+| `Code/client/Services/CharacterCreationService.*` | Rearm Character Creation on a fresh Alternate Start quest lifecycle so same-process New Game works even when Skyrim does not emit another stage event. |
+| `CK_RECORDS_M7_IMPLEMENTED.json` | Track the new STRE marker, approved `MQQuickstart`/`MQ101` master overrides, and the pre-existing anonymous NAVI baseline without weakening STRE prefix checks. |
+| `Tools/Scripts/audit_stre_plugin_records.py` | Validate approved master overrides, verify `MQQuickstart = 5`, preserve the explicit NAVI baseline exception, and reject every other master-backed record. |
 | feature documentation/tests | Record the final CK record delta, handoff policy, and runtime evidence. |
 
-No C++ source file, second ESP, database schema, or campaign save format is
-required for the New Game interception itself.
+No native hook, second ESP, database schema, or campaign save format is required
+for New Game interception. A small `CharacterCreationService` lifecycle fix is
+required for reliable same-process New Game re-entry.
 
 ## Compatibility policy
 
@@ -482,7 +535,7 @@ fix outside the single intentional stage-0 delta.
 | Native client present but disconnected | Continue through the local flow; no server wait. |
 | Server disconnects after admission | Follow campaign authority/recovery policy; do not restart MQ101. |
 | RaceMenu fails or is cancelled | Preserve the existing character-creation control lock and retry/error UI; do not advance departure. |
-| Duplicate stage/start event | Idempotently retain the current bootstrap state; never start another quest instance or rerun inventory cleanup. |
+| Fresh quest Start after returning to the main menu | Treat it as a new Character Creation lifecycle, reset stale native UI/control/build state, then recover stage 20 once. Duplicate events within the same lifecycle must remain idempotent. |
 | Ordinary save is loaded | Do not invoke the New Game bridge. |
 | Managed campaign save is loaded | Future #55/#56 flow owns it; never reset MQ101 or the STRE bootstrap. |
 | Vanilla handoff fails | Remain in a diagnosable pre-departure state and do not enable an incoherent partial world. |
@@ -492,7 +545,7 @@ fix outside the single intentional stage-0 delta.
 ### CK/plugin structural checks
 
 - strict manifest audit passes;
-- exactly one intentional vanilla override exists: MQ101;
+- exactly two intentional EditorID-bearing Skyrim overrides exist: `MQQuickstart` and `MQ101`, plus the explicit pre-existing anonymous NAVI baseline record;
 - MQ101 winning record differs from the supported master/USSEP record only in
   the approved stage-0 branch and generated fragment metadata;
 - the deployed QF PEX matches the reviewed PSC/plugin fragment;
@@ -554,22 +607,22 @@ The approved departure path must validate:
   as incompatible rather than silently combined;
 - Vortex staging/deployed hardlink installation path.
 
-## Proposed implementation milestones
+## Implementation status and next milestones
 
-1. **Disposable CK timing prototype** — add only stage-0 traces and a move/start
-   delegation; prove New Game ordering and no stage 10 on Skyrim 1.6.1170.
-2. **Minimal plugin bridge** — commit the reviewed MQ101 override, generated QF
-   source/PEX, strict audit allowlist, and idempotent STRE bootstrap entry.
-3. **Solo bootstrap acceptance** — validate the existing seat, stage 20,
-   RaceMenu, and local build flow with no server process.
-4. **Campaign bootstrap projection** — map admitted pre-checkpoint campaign
-   phases to the same CK flow without implementing managed saves.
-5. **Vanilla departure decision/prototype** — approve neutral versus branch
-   handoff, then validate the exact MQ101/MQ102/Helgen projection in CK and in
-   game.
-6. **Compatibility and regression gate** — compare winning records, execute the
-   full matrix, update canonical CK documentation and current STATUS only after
-   implementation/runtime validation.
+1. **CK timing/bootstrap prototype — complete.** New Game ordering, direct world
+   transition, and suppression of MQ101 stage 10 are runtime-validated.
+2. **Minimal plugin bridge — complete for bootstrap.** MQ101/QF, `MQQuickstart`,
+   marker, strict audit allowlist, and generated PSC/PEX are versioned.
+3. **Solo bootstrap acceptance — complete.** Seat, stage 20, RaceMenu, local
+   build, same-process second New Game, and ordinary-save non-retrigger are
+   smoke-tested.
+4. **Campaign bootstrap projection — pending.** Map admitted pre-checkpoint
+   campaign phases to the same CK flow without implementing managed saves.
+5. **Vanilla departure decision/prototype — pending.** Approve neutral versus
+   branch handoff, then validate the exact MQ101/MQ102/Helgen projection in CK
+   and in game.
+6. **Compatibility and regression gate — pending.** Compare winning records,
+   execute the supported-load-order matrix, and document explicit conflicts.
 
 Each milestone should be independently reviewable. #55 and #56 remain separate
 and must not be pulled into these increments.
