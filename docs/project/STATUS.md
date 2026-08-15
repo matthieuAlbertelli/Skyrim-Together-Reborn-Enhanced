@@ -217,7 +217,9 @@ transport/service boundary:
   than trusted from packet fields;
 - campaign-create retries resolve their original server assignment from the
   atomic SQLite creation journal even after a full server restart, without a
-  second receipt store or duplicate campaign;
+  second receipt store or duplicate campaign; the historical assignment is
+  admitted only after the exact tuple is verified against the current mutable
+  Lobby roster, so removed or rebound ownership is never restored;
 - an existing Lobby member reconnects through exact `PlayerId`/binding resume
   without changing roster or version; a genuinely new join mutation for that
   member is rejected explicitly as resume-required;

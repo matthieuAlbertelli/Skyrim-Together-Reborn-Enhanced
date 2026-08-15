@@ -23,6 +23,33 @@ std::string TestPlayerId(std::size_t aIndex)
     return result;
 }
 
+std::int64_t CountCampaigns(const std::filesystem::path& acPath)
+{
+    sqlite3* pDatabase{};
+    if (sqlite3_open(acPath.string().c_str(), &pDatabase) != SQLITE_OK)
+    {
+        if (pDatabase)
+            sqlite3_close_v2(pDatabase);
+        return -1;
+    }
+    sqlite3_stmt* pStatement{};
+    std::int64_t result{-1};
+    if (sqlite3_prepare_v2(
+            pDatabase,
+            "SELECT COUNT(*) FROM campaigns;",
+            -1,
+            &pStatement,
+            nullptr) == SQLITE_OK &&
+        sqlite3_step(pStatement) == SQLITE_ROW)
+    {
+        result = sqlite3_column_int64(pStatement, 0);
+    }
+    if (pStatement)
+        sqlite3_finalize(pStatement);
+    sqlite3_close_v2(pDatabase);
+    return result;
+}
+
 struct ProtocolFixture
 {
     ProtocolFixture()
@@ -186,20 +213,122 @@ TEST_CASE("Campaign create retry survives a full admission and store restart", "
             created.CharacterBindingId);
     }
 
-    sqlite3* rawDatabase{};
-    REQUIRE(sqlite3_open(database.Path.string().c_str(), &rawDatabase) ==
-        SQLITE_OK);
-    sqlite3_stmt* statement{};
-    REQUIRE(sqlite3_prepare_v2(
-        rawDatabase,
-        "SELECT COUNT(*) FROM campaigns;",
-        -1,
-        &statement,
-        nullptr) == SQLITE_OK);
-    REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
-    REQUIRE(sqlite3_column_int64(statement, 0) == 1);
-    sqlite3_finalize(statement);
-    sqlite3_close_v2(rawDatabase);
+    REQUIRE(CountCampaigns(database.Path) == 1);
+}
+
+TEST_CASE("Historical create replay does not restore a removed Lobby membership", "[campaign.admission][persistence][reconnect]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    const auto left = fixture.Admission.LeaveCampaign(
+        1, created.CampaignId, "mutation-leave-host", 1);
+    REQUIRE(left.Result == CampaignProtocolResult::Applied);
+    REQUIRE(left.Version == 2);
+    REQUIRE(left.Snapshot);
+    REQUIRE(left.Snapshot->Roster.empty());
+    const std::size_t generatedBeforeReplay = fixture.GeneratedIds;
+
+    const auto replay = fixture.Admission.CreateCampaign(
+        1, "mutation-create", true);
+    REQUIRE(replay.Result == CampaignProtocolResult::IdentityMismatch);
+    REQUIRE(fixture.GeneratedIds == generatedBeforeReplay);
+    const auto* connection =
+        static_cast<const CampaignAdmissionService&>(fixture.Admission)
+            .FindConnection(1);
+    REQUIRE(connection);
+    REQUIRE_FALSE(connection->AdmittedIdentity);
+
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.Version == 2);
+    REQUIRE(durable.Campaign.Roster.empty());
+    REQUIRE(CountCampaigns(fixture.Database.Path) == 1);
+}
+
+TEST_CASE("Historical create replay does not restore a rebound Lobby membership", "[campaign.admission][persistence][reconnect]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    const auto rebound = fixture.Runtime.ReplaceRosterSlot(
+        {CampaignId{created.CampaignId},
+         1,
+         MutationId{"mutation-rebind-host"},
+         {CampaignSlotId{created.CampaignSlotId},
+          PlayerId{TestPlayerId(1)},
+          CharacterBindingId{"binding-rebound"}}});
+    REQUIRE(rebound.Succeeded());
+    REQUIRE(rebound.Version == 2);
+    REQUIRE(fixture.Admission.Disconnect(1));
+    REQUIRE(fixture.Admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+
+    const auto replay = fixture.Admission.CreateCampaign(
+        11, "mutation-create", true);
+    REQUIRE(replay.Result == CampaignProtocolResult::BindingMismatch);
+    const auto* connection =
+        static_cast<const CampaignAdmissionService&>(fixture.Admission)
+            .FindConnection(11);
+    REQUIRE(connection);
+    REQUIRE_FALSE(connection->AdmittedIdentity);
+
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.Version == 2);
+    REQUIRE(durable.Campaign.Roster.size() == 1);
+    REQUIRE(durable.Campaign.Roster.front().Slot.Value ==
+        created.CampaignSlotId);
+    REQUIRE(durable.Campaign.Roster.front().Player.Value == TestPlayerId(1));
+    REQUIRE(durable.Campaign.Roster.front().CharacterBinding.Value ==
+        "binding-rebound");
+    REQUIRE(CountCampaigns(fixture.Database.Path) == 1);
+}
+
+TEST_CASE("Historical create replay preserves an admission to another campaign", "[campaign.admission][persistence][security]")
+{
+    ProtocolFixture fixture;
+    const auto createdA = fixture.CreateHost();
+    REQUIRE(createdA.Succeeded());
+    const auto leftA = fixture.Admission.LeaveCampaign(
+        1, createdA.CampaignId, "mutation-leave-a", 1);
+    REQUIRE(leftA.Succeeded());
+
+    const auto createdB = fixture.Admission.CreateCampaign(
+        1, "mutation-create-b", true);
+    REQUIRE(createdB.Result == CampaignProtocolResult::Applied);
+    REQUIRE(createdB.CampaignId != createdA.CampaignId);
+    const std::size_t generatedBeforeReplay = fixture.GeneratedIds;
+
+    const auto replayA = fixture.Admission.CreateCampaign(
+        1, "mutation-create", true);
+    REQUIRE(replayA.Result == CampaignProtocolResult::NotAdmitted);
+    REQUIRE(fixture.GeneratedIds == generatedBeforeReplay);
+    const auto* connection =
+        static_cast<const CampaignAdmissionService&>(fixture.Admission)
+            .FindConnection(1);
+    REQUIRE(connection);
+    REQUIRE(connection->AdmittedIdentity);
+    REQUIRE(connection->AdmittedIdentity->Campaign.Value ==
+        createdB.CampaignId);
+    REQUIRE(connection->AdmittedIdentity->Slot.Value ==
+        createdB.CampaignSlotId);
+    REQUIRE(connection->AdmittedIdentity->CharacterBinding.Value ==
+        createdB.CharacterBindingId);
+
+    const auto durableA = fixture.Runtime.LoadCampaign(
+        CampaignId{createdA.CampaignId});
+    REQUIRE(durableA.Succeeded());
+    REQUIRE(durableA.Campaign.Version == 2);
+    REQUIRE(durableA.Campaign.Roster.empty());
+    const auto durableB = fixture.Runtime.LoadCampaign(
+        CampaignId{createdB.CampaignId});
+    REQUIRE(durableB.Succeeded());
+    REQUIRE(durableB.Campaign.Version == 1);
+    REQUIRE(durableB.Campaign.Roster.size() == 1);
+    REQUIRE(CountCampaigns(fixture.Database.Path) == 2);
 }
 
 TEST_CASE("Ambiguous durable campaign creation reuse fails closed", "[campaign.admission][persistence][idempotency]")

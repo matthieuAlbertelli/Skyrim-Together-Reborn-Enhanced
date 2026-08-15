@@ -59,7 +59,9 @@ The live protocol implements:
 
 - leader-only campaign creation with server-generated campaign, slot, and
   character-binding identities; its journaled initial-roster command is also
-  the durable idempotency receipt for an exact retry after server restart;
+  the durable idempotency receipt for an exact retry after server restart, but
+  transient admission is restored only when that historical tuple still exists
+  unchanged in the current canonical roster;
 - pre-seal join/leave in the current party/session;
 - pre-seal or sealed resume admission by canonical `PlayerId` plus cached
   binding, with the slot resolved only from server state and no roster/version

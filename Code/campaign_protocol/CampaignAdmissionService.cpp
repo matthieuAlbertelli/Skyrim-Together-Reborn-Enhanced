@@ -326,6 +326,47 @@ CampaignProtocolCommandResult CampaignAdmissionService::CreateCampaign(
         }
         if (creation.Identity)
         {
+            if (pRecord->AdmittedIdentity &&
+                pRecord->AdmittedIdentity->Campaign !=
+                    creation.Identity->Campaign)
+            {
+                return Failure(
+                    CampaignProtocolOperation::Create,
+                    CampaignProtocolResult::NotAdmitted,
+                    creation.Identity->Campaign.Value);
+            }
+            CampaignLoadResult current = m_runtime.LoadCampaign(
+                creation.Identity->Campaign);
+            if (!current)
+            {
+                return Failure(
+                    CampaignProtocolOperation::Create,
+                    MapLoadFailure(current),
+                    creation.Identity->Campaign.Value);
+            }
+            const auto currentSlot = std::find_if(
+                current.Campaign.Roster.begin(),
+                current.Campaign.Roster.end(),
+                [&](const CampaignSlotState& acSlot)
+                {
+                    return acSlot.Player == creation.Identity->Player;
+                });
+            if (currentSlot == current.Campaign.Roster.end() ||
+                currentSlot->Slot != creation.Identity->Slot)
+            {
+                return Failure(
+                    CampaignProtocolOperation::Create,
+                    CampaignProtocolResult::IdentityMismatch,
+                    creation.Identity->Campaign.Value);
+            }
+            if (currentSlot->CharacterBinding !=
+                creation.Identity->CharacterBinding)
+            {
+                return Failure(
+                    CampaignProtocolOperation::Create,
+                    CampaignProtocolResult::BindingMismatch,
+                    creation.Identity->Campaign.Value);
+            }
             CampaignProtocolCommandResult replay;
             replay.Operation = CampaignProtocolOperation::Create;
             replay.Result = CampaignProtocolResult::IdempotentReplay;
