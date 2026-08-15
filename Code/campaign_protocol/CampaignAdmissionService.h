@@ -104,13 +104,6 @@ public:
     GetAdmittedConnections(const CampaignId& acCampaign) const;
 
 private:
-    struct CreateReceipt
-    {
-        PlayerId Player;
-        MutationId Mutation;
-        CampaignProtocolCommandResult Result;
-    };
-
     [[nodiscard]] CampaignAdmissionRecord* FindConnection(
         CampaignConnectionHandle aConnection) noexcept;
     [[nodiscard]] std::vector<CampaignMemberPresence> BuildPresence(
@@ -120,6 +113,5 @@ private:
     CampaignRuntimeService& m_runtime;
     IdGenerator m_idGenerator;
     std::vector<CampaignAdmissionRecord> m_connections;
-    std::vector<CreateReceipt> m_createReceipts;
 };
 }

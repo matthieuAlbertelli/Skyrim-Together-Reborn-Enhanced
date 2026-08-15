@@ -38,6 +38,9 @@ public:
 
     virtual StoreValueResult<std::vector<JournalRecord>> LoadJournal(
         const CampaignId& acCampaign) noexcept = 0;
+    virtual StoreValueResult<std::vector<JournalRecord>> LoadJournalByMutation(
+        const MutationId& acMutation,
+        std::string_view acKind) noexcept = 0;
     virtual StoreValueResult<std::vector<OutboxRecord>> LoadPendingOutbox(
         const CampaignId& acCampaign) noexcept = 0;
     virtual StoreResult MarkOutboxDelivered(std::uint64_t aOutboxId) noexcept = 0;

@@ -282,6 +282,92 @@ StoreValueResult<std::vector<JournalRecord>> SqliteCampaignStore::LoadJournal(
     return result;
 }
 
+StoreValueResult<std::vector<JournalRecord>>
+SqliteCampaignStore::LoadJournalByMutation(
+    const MutationId& acMutation,
+    std::string_view acKind) noexcept
+{
+    StoreValueResult<std::vector<JournalRecord>> result;
+    try
+    {
+        if (!IsValidId(acMutation) || acKind.empty() ||
+            acKind.size() > kMaximumKindLength)
+        {
+            result.Error = StoreError::InvalidArgument;
+            result.Message = "invalid journal mutation lookup";
+            return result;
+        }
+        Statement statement(
+            m_pDatabase,
+            "SELECT sequence, campaign_id, expected_revision, "
+            "resulting_revision, payload_codec_version, payload, "
+            "restored_from_checkpoint_id, restored_from_revision, "
+            "created_at_unix_ms FROM campaign_journal "
+            "WHERE mutation_id=?1 AND mutation_kind=?2 ORDER BY sequence;");
+        if (!statement.Valid() ||
+            !statement.BindText(1, acMutation.Value) ||
+            !statement.BindText(2, acKind))
+        {
+            result.Error = StoreError::DatabaseFailure;
+            result.Message = DatabaseMessage(
+                m_pDatabase, "load journal entries by mutation");
+            return result;
+        }
+        int journalCode{};
+        for (journalCode = statement.Step(); journalCode == SQLITE_ROW;
+             journalCode = statement.Step())
+        {
+            if (statement.Int64(0) <= 0 || statement.Int64(2) < 0 ||
+                statement.Int64(3) <= 0 || statement.Int64(4) <= 0)
+            {
+                result.Error = StoreError::IntegrityFailure;
+                result.Message =
+                    "campaign journal contains malformed mutation metadata";
+                return result;
+            }
+            JournalRecord record;
+            record.Sequence = static_cast<std::uint64_t>(statement.Int64(0));
+            record.Campaign = CampaignId{statement.Text(1)};
+            record.Mutation = acMutation;
+            record.ExpectedRevision =
+                static_cast<StateVersion>(statement.Int64(2));
+            record.ResultingRevision =
+                static_cast<StateVersion>(statement.Int64(3));
+            record.Kind = std::string(acKind);
+            record.PayloadCodecVersion =
+                static_cast<std::uint32_t>(statement.Int64(4));
+            record.Payload = statement.Blob(5);
+            if (!statement.IsNull(6))
+                record.RestoredFromCheckpoint = CheckpointId{statement.Text(6)};
+            if (!statement.IsNull(7))
+                record.RestoredFromRevision =
+                    static_cast<StateVersion>(statement.Int64(7));
+            record.CreatedAtUnixMs = statement.Int64(8);
+            if (!IsValidId(record.Campaign) ||
+                !IsValidPayload(record.Payload))
+            {
+                result.Error = StoreError::IntegrityFailure;
+                result.Message =
+                    "campaign journal contains malformed mutation payload";
+                return result;
+            }
+            result.Value.push_back(std::move(record));
+        }
+        if (journalCode != SQLITE_DONE)
+        {
+            result.Error = StoreError::DatabaseFailure;
+            result.Message = DatabaseMessage(
+                m_pDatabase, "iterate journal entries by mutation");
+        }
+    }
+    catch (...)
+    {
+        result.Error = StoreError::DatabaseFailure;
+        result.Message = "failed to load journal entries by mutation safely";
+    }
+    return result;
+}
+
 StoreValueResult<std::vector<OutboxRecord>>
 SqliteCampaignStore::LoadPendingOutbox(
     const CampaignId& acCampaign) noexcept

@@ -45,7 +45,8 @@ bool CampaignCommandResponse::IsValid() const noexcept
     return WireValid && static_cast<std::uint8_t>(Operation) <=
             static_cast<std::uint8_t>(CampaignProtocolOperation::Leave) &&
         static_cast<std::uint8_t>(Result) <=
-            static_cast<std::uint8_t>(CampaignProtocolResult::PersistenceFailure) &&
+            static_cast<std::uint8_t>(
+                CampaignProtocolResult::ExistingMembershipRequiresResume) &&
         IsValidCampaignWireId(MutationId, true) &&
         IsValidCampaignWireId(CampaignId, !succeeded) &&
         (assignmentEmpty || assignmentValid);

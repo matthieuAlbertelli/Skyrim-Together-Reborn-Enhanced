@@ -316,24 +316,26 @@ CampaignProtocolCommandResult CampaignAdmissionService::CreateCampaign(
         if (!pRecord || !IsValidProtocolId(acMutationId))
             return Failure(CampaignProtocolOperation::Create,
                 CampaignProtocolResult::InvalidRequest);
-        const auto receipt = std::find_if(
-            m_createReceipts.begin(), m_createReceipts.end(),
-            [&](const CreateReceipt& acReceipt)
-            {
-                return acReceipt.Player == pRecord->Player &&
-                    acReceipt.Mutation.Value == acMutationId;
-            });
-        if (receipt != m_createReceipts.end())
+        CampaignCreationLookupResult creation =
+            m_runtime.FindCampaignCreation(
+                pRecord->Player, MutationId{acMutationId});
+        if (!creation)
         {
-            CampaignProtocolCommandResult replay = receipt->Result;
+            return Failure(CampaignProtocolOperation::Create,
+                CampaignProtocolResult::PersistenceFailure);
+        }
+        if (creation.Identity)
+        {
+            CampaignProtocolCommandResult replay;
+            replay.Operation = CampaignProtocolOperation::Create;
             replay.Result = CampaignProtocolResult::IdempotentReplay;
-            pRecord->AdmittedIdentity = CampaignMemberIdentity{
-                CampaignId{replay.CampaignId},
-                CampaignSlotId{replay.CampaignSlotId},
-                pRecord->Player,
-                CharacterBindingId{replay.CharacterBindingId}};
-            replay.Snapshot = BuildSnapshot(
-                CampaignId{replay.CampaignId});
+            replay.CampaignId = creation.Identity->Campaign.Value;
+            replay.Version = creation.Version;
+            replay.CampaignSlotId = creation.Identity->Slot.Value;
+            replay.CharacterBindingId =
+                creation.Identity->CharacterBinding.Value;
+            pRecord->AdmittedIdentity = *creation.Identity;
+            replay.Snapshot = BuildSnapshot(creation.Identity->Campaign);
             return replay;
         }
         if (pRecord->AdmittedIdentity)
@@ -360,8 +362,6 @@ CampaignProtocolCommandResult CampaignAdmissionService::CreateCampaign(
         result.CampaignSlotId = hostSlot.Slot.Value;
         result.CharacterBindingId = hostSlot.CharacterBinding.Value;
         result.Snapshot = BuildSnapshot(campaign);
-        m_createReceipts.push_back(
-            {pRecord->Player, MutationId{acMutationId}, result});
         return result;
     }
     catch (...)
@@ -450,6 +450,16 @@ CampaignProtocolCommandResult CampaignAdmissionService::JoinCampaign(
             {campaign, aExpectedRevision, MutationId{acMutationId}, slot});
         CampaignProtocolCommandResult result = FromCommand(
             CampaignProtocolOperation::Join, acCampaignId, command);
+        if (existing != loaded.Campaign.Roster.end() &&
+            !command.Succeeded() &&
+            (command.Error == CampaignError::DuplicateSlot ||
+             command.Error == CampaignError::DuplicatePlayer ||
+             command.Error == CampaignError::DuplicateCharacterBinding))
+        {
+            result.Result =
+                CampaignProtocolResult::ExistingMembershipRequiresResume;
+            result.Version = loaded.Campaign.Version;
+        }
         if (!result.Succeeded())
             return result;
 
@@ -493,9 +503,6 @@ CampaignProtocolCommandResult CampaignAdmissionService::ResumeCampaign(
         if (!loaded)
             return Failure(CampaignProtocolOperation::Resume,
                 MapLoadFailure(loaded), acCampaignId);
-        if (!loaded.Campaign.RosterSealed)
-            return Failure(CampaignProtocolOperation::Resume,
-                CampaignProtocolResult::RosterNotSealed, acCampaignId);
         const auto slot = std::find_if(
             loaded.Campaign.Roster.begin(), loaded.Campaign.Roster.end(),
             [&](const CampaignSlotState& acSlot)

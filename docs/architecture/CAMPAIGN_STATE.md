@@ -58,10 +58,13 @@ written into campaign persistence.
 The live protocol implements:
 
 - leader-only campaign creation with server-generated campaign, slot, and
-  character-binding identities;
+  character-binding identities; its journaled initial-roster command is also
+  the durable idempotency receipt for an exact retry after server restart;
 - pre-seal join/leave in the current party/session;
-- sealed resume admission by canonical `PlayerId` plus cached binding, with the
-  slot resolved only from server state;
+- pre-seal or sealed resume admission by canonical `PlayerId` plus cached
+  binding, with the slot resolved only from server state and no roster/version
+  mutation; a fresh join mutation for an existing member is rejected with an
+  explicit resume-required result;
 - leader-only campaign start/seal, deriving the durable Session Manager from
   the admitted requester's STRE `PlayerId`;
 - admitted-member readiness whose actor tuple is derived server-side;

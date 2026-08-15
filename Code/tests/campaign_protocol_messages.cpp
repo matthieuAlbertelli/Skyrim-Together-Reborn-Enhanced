@@ -138,6 +138,17 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
     REQUIRE(decodedResponse->CharacterBindingId == response.CharacterBindingId);
     REQUIRE(decodedResponse->IsValid());
 
+    CampaignCommandResponse existingMember;
+    existingMember.Operation = CampaignProtocolOperation::Join;
+    existingMember.Result =
+        CampaignProtocolResult::ExistingMembershipRequiresResume;
+    existingMember.MutationId = "mutation-join-new";
+    existingMember.CampaignId = "campaign-1";
+    existingMember.StateVersion = 4;
+    const auto decodedExistingMember = RoundTripServer(existingMember);
+    REQUIRE(decodedExistingMember->Result == existingMember.Result);
+    REQUIRE(decodedExistingMember->IsValid());
+
     NotifyCampaignSnapshot notification;
     notification.Snapshot.CampaignId = "campaign-1";
     notification.Snapshot.StateVersion = 5;

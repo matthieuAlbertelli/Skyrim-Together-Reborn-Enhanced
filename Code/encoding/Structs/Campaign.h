@@ -37,7 +37,8 @@ enum class CampaignProtocolResult : std::uint8_t
     StaleRevision,
     IdempotencyConflict,
     RosterIncomplete,
-    PersistenceFailure
+    PersistenceFailure,
+    ExistingMembershipRequiresResume
 };
 
 struct CampaignPublicSlotData

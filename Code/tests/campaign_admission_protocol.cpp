@@ -137,6 +137,215 @@ TEST_CASE("Campaign create retry restores transient admission after reconnect", 
     REQUIRE(admission->AdmittedIdentity->Slot.Value == created.CampaignSlotId);
 }
 
+TEST_CASE("Campaign create retry survives a full admission and store restart", "[campaign.admission][persistence][reconnect]")
+{
+    TemporaryDatabase database;
+    std::size_t generatedIds{};
+    CampaignProtocolCommandResult created;
+    {
+        auto store = OpenStore(database);
+        CampaignRuntimeService runtime(*store);
+        CampaignAdmissionService admission(
+            runtime, [&generatedIds](std::string_view acPrefix)
+            {
+                return std::string(acPrefix) + "restart-test-" +
+                    std::to_string(++generatedIds);
+            });
+        REQUIRE(admission.RegisterConnection(1, TestPlayerId(1)) ==
+            CampaignConnectionRegistration::Accepted);
+        created = admission.CreateCampaign(1, "mutation-create-restart", true);
+        REQUIRE(created.Result == CampaignProtocolResult::Applied);
+    }
+
+    CampaignProtocolCommandResult replay;
+    {
+        auto store = OpenStore(database);
+        CampaignRuntimeService runtime(*store);
+        CampaignAdmissionService admission(
+            runtime, [&generatedIds](std::string_view acPrefix)
+            {
+                return std::string(acPrefix) + "restart-test-" +
+                    std::to_string(++generatedIds);
+            });
+        REQUIRE(admission.RegisterConnection(2, TestPlayerId(1)) ==
+            CampaignConnectionRegistration::Accepted);
+        replay = admission.CreateCampaign(
+            2, "mutation-create-restart", true);
+        REQUIRE(replay.Result == CampaignProtocolResult::IdempotentReplay);
+        REQUIRE(replay.CampaignId == created.CampaignId);
+        REQUIRE(replay.CampaignSlotId == created.CampaignSlotId);
+        REQUIRE(replay.CharacterBindingId == created.CharacterBindingId);
+
+        const auto durable = runtime.LoadCampaign(CampaignId{created.CampaignId});
+        REQUIRE(durable.Succeeded());
+        REQUIRE(durable.Campaign.Roster.size() == 1);
+        REQUIRE(durable.Campaign.Roster.front().Player.Value == TestPlayerId(1));
+        REQUIRE(durable.Campaign.Roster.front().Slot.Value ==
+            created.CampaignSlotId);
+        REQUIRE(durable.Campaign.Roster.front().CharacterBinding.Value ==
+            created.CharacterBindingId);
+    }
+
+    sqlite3* rawDatabase{};
+    REQUIRE(sqlite3_open(database.Path.string().c_str(), &rawDatabase) ==
+        SQLITE_OK);
+    sqlite3_stmt* statement{};
+    REQUIRE(sqlite3_prepare_v2(
+        rawDatabase,
+        "SELECT COUNT(*) FROM campaigns;",
+        -1,
+        &statement,
+        nullptr) == SQLITE_OK);
+    REQUIRE(sqlite3_step(statement) == SQLITE_ROW);
+    REQUIRE(sqlite3_column_int64(statement, 0) == 1);
+    sqlite3_finalize(statement);
+    sqlite3_close_v2(rawDatabase);
+}
+
+TEST_CASE("Ambiguous durable campaign creation reuse fails closed", "[campaign.admission][persistence][idempotency]")
+{
+    TemporaryDatabase database;
+    auto store = OpenStore(database);
+    CampaignRuntimeService runtime(*store);
+    const CampaignSlotRecord firstSlot{
+        CampaignSlotId{"slot-01"}, PlayerId{TestPlayerId(1)},
+        CharacterBindingId{"binding-first"}};
+    const CampaignSlotRecord secondSlot{
+        CampaignSlotId{"slot-01"}, PlayerId{TestPlayerId(1)},
+        CharacterBindingId{"binding-second"}};
+    REQUIRE(runtime.CreateLobbyCampaign(
+        {CampaignId{"campaign-first"}, MutationId{"mutation-conflict"},
+         {firstSlot}}).Succeeded());
+    REQUIRE(runtime.CreateLobbyCampaign(
+        {CampaignId{"campaign-second"}, MutationId{"mutation-conflict"},
+         {secondSlot}}).Succeeded());
+
+    std::size_t generatedIds{};
+    CampaignAdmissionService admission(
+        runtime, [&generatedIds](std::string_view acPrefix)
+        {
+            ++generatedIds;
+            return std::string(acPrefix) + "must-not-be-generated";
+        });
+    REQUIRE(admission.RegisterConnection(1, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto conflict = admission.CreateCampaign(
+        1, "mutation-conflict", true);
+    REQUIRE(conflict.Result == CampaignProtocolResult::PersistenceFailure);
+    REQUIRE(generatedIds == 0);
+    REQUIRE(runtime.LoadCampaign(CampaignId{"campaign-first"}).Succeeded());
+    REQUIRE(runtime.LoadCampaign(CampaignId{"campaign-second"}).Succeeded());
+}
+
+TEST_CASE("Pre-seal members resume their canonical admission without roster mutation", "[campaign.admission][reconnect]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.RegisterConnection(2, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto joined = fixture.Admission.JoinCampaign(
+        2, created.CampaignId, "mutation-join", 1, true);
+    REQUIRE(joined.Succeeded());
+    REQUIRE(joined.Version == 2);
+
+    REQUIRE(fixture.Admission.Disconnect(2));
+    REQUIRE(fixture.Admission.RegisterConnection(22, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto wrongBinding = fixture.Admission.ResumeCampaign(
+        22, created.CampaignId, "binding-wrong");
+    REQUIRE(wrongBinding.Result == CampaignProtocolResult::BindingMismatch);
+    const auto resumed = fixture.Admission.ResumeCampaign(
+        22, created.CampaignId, joined.CharacterBindingId);
+    REQUIRE(resumed.Result == CampaignProtocolResult::Applied);
+    REQUIRE(resumed.Version == 2);
+    REQUIRE(resumed.CampaignSlotId == joined.CampaignSlotId);
+    REQUIRE(resumed.CharacterBindingId == joined.CharacterBindingId);
+    REQUIRE(resumed.Snapshot);
+    REQUIRE_FALSE(resumed.Snapshot->RosterSealed);
+    REQUIRE(resumed.Snapshot->Roster.size() == 2);
+    REQUIRE(resumed.Snapshot->Roster[1].Present);
+
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.Version == 2);
+    REQUIRE(durable.Campaign.Roster.size() == 2);
+}
+
+TEST_CASE("Pre-seal host and unknown identities use the same exact resume contract", "[campaign.admission][reconnect][security]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.Disconnect(1));
+    REQUIRE(fixture.Admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto hostResumed = fixture.Admission.ResumeCampaign(
+        11, created.CampaignId, created.CharacterBindingId);
+    REQUIRE(hostResumed.Result == CampaignProtocolResult::Applied);
+    REQUIRE(hostResumed.Version == 1);
+    REQUIRE(hostResumed.CampaignSlotId == created.CampaignSlotId);
+
+    REQUIRE(fixture.Admission.RegisterConnection(3, TestPlayerId(3)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto unknown = fixture.Admission.ResumeCampaign(
+        3, created.CampaignId, created.CharacterBindingId);
+    REQUIRE(unknown.Result == CampaignProtocolResult::IdentityMismatch);
+
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.Version == 1);
+    REQUIRE(durable.Campaign.Roster.size() == 1);
+}
+
+TEST_CASE("Pre-seal join replay remains idempotent while new joins require resume", "[campaign.admission][reconnect][idempotency]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.RegisterConnection(2, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto joined = fixture.Admission.JoinCampaign(
+        2, created.CampaignId, "mutation-join", 1, true);
+    REQUIRE(joined.Result == CampaignProtocolResult::Applied);
+    REQUIRE(fixture.Admission.Disconnect(2));
+
+    REQUIRE(fixture.Admission.RegisterConnection(22, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto replay = fixture.Admission.JoinCampaign(
+        22, created.CampaignId, "mutation-join", 1, true);
+    REQUIRE(replay.Result == CampaignProtocolResult::IdempotentReplay);
+    REQUIRE(replay.Version == 2);
+    REQUIRE(replay.CampaignSlotId == joined.CampaignSlotId);
+    REQUIRE(replay.CharacterBindingId == joined.CharacterBindingId);
+    REQUIRE(fixture.Admission.Disconnect(22));
+
+    REQUIRE(fixture.Admission.RegisterConnection(23, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto newJoin = fixture.Admission.JoinCampaign(
+        23, created.CampaignId, "mutation-join-new", 2, true);
+    REQUIRE(newJoin.Result ==
+        CampaignProtocolResult::ExistingMembershipRequiresResume);
+    REQUIRE(newJoin.Version == 2);
+    const auto* connection =
+        static_cast<const CampaignAdmissionService&>(fixture.Admission)
+            .FindConnection(23);
+    REQUIRE(connection);
+    REQUIRE_FALSE(connection->AdmittedIdentity);
+
+    const auto resumed = fixture.Admission.ResumeCampaign(
+        23, created.CampaignId, joined.CharacterBindingId);
+    REQUIRE(resumed.Result == CampaignProtocolResult::Applied);
+    REQUIRE(resumed.Version == 2);
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.Version == 2);
+    REQUIRE(durable.Campaign.Roster.size() == 2);
+}
+
 TEST_CASE("Host-authorized seal and ready commands derive actor identity from admission", "[campaign.admission][security]")
 {
     ProtocolFixture fixture;
@@ -257,6 +466,7 @@ TEST_CASE("Sealed reconnect admission preserves roster and derives runtime prese
     const auto resumed = fixture.Admission.ResumeCampaign(
         22, created.CampaignId, memberBinding);
     REQUIRE(resumed.Result == CampaignProtocolResult::Applied);
+    REQUIRE(resumed.Version == 3);
     REQUIRE(resumed.CampaignSlotId == memberSlot);
     REQUIRE(resumed.Snapshot->RuntimeState ==
         static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE));
@@ -264,6 +474,12 @@ TEST_CASE("Sealed reconnect admission preserves roster and derives runtime prese
     const auto unknownPlayer = fixture.Admission.ResumeCampaign(
         3, created.CampaignId, memberBinding);
     REQUIRE(unknownPlayer.Result == CampaignProtocolResult::IdentityMismatch);
+
+    const auto unchanged = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(unchanged.Succeeded());
+    REQUIRE(unchanged.Campaign.Version == 3);
+    REQUIRE(unchanged.Campaign.Roster.size() == 2);
 }
 
 TEST_CASE("Normal campaign protocol scales to two four and ten slots", "[campaign.admission][scale]")

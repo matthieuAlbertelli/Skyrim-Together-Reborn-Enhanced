@@ -205,8 +205,9 @@ transport/service boundary:
   malformed existing identity/cache files fail closed rather than silently
   replacing campaign identity;
 - explicit typed messages on the existing STR transport cover campaign create,
-  pre-seal join/leave, sealed resume admission, host-authorized start/seal,
-  readiness, bounded command results, and public canonical snapshots;
+  pre-seal join/leave, exact pre-seal or sealed resume admission,
+  host-authorized start/seal, readiness, bounded command results, and public
+  canonical snapshots;
 - a focused server admission service keeps connection, party, and admission
   presence transient, uses `PartyService::IsPlayerLeader()` only as current
   administrative proof, and routes every durable roster/readiness/phase mutation
@@ -214,6 +215,12 @@ transport/service boundary:
 - campaign, slot, and character-binding identities are allocated canonically by
   the server; ready/start actors are derived from the admitted connection rather
   than trusted from packet fields;
+- campaign-create retries resolve their original server assignment from the
+  atomic SQLite creation journal even after a full server restart, without a
+  second receipt store or duplicate campaign;
+- an existing Lobby member reconnects through exact `PlayerId`/binding resume
+  without changing roster or version; a genuinely new join mutation for that
+  member is rejected explicitly as resume-required;
 - exact sealed-roster admission derives public `WAITING_FOR_ROSTER`/`ACTIVE`
   snapshots; disconnect removes only transient presence, and exact
   `PlayerId`/binding resume restores the same canonical slot without changing
