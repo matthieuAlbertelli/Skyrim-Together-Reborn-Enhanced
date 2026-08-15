@@ -1,7 +1,6 @@
 #include <CampaignRuntimeService.h>
 
 #include <algorithm>
-#include <limits>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -174,8 +173,7 @@ CampaignCommandResult StaleRevision(
 
 enum class RevisionMode
 {
-    Current,
-    PossibleReplay
+    Current
 };
 
 bool ResolveRevisionMode(
@@ -186,12 +184,6 @@ bool ResolveRevisionMode(
     if (aCurrent == aExpected)
     {
         aMode = RevisionMode::Current;
-        return true;
-    }
-    if (aExpected != std::numeric_limits<StateVersion>::max() &&
-        aCurrent == aExpected + 1)
-    {
-        aMode = RevisionMode::PossibleReplay;
         return true;
     }
     return false;

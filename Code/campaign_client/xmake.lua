@@ -1,0 +1,6 @@
+target("CampaignClient")
+    set_kind("static")
+    set_group("common")
+    add_includedirs(".", {public = true})
+    add_headerfiles("**.h")
+    add_files("**.cpp")

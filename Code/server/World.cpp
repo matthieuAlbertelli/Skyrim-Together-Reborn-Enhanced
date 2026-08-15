@@ -3,6 +3,7 @@
 
 #include <Services/CharacterService.h>
 #include <Services/CharacterBuildService.h>
+#include <Services/CampaignProtocolService.h>
 #include <Services/ObjectService.h>
 #include <Services/QuestService.h>
 #include <Services/ServerListService.h>
@@ -35,6 +36,7 @@ World::World()
     ctx().emplace<ServerListService>(*this, m_dispatcher);
     ctx().emplace<QuestService>(*this, m_dispatcher);
     ctx().emplace<PartyService>(*this, m_dispatcher);
+    ctx().emplace<CampaignProtocolService>(*this, m_dispatcher);
     ctx().emplace<TradeService>(*this, m_dispatcher);
     ctx().emplace<ActorValueService>(*this, m_dispatcher);
     ctx().emplace<InventoryService>(*this, m_dispatcher);

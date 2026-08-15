@@ -8,6 +8,8 @@ end
 includes("common")
 includes("campaign_persistence")
 includes("campaign_runtime")
+includes("campaign_client")
+includes("campaign_protocol")
 includes("components")
 includes("base")
 includes("admin_protocol")

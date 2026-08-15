@@ -1,0 +1,8 @@
+target("CampaignProtocol")
+    set_kind("static")
+    set_group("common")
+    add_includedirs(".", {public = true})
+    add_headerfiles("**.h")
+    add_files("**.cpp")
+    add_deps("CampaignRuntime", "SkyrimEncoding")
+    add_packages("tiltedcore", "hopscotch-map")

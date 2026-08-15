@@ -8,6 +8,7 @@
 #include <Services/CharacterService.h>
 #include <Services/MagicService.h>
 #include <Services/DebugService.h>
+#include <Services/CampaignService.h>
 
 #include <Systems/ModSystem.h>
 
@@ -34,6 +35,8 @@ struct World : entt::registry
     const DebugService& GetDebugService() const noexcept { return ctx().at<const DebugService>(); }
     MagicService& GetMagicService() noexcept { return ctx().at<MagicService>(); }
     const MagicService& GetMagicService() const noexcept { return ctx().at<const MagicService>(); }
+    CampaignService& GetCampaignService() noexcept { return ctx().at<CampaignService>(); }
+    const CampaignService& GetCampaignService() const noexcept { return ctx().at<const CampaignService>(); }
 
     auto& GetDispatcher() noexcept { return m_dispatcher; }
 

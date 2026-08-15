@@ -9,7 +9,9 @@ target("TPTests")
         "SkyrimEncoding",
         "CommonLib",
         "CampaignPersistence",
-        "CampaignRuntime")
+        "CampaignRuntime",
+        "CampaignClient",
+        "CampaignProtocol")
     add_packages(
         "tiltedcore",
         "hopscotch-map",

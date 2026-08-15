@@ -1,6 +1,7 @@
 
 #include <Services/TransportService.h>
 #include <Services/CampaignRuntimeGateService.h>
+#include <Services/CampaignService.h>
 
 #include <Events/ConnectedEvent.h>
 #include <Events/ConnectionErrorEvent.h>
@@ -201,6 +202,20 @@ void TransportService::OnConsume(const void* apData, uint32_t aSize)
 void TransportService::OnConnected()
 {
     AuthenticationRequest request{};
+    const auto durablePlayerId =
+        m_world.GetCampaignService().GetDurablePlayerIdForAuthentication();
+    if (!durablePlayerId)
+    {
+        spdlog::error(
+            "[STRE][CampaignIdentity] connection aborted because the durable local PlayerId is unavailable");
+        ConnectionErrorEvent error;
+        error.ErrorDetail =
+            "{\"error\": \"stre_player_identity_unavailable\"}";
+        m_dispatcher.trigger(error);
+        Close();
+        return;
+    }
+    request.StrePlayerId = *durablePlayerId;
     request.Version = BUILD_COMMIT;
     request.SKSEActive = IsScriptExtenderLoaded();
     request.MO2Active = GetModuleHandleW(kMO2DllName);
@@ -369,6 +384,16 @@ void TransportService::HandleAuthenticationResponse(const AuthenticationResponse
     case AR::kServerFull:
     {
         ErrorInfo += "\"error\": \"server_full\"";
+        break;
+    }
+    case AR::kInvalidStrePlayerId:
+    {
+        ErrorInfo += "\"error\": \"invalid_stre_player_id\"";
+        break;
+    }
+    case AR::kDuplicateStrePlayerId:
+    {
+        ErrorInfo += "\"error\": \"duplicate_stre_player_id\"";
         break;
     }
     default: ErrorInfo += "\"error\": \"no_reason\""; break;

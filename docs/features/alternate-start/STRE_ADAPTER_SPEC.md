@@ -1,6 +1,6 @@
 # Alternate Start — STRE integration specification
 
-> **Status: First-party Character Build and server campaign core implemented; generic campaign protocol/projection proposed**
+> **Status: First-party Character Build, server campaign core, and live admission protocol implemented; gameplay projection pending**
 
 ## Identity
 
@@ -24,6 +24,14 @@ Current messages:
 - `CharacterBuildResponse`;
 - `CharacterBuildAppliedRequest`;
 - `NotifyCharacterBuildState`.
+- `CampaignCreateRequest`;
+- `CampaignJoinRequest`;
+- `CampaignResumeRequest`;
+- `CampaignStartRequest`;
+- `CampaignSetReadyRequest`;
+- `CampaignLeaveRequest`;
+- `CampaignCommandResponse`;
+- `NotifyCampaignSnapshot`.
 
 ## Current semantics
 
@@ -32,8 +40,10 @@ The client sends only logical identifiers. The server constructs the canonical b
 ## Target campaign capabilities
 
 The pure server campaign core behind these capabilities is implemented over the
-durable campaign store. Network commands, opcodes, client snapshots, CEF, and CK
-projection remain intentionally unwired in this increment.
+durable campaign store. Explicit bounded network commands, result opcodes,
+public snapshots, local durable `PlayerId`, and non-canonical binding cache are
+wired through the existing STR transport. CEF and CK projection remain
+intentionally unwired in this increment.
 
 | Capability | Authority | Canonical state |
 |---|---|---|
@@ -47,15 +57,21 @@ projection remain intentionally unwired in this increment.
 | `campaign.departure/1` | server | authorization |
 | `narrative.dragonborn/1` | server secret | identity/reveal |
 
-## Future intents
+## Implemented campaign intents
 
 - `CreateCampaign`
 - `JoinCampaign` (before roster seal only)
-- `BindCharacter`
-- `CommitCampaignStart` (after future session-layer host-role authorization,
-  issue a server-authorized command that atomically seals the roster, establishes
-  the explicit roster-member Session Manager, and enters `CharacterCreation`)
+- `CommitCampaignStart` (after live session-layer host-role authorization, the
+  server-authorized command atomically seals the roster, establishes the
+  requesting admitted leader as Session Manager, and enters
+  `CharacterCreation`)
 - `SetReady`
+- pre-seal `LeaveCampaign`;
+- sealed `ResumeCampaign` admission.
+
+## Future intents
+
+- `BindCharacter`
 - `RequestIntroductionStart`
 - `ReportLocalSceneCompleted`
 - `RequestDeparture`
@@ -95,17 +111,19 @@ do not seal the roster. After seal, the server rejects extra players, slot
 replacement, and any identity or binding mismatch. The complete expected roster
 is required before campaign runtime can be `ACTIVE`.
 
-The durable campaign/checkpoint persistence substrate is implemented and
-automated-tested, but this live adapter is not yet wired to campaign identity,
-checkpoint coordination, or restore. Snapshots remain useful for idempotent
-hydration and retransmission, but reconnect does not
+The durable campaign/checkpoint persistence substrate and live identity/admission
+adapter are implemented and automated-tested. Character Build is not yet bound
+to the admitted campaign identity, and checkpoint coordination/restore remain
+unwired. Snapshots remain useful for idempotent hydration and retransmission,
+but reconnect does not
 catch one player up while the campaign continues. A required disconnect locks the
 campaign. Once the exact roster returns, the server selects the last committed
 `CampaignCheckpoint`; every client loads its slot's matching native save, the
 server restores the matching revision, and all participants acknowledge before
 the runtime returns to `ACTIVE`.
 
-This specification does not allocate protocol opcodes. See
+Campaign opcodes are appended after the existing STRE ranges so earlier numeric
+values remain stable. See
 [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
 and [Campaign State](../../architecture/CAMPAIGN_STATE.md).
 

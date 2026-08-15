@@ -1,0 +1,75 @@
+#pragma once
+
+#include "Message.h"
+
+#include <Structs/Campaign.h>
+
+struct CampaignCreateRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignCreateRequest;
+    CampaignCreateRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String MutationId;
+};
+
+struct CampaignJoinRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignJoinRequest;
+    CampaignJoinRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String MutationId;
+    std::uint64_t ExpectedRevision{};
+};
+
+struct CampaignResumeRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignResumeRequest;
+    CampaignResumeRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String CharacterBindingId;
+};
+
+struct CampaignStartRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignStartRequest;
+    CampaignStartRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String MutationId;
+    std::uint64_t ExpectedRevision{};
+};
+
+struct CampaignSetReadyRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignSetReadyRequest;
+    CampaignSetReadyRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String MutationId;
+    std::uint64_t ExpectedRevision{};
+    bool Ready{};
+};
+
+struct CampaignLeaveRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignLeaveRequest;
+    CampaignLeaveRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String MutationId;
+    std::uint64_t ExpectedRevision{};
+};
