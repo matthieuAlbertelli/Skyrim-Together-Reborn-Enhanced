@@ -5,7 +5,11 @@ target("TPTests")
         ".", "../encoding")
     add_headerfiles("**.h")
     add_files("*.cpp")
-    add_deps("SkyrimEncoding", "CommonLib", "CampaignPersistence")
+    add_deps(
+        "SkyrimEncoding",
+        "CommonLib",
+        "CampaignPersistence",
+        "CampaignRuntime")
     add_packages(
         "tiltedcore",
         "hopscotch-map",

@@ -422,6 +422,12 @@ MutationResult SqliteCampaignStore::CreateCampaign(
         StoreResult slotValidation = ValidateSlots(acRequest.Slots);
         if (!slotValidation)
             return MutationFailure(slotValidation.Error, slotValidation.Message);
+        if (acRequest.Campaign.RosterSealed && acRequest.Slots.empty())
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "a sealed campaign roster cannot be empty");
+        }
         if (acRequest.Campaign.PersistenceSchemaVersion !=
                 kCampaignDatabaseSchemaVersion ||
             acRequest.Campaign.CoreStateCodecVersion == 0 ||
@@ -626,6 +632,20 @@ MutationResult SqliteCampaignStore::ApplyMutation(
                 StoreError::InvalidArgument,
                 "core state codec cannot change without a payload");
         }
+        if (!acRequest.AdvancesStateVersion &&
+            (acRequest.CoreStateCodecVersion ||
+             acRequest.CoreStatePayload || acRequest.RosterSealed ||
+             acRequest.ReplacementRoster ||
+             !acRequest.CharacterBuildUpserts.empty() ||
+             !acRequest.CharacterBuildDeletes.empty() ||
+             !acRequest.AdapterStateUpserts.empty() ||
+             !acRequest.AdapterStateDeletes.empty() ||
+             !acRequest.Outbox.empty()))
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "accepted no-op cannot mutate canonical state or emit outbox work");
+        }
         if (acRequest.ReplacementRoster)
         {
             StoreResult validation = ValidateSlots(*acRequest.ReplacementRoster);
@@ -709,6 +729,8 @@ MutationResult SqliteCampaignStore::ApplyMutation(
         for (const std::string& adapter : acRequest.AdapterStateDeletes)
             AppendDigestText(digestPayload, adapter);
         AppendDigestOutbox(digestPayload, acRequest.Outbox);
+        if (!acRequest.AdvancesStateVersion)
+            AppendDigestScalar<std::uint8_t>(digestPayload, 0);
         const std::string digest = Codec::MutationDigest(
             acRequest.Kind,
             acRequest.ExpectedRevision,
@@ -735,9 +757,12 @@ MutationResult SqliteCampaignStore::ApplyMutation(
                     " expected_revision=" + std::to_string(acRequest.ExpectedRevision) +
                     " current_revision=" + std::to_string(currentRevision.Value));
         }
-        if (currentRevision.Value >= kMaximumRevision)
+        if (acRequest.AdvancesStateVersion &&
+            currentRevision.Value >= kMaximumRevision)
             return MutationFailure(StoreError::InvalidArgument, "campaign revision exhausted");
-        const StateVersion newRevision = currentRevision.Value + 1;
+        const StateVersion newRevision = acRequest.AdvancesStateVersion
+            ? currentRevision.Value + 1
+            : currentRevision.Value;
 
         bool rosterSealed{};
         {
@@ -767,6 +792,36 @@ MutationResult SqliteCampaignStore::ApplyMutation(
             return MutationFailure(
                 StoreError::InvalidArgument,
                 "campaign=" + acRequest.Campaign.Value + " roster seal is irreversible");
+        }
+        if (!rosterSealed && acRequest.RosterSealed &&
+            *acRequest.RosterSealed)
+        {
+            bool rosterEmpty{};
+            if (acRequest.ReplacementRoster)
+            {
+                rosterEmpty = acRequest.ReplacementRoster->empty();
+            }
+            else
+            {
+                Statement countRoster(
+                    m_pDatabase,
+                    "SELECT COUNT(*) FROM campaign_slots WHERE campaign_id=?1;");
+                if (!countRoster.Valid() ||
+                    !countRoster.BindText(1, acRequest.Campaign.Value) ||
+                    countRoster.Step() != SQLITE_ROW)
+                {
+                    return MutationFailure(
+                        StoreError::DatabaseFailure,
+                        DatabaseMessage(m_pDatabase, "validate roster before seal"));
+                }
+                rosterEmpty = countRoster.Int64(0) == 0;
+            }
+            if (rosterEmpty)
+            {
+                return MutationFailure(
+                    StoreError::InvalidArgument,
+                    "a sealed campaign roster cannot be empty");
+            }
         }
 
         if (acRequest.ReplacementRoster)
@@ -885,16 +940,23 @@ MutationResult SqliteCampaignStore::ApplyMutation(
         }
 
         const std::int64_t now = NowUnixMs();
-        StoreResult revision = UpdateCampaignRevision(
-            m_pDatabase,
-            acRequest.Campaign,
-            acRequest.ExpectedRevision,
-            newRevision,
-            now);
-        if (!revision)
-            return MutationFailure(revision.Error, revision.Message);
-        if (ShouldInject(TransactionStage::AfterCurrentState))
-            return MutationFailure(StoreError::FaultInjected, "fault injected after current-state write");
+        if (acRequest.AdvancesStateVersion)
+        {
+            StoreResult revision = UpdateCampaignRevision(
+                m_pDatabase,
+                acRequest.Campaign,
+                acRequest.ExpectedRevision,
+                newRevision,
+                now);
+            if (!revision)
+                return MutationFailure(revision.Error, revision.Message);
+            if (ShouldInject(TransactionStage::AfterCurrentState))
+            {
+                return MutationFailure(
+                    StoreError::FaultInjected,
+                    "fault injected after current-state write");
+            }
+        }
         StoreResult journal = AppendJournal(
             m_pDatabase,
 
@@ -931,7 +993,7 @@ MutationResult SqliteCampaignStore::ApplyMutation(
 
         MutationResult result;
         result.Revision = newRevision;
-        result.Applied = true;
+        result.Applied = acRequest.AdvancesStateVersion;
         return result;
     }
     catch (...)

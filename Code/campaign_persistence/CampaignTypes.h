@@ -10,7 +10,7 @@
 
 namespace STRE::Campaign
 {
-inline constexpr std::uint32_t kCampaignDatabaseSchemaVersion = 1;
+inline constexpr std::uint32_t kCampaignDatabaseSchemaVersion = 2;
 inline constexpr std::uint32_t kCampaignSnapshotCodecVersion = 1;
 
 using Bytes = std::vector<std::uint8_t>;
@@ -246,6 +246,7 @@ struct CampaignMutationRequest
     StateVersion ExpectedRevision{};
     MutationId Mutation;
     std::string Kind;
+    bool AdvancesStateVersion{true};
     std::uint32_t MutationCodecVersion{1};
     Bytes MutationPayload;
     std::optional<std::uint32_t> CoreStateCodecVersion;
@@ -346,6 +347,7 @@ struct JournalRecord
     std::uint64_t Sequence{};
     CampaignId Campaign;
     MutationId Mutation;
+    StateVersion ExpectedRevision{};
     StateVersion ResultingRevision{};
     std::string Kind;
     std::uint32_t PayloadCodecVersion{};

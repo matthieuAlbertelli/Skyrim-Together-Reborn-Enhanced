@@ -218,10 +218,10 @@ StoreValueResult<std::vector<JournalRecord>> SqliteCampaignStore::LoadJournal(
         }
         Statement statement(
             m_pDatabase,
-            "SELECT sequence, mutation_id, resulting_revision, mutation_kind, "
-            "payload_codec_version, payload, restored_from_checkpoint_id, "
-            "restored_from_revision, created_at_unix_ms "
-            "FROM campaign_journal WHERE campaign_id=?1 ORDER BY resulting_revision;");
+            "SELECT sequence, mutation_id, expected_revision, resulting_revision, "
+            "mutation_kind, payload_codec_version, payload, "
+            "restored_from_checkpoint_id, restored_from_revision, created_at_unix_ms "
+            "FROM campaign_journal WHERE campaign_id=?1 ORDER BY sequence;");
         if (!statement.Valid() || !statement.BindText(1, acCampaign.Value))
         {
             result.Error = StoreError::DatabaseFailure;
@@ -232,8 +232,8 @@ StoreValueResult<std::vector<JournalRecord>> SqliteCampaignStore::LoadJournal(
         for (journalCode = statement.Step(); journalCode == SQLITE_ROW;
              journalCode = statement.Step())
         {
-            if (statement.Int64(0) <= 0 || statement.Int64(2) <= 0 ||
-                statement.Int64(4) <= 0)
+            if (statement.Int64(0) <= 0 || statement.Int64(2) < 0 ||
+                statement.Int64(3) <= 0 || statement.Int64(5) <= 0)
             {
                 result.Error = StoreError::IntegrityFailure;
                 result.Message = "campaign journal contains malformed metadata";
@@ -243,18 +243,20 @@ StoreValueResult<std::vector<JournalRecord>> SqliteCampaignStore::LoadJournal(
             record.Sequence = static_cast<std::uint64_t>(statement.Int64(0));
             record.Campaign = acCampaign;
             record.Mutation = MutationId{statement.Text(1)};
-            record.ResultingRevision =
+            record.ExpectedRevision =
                 static_cast<StateVersion>(statement.Int64(2));
-            record.Kind = statement.Text(3);
+            record.ResultingRevision =
+                static_cast<StateVersion>(statement.Int64(3));
+            record.Kind = statement.Text(4);
             record.PayloadCodecVersion =
-                static_cast<std::uint32_t>(statement.Int64(4));
-            record.Payload = statement.Blob(5);
-            if (!statement.IsNull(6))
-                record.RestoredFromCheckpoint = CheckpointId{statement.Text(6)};
+                static_cast<std::uint32_t>(statement.Int64(5));
+            record.Payload = statement.Blob(6);
             if (!statement.IsNull(7))
+                record.RestoredFromCheckpoint = CheckpointId{statement.Text(7)};
+            if (!statement.IsNull(8))
                 record.RestoredFromRevision =
-                    static_cast<StateVersion>(statement.Int64(7));
-            record.CreatedAtUnixMs = statement.Int64(8);
+                    static_cast<StateVersion>(statement.Int64(8));
+            record.CreatedAtUnixMs = statement.Int64(9);
             if (!IsValidId(record.Mutation) || record.Kind.empty() ||
                 record.Kind.size() > kMaximumKindLength ||
                 !IsValidPayload(record.Payload))

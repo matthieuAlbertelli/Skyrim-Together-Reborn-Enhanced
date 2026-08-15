@@ -74,7 +74,7 @@ StoreResult ValidateOutbox(const std::vector<OutboxIntent>& acOutbox)
 
 StoreResult ValidateSlots(const std::vector<CampaignSlotRecord>& acSlots)
 {
-    if (acSlots.empty() || acSlots.size() > 128)
+    if (acSlots.size() > 128)
         return Failure(StoreError::InvalidArgument, "campaign roster size is invalid");
     std::unordered_set<std::string> slots;
     std::unordered_set<std::string> players;

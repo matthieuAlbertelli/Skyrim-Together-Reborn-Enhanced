@@ -47,7 +47,7 @@ TEST_CASE("Campaign database creates schema and survives restart", "[campaign.pe
 }
 
 TEST_CASE(
-    "Pre-refactor schema-v1 database remains fully compatible",
+    "Schema-v1 database migrates to v2 without losing durable state",
     "[campaign.persistence][schema][compatibility]")
 {
     TemporaryDatabase database;
@@ -58,7 +58,7 @@ TEST_CASE(
 
     {
         auto preRefactorWriter = OpenStore(database);
-        REQUIRE(preRefactorWriter->GetSchemaVersion().Value == 1);
+        REQUIRE(preRefactorWriter->GetSchemaVersion().Value == 2);
         REQUIRE(preRefactorWriter->CreateCampaign(MakeCampaign()).Succeeded());
         REQUIRE(CompleteCheckpoint(*preRefactorWriter) == 5);
 
@@ -80,8 +80,59 @@ TEST_CASE(
         expectedOutbox = std::move(outbox.Value);
     }
 
+    REQUIRE(ExecuteRaw(
+        database.Path,
+        R"sql(
+DROP TRIGGER campaign_journal_no_update;
+DROP TRIGGER campaign_journal_no_delete;
+DROP INDEX idx_journal_campaign_revision;
+ALTER TABLE campaign_journal RENAME TO campaign_journal_v2;
+CREATE TABLE campaign_journal (
+    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id TEXT NOT NULL,
+    mutation_id TEXT NOT NULL,
+    expected_revision INTEGER NOT NULL CHECK (expected_revision >= 0),
+    resulting_revision INTEGER NOT NULL CHECK (resulting_revision > 0),
+    mutation_kind TEXT NOT NULL,
+    command_digest TEXT NOT NULL,
+    payload_codec_version INTEGER NOT NULL CHECK (payload_codec_version > 0),
+    payload BLOB NOT NULL,
+    restored_from_checkpoint_id TEXT,
+    restored_from_revision INTEGER,
+    created_at_unix_ms INTEGER NOT NULL,
+    UNIQUE (campaign_id, mutation_id),
+    UNIQUE (campaign_id, resulting_revision),
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id) ON DELETE RESTRICT
+);
+INSERT INTO campaign_journal(
+    sequence, campaign_id, mutation_id, expected_revision, resulting_revision,
+    mutation_kind, command_digest, payload_codec_version, payload,
+    restored_from_checkpoint_id, restored_from_revision, created_at_unix_ms)
+SELECT
+    sequence, campaign_id, mutation_id, expected_revision, resulting_revision,
+    mutation_kind, command_digest, payload_codec_version, payload,
+    restored_from_checkpoint_id, restored_from_revision, created_at_unix_ms
+FROM campaign_journal_v2 ORDER BY sequence;
+DROP TABLE campaign_journal_v2;
+CREATE INDEX idx_journal_campaign_revision
+    ON campaign_journal(campaign_id, resulting_revision);
+CREATE TRIGGER campaign_journal_no_update
+BEFORE UPDATE ON campaign_journal
+BEGIN
+    SELECT RAISE(ABORT, 'campaign journal is append-only');
+END;
+CREATE TRIGGER campaign_journal_no_delete
+BEFORE DELETE ON campaign_journal
+BEGIN
+    SELECT RAISE(ABORT, 'campaign journal is append-only');
+END;
+UPDATE campaigns SET persistence_schema_version=1;
+UPDATE schema_metadata SET schema_version=1 WHERE singleton=1;
+PRAGMA user_version=1;
+)sql"));
+
     auto refactoredReader = OpenStore(database);
-    REQUIRE(refactoredReader->GetSchemaVersion().Value == 1);
+    REQUIRE(refactoredReader->GetSchemaVersion().Value == 2);
     auto projection = refactoredReader->LoadCampaignProjection(
         CampaignId{"campaign-1"}, ProjectionAudience::Server());
     auto checkpoint = refactoredReader->LoadLastCommittedCheckpoint(
@@ -111,6 +162,24 @@ TEST_CASE(
         expectedOutbox.back().Mutation.Value);
     REQUIRE(outbox.Value.back().Revision == expectedOutbox.back().Revision);
     REQUIRE(outbox.Value.back().Payload == expectedOutbox.back().Payload);
+
+    CampaignMutationRequest acceptedNoOp;
+    acceptedNoOp.Campaign = CampaignId{"campaign-1"};
+    acceptedNoOp.ExpectedRevision = projection.Value.Campaign.CurrentRevision;
+    acceptedNoOp.Mutation = MutationId{"mutation-migrated-accepted-noop"};
+    acceptedNoOp.Kind = "AcceptedNoOp";
+    acceptedNoOp.AdvancesStateVersion = false;
+    acceptedNoOp.MutationPayload = {0x71};
+    MutationResult reserved = refactoredReader->ApplyMutation(acceptedNoOp);
+    REQUIRE(reserved.Succeeded());
+    REQUIRE_FALSE(reserved.Applied);
+    REQUIRE(reserved.Revision == projection.Value.Campaign.CurrentRevision);
+    auto migratedJournal = refactoredReader->LoadJournal(
+        CampaignId{"campaign-1"});
+    REQUIRE(migratedJournal.Succeeded());
+    REQUIRE(migratedJournal.Value.size() == expectedJournal.size() + 1);
+    REQUIRE(migratedJournal.Value.back().ExpectedRevision == reserved.Revision);
+    REQUIRE(migratedJournal.Value.back().ResultingRevision == reserved.Revision);
 }
 
 TEST_CASE("Schema migration is explicit transactional and fails closed", "[campaign.persistence][migration]")
@@ -127,13 +196,13 @@ TEST_CASE("Schema migration is explicit transactional and fails closed", "[campa
         auto store = OpenStore(database);
         auto version = store->GetSchemaVersion();
         REQUIRE(version.Succeeded());
-        REQUIRE(version.Value == 1);
+        REQUIRE(version.Value == kCampaignDatabaseSchemaVersion);
     }
 
     SECTION("newer version is rejected without reset")
     {
         TemporaryDatabase database;
-        REQUIRE(ExecuteRaw(database.Path, "PRAGMA user_version=2; CREATE TABLE keep_me(value TEXT);"));
+        REQUIRE(ExecuteRaw(database.Path, "PRAGMA user_version=3; CREATE TABLE keep_me(value TEXT);"));
         StoreResult openResult;
         auto store = SqliteCampaignStore::Open(database.Path, openResult);
         REQUIRE_FALSE(store);

@@ -88,7 +88,7 @@ through existing server `noexcept` boundaries.
 
 ### Logical data model
 
-Schema version 1 contains the equivalent of:
+Initial schema version 1 contains the equivalent of:
 
 - schema/migration metadata;
 - `campaigns`, with current durable revision, roster-seal metadata, selected
@@ -105,6 +105,11 @@ Schema version 1 contains the equivalent of:
 - an append-only validated-mutation journal;
 - a transactional replication outbox whose pending entries can be delivered,
   or explicitly superseded by restore.
+
+Schema version 2 preserves that data model and removes only the journal's
+one-record-per-resulting-revision restriction. Multiple accepted commands may
+therefore reference the same canonical state revision, while
+`(CampaignId, MutationId)` remains unique and the journal remains append-only.
 
 Core current state is normalized around campaign, slot, character-build, and
 adapter records. Historical checkpoint snapshots are immutable and use an
@@ -136,6 +141,12 @@ same command is an idempotent replay and does not duplicate current state,
 journal, or outbox rows. Reusing it for different content fails closed. A stale
 `ExpectedRevision` leaves all durable tables unchanged. Database triggers also
 reject journal update/delete and snapshot update/delete.
+
+An accepted semantic no-op uses the same transaction and journal, with
+`ExpectedRevision == ResultingRevision`. It reserves the `MutationId` without
+updating normalized state, advancing the campaign revision, or creating an
+outbox row. Exact replay remains idempotent, while different content using that
+identifier is rejected.
 
 ### Checkpoints and restore revisions
 
@@ -199,10 +210,13 @@ domain and migration design, but schema version 1 does not persist
 
 ## Migration plan
 
-Schema version 1 creates a fresh database transactionally. Version 0 is the only
-older supported bootstrap source in the initial implementation. Unknown tables,
-newer versions, malformed metadata, migration failure, and integrity failure all
-leave the original file in place and refuse startup.
+Fresh databases are created transactionally at schema version 2. Version 0 is
+the supported empty bootstrap source. Existing schema-v1 databases migrate
+transactionally to v2 by rebuilding only `campaign_journal`, preserving its
+sequence, payloads, digests, append-only triggers, and unique mutation IDs while
+allowing more than one record at a resulting revision. Unknown tables, newer
+versions, malformed metadata, migration failure, and integrity failure all leave
+the original file in place and refuse startup.
 
 Future migrations increment the database schema independently of network
 protocol and Character Build versions. They require file-backed migration,
@@ -217,6 +231,8 @@ rollback, reopen, and incompatible-newer-schema tests.
 - public/private adapter-state filtering;
 - optimistic revision, MutationId, journal, outbox, constraint-failure, and
   injected crash-window tests;
+- accepted no-op reservation, exact replay, conflicting reuse, unchanged state
+  revision, and schema-v1-to-v2 migration tests;
 - Candidate/Committed restart, partial N+1, identity mismatch, and exact
   checkpoint selection tests;
 - exact snapshot restore at a new monotonic revision with obsolete outbox

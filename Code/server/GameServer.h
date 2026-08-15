@@ -6,6 +6,7 @@
 #include <World.h>
 
 #include <CampaignStore.h>
+#include <CampaignRuntimeService.h>
 
 #include <memory>
 
@@ -91,6 +92,10 @@ struct GameServer final : Server
     {
         return *m_pCampaignStore;
     }
+    STRE::Campaign::CampaignRuntimeService& GetCampaignRuntime() const noexcept
+    {
+        return *m_pCampaignRuntime;
+    }
 
     [[nodiscard]] const TiltedPhoques::Set<ConnectionId_t>& GetAdminSessions() const noexcept { return m_adminSessions; }
 
@@ -131,6 +136,7 @@ private:
     TiltedPhoques::Map<ConnectionId_t, entt::entity> m_connectionToEntity;
 
     std::unique_ptr<STRE::Campaign::ICampaignStore> m_pCampaignStore;
+    std::unique_ptr<STRE::Campaign::CampaignRuntimeService> m_pCampaignRuntime;
     UniquePtr<World> m_pWorld;
 
     bool m_requestStop;

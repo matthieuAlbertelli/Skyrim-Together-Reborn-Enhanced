@@ -1,6 +1,6 @@
 # Alternate Start — STRE integration specification
 
-> **Status: First-party Character Build implemented; generic campaign adapter proposed**
+> **Status: First-party Character Build and server campaign core implemented; generic campaign protocol/projection proposed**
 
 ## Identity
 
@@ -31,6 +31,10 @@ The client sends only logical identifiers. The server constructs the canonical b
 
 ## Target campaign capabilities
 
+The pure server campaign core behind these capabilities is implemented over the
+durable campaign store. Network commands, opcodes, client snapshots, CEF, and CK
+projection remain intentionally unwired in this increment.
+
 | Capability | Authority | Canonical state |
 |---|---|---|
 | `campaign.bootstrap/1` | server | campaign, roster, roster seal, manager |
@@ -48,7 +52,9 @@ The client sends only logical identifiers. The server constructs the canonical b
 - `CreateCampaign`
 - `JoinCampaign` (before roster seal only)
 - `BindCharacter`
-- `CommitCampaignStart` (atomically seal the roster and enter `CharacterCreation`)
+- `CommitCampaignStart` (after future session-layer host-role authorization,
+  issue a server-authorized command that atomically seals the roster, establishes
+  the explicit roster-member Session Manager, and enters `CharacterCreation`)
 - `SetReady`
 - `RequestIntroductionStart`
 - `ReportLocalSceneCompleted`

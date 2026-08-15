@@ -1,11 +1,42 @@
 # Campaign State Model
 
-> **Status:** campaign runtime proposed; durable persistence substrate implemented and automated-tested.
+> **Status:** fixed-roster/runtime core implemented and automated-tested; client protocol and later phase/recovery wiring pending.
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
 Manager may administer the session and a client may hold temporary simulation
 authority, but neither owns the persistent truth.
+
+## Current implementation boundary
+
+`Code/campaign_runtime` implements the pure aggregate, versioned core codec,
+transition-policy boundary, exact full-roster predicate, and transactional
+service over `ICampaignStore`. `GameServer` owns that service after the durable
+store opens successfully. No second persistence layer is introduced: normalized
+slots retain ownership while the versioned core payload stores phase, Session
+Manager, and per-slot readiness. State-changing commands write current state,
+the journal, and a canonical snapshot intent to the outbox atomically. Accepted
+semantic no-ops reserve their `MutationId` in the same journal without advancing
+`StateVersion` or emitting redundant outbox work; schema v2 is the minimal
+transactional migration needed to represent this.
+
+Transport connectivity and campaign admission remain transient inputs rather
+than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE` through
+one exact-roster predicate. The other runtime enum values are represented for
+the accepted model but are not activated by this increment.
+
+The implemented narrative mutation is the atomic
+`Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
+the pure-domain boundary. A future session/network caller must first prove that
+the requesting connection holds the host/Session Manager administrative role,
+then issue the server-authorized command with an explicit target Session Manager
+that belongs to the proposed roster. That transient proof is not persisted in
+the aggregate, and roster membership alone never authorizes the seal. Policies
+for the remaining phase edges define their source, target, actor authority,
+common roster/readiness preconditions, and resulting intent, but deliberately
+refuse execution until their feature-owned CK/Valen/build preconditions are
+implemented. No campaign network protocol, CEF/CK projection, coordinated
+native save, or recovery-lock behavior is part of this core increment.
 
 ## Goals
 
@@ -249,7 +280,10 @@ commit state use the persistence port and proposed SQLite adapter described by
 substrate provides a versioned multi-campaign schema, explicit transactional
 migration, normalized current state, immutable snapshots, optimistic revisions,
 an append-only validated-mutation journal, and a transactional outbox. Its
-default locked server path is `state/stre-server.sqlite3`.
+default locked server path is `state/stre-server.sqlite3`. Schema v2 keeps that
+model and permits accepted no-op journal records to share the unchanged
+canonical revision; schema-v1 stores migrate transactionally without a second
+receipt system.
 
 Checkpoint rollback never rewinds the durable mutation sequence. A checkpoint
 permanently retains its exact `SourceRevision`. Restoring it is a new validated
@@ -260,13 +294,15 @@ the journal, supersedes obsolete pending outbox work, and emits a canonical full
 snapshot at the new revision. Clients then consume only events newer than that
 restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
 
-The persistence substrate is not yet called by a live fixed-roster campaign
-flow. Issue #28 owns the live campaign/roster/readiness/phase callers. Issue #55
-owns coordinated native-save creation, identity/fingerprinting,
-acknowledgement, and `CampaignCheckpoint` coordination. Issue #56 owns
-disconnect recovery lock and collective checkpoint restore/reload gameplay.
-Durable WorldEntity persistence remains separate future work rather than part
-of #55.
+The server-owned #28 core now calls this persistence substrate for Lobby roster
+configuration, the campaign start/seal, Session Manager transfer, readiness,
+journal entries, and outbox snapshot intents. Live campaign protocol,
+connection admission, Character Build binding, and client/CK/UI projection are
+still pending #28 integration. Issue #55 owns coordinated native-save creation,
+identity/fingerprinting, acknowledgement, and `CampaignCheckpoint`
+coordination. Issue #56 owns disconnect recovery lock and collective checkpoint
+restore/reload gameplay. Durable WorldEntity persistence remains separate
+future work rather than part of #55.
 
 The standalone solo Alternate Start path remains independent of this multiplayer
 full-roster rule and continues to restore from its local Skyrim save.

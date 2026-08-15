@@ -234,6 +234,11 @@ GameServer::GameServer(Console::ConsoleRegistry& aConsole) noexcept
         "[STRE][CampaignPersistence] Durable campaign store ready path={} schema={}",
         sStateDatabasePath.value(),
         STRE::Campaign::kCampaignDatabaseSchemaVersion);
+    m_pCampaignRuntime =
+        std::make_unique<STRE::Campaign::CampaignRuntimeService>(
+            *m_pCampaignStore);
+    spdlog::info(
+        "[STRE][CampaignRuntime] Server-authoritative campaign core ready");
 
     auto port = uServerPort.value_as<uint16_t>();
     while (!Host(port, GetUserTickRate()))
@@ -285,7 +290,7 @@ GameServer* GameServer::Get() noexcept
 
 bool GameServer::Initialize()
 {
-    if (!m_pCampaignStore || !m_pWorld)
+    if (!m_pCampaignStore || !m_pCampaignRuntime || !m_pWorld)
         return false;
 
     if (!CheckMoPo())

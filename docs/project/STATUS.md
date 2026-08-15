@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 13, 2026.
+> **Last updated:** August 15, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -118,13 +118,17 @@ The current catalog uses `BuildVersion = 5`.
 - the locked server setting defaults to `state/stre-server.sqlite3`;
 - the server opens, migrates, and integrity-checks the store before constructing
   its `World`, and persistence startup failure fails closed;
-- schema version 1 stores multiple campaign identities, roster slots,
+- schema version 2 stores multiple campaign identities, roster slots,
   `PlayerId`/`CharacterBinding` records, versioned Character Build state,
   audience-tagged adapter state, immutable snapshots, Candidate/Committed
   checkpoint metadata, per-slot native-save metadata, an append-only journal,
   and a transactional outbox;
 - optimistic revisions and `MutationId` idempotency protect atomic current-state
   + journal + outbox mutations;
+- accepted semantic no-ops durably reserve their `MutationId` in the same
+  append-only journal without advancing canonical state or producing redundant
+  outbox work; existing schema-v1 databases migrate transactionally to this
+  representation;
 - checkpoint restore materializes the exact immutable snapshot at a new
   monotonic revision and supersedes obsolete pending outbox work;
 - file-backed automated tests cover restart, migration, partial-write rollback,
@@ -133,17 +137,67 @@ The current catalog uses `BuildVersion = 5`.
 - runtime validation created and reopened a real schema-v1 database across a
   clean server stop/restart, accepted a real Skyrim client connection, and
   confirmed fail-closed startup for an intentionally incompatible schema
-  version before normal startup resumed with schema version 1.
+  version before normal startup resumed with schema version 1. That validation
+  occurred while schema v1 was current; the repository now uses schema v2.
 
-The durable server campaign/checkpoint persistence substrate is implemented and
-automated-tested and runtime-validated; the live fixed-roster campaign flow,
-coordinated native saves, and collective reconnect recovery remain unimplemented. `CharacterBuildService`
-continues to use session state until #28 supplies campaign identity/binding
-callers. Coordinated native-save/checkpoint work remains #55, and disconnect
-recovery lock plus collective restore/reload remains #56. No native `.ess`
-payload, save/load engine call, recovery UI, or WorldEntity persistence is part
-of this foundation; durable WorldEntity persistence remains separate future
-work rather than part of #55.
+The durable server campaign/checkpoint persistence substrate is implemented,
+automated-tested, and runtime-validated. The fixed-roster/runtime core described
+below now uses it, while live client admission/protocol wiring, coordinated
+native saves, and collective reconnect recovery remain unimplemented.
+`CharacterBuildService` continues to use session state until later #28
+campaign-protocol and identity/binding callers are supplied. Coordinated
+native-save/checkpoint work remains #55, and disconnect recovery lock plus
+collective restore/reload remains #56. No native `.ess` payload, save/load
+engine call, recovery UI, or WorldEntity persistence is part of this
+foundation; durable WorldEntity persistence remains separate future work rather
+than part of #55.
+
+### Campaign roster/runtime core
+
+The first production increment of the server-authoritative campaign runtime is
+implemented and automated-tested:
+
+- `CampaignPhase` models the canonical Lobby-through-OpenWorld sequence, while
+  `CampaignRuntimeState` separately models roster eligibility and the future
+  checkpoint/recovery states;
+- a mutable Lobby roster uses durable `CampaignSlotId`, `PlayerId`, and
+  `CharacterBindingId` values, enforces unique non-empty identities and the v1
+  ten-slot limit, and is stored in deterministic slot order;
+- `CommitCampaignStart` is server-authoritative at the domain boundary and
+  atomically validates and seals the exact roster, establishes an explicitly
+  selected roster-member Session Manager, advances
+  `Lobby -> CharacterCreation`, increments the state version once, journals the
+  mutation, and writes a canonical snapshot intent to the transactional outbox;
+- the future session/network caller remains responsible for proving host-role
+  administration before issuing that server-authorized start; roster membership
+  alone grants no seal authority and transient session authority is not persisted;
+- post-seal roster ownership is immutable, including across Session Manager
+  transfer;
+- one exact full-roster predicate distinguishes transport connectivity from
+  campaign admission and rejects missing, extra, replacement, wrong-campaign,
+  wrong-slot, wrong-binding, and duplicate active identities;
+- exact per-slot readiness is durable, supports withdrawal and idempotent
+  duplicates, and can be changed only by the matching sealed member;
+- optimistic revisions and journal-backed `MutationId` replay prevent stale,
+  delayed, duplicate, or out-of-order commands from regressing canonical state,
+  including accepted readiness, self-transfer, and identical-roster no-ops;
+- the transition-policy boundary records source, target, actor authority,
+  shared preconditions, and resulting intent for every canonical phase edge.
+
+`GameServer` owns this core over the existing `ICampaignStore`; no second
+persistence layer was introduced. The existing SQLite schema was minimally
+revised to v2 so accepted semantic no-op commands can share a resulting state
+revision while retaining unique `MutationId` values per campaign.
+Connection/admission presence is deliberately transient: a sealed exact roster
+derives `ACTIVE`; any mismatch derives `WAITING_FOR_ROSTER`, and future
+narrative transitions are gated by that same predicate.
+
+The only production narrative transition implemented in this increment is
+`Lobby -> CharacterCreation`. Campaign protocol messages, live connection
+admission, Character Build binding, CEF/CK/Valen projections, and later phase
+preconditions remain pending. `CHECKPOINTING`, `RECOVERY_LOCK`, and
+`RESTORING_CHECKPOINT` are represented but have no #55/#56 behavior here;
+native-save checkpoint wiring remains #55 and collective recovery remains #56.
 
 ### Campaign save-load runtime gate spike
 
