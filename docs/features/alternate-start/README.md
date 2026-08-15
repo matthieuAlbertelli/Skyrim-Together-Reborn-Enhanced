@@ -39,6 +39,7 @@ Documents under `history/` are dated evidence and milestones; they do not replac
 - `SOLO_DESIGN.md` — operation without a server;
 - `STRE_ADAPTER_SPEC.md` — current and target cooperative semantics;
 - `CK_IMPLEMENTATION.md` — CK records and flow;
+- `NEW_GAME_BOOTSTRAP_SPIKE.md` — proposed CK/Papyrus New Game interception architecture and validation plan;
 - `STATE_MODEL.md` — build and campaign state;
 - [`../../architecture/CAMPAIGN_STATE.md`](../../architecture/CAMPAIGN_STATE.md)
   and [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
