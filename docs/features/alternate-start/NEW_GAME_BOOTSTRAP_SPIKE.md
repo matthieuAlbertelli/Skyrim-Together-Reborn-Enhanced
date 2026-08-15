@@ -236,6 +236,40 @@ main-quest behavior. STRE needs a narrower contract and its own tested vanilla
 handoff. No third-party record, script, or architecture should be imported
 blindly.
 
+## Comparative implementation evidence — Alternate Start: Live Another Life
+
+Inspection of the distributed Alternate Start — Live Another Life archive
+provides implementation evidence for the proposed CK boundary.
+
+Relevant observations:
+
+- the mod replaces the MQ101 generated quest fragment;
+- New Game takeover occurs from MQ101 before the normal Helgen cart path;
+- the alternate chargen/bootstrap is owned by Papyrus/CK rather than a native
+  Skyrim executable hook;
+- the mod does not treat skipping MQ101 stage 10 as sufficient vanilla cleanup;
+- later vanilla continuity work explicitly handles MQ101/Helgen state;
+- MQ102 is also adapted for main-quest continuity;
+- Civil War, Riverwood/Whiterun progression, Helgen state, Alduin, Hadvar and
+  Ralof are treated as separate continuity concerns;
+- the main quest can remain deferred while the alternate-start experience
+  proceeds.
+
+STRE does not need Live Another Life's alternate-start scenarios.
+
+The relevant architectural pattern is narrower:
+
+1. intercept normal New Game through MQ101 before stage 10;
+2. transfer control to an STRE-owned chargen/bootstrap quest;
+3. keep the vanilla main quest dormant during the STRE Alternate Start;
+4. reconstruct only the minimum coherent post-Helgen vanilla state required by
+   STRE;
+5. perform eventual MQ102/MQ103 handoff through a separately tested continuity
+   adapter.
+
+STRE must reproduce the required behavior independently rather than copy
+third-party scripts or records verbatim.
+
 ## Recommended CK/Papyrus architecture
 
 ### 1. Thin vanilla bridge
