@@ -2,8 +2,14 @@
 # Plugin : STRE_AlternateStart.esp
 # Ne pas modifier manuellement cette liste.
 Scripts\QF_MQ101_0003372B.pex
+Scripts\QF_STRE_HelgenCleanup_0302D022.pex
 Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.pex
 Scripts\Source\QF_STRE_QUEST_AlternateStart_02001AF9.pex
+Scripts\STRE_HelgenCollapseLoadAlias.pex
+Scripts\STRE_HelgenContinuityController.pex
 Source\Scripts\QF_MQ101_0003372B.psc
+Source\Scripts\QF_STRE_HelgenCleanup_0302D022.psc
 Source\Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.psc
+Source\Scripts\STRE_HelgenCollapseLoadAlias.psc
+Source\Scripts\STRE_HelgenContinuityController.psc
 STRE_AlternateStart.esp

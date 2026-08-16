@@ -11,7 +11,8 @@
     "Les FormID sont locaux au plugin non-ESL.",
     "Le mode strict rejette les doublons ou records STRE inattendus et tout override de master non explicitement autorisé.",
     "Les noms FULL ne doivent contenir aucun espace ni retour de ligne périphérique.",
-    "Le record NAVI Skyrim.esm [00012FB4] est une exception de baseline préexistante sans EditorID, conservée explicitement par l’audit."
+    "Le record NAVI Skyrim.esm [00012FB4] est une exception de baseline préexistante sans EditorID, conservée explicitement par l’audit.",
+    "La projection post-Helgen nécessite plusieurs références vanilla promues en Persistent par le Creation Kit; leurs conteneurs WRLD/CELL structurels sont explicitement conservés et audités."
   ],
   "records": [
     {
@@ -298,6 +299,11 @@
       "editorId": "STRE_SPEL_Destruction_Shock_MinorSparks",
       "expectedLocalFormId": "0x000040EE",
       "displayName": "Étincelles mineures"
+    },
+    {
+      "signature": "QUST",
+      "editorId": "STRE_QUEST_HelgenNPCCleanup",
+      "expectedLocalFormId": "0x0002D022"
     }
   ],
   "spellEffectExpectations": {
@@ -324,6 +330,62 @@
       "editorId": "MQ101",
       "expectedFormId": "0x0003372B",
       "master": "Skyrim.esm"
+    },
+    {
+      "signature": "WRLD",
+      "editorId": "Tamriel",
+      "expectedFormId": "0x0000003C",
+      "master": "Skyrim.esm",
+      "reason": "Structural worldspace parent retained by the CK for the Tamriel persistent-cell override used by Helgen continuity."
+    },
+    {
+      "signature": "CELL",
+      "editorId": "HelgenKeep01",
+      "expectedFormId": "0x0005DE24",
+      "master": "Skyrim.esm",
+      "reason": "Structural parent cell retained by the CK for Helgen Keep references promoted to Persistent."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage360",
+      "expectedFormId": "0x0005CEE3",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage400",
+      "expectedFormId": "0x000BA032",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage267",
+      "expectedFormId": "0x000BAC16",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage368",
+      "expectedFormId": "0x000F778E",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage485",
+      "expectedFormId": "0x000FDA33",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "editorId": "MQ101SetStage210",
+      "expectedFormId": "0x00103AF4",
+      "master": "Skyrim.esm",
+      "reason": "CK Persistent promotion required for STRE Helgen continuity property binding."
     }
   ],
   "allowedMasterRecordsWithoutEditorId": [
@@ -332,6 +394,18 @@
       "expectedFormId": "0x00012FB4",
       "master": "Skyrim.esm",
       "reason": "Pre-existing navigation-map baseline record; not introduced by the New Game bootstrap."
+    },
+    {
+      "signature": "CELL",
+      "expectedFormId": "0x00000D74",
+      "master": "Skyrim.esm",
+      "reason": "Tamriel persistent cell retained structurally after the CK promoted REFR 0010FDE3 to Persistent."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x0010FDE3",
+      "master": "Skyrim.esm",
+      "reason": "Anonymous ChargenFxTrigger reference promoted by the CK to Persistent for STRE Helgen continuity property binding."
     }
   ]
 }
