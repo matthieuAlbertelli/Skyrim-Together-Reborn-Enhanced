@@ -161,5 +161,7 @@ spike scope unless it later affects automatic campaign arming or release.
 
 Conclusion: the existing native load boundary, post-load event, guard menu, and
 STRE update path are sufficient for the tested invariant. No additional engine
-hook is required by this evidence. Production identity, save selection,
-checkpoint coordination, and recovery policy remain owned by #28, #55, and #56.
+hook is required by this evidence. The campaign runtime/admission foundation
+from #28 does not yet wire this gate into production; coordinated save selection
+and checkpoint creation remain #55, while recovery lock and collective restore
+remain #56.

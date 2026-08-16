@@ -1,6 +1,6 @@
 # Alternate Start — Single-player design
 
-> **Status: Local build fallback implemented; complete new-game bootstrap proposed**
+> **Status: Local build fallback, New Game interception, and MQ101/post-Helgen projection implemented; MQ102/MQ103 departure handoff remains**
 
 ## Principle
 
@@ -15,22 +15,28 @@ The CK plugin and Character Creation must remain usable without an STRE server. 
 - character cleanup;
 - local application of inventory, spells, and equipment;
 - level 1;
-- no mandatory server call when STRE is disconnected.
+- no mandatory server call when STRE is disconnected;
+- fresh New Game interception before the cart sequence;
+- MQ101/post-Helgen world-state projection without selecting MQ102A/MQ102B.
 
 ## Required for a complete single-player new game
 
-- intercept startup before the cart sequence;
-- cleanly neutralize or advance the vanilla states associated with Helgen;
+The early New Game interception and MQ101/post-Helgen projection are now
+implemented. Remaining work is:
+
 - initialize the introduction;
+- complete the local ready/departure flow;
 - open the exit door after validation;
-- guarantee a route back to the main quest.
+- project the proven neutral MQ102/MQ103 handoff;
+- guarantee the intended route back to the main quest.
 
 ## Local state
 
 Current elements:
 
 - `STRE_QUEST_AlternateStart`;
-- player and seat aliases;
+- `STRE_QUEST_HelgenNPCCleanup`;
+- player, seat, and Helgen continuity aliases/properties;
 - local Character Creation state in the client service.
 
 Possible future elements:

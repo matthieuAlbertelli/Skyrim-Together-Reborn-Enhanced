@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 15, 2026.
+> **Last updated:** August 17, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -103,13 +103,26 @@ See [`docs/features/item-preview/`](../features/item-preview/).
 - fresh New Game interception through `MQQuickstart = 5` and a dedicated MQ101 stage-0 STRE branch;
 - direct world transition to the inn before starting the Alternate Start quest;
 - same-process New Game re-entry through explicit Alternate Start quest lifecycle reset in `CharacterCreationService`;
-- ordinary save loading verified not to retrigger the bootstrap.
+- ordinary save loading verified not to retrigger the bootstrap;
+- STRE-owned MQ101 continuity projection advances the required post-Helgen
+  branches through stage 900, reaches MQ101 stage 1000, and leaves MQ102,
+  MQ102A, and MQ102B untouched;
+- `STRE_QUEST_HelgenNPCCleanup` removes the skipped Keep victims, moves Hadvar
+  and Ralof to the post-escape objective, and removes the residual Imperial
+  guard;
+- `STRE_HelgenContinuityController` projects the validated destroyed-Helgen
+  reference state and neutralizes the Keep collapse trigger while preserving
+  the already-collapsed rubble presentation;
+- the post-Helgen projection was runtime-smoke-tested after xEdit Quick Auto
+  Clean, including Helgen exterior and `HelgenKeep01`.
 
 The current catalog uses `BuildVersion = 5`.
 
 ### Limitations
 
-- the New Game bootstrap is implemented, but Helgen/world-state continuity and vanilla main-quest handoff remain unfinished;
+- the New Game bootstrap and MQ101/post-Helgen world-state projection are
+  implemented, but the neutral MQ102/MQ103 vanilla main-quest handoff remains
+  unfinished;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;
@@ -148,8 +161,8 @@ The durable server campaign/checkpoint persistence substrate is implemented,
 automated-tested, and runtime-validated. The fixed-roster/runtime core and live
 admission protocol described below now use it, while coordinated native saves
 and collective reconnect recovery remain unimplemented. `CharacterBuildService`
-continues to use session state until a later #28 increment binds builds to the
-admitted campaign slot and character identity. Coordinated
+continues to use session state; durable binding to the admitted campaign slot
+and character identity remains unimplemented. Coordinated
 native-save/checkpoint work remains #55, and disconnect recovery lock plus
 collective restore/reload remains #56. No native `.ess` payload, save/load
 engine call, recovery UI, or WorldEntity persistence is part of this
@@ -235,11 +248,15 @@ transport/service boundary:
   identity/cache behavior, authority and spoof rejection, idempotent/stale
   mutations, 2/4/10-slot flows, disconnect/resume, and readiness no-ops.
 
-The only production narrative transition implemented in this increment is
-`Lobby -> CharacterCreation`. Durable Character Build binding, CEF/UI,
-CK/Valen projections, later narrative phase execution, and Departure validation
-remain pending under #28; there is no gameplay-facing caller yet and no in-game
-validation is claimed. `CHECKPOINTING`, `RECOVERY_LOCK`, and
+The only production narrative transition currently executed by the live
+campaign runtime is `Lobby -> CharacterCreation`. The fixed-roster/readiness/
+phase-policy and live admission foundation developed in the #28 workstream is
+implemented, but durable Character Build binding, CEF/UI and CK/Valen
+projections, feature-owned later narrative phase execution, and Departure
+validation remain unimplemented. GitHub currently marks #28 completed; that
+tracking state does not override this implementation boundary. There is no
+gameplay-facing caller for those later phases yet and no in-game validation is
+claimed. `CHECKPOINTING`, `RECOVERY_LOCK`, and
 `RESTORING_CHECKPOINT` are represented but have no #55/#56 behavior here;
 native-save/checkpoint identity and fingerprinting remain #55, while disconnect
 to recovery lock and collective checkpoint restore remain #56.
@@ -261,7 +278,8 @@ The isolated #60 client spike is automated-tested and human runtime-validated:
 The validation-only F8/F10 controls and raw-input probes were removed after the
 successful test. No production campaign save detection, automatic gate
 arming/release, checkpoint coordination, or recovery state is implemented by
-this spike; those callers remain future work under #28, #55, and #56.
+this spike. Production integration remains future work; #55 owns coordinated
+checkpoint saves and #56 owns recovery lock plus collective restore.
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 

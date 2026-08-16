@@ -1,10 +1,12 @@
 # Alternate Start
 
-> **Status: Character Build and New Game bootstrap implemented and smoke-tested; full campaign in progress**
+> **Status: Character Build, New Game bootstrap, and MQ101/post-Helgen projection implemented and smoke-tested; MQ102/MQ103 handoff and full campaign remain**
 
 ## Current outcome
 
 A fresh Skyrim **New Game** is intercepted before vanilla MQ101 stage 10, moves the player into the STRE inn, starts the existing Alternate Start quest, opens RaceMenu, then continues through class/loadout selection and build sealing.
+
+The current continuity step also projects the required MQ101/post-Helgen state without replaying the vanilla intro: MQ101 reaches its post-chargen completion boundary, skipped Helgen actors/references are cleaned up, destroyed Helgen is projected, and MQ102/MQ102A/MQ102B remain untouched for the next dedicated vanilla-continuity increment.
 
 The flow works:
 
@@ -15,7 +17,9 @@ The flow works:
 - in multiplayer with server validation of inventory and spells;
 - with Warrior, Mage, and Thief;
 - with the Mage Destruction/Alteration vertical slice;
-- with functional targeted buffs on another player.
+- with functional targeted buffs on another player;
+- with the validated MQ101/post-Helgen projection applied without starting
+  MQ102, MQ102A, or MQ102B.
 
 The current catalog is `BuildVersion = 5`.
 

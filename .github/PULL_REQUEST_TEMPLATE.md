@@ -1,7 +1,8 @@
 ## Related issue
 
-Closes #<!-- issue number -->
+Refs #<!-- issue number -->
 
+Use `Closes #...` only when this PR satisfies the linked issue's complete acceptance criteria.
 For a trivial documentation-only change without an issue, explain why one is unnecessary.
 
 ## Problem

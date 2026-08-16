@@ -1,6 +1,6 @@
 # Alternate Start — Product specification
 
-> **Status: Product target accepted; character bootstrap partially implemented**
+> **Status: Product target accepted; character bootstrap and MQ101/post-Helgen projection implemented, full departure journey incomplete**
 
 ## Pitch
 
@@ -17,6 +17,9 @@ Start a campaign in an inn without importing an already-advanced character. Each
 7. Apply anti-import cleanup, level 1, canonical inventory, and canonical spells.
 8. Use the local offline path or server validation in multiplayer.
 9. Apply functional targeted Alteration buffs to a remote companion.
+10. Intercept a fresh New Game before vanilla MQ101 stage 10.
+11. Project MQ101 and Helgen to the validated post-attack boundary while leaving
+    MQ102/MQ102A/MQ102B untouched for the later handoff.
 
 ## Complete product goals
 
@@ -50,8 +53,11 @@ Warrior, Mage, and Thief form the first implemented vertical slice. The kits, it
 8. Complete the ready check.
 9. Depart for Skyrim together without changing the sealed roster.
 
-The appearance/build steps are partially present. The campaign lobby/start/seal,
-automatic redirect, Valen, ready check, and departure remain to be completed.
+The appearance/build flow, automatic New Game redirect, and MQ101/post-Helgen
+projection are present. The server campaign core and live create/join/resume/
+start/readiness protocol provide the fixed-roster foundation, but gameplay-facing
+campaign UI/CK projection is not yet wired. Valen, integrated ready/departure
+behavior, and the neutral MQ102/MQ103 handoff remain to be completed.
 
 ## Single-player
 
@@ -67,7 +73,8 @@ automatic redirect, Valen, ready check, and departure remain to be completed.
 - canonical inventory and spells;
 - hashes and application acknowledgment;
 - Pending/Applied state broadcast;
-- build state does not persist beyond the session.
+- build state is still session-owned by `CharacterBuildService` and is not yet
+  bound to the admitted durable campaign slot/character identity.
 
 ## Target STRE behavior
 

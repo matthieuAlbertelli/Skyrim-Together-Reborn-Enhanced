@@ -139,6 +139,8 @@ Pull requests link an actionable issue unless the change is a trivial documentat
 
 PRs target `main`, use focused commits and remain unmerged until the applicable review policy, resolved conversations and required checks permit integration. Structural decisions use an ADR; feature-local behavior and protocols remain in the feature's canonical documentation directory.
 
+Use `Refs #...` for incremental PRs that contribute to an issue without satisfying its full acceptance criteria. Use `Closes #...` only when the PR, once merged, completes the linked issue's complete acceptance contract. A parent or umbrella issue must not be closed merely because one independently reviewable increment lands.
+
 ## Main branch protection
 
 Branch protection must preserve PR traceability and required CI without making the repository impossible to maintain.

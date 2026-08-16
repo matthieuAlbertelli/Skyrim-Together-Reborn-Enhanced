@@ -1,16 +1,21 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits and M7 smoke tests executed; exhaustive coverage remains**
+> **Status: Automated audits plus M7, New Game, and MQ101/post-Helgen smoke tests executed; exhaustive coverage remains**
 
 ## Completed checks
 
 - successful Windows xmake build;
-- conforming strict audit of 47 CK records;
+- conforming strict audit of 49 STRE-owned CK records plus the explicit
+  Skyrim-master override allowlist;
 - conforming audit of 41 catalog/ESP references;
 - compiled `Code/tests/character_build.cpp` tests;
 - in-game Mage bootstrap test;
 - targeted buffs tested between two PCs;
-- single-player fallback present in the service and tested through the build flow.
+- single-player fallback present in the service and tested through the build flow;
+- New Game interception validated for first and same-process second New Game;
+- MQ101 structural and generated-fragment invariant audits conform;
+- post-Helgen MQ101/world-state projection validated in game after xEdit Quick
+  Auto Clean while MQ102/MQ102A/MQ102B remain untouched.
 
 These checks do not constitute exhaustive validation of every combination.
 
@@ -23,6 +28,16 @@ py -3 .\Tools\Scripts\audit_stre_plugin_records.py `
   --output .\_audit\STRE_AlternateStart.records.m7.tsv `
   --strict `
   --reject-unexpected
+```
+
+```powershell
+py -3 .\Tools\Scripts\audit_mq101_quickstart5.py `
+  .\GameFiles\Skyrim\STRE_AlternateStart.esp
+```
+
+```powershell
+py -3 .\Tools\Scripts\audit_mq101_generated_invariants.py `
+  .\GameFiles\Skyrim\Source\Scripts\QF_MQ101_0003372B.psc
 ```
 
 ```powershell
@@ -86,13 +101,26 @@ The three spell names above are translated descriptions of currently localized F
 Validated on 15 August 2026:
 
 - first New Game enters the inn and reaches Character Creation;
-- MQ101 remains at stage 0 and the STRE Alternate Start quest reaches stage 20;
+- during the initial character-creation bootstrap, MQ101 remains at stage 0
+  and the STRE Alternate Start quest reaches stage 20;
 - a second New Game works after returning to the main menu without restarting Skyrim;
 - an ordinary existing save loads without retriggering the bootstrap.
 
+## Post-Helgen continuity regression
+
+Validated on 16 August 2026:
+
+- MQ101 reaches stage 1000 and stops;
+- MQ102, MQ102A, and MQ102B remain untouched;
+- the cleanup helper reaches its completion marker;
+- Helgen exterior remains destroyed;
+- entering `HelgenKeep01` shows already-collapsed rubble without replaying the
+  vanilla proximity collapse or dragon/collapse roar;
+- the accepted minor limitation is a brief rubble sound during Keep load.
+
 ## Tests still blocked by missing features
 
-- Helgen/world-state continuity and vanilla main-quest handoff;
+- neutral MQ102/MQ103 vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;
 - save/load at every phase;
