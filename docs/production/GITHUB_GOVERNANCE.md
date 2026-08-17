@@ -41,7 +41,7 @@ graph lives in [`DEPENDENCY_MAP.md`](DEPENDENCY_MAP.md).
 
 ## Label taxonomy
 
-Labels are orthogonal metadata. Apply one type, one priority after triage, one origin after audit, and every area that materially owns the work. Apply triage and community labels only when useful.
+Labels are orthogonal metadata. Apply one type, one origin after audit, and every area that materially owns the work. Assign one priority to defects and operational risks after impact triage. Feature sequencing is represented by Project status, dependencies, Milestone, and Roadmap gates rather than by severity labels. Apply triage and community labels only when useful.
 
 ### Type
 
@@ -54,7 +54,7 @@ Labels are orthogonal metadata. Apply one type, one priority after triage, one o
 
 ### Priority
 
-Priority is assigned by maintainers from demonstrated impact, not selected by community reporters.
+Priority labels express demonstrated severity or operational risk. They are not a general feature-ordering mechanism and are not required on ordinary feature or documentation issues. Priority is assigned by maintainers from demonstrated impact, not selected by community reporters.
 
 | Label | Meaning |
 |---|---|
