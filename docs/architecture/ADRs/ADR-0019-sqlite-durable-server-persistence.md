@@ -254,7 +254,9 @@ empty before #28/#55 wiring, as designed.
 
 ## Implementation notes
 
-The accepted adapter and automated persistence tests are tracked by #27. Live
-fixed-roster creation/phase flow remains #28, coordinated native-save creation
-and acknowledgement remains #55, and disconnect/reload recovery gameplay remains
-#56.
+The accepted adapter and automated persistence tests were tracked by #27.
+The fixed-roster/runtime core and live admission protocol were subsequently
+implemented under #28 and now use this persistence substrate. Durable Character
+Build binding and later gameplay projections remain separate feature-integration
+work. Coordinated native-save creation and acknowledgement remains #55, and
+disconnect/reload recovery gameplay remains #56.

@@ -1,6 +1,6 @@
 # Alternate Start — Open questions
 
-> **Status: Decisions remaining after M7**
+> **Status: Remaining decisions after New Game and MQ101/post-Helgen continuity validation**
 
 ## Resolved decisions
 
@@ -28,8 +28,6 @@
 
 ## Persistence and checkpoints
 
-- human review and acceptance of the SQLite storage decision proposed by
-  [ADR-0019](../../architecture/ADRs/ADR-0019-sqlite-durable-server-persistence.md);
 - migration policy between future campaign persistence schema/codec versions;
 - checkpoint cadence, triggers, and safe points;
 - interaction with autosaves, manual saves, combat, dialogue, and cell transitions;
@@ -46,13 +44,25 @@
 - Health/Magicka/Stamina history;
 - policy for racial powers and permanent effects from mods.
 
-## New game and Helgen skip
+## Vanilla handoff after Helgen
 
-- exact interception point;
-- vanilla stages and globals to modify;
-- unlocking dragons and shouts;
-- compatibility with other alternate starts;
-- route back to the main quest.
+Resolved:
+
+- New Game interception is the dedicated `MQQuickstart == 5` MQ101 stage-0
+  branch before vanilla stage 10;
+- MQ101/post-Helgen projection now reaches the validated stage-1000/destroyed
+  Helgen boundary while leaving MQ102/MQ102A/MQ102B untouched.
+
+Remaining:
+
+- exact neutral MQ102/MQ103 handoff stages and quest-running/completion state;
+- Alduin marker/reference state and Riverwood/Whiterun dialogue dependencies;
+- neutral Civil War initialization without implicit Imperial/Stormcloak
+  allegiance;
+- unlocking dragons and shouts only through intended vanilla progression;
+- compatibility policy for other alternate starts and supported MQ101/QF
+  conflicts;
+- exact Departure destination and the route back to the main quest.
 
 ## Remaining kits
 

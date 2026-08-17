@@ -315,7 +315,7 @@ local freeze/pause presentation is delegated to implementation audit.
 ## Persistence
 
 Campaign state, checkpoint metadata, roster/bindings, snapshots, revisions, and
-commit state use the persistence port and proposed SQLite adapter described by
+commit state use the persistence port and accepted SQLite adapter described by
 [ADR-0019](ADRs/ADR-0019-sqlite-durable-server-persistence.md). The implemented
 substrate provides a versioned multi-campaign schema, explicit transactional
 migration, normalized current state, immutable snapshots, optimistic revisions,
@@ -334,11 +334,13 @@ the journal, supersedes obsolete pending outbox work, and emits a canonical full
 snapshot at the new revision. Clients then consume only events newer than that
 restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
 
-The server-owned #28 runtime and live protocol now call this persistence
-substrate for Lobby roster configuration, the campaign start/seal, Session
-Manager transfer, readiness, journal entries, and outbox snapshot intents.
-Durable Character Build binding and client/CK/UI gameplay projection remain
-pending #28 integration. Issue #55 owns coordinated native-save creation,
+The server-owned campaign runtime and live protocol implemented in the #28
+workstream call this persistence substrate for Lobby roster configuration, the
+campaign start/seal, Session Manager transfer, readiness, journal entries, and
+outbox snapshot intents. Durable Character Build binding, client/CK/UI gameplay
+projection, feature-owned later narrative phase execution, and Departure
+validation remain incomplete. The tracking state of #28 does not supersede
+those implementation gaps. Issue #55 owns coordinated native-save creation,
 identity/fingerprinting, acknowledgement, and `CampaignCheckpoint`
 coordination. Issue #56 owns disconnect recovery lock and collective checkpoint
 restore/reload gameplay. Durable WorldEntity persistence remains separate

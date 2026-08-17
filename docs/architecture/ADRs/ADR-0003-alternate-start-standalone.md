@@ -22,7 +22,10 @@ STRE is absent.
 
 ## Implementation state
 
-The local Character Build path uses the same catalog without a server. The
-complete new-game and Helgen-bypass flow remains unimplemented; the ADR is
-therefore validated for the build, but not for the entire Alternate Start
-experience.
+The local Character Build path uses the same catalog without a server. Fresh
+New Game interception and the MQ101/post-Helgen world-state projection are
+implemented through local CK/Papyrus/native boundaries that do not require
+server authority, and the current pre-Departure flow is runtime-validated.
+Valen, Departure, the neutral MQ102/MQ103 continuation, and an explicit
+end-to-end standalone regression still require validation before the entire
+Alternate Start experience is complete.

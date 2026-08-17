@@ -1,8 +1,9 @@
 # New Game bootstrap spike
 
-> **Status: New Game bootstrap implemented and runtime smoke-tested; vanilla departure/Helgen continuity remains open.**
+> **Status: New Game bootstrap and MQ101/post-Helgen projection implemented and runtime smoke-tested; MQ102/MQ103 handoff and Departure remain open.**
 >
-> Evidence snapshot: 15 August 2026, Skyrim SE `1.6.1170.0`.
+> Evidence snapshots: New Game bootstrap — 15 August 2026; MQ101/post-Helgen continuity — 16 August 2026.
+> Runtime: Skyrim SE `1.6.1170.0`.
 
 ## Decision summary
 
@@ -37,8 +38,10 @@ fragment script require an explicit patch or are mutually exclusive.
 
 Runtime smoke tests validated first New Game, a second New Game in the same
 Skyrim process, and loading an ordinary existing save without retriggering the
-bootstrap. Vanilla departure, Helgen world-state projection, MQ102/MQ103
-handoff, and MQ101 stage 1000 remain separate work.
+bootstrap. A subsequent continuity increment now projects the required
+MQ101/post-Helgen state through MQ101 stage 1000 while leaving MQ102/MQ102A/
+MQ102B untouched. The neutral MQ102/MQ103 handoff and real Departure remain
+separate work.
 
 ## Scope and ownership
 
@@ -100,10 +103,10 @@ The installed Bethesda-distributed Papyrus sources used for this audit were:
 - `CCStartAfterCharGenScript.psc`.
 
 The xEdit QUST definition confirms the meaning of the QUST DNAM flags and the
-stage/alias structures. The repository's strict plugin audit now passes with 48 expected STRE-owned
-records, the two approved EditorID-bearing Skyrim master overrides
-(`MQQuickstart`, `MQ101`), and the pre-existing anonymous `NAVI [00012FB4]`
-baseline record. Any additional master-backed record is rejected.
+stage/alias structures. The repository's current strict plugin audit passes with
+49 expected STRE-owned records and only the explicit named/anonymous
+Skyrim-master allowlist recorded in `CK_RECORDS_M7_IMPLEMENTED.json`. Any
+additional master-backed record is rejected.
 
 ### Inference that requires a runtime trace
 
@@ -209,11 +212,11 @@ the intended state.
 
 ## Current STRE plugin audit
 
-`STRE_AlternateStart.esp` now contains 48 manifest-owned STRE records, including
-`STRE_REFR_NewGameStartMarker`, plus the intentional Skyrim overrides
-`MQQuickstart [0004679E]` and `MQ101 [0003372B]`. The strict audit also carries
-the pre-existing anonymous `NAVI [00012FB4]` baseline exception so that every
-other master-backed record fails `--reject-unexpected`.
+`STRE_AlternateStart.esp` now contains 49 manifest-owned STRE records, including
+`STRE_REFR_NewGameStartMarker` and `STRE_QUEST_HelgenNPCCleanup`, plus the
+explicit Skyrim-master override allowlist in
+`CK_RECORDS_M7_IMPLEMENTED.json`. Every master-backed record outside that
+allowlist fails `--reject-unexpected`.
 
 `MQQuickstart` is fixed to value `5`; the audit verifies that value.
 
@@ -227,9 +230,10 @@ other master-backed record fails `--reject-unexpected`.
 - supports an offline/local build path as well as server-authoritative build
   validation when connected.
 
-The current plugin therefore has the destination cell, furniture, aliases, and
-stage-10/stage-20 flow needed by the target path. The missing piece is the
-deterministic New Game bridge and a later, validated vanilla departure adapter.
+The current plugin therefore has the deterministic New Game bridge, destination
+cell, furniture, character-creation bootstrap, and validated MQ101/post-Helgen
+projection needed before Departure. The remaining continuity problem is the
+neutral MQ102/MQ103 vanilla handoff and its later authorized Departure trigger.
 The existing plugin should be extended; a second plugin would add load-order
 and ownership ambiguity without removing the MQ101 conflict.
 
@@ -616,12 +620,16 @@ The approved departure path must validate:
 3. **Solo bootstrap acceptance — complete.** Seat, stage 20, RaceMenu, local
    build, same-process second New Game, and ordinary-save non-retrigger are
    smoke-tested.
-4. **Campaign bootstrap projection — pending.** Map admitted pre-checkpoint
+4. **MQ101/post-Helgen projection — complete.** The required audited MQ101
+   continuity stages, skipped-actor cleanup, destroyed-Helgen reference state,
+   and Keep-collapse historical projection are runtime-validated while
+   MQ102/MQ102A/MQ102B remain untouched.
+5. **Campaign bootstrap projection — pending.** Map admitted pre-checkpoint
    campaign phases to the same CK flow without implementing managed saves.
-5. **Vanilla departure decision/prototype — pending.** Approve neutral versus
-   branch handoff, then validate the exact MQ101/MQ102/Helgen projection in CK
-   and in game.
-6. **Compatibility and regression gate — pending.** Compare winning records,
+6. **Neutral MQ102/MQ103 departure decision/prototype — pending.** Prove the
+   exact generic MQ102/MQ103, Alduin, Riverwood, and Civil War state needed by
+   STRE before wiring the real Departure authority path.
+7. **Compatibility and regression gate — pending.** Compare winning records,
    execute the supported-load-order matrix, and document explicit conflicts.
 
 Each milestone should be independently reviewable. #55 and #56 remain separate
@@ -629,16 +637,17 @@ and must not be pulled into these increments.
 
 ## Open decisions before production
 
-1. Should departure choose a Hadvar/Ralof branch or a neutral generic MQ102
-   route? The current product documents do not authorize a Civil War side.
-2. At which local Alternate Start phase should MQ101 stage 1000 become true:
-   immediately after the build, after Valen, or at departure? The dependency on
-   post-chargen content makes this a product-visible timing choice.
-3. Is destroyed Helgen required immediately on New Game, or only at departure?
-   One coherent state is mandatory; a partially active intro is not acceptable.
-4. Which USSEP version is the v1 compatibility baseline for the MQ101 forwarded
+The current implementation has resolved two earlier questions: MQ101 now reaches
+stage 1000 as part of the validated pre-handoff continuity projection, and
+destroyed Helgen is projected before the future MQ102/MQ103 Departure handoff.
+
+Remaining decisions:
+
+1. Prove the exact neutral generic MQ102/MQ103 route without selecting a
+   Hadvar/Ralof Civil War allegiance.
+2. Which USSEP version is the v1 compatibility baseline for the MQ101 forwarded
    override?
-5. What diagnostic escape is allowed if the CK bootstrap fails before stage 20
+3. What diagnostic escape is allowed if the CK bootstrap fails before stage 20
    without turning that escape into an alternate authority path?
 
 ## References
