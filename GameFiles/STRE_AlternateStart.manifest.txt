@@ -4,7 +4,6 @@
 Scripts\QF_MQ101_0003372B.pex
 Scripts\QF_STRE_HelgenCleanup_0302D022.pex
 Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.pex
-Scripts\Source\QF_STRE_QUEST_AlternateStart_02001AF9.pex
 Scripts\STRE_HelgenCollapseLoadAlias.pex
 Scripts\STRE_HelgenContinuityController.pex
 Source\Scripts\QF_MQ101_0003372B.psc

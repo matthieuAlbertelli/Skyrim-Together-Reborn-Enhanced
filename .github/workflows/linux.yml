@@ -20,6 +20,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Audit CK packaging boundary
+      run: python3 Tools/Scripts/audit_ck_packaging.py
+
     - name: Checkout submodules
       run: |
         git submodule sync --recursive

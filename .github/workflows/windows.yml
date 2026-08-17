@@ -43,6 +43,10 @@ jobs:
           # Full history is required for git describe / BuildInfo versioning.
           fetch-depth: 0
 
+      - name: Audit CK packaging boundary
+        shell: pwsh
+        run: python Tools/Scripts/audit_ck_packaging.py
+
       - name: Checkout submodules
         shell: pwsh
         run: |
