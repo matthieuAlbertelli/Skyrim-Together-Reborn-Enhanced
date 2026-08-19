@@ -1,6 +1,6 @@
 # Alternate Start — Creation Kit implementation
 
-> **Status: New Game/CK bootstrap and MQ101/post-Helgen projection smoke-tested; native campaign gate automated-tested and manually validated on the Solo/two-player happy path; negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
+> **Status: New Game/CK bootstrap, MQ101/post-Helgen projection, and the first pre-deadline wounded-survivor investigation slice are smoke-tested; the native campaign gate is automated-tested and manually validated on the Solo/two-player happy path; four-day transition, rescue/capture flow, negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
 
 ## Versioned files
 
@@ -16,6 +16,12 @@ GameFiles/Skyrim/Source/Scripts/STRE_HelgenContinuityController.psc
 GameFiles/Skyrim/scripts/STRE_HelgenContinuityController.pex
 GameFiles/Skyrim/Source/Scripts/STRE_HelgenCollapseLoadAlias.psc
 GameFiles/Skyrim/scripts/STRE_HelgenCollapseLoadAlias.pex
+GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_HelgenInvestig_0305BCA5.psc
+GameFiles/Skyrim/scripts/QF_STRE_QUEST_HelgenInvestig_0305BCA5.pex
+GameFiles/Skyrim/Source/Scripts/STRE_HelgenInvestigationController.psc
+GameFiles/Skyrim/scripts/STRE_HelgenInvestigationController.pex
+GameFiles/Skyrim/Source/Scripts/STRE_HelgenRubbleSqueezeActivator.psc
+GameFiles/Skyrim/scripts/STRE_HelgenRubbleSqueezeActivator.pex
 GameFiles/STRE_AlternateStart.manifest.txt
 ```
 
@@ -93,16 +99,24 @@ Never hard-code a loaded FormID that depends on load order. CK references use al
 
 ## M7 records and continuity helper
 
-The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 49 expected STRE-owned records:
+The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 63 expected STRE-owned records:
 
-- cells, quest, and seat references;
+- cells, quests, and seat references;
 - outfits and boots;
 - weak enchantments;
 - Destruction and Alteration spells;
 - targetable magic effects for ally buffs;
 - the `STRE_REFR_NewGameStartMarker` placed reference used only for the initial world transition;
 - `STRE_QUEST_HelgenNPCCleanup`, which owns the skipped-Helgen cleanup aliases
-  and the continuity controller used by the post-Helgen projection.
+  and the continuity controller used by the post-Helgen projection;
+- `STRE_QUEST_HelgenInvestigation` and the first pre-deadline investigation
+  projection records;
+- independent Hadvar/Ralof wounded anchors, wounded furniture references, and
+  `SitTarget` packages;
+- the shared rubble-squeeze activator, its two placed activators, and its two
+  destination markers;
+- the dead excavator bandit and placed pickaxe used by the environmental
+  storytelling around the rubble opening.
 
 The same strict manifest allows only the explicit named and anonymous
 Skyrim-master records listed in its allowlists. Any additional master-backed
@@ -142,18 +156,103 @@ Stormcloak MQ102 branch.
 This is a local Skyrim projection. The server must never synchronize raw
 `MQ101.SetStage` or future `MQ102.SetStage` calls as campaign protocol.
 
+## Pre-deadline Helgen investigation slice
+
+The first investigation increment is owned by:
+
+```text
+STRE_QUEST_HelgenInvestigation
+STRE_HelgenInvestigationController
+```
+
+The quest is not Start Game Enabled. Its stage `10` is currently a diagnostic
+bootstrap used to call `BeginInvestigation()`; it is not the canonical survivor
+state machine and will later be replaced at the narrative boundary by Valen.
+
+`BeginInvestigation()` records `Utility.GetCurrentGameTime()` only when the
+investigation transitions out of its uninitialized state. The current local
+state model reserves independent values for:
+
+```text
+InvestigationState
+HadvarState
+RalofState
+MainQuestPath
+```
+
+Only `WoundedInCave` projection is implemented in this increment.
+
+Hadvar and Ralof use Specific Reference aliases with `Allow Reserved` because
+their vanilla actor references are already reserved elsewhere in the active
+quest graph. The investigation quest also owns aliases for the two
+STRE wounded-position markers.
+
+The current wounded projection is:
+
+```text
+logical survivor state = WoundedInCave
+→ MoveTo STRE wounded anchor
+→ EvaluatePackage()
+→ dedicated SitTarget package
+→ vanilla wounded furniture marker
+```
+
+Hadvar uses `STRE_PACK_HadvarWounded` with
+`STRE_HelgenHadvarWoundedFurniture`; Ralof uses
+`STRE_PACK_RalofWounded` with `STRE_HelgenRalofWoundedFurniture`. The packages
+own the local wounded posture; the XMarkerHeading references remain logical
+position anchors.
+
+The existing collapsed Keep rubble remains intact. No collision or navmesh edit
+was introduced. A small visible opening is exposed as a bidirectional local
+interaction:
+
+```text
+STRE_ACTI_HelgenRubbleSqueeze
+→ "Se faufiler"
+→ STRE_HelgenRubbleSqueezeActivator
+→ GetLinkedRef()
+→ short fade
+→ local player MoveTo
+```
+
+Each side links to the destination marker on the opposite side. The interaction
+is per-player local traversal and is not shared campaign state.
+
+`STRE_HelgenRubbleExcavatorCorpse` and
+`STRE_HelgenRubbleExcavatorPickaxe` explain the opening through environmental
+storytelling. The corpse currently uses a vanilla corpse ActorBase whose
+respawn behavior still requires a cell-reset regression test.
+
+`STRE_QUEST_HelgenInvestigation` is explicitly excluded from generic
+`QuestService` synchronization. Future multiplayer integration must synchronize
+canonical investigation/survivor/world-phase facts through the dedicated STRE
+campaign boundary and locally project them into CK/Papyrus.
+
+Not implemented yet:
+
+- four-day deadline evaluation;
+- `BanditOccupied` physical projection;
+- `CapturedInKeep`, `Freed`, or `Departed` survivor projection;
+- rescue/liberation interaction;
+- Valen-driven quest start;
+- neutral/Hadvar/Ralof MQ102 continuity.
+
 ## Navmesh
 
 The cell contains several navmesh fragments. Avoid relying on complex NPC pathfinding until the cell has received a complete CK audit. Every furniture or door change must be followed by a navigation test.
 
 ## Remaining implementation
 
+- four-day deadline and safe-boundary transition into bandit occupation;
+- captured-survivor prison placement, rescue/liberation, and survivor lifecycle;
 - neutral MQ102/MQ103 vanilla-continuity handoff and its Riverwood/Alduin/Civil
   War semantics;
+- Hadvar/Ralof branch commit without making rescue itself a faction choice;
 - Valen, scenes, dialogue, and aliases;
 - real Departure/exit flow and main-quest resumption;
 - markers and placements for more players;
-- campaign scripts and generic bridge;
+- dedicated campaign adapter for authoritative shared investigation state;
 - automated Papyrus compilation.
 
 ## Audits
@@ -208,6 +307,22 @@ Post-Helgen continuity validated on 16 August 2026 after xEdit Quick Auto Clean:
 - Helgen Keep rubble is already collapsed, proximity does not replay the
   collapse, and the vanilla dragon/collapse roar is suppressed;
 - the known minor limitation is a brief rubble sound while `HelgenKeep01` loads.
+
+Pre-deadline investigation slice validated on 20 August 2026:
+
+- `STRE_QUEST_HelgenInvestigation` starts successfully with Hadvar, Ralof, and
+  both wounded marker aliases filled;
+- Hadvar and Ralof move independently to the intended `HelgenKeep01` locations
+  and remain in their distinct vanilla wounded poses;
+- the `Se faufiler` prompt is available at the rubble opening and traverses the
+  blockage in both directions with the expected fade/MoveTo behavior;
+- the dead bandit and pickaxe are present without blocking the interaction;
+- no navmesh or rubble collision edit is required;
+- the strict record audit conforms with 63 expected STRE-owned records and no
+  unexpected Skyrim-master override;
+- CK packaging audit passes with no compiled PEX under `Scripts/Source`;
+- `STRE_QUEST_HelgenInvestigation` is excluded from generic quest-stage
+  synchronization, and the client build plus TPTests pass.
 
 ## Local test
 

@@ -1,11 +1,11 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits plus M7, New Game, and MQ101/post-Helgen smoke tests executed; focused campaign-bootstrap automation and the Solo/two-player happy path pass, while the remaining runtime matrix is pending**
+> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign Solo/two-player happy path passes while the remaining runtime matrices are pending**
 
 ## Completed checks
 
 - successful Windows xmake build;
-- conforming strict audit of 49 STRE-owned CK records plus the explicit
+- conforming strict audit of 63 STRE-owned CK records plus the explicit
   Skyrim-master override allowlist;
 - conforming audit of 41 catalog/ESP references;
 - compiled `Code/tests/character_build.cpp` tests;
@@ -15,7 +15,7 @@
 - New Game interception validated for first and same-process second New Game;
 - MQ101 structural and generated-fragment invariant audits conform;
 - post-Helgen MQ101/world-state projection validated in game after xEdit Quick
-  Auto Clean while MQ102/MQ102A/MQ102B remain untouched.
+  Auto Clean while MQ102/MQ102A/MQ102B remain untouched;
 - native `TPTests` pass with 126 test cases and 1753 assertions, including the
   focused join-code directory, wire validation, opcode stability, native CEF
   binding manifest/action routing, bounded Unicode lobby-pseudo validation, and
@@ -24,7 +24,17 @@
   entry/join and code normalization, Solo intent, shared persisted connection
   address without password persistence, lobby projection/Start authority,
   disconnected form/back behavior, and required/trimmed/bounded Unicode pseudo
-  handling across the five-argument native action contract.
+  handling across the five-argument native action contract;
+- pre-deadline Helgen investigation bootstrap validated with independent Hadvar
+  and Ralof wounded positions and dedicated wounded packages;
+- bidirectional rubble-squeeze interaction validated in game with the expected
+  prompt, fade, and local player transfer;
+- investigation quest exclusion from generic quest synchronization builds
+  successfully;
+- TPTests pass with 1511 assertions in 112 test cases;
+- CK packaging audit passes with 17 managed files and zero compiled PEX files
+  under `Scripts/Source`;
+- `git diff --check` passes for the current increment.
 
 These checks do not constitute exhaustive validation of every combination.
 
@@ -193,13 +203,44 @@ where available, transient/durable player context allowed by logging policy, and
 PartyService decision. Confirm the roster is unchanged and no password is logged.
 None of C–L is claimed as manually passed by the happy-path run above.
 
+## Pre-deadline Helgen investigation regression
+
+Validated on 20 August 2026:
+
+- project post-Helgen continuity first and confirm MQ101 reaches stage 1000;
+- start `STRE_QUEST_HelgenInvestigation` and advance its diagnostic stage 10;
+- verify Hadvar, Ralof, and both wounded-marker aliases are filled;
+- verify Hadvar and Ralof reach their independent intended locations;
+- verify Hadvar uses the Wounded02-based furniture pose and Ralof the
+  Wounded03-based furniture pose;
+- verify neither actor immediately resumes an incompatible vanilla travel
+  package;
+- verify `Se faufiler` appears only around the intended rubble opening;
+- traverse the rubble in both directions and verify fade, destination, and
+  immediate movement after arrival;
+- verify the dead bandit and pickaxe do not obstruct the interaction;
+- verify the strict record audit reports 63 expected records with no unexpected
+  master override;
+- verify `audit_ck_packaging.py`, client build, TPTests, and
+  `git diff --check`.
+
+Still required for this slice:
+
+- save/load while the investigation is active;
+- repeat/reapply stage-10 projection and confirm safe behavior;
+- cell reset to determine whether the current vanilla corpse ActorBase respawns;
+- multiplayer traversal with two players using the squeeze independently.
+
 ## Tests still blocked by missing features
 
+- four-day deadline and safe-boundary world-phase transition;
+- post-deadline bandit occupation and prisoner placement;
+- rescue/liberation and `Freed`/`CapturedInKeep` survivor transitions;
 - neutral MQ102/MQ103 vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;
-- save/load at every phase;
-- coordinated checkpoints, disconnect recovery lock, and collective
+- save/load at every campaign phase;
+- sealed roster, coordinated checkpoints, disconnect recovery, and collective
   build/campaign restoration;
 - 4 and 10 players.
 

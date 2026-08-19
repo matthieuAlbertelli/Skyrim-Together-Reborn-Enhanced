@@ -545,11 +545,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.reject_unexpected:
             expected_ids = {entry.get("editorId") for entry in expected}
             unexpected = sorted(
-                record
-                for record in records
-                if record.editor_id
-                and record.editor_id.startswith(args.prefix)
-                and record.editor_id not in expected_ids
+                (
+                    record
+                    for record in records
+                    if record.editor_id
+                       and record.editor_id.startswith(args.prefix)
+                       and record.editor_id not in expected_ids
+                ),
+                key=lambda record: (
+                    record.signature,
+                    record.editor_id or "",
+                    record.local_form_id,
+                ),
             )
             for record in unexpected:
                 errors += 1

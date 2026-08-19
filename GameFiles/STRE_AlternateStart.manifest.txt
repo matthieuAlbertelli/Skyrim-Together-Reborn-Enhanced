@@ -4,11 +4,17 @@
 Scripts\QF_MQ101_0003372B.pex
 Scripts\QF_STRE_HelgenCleanup_0302D022.pex
 Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.pex
+Scripts\QF_STRE_QUEST_HelgenInvestig_0305BCA5.pex
 Scripts\STRE_HelgenCollapseLoadAlias.pex
 Scripts\STRE_HelgenContinuityController.pex
+Scripts\STRE_HelgenInvestigationController.pex
+Scripts\STRE_HelgenRubbleSqueezeActivator.pex
 Source\Scripts\QF_MQ101_0003372B.psc
 Source\Scripts\QF_STRE_HelgenCleanup_0302D022.psc
 Source\Scripts\QF_STRE_QUEST_AlternateStart_02001AF9.psc
+Source\Scripts\QF_STRE_QUEST_HelgenInvestig_0305BCA5.psc
 Source\Scripts\STRE_HelgenCollapseLoadAlias.psc
 Source\Scripts\STRE_HelgenContinuityController.psc
+Source\Scripts\STRE_HelgenInvestigationController.psc
+Source\Scripts\STRE_HelgenRubbleSqueezeActivator.psc
 STRE_AlternateStart.esp

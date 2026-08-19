@@ -119,7 +119,24 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   reference state and neutralizes the Keep collapse trigger while preserving
   the already-collapsed rubble presentation;
 - the post-Helgen projection was runtime-smoke-tested after xEdit Quick Auto
-  Clean, including Helgen exterior and `HelgenKeep01`.
+  Clean, including Helgen exterior and `HelgenKeep01`;
+- `STRE_QUEST_HelgenInvestigation` now provides the first local pre-deadline
+  Helgen-investigation slice, with a diagnostic stage-10 bootstrap and persistent
+  investigation/survivor/path state owned by `STRE_HelgenInvestigationController`;
+- Hadvar and Ralof are independently projected to STRE-owned wounded positions
+  in `HelgenKeep01` and use dedicated `SitTarget` packages with vanilla wounded
+  furniture markers;
+- the collapsed Keep passage has a bidirectional `Se faufiler` interaction using
+  one reusable activator script, linked destination markers, a short fade, and
+  local `MoveTo`, without changing the rubble collision or navmesh;
+- a dead bandit and abandoned pickaxe provide environmental explanation for the
+  opening through the rubble;
+- `STRE_QUEST_HelgenInvestigation`, like the Alternate Start orchestration
+  quest, is explicitly excluded from generic quest-stage synchronization so its
+  CK stages cannot become shared campaign state;
+- the strict CK manifest now covers 63 expected STRE-owned records and rejects
+  unexpected master overrides; the current investigation slice passes that
+  strict audit.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -128,6 +145,11 @@ The current catalog uses `BuildVersion = 5`.
 - the New Game bootstrap and MQ101/post-Helgen world-state projection are
   implemented, but the neutral MQ102/MQ103 vanilla main-quest handoff remains
   unfinished;
+- the current Helgen investigation slice is still entered through a diagnostic
+  quest bootstrap; Valen does not yet start it and the four-day deadline is not
+  implemented;
+- rescue/liberation, `Freed`/`CapturedInKeep` projection, bandit occupation, and
+  the post-deadline prison flow remain unimplemented;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;

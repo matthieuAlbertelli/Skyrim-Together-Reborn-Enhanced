@@ -24,7 +24,14 @@
 - a required disconnect suspends progression and collective rollback restores
   every member from the same committed `CampaignCheckpoint`;
 - every roster member retains a native Skyrim `.ess` for local
-  Skyrim/Papyrus/quest runtime restoration; it is not shared-state authority.
+  Skyrim/Papyrus/quest runtime restoration; it is not shared-state authority;
+- before the four-day transition, Hadvar and Ralof are independently projected
+  as wounded survivors in the final `HelgenKeep01` cave section;
+- the recent-post-attack route keeps the validated collapsed rubble intact and
+  exposes a local bidirectional `Se faufiler` interaction through an opening
+  explained by a dead bandit and abandoned pickaxe;
+- `STRE_QUEST_HelgenInvestigation` is a local CK orchestration/projection quest
+  and is excluded from generic quest-stage synchronization.
 
 ## Persistence and checkpoints
 
@@ -51,10 +58,24 @@ Resolved:
 - New Game interception is the dedicated `MQQuickstart == 5` MQ101 stage-0
   branch before vanilla stage 10;
 - MQ101/post-Helgen projection now reaches the validated stage-1000/destroyed
-  Helgen boundary while leaving MQ102/MQ102A/MQ102B untouched.
+  Helgen boundary while leaving MQ102/MQ102A/MQ102B untouched;
+- the first pre-deadline investigation slice can project both Hadvar and Ralof
+  independently into wounded positions without choosing MQ102A or MQ102B;
+- the collapsed Keep route remains intact and the survivors are reachable
+  through the STRE-owned squeeze interaction rather than a navmesh/collision
+  rewrite.
 
 Remaining:
 
+- exact four-day deadline evaluation and the safe boundary for physically
+  changing Helgen while players may be nearby;
+- exact vanilla/STRE bandit-occupation projection after the deadline;
+- prison markers, AI packages, and release behavior for each unsaved survivor;
+- rescue interaction and the exact transition from `WoundedInCave` or
+  `CapturedInKeep` to `Freed`;
+- whether the current vanilla corpse ActorBase used for the rubble excavator
+  actually respawns after a relevant cell reset and whether it needs an
+  STRE-owned non-respawning replacement;
 - exact neutral MQ102/MQ103 handoff stages and quest-running/completion state;
 - Alduin marker/reference state and Riverwood/Whiterun dialogue dependencies;
 - neutral Civil War initialization without implicit Imperial/Stormcloak
