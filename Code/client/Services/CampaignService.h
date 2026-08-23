@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CampaignIdentityStore.h>
+#include <CampaignHelgenStateCache.h>
 #include <Structs/Campaign.h>
 
 #include <memory>
@@ -12,6 +13,7 @@ struct CampaignCommandResponse;
 struct DisconnectedEvent;
 struct NotifyCampaignSnapshot;
 struct NotifyCampaignLobbyState;
+struct NotifyCampaignHelgenState;
 struct TransportService;
 
 struct CampaignClientAdmission
@@ -48,9 +50,7 @@ struct CampaignClientLobbyState
 class CampaignService final
 {
 public:
-    CampaignService(
-        entt::dispatcher& aDispatcher,
-        TransportService& aTransport) noexcept;
+    CampaignService(entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept;
 
     [[nodiscard]] std::optional<TiltedPhoques::String>
     GetDurablePlayerIdForAuthentication() const noexcept;
@@ -94,6 +94,16 @@ public:
         std::uint64_t aExpectedRevision,
         const std::string& acMutationId = {}) noexcept;
 
+    [[nodiscard]] bool SignalHelgenInvestigationReady() noexcept;
+    [[nodiscard]] bool IsHelgenInvestigationStartAuthorized() const noexcept
+    {
+        return m_helgenState.IsInvestigationStartAuthorized();
+    }
+    [[nodiscard]] bool AreAllRequiredPlayersOutsideHelgen() const noexcept
+    {
+        return m_helgenState.AreAllRequiredPlayersOutside();
+    }
+
 private:
     [[nodiscard]] std::string GenerateMutationId() const;
     void OnCommandResponse(
@@ -102,6 +112,7 @@ private:
         const NotifyCampaignSnapshot& acNotification) noexcept;
     void OnLobbyState(
         const NotifyCampaignLobbyState& acNotification) noexcept;
+    void OnHelgenState(const NotifyCampaignHelgenState& acNotification) noexcept;
     void OnDisconnected(const DisconnectedEvent&) noexcept;
 
     TransportService& m_transport;
@@ -113,9 +124,11 @@ private:
     std::optional<CampaignSnapshotData> m_latestSnapshot;
     std::optional<CampaignClientCommandOutcome> m_lastCommandOutcome;
     std::optional<CampaignClientLobbyState> m_lobbyState;
+    CampaignHelgenStateCache m_helgenState;
 
     entt::scoped_connection m_responseConnection;
     entt::scoped_connection m_snapshotConnection;
     entt::scoped_connection m_lobbyStateConnection;
+    entt::scoped_connection m_helgenStateConnection;
     entt::scoped_connection m_disconnectedConnection;
 };

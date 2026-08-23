@@ -26,11 +26,13 @@ static_assert(kCampaignStartRequest == 65);
 static_assert(kCampaignSetReadyRequest == 66);
 static_assert(kCampaignLeaveRequest == 67);
 static_assert(kCampaignJoinByCodeRequest == 68);
+static_assert(kCampaignHelgenInvestigationReadyRequest == 69);
 static_assert(kNotifyCharacterBuildState == 63);
 static_assert(kNotifyWorldEntityManipulation == 64);
 static_assert(kCampaignCommandResponse == 65);
 static_assert(kNotifyCampaignSnapshot == 66);
 static_assert(kNotifyCampaignLobbyState == 67);
+static_assert(kNotifyCampaignHelgenState == 68);
 
 namespace
 {
@@ -57,13 +59,12 @@ template <class T> UniquePtr<T> RoundTripServer(const T& acMessage)
     REQUIRE(decoded->GetOpcode() == T::Opcode);
     return CastUnique<T>(std::move(decoded));
 }
-}
+} // namespace
 
 TEST_CASE("Authentication carries durable STRE PlayerId metadata", "[campaign.protocol]")
 {
     AuthenticationRequest request;
-    request.StrePlayerId =
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    request.StrePlayerId = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     const auto decoded = RoundTripClient(request);
     REQUIRE(decoded->StrePlayerId == request.StrePlayerId);
 }
@@ -132,6 +133,9 @@ TEST_CASE("Every campaign client command round-trips through the factory", "[cam
     REQUIRE(joinedByCode->MutationId == "mutation-code");
     REQUIRE(joinedByCode->DisplayName == joinByCode.DisplayName);
     REQUIRE(joinedByCode->IsValid());
+
+    CampaignHelgenInvestigationReadyRequest helgenReady;
+    REQUIRE(RoundTripClient(helgenReady));
 }
 
 TEST_CASE("Campaign response and public snapshot round-trip through the server factory", "[campaign.protocol]")
@@ -156,8 +160,7 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
 
     CampaignCommandResponse existingMember;
     existingMember.Operation = CampaignProtocolOperation::Join;
-    existingMember.Result =
-        CampaignProtocolResult::ExistingMembershipRequiresResume;
+    existingMember.Result = CampaignProtocolResult::ExistingMembershipRequiresResume;
     existingMember.MutationId = "mutation-join-new";
     existingMember.CampaignId = "campaign-1";
     existingMember.StateVersion = 4;
@@ -172,10 +175,8 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
     notification.Snapshot.RuntimeState = 1;
     notification.Snapshot.RosterSealed = true;
     notification.Snapshot.SessionManagerPlayerId = "player-1";
-    notification.Snapshot.Roster.push_back(
-        {"slot-01", "player-1", true, true});
-    notification.Snapshot.Roster.push_back(
-        {"slot-02", "player-2", false, true});
+    notification.Snapshot.Roster.push_back({"slot-01", "player-1", true, true});
+    notification.Snapshot.Roster.push_back({"slot-02", "player-2", false, true});
     const auto decodedSnapshot = RoundTripServer(notification);
     REQUIRE(decodedSnapshot->Snapshot == notification.Snapshot);
     REQUIRE(decodedSnapshot->IsValid());
@@ -198,23 +199,30 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
     REQUIRE_FALSE(decodedLobby->Members[1].Present);
     REQUIRE_FALSE(decodedLobby->CanStart);
     REQUIRE(decodedLobby->IsValid());
+
+    NotifyCampaignHelgenState helgen;
+    helgen.InvestigationStartAuthorized = true;
+    helgen.SpatialStatus = CampaignHelgenSpatialStatus::Known;
+    helgen.AllRequiredPlayersOutside = true;
+    const auto decodedHelgen = RoundTripServer(helgen);
+    REQUIRE(decodedHelgen->InvestigationStartAuthorized);
+    REQUIRE(decodedHelgen->SpatialStatus == CampaignHelgenSpatialStatus::Known);
+    REQUIRE(decodedHelgen->AllRequiredPlayersOutside);
+    REQUIRE(decodedHelgen->IsValid());
 }
 
 TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[campaign.protocol][robustness]")
 {
     Buffer oversizedIdentifier(256);
     Buffer::Writer oversizedIdentifierWriter(&oversizedIdentifier);
-    Serialization::WriteVarInt(
-        oversizedIdentifierWriter, kCampaignWireMaximumIdLength + 1);
+    Serialization::WriteVarInt(oversizedIdentifierWriter, kCampaignWireMaximumIdLength + 1);
     Buffer::Reader oversizedIdentifierReader(&oversizedIdentifier);
     String decodedIdentifier = "must-be-cleared";
-    REQUIRE_FALSE(ReadCampaignWireId(
-        oversizedIdentifierReader, decodedIdentifier));
+    REQUIRE_FALSE(ReadCampaignWireId(oversizedIdentifierReader, decodedIdentifier));
     REQUIRE(decodedIdentifier.empty());
 
     CampaignJoinRequest oversizedJoin;
-    oversizedJoin.CampaignId = String(
-        kCampaignWireMaximumIdLength + 1, 'x');
+    oversizedJoin.CampaignId = String(kCampaignWireMaximumIdLength + 1, 'x');
     oversizedJoin.MutationId = "mutation-join";
     REQUIRE_FALSE(RoundTripClient(oversizedJoin)->IsValid());
 
@@ -224,8 +232,7 @@ TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[c
     Buffer::Reader clientReader(&truncatedClient);
     auto clientMessage = ClientMessageFactory{}.Extract(clientReader);
     REQUIRE(clientMessage);
-    const auto ready = CastUnique<CampaignSetReadyRequest>(
-        std::move(clientMessage));
+    const auto ready = CastUnique<CampaignSetReadyRequest>(std::move(clientMessage));
     REQUIRE_FALSE(ready->IsValid());
 
     Buffer truncatedServer(8);
@@ -234,8 +241,7 @@ TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[c
     Buffer::Reader serverReader(&truncatedServer);
     auto serverMessage = ServerMessageFactory{}.Extract(serverReader);
     REQUIRE(serverMessage);
-    const auto snapshot = CastUnique<NotifyCampaignSnapshot>(
-        std::move(serverMessage));
+    const auto snapshot = CastUnique<NotifyCampaignSnapshot>(std::move(serverMessage));
     REQUIRE_FALSE(snapshot->IsValid());
 
     Buffer invalidOpcode(8);
@@ -249,8 +255,7 @@ TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[c
     oversized.Snapshot.RosterSealed = false;
     for (std::size_t index = 0; index < 11; ++index)
     {
-        oversized.Snapshot.Roster.push_back(
-            {"slot-x", "player-x", false, false});
+        oversized.Snapshot.Roster.push_back({"slot-x", "player-x", false, false});
     }
     REQUIRE_FALSE(RoundTripServer(oversized)->IsValid());
 

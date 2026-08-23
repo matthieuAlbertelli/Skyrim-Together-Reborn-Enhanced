@@ -1,6 +1,6 @@
 # Alternate Start — Creation Kit implementation
 
-> **Status: New Game/CK bootstrap, MQ101/post-Helgen projection, the wounded-survivor investigation slice, and standalone T+4 bandit occupation/capture are runtime-tested; the native campaign gate is automated-tested and manually validated on the Solo/two-player happy path; multiplayer Helgen validation, rescue/liberation, negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
+> **Status: New Game/CK bootstrap, MQ101/post-Helgen projection, the wounded-survivor investigation slice, and standalone T+4 are runtime-tested; the native campaign bootstrap and the multiplayer T+4 gate are automated-tested, while two-client Helgen validation, rescue/liberation, negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
 
 ## Versioned files
 
@@ -228,10 +228,38 @@ is per-player local traversal and is not shared campaign state.
 storytelling. The corpse currently uses a vanilla corpse ActorBase whose
 respawn behavior still requires a cell-reset regression test.
 
-`STRE_QUEST_HelgenInvestigation` is explicitly excluded from generic
-`QuestService` synchronization. Future multiplayer integration must synchronize
-canonical investigation/survivor/world-phase facts through the dedicated STRE
-campaign boundary and locally project them into CK/Papyrus.
+`STRE_QUEST_HelgenInvestigation` remains explicitly excluded from generic
+`QuestService` synchronization. The multiplayer vertical slice does not make
+quest stages or Helgen state persistent server authority. Instead, every local
+controller signals that `BeginInvestigation()` has run; once the campaign is
+`ACTIVE` and the exact sealed roster has signalled, the server broadcasts an
+ephemeral collective start authorization. Each client then records its local
+Skyrim time, whose calendar is already resynchronized by STR's
+`CalendarService`, and owns the relative T+4 timer in its native save.
+
+The cooperative presence gate is also ephemeral. The server evaluates a generic
+group spatial `NONE` condition from the existing `CellIdComponent` values and
+pushes a reliable cache update after the collective start and every player cell
+update. A missing roster member, an unknown cell, a non-`ACTIVE` campaign, or an
+unresolved footprint returns no authorization. Papyrus polls only the cache and
+never blocks the VM for a network response.
+
+The exact footprint was audited from Bethesda's installed `Skyrim.esm` by
+selecting `CELL` records whose `XLCN` is `HelgenLocation [00018A4A]`:
+
+```text
+Exterior: 000097ED HelgenExterior04, 000097EE ChargenExit,
+          0000980B HelgenExterior,   0000980C HelgenExterior05,
+          0000982A HelgenExterior02, 0000982B HelgenExterior06,
+          00009849 HelgenExterior03, 0000984A HelgenExterior07
+Interior: 00013A66 HelgenTorolfsMill,
+          00013A67 HelgenHomestead,
+          0005DE24 HelgenKeep01
+```
+
+All entries use stable `Skyrim.esm` plus local FormID identities. Exact cells
+cover the location contract, so no approximate exterior radius or grid range is
+used.
 
 The v1 post-deadline behavior is now fixed at the product level:
 
@@ -249,14 +277,18 @@ The v1 post-deadline behavior is now fixed at the product level:
   independently to `CapturedInKeep`; survivors already `Freed` or `Departed`
   never regress to captivity.
 
-The standalone v1 path is now implemented with `HelgenLocation [00018A4A]`
+The standalone v1 path is implemented with `HelgenLocation [00018A4A]`
 as the local presence predicate. `STRE_HelgenInvestigationController` stores
 `InvestigationStartGameTime`, arms the relative four-day deadline through
 `RegisterForSingleUpdateGameTime`, and refuses local campaign authority whenever
 `SkyrimTogetherUtils.IsConnected()` reports an active STR connection. If the
 standalone player is still inside `HelgenLocation` at the deadline, the
 controller enters `BanditOccupationPending` and rechecks presence every five
-real-time seconds until the location is clear.
+real-time seconds until the location is clear. While connected, the same
+controller instead waits for the collective start cache, keeps T+4 local, and
+commits only when the server's full-roster outside-Helgen cache is known and
+true. Once a campaign has been observed, disconnect cannot reactivate the solo
+authority path.
 
 `HelgenWorldPhase` is projected locally as:
 
@@ -304,10 +336,14 @@ are not implemented yet.
 
 Not implemented yet:
 
-- server-authoritative multiplayer ownership of the four-day deadline and
-  all-roster Helgen-presence predicate;
-- transport/snapshot/recovery of `HelgenWorldPhase` and survivor state through
-  the dedicated campaign adapter;
+- two-client runtime validation of the implemented collective start and
+  all-roster Helgen-presence gate. The cases where A exits while B remains,
+  the inverse order, both are already outside at T+4, and one member remains in
+  `HelgenKeep01` remain pending. The merged #71 gameplay bootstrap is now the
+  supported way to create, join, and start the sealed campaign for this
+  two-PC matrix. No Helgen runtime pass is claimed yet;
+- general coordinated checkpoint/recovery infrastructure; Helgen intentionally
+  relies on native saves and adds no dedicated persistent adapter state;
 - rescue/liberation interaction and physical `Freed`/`Departed` projections;
 - Valen-driven quest start;
 - neutral/Hadvar/Ralof MQ102 continuity.
@@ -332,11 +368,11 @@ The cell contains several navmesh fragments. Avoid relying on complex NPC pathfi
 
 ## Remaining implementation
 
-- server-authoritative four-day deadline and all-roster Helgen presence gate for
-  multiplayer, using the dedicated campaign-state boundary rather than CK quest
-  stages;
-- multiplayer projection/snapshot/recovery for the implemented Helgen world and
-  survivor states;
+- two-client runtime validation for both last-exit orders, the direct
+  already-outside-at-T+4 path, and `HelgenKeep01`, using the merged #71
+  gameplay bootstrap;
+- coordinated campaign checkpoint/recovery validation for the native local
+  Helgen projection;
 - rescue/liberation and the remaining survivor lifecycle projections;
 - neutral MQ102/MQ103 vanilla-continuity handoff and its Riverwood/Alduin/Civil
   War semantics;
@@ -344,7 +380,6 @@ The cell contains several navmesh fragments. Avoid relying on complex NPC pathfi
 - Valen, scenes, dialogue, and aliases;
 - real Departure/exit flow and main-quest resumption;
 - markers and placements for more players;
-- dedicated campaign adapter for authoritative shared investigation state;
 - automated Papyrus compilation.
 
 ## Audits
@@ -430,9 +465,27 @@ Standalone T+4 occupation slice validated on 23 August 2026:
   and survivors still in `WoundedInCave` move to their locked jail projections;
 - the strict CK record audit conforms with 67 expected STRE-owned records and no
   unexpected Skyrim-master override;
-- CK packaging passes with 17 managed files and no compiled PEX under
-  `Scripts/Source`; client build and TPTests remain green at 1511 assertions in
-  112 test cases.
+- CK packaging passes with 19 managed files and no compiled PEX under
+  `Scripts/Source`; client/server builds and TPTests remain green at 1794
+  assertions in 130 test cases.
+
+Multiplayer T+4 vertical slice implemented and automated-validated on 23 August
+2026:
+
+- `BeginInvestigation()` is not intrinsically collective, so an ephemeral
+  all-roster start barrier now establishes the common logical T+4 boundary;
+- server calendar resynchronization keeps the local Skyrim calendars aligned;
+- the server computes `NONE` over the exact sealed roster and exact Helgen cell
+  footprint, then pushes a non-blocking client cache on cell updates;
+- the generic spatial evaluator covers one, two, and N members, both exit
+  orders, interior/exterior cells, unknown position, incomplete roster, empty
+  footprint, and closed campaign gate;
+- protocol round trips cover the readiness request and Helgen cache
+  notification;
+- `SkyrimTogetherClient`, `SkyrimTogetherServer`, and TPTests build; all 1794
+  assertions in 130 test cases pass;
+- two-client in-game validation remains required before this slice can be
+  called runtime-validated.
 
 ## Local test
 

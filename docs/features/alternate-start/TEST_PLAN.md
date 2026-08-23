@@ -1,6 +1,6 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign Solo/two-player happy path passes while the remaining runtime matrices are pending**
+> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign Solo/two-player happy path passes, while the multiplayer T+4 path awaits two-client smoke validation**
 
 ## Completed checks
 
@@ -31,8 +31,8 @@
   prompt, fade, and local player transfer;
 - investigation quest exclusion from generic quest synchronization builds
   successfully;
-- TPTests pass with 1511 assertions in 112 test cases;
-- CK packaging audit passes with 17 managed files and zero compiled PEX files
+- TPTests pass with 1794 assertions in 130 test cases;
+- CK packaging audit passes with 19 managed files and zero compiled PEX files
   under `Scripts/Source`;
 - `git diff --check` passes for the current increment.
 
@@ -253,7 +253,7 @@ Validated on 23 August 2026:
   package, and have their selected vanilla jail doors closed and locked;
 - verify strict CK audit with 67 expected STRE-owned records and no unexpected
   master overrides, CK packaging with 17 managed files, client build, TPTests
-  (1511 assertions / 112 test cases), and `git diff --check`.
+  (1552 assertions / 116 test cases), and `git diff --check`.
 
 Still required for the T+4 slice:
 
@@ -266,12 +266,42 @@ Still required for the T+4 slice:
   `BanditOccupied`, then verify idempotent reprojection;
 - cell-reset regression for the bandit occupation, jail doors, survivor
   projection, and current rubble-excavator corpse;
-- repeat the defer rule with multiple connected players and verify occupation
-  waits until the last relevant roster member leaves;
-- verify server-authoritative multiplayer clients converge on the same canonical
-  occupation/survivor state without synchronizing raw CK quest stages;
-- verify snapshot/reconnect/recovery of the same state once the campaign adapter
-  path is implemented.
+- run the multiplayer vertical-slice matrix below;
+- verify collective checkpoint/recovery once the campaign recovery path is
+  implemented; Helgen has no separate state replay mechanism.
+
+## Multiplayer T+4 Helgen vertical slice
+
+Native and protocol automation validated on 23 August 2026:
+
+- exact sealed roster and `ACTIVE` gate are required;
+- readiness and spatial notification messages round-trip through their
+  factories;
+- the generic group evaluator passes 1-player, all 2-player inside/outside
+  combinations, N-player last-exit, exact interior/exterior, unknown-position,
+  missing-member, empty-footprint, and closed-gate cases;
+- client and server builds pass; TPTests pass 1794 assertions in 130 test cases.
+
+Two-client runtime validation is still required. The merged #71
+gameplay-facing bootstrap now supplies the supported Create/Join/Start path for
+bringing two real Skyrim clients into a sealed campaign. The following matrix
+is the next manual phase; none of its Helgen outcomes is claimed as passed yet:
+
+1. start the investigation on A and B, verify neither local T+4 clock arms until
+   both have crossed the collective start barrier;
+2. at T+4, move A outside while B remains in any exact Helgen cell and verify
+   both remain `BanditOccupationPending` with no physical occupation;
+3. move B outside and verify both clients call the existing local
+   `CommitBanditOccupation()` projection within the five-second convergence
+   interval;
+4. repeat with B leaving before A;
+5. repeat with both players already outside when T+4 arrives and verify direct
+   occupation on both;
+6. repeat with one player in `HelgenKeep01` and one in a Helgen exterior cell;
+7. disconnect either required member before commit and verify the remaining
+   client receives no progression authorization;
+8. verify `Freed` and `Departed` never become `CapturedInKeep`, and confirm no
+   `STRE_QUEST_HelgenInvestigation` stage packet is emitted.
 
 ## Tests still blocked by missing features
 

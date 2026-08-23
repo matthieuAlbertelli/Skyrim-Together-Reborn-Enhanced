@@ -10,15 +10,11 @@ namespace
 {
 bool Succeeded(CampaignProtocolResult aResult) noexcept
 {
-    return aResult == CampaignProtocolResult::Applied ||
-        aResult == CampaignProtocolResult::AcceptedNoOp ||
-        aResult == CampaignProtocolResult::IdempotentReplay;
+    return aResult == CampaignProtocolResult::Applied || aResult == CampaignProtocolResult::AcceptedNoOp || aResult == CampaignProtocolResult::IdempotentReplay;
 }
-}
+} // namespace
 
-CampaignService::CampaignService(
-    entt::dispatcher& aDispatcher,
-    TransportService& aTransport) noexcept
+CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
     : m_transport(aTransport)
     , m_responseConnection(aDispatcher.sink<CampaignCommandResponse>()
           .connect<&CampaignService::OnCommandResponse>(this))
@@ -26,19 +22,19 @@ CampaignService::CampaignService(
           .connect<&CampaignService::OnSnapshot>(this))
     , m_lobbyStateConnection(aDispatcher.sink<NotifyCampaignLobbyState>()
           .connect<&CampaignService::OnLobbyState>(this))
+    , m_helgenStateConnection(aDispatcher.sink<NotifyCampaignHelgenState>()
+          .connect<&CampaignService::OnHelgenState>(this))
     , m_disconnectedConnection(aDispatcher.sink<DisconnectedEvent>()
           .connect<&CampaignService::OnDisconnected>(this))
 {
-    auto directory =
-        STRE::Campaign::CampaignIdentityStore::ResolveDefaultDirectory();
+    auto directory = STRE::Campaign::CampaignIdentityStore::ResolveDefaultDirectory();
     if (!directory)
     {
         m_storageError = std::move(directory.Message);
         spdlog::error("[STRE][CampaignIdentity] {}", m_storageError);
         return;
     }
-    m_store = std::make_unique<STRE::Campaign::CampaignIdentityStore>(
-        std::move(directory.Value));
+    m_store = std::make_unique<STRE::Campaign::CampaignIdentityStore>(std::move(directory.Value));
     auto identity = m_store->LoadOrCreatePlayerId();
     if (!identity)
     {
@@ -55,12 +51,19 @@ CampaignService::CampaignService(
         return;
     }
     m_bindingCacheAvailable = true;
-    spdlog::info(
-        "[STRE][CampaignIdentity] durable local PlayerId loaded");
+    spdlog::info("[STRE][CampaignIdentity] durable local PlayerId loaded");
 }
 
-std::optional<TiltedPhoques::String>
-CampaignService::GetDurablePlayerIdForAuthentication() const noexcept
+bool CampaignService::SignalHelgenInvestigationReady() noexcept
+{
+    if (!m_admission)
+        return false;
+    CampaignHelgenInvestigationReadyRequest request;
+    (void)m_transport.Send(request);
+    return true;
+}
+
+std::optional<TiltedPhoques::String> CampaignService::GetDurablePlayerIdForAuthentication() const noexcept
 {
     if (!m_playerId)
         return std::nullopt;
@@ -81,8 +84,7 @@ std::string CampaignService::CreateCampaign(
     try
     {
         CampaignCreateRequest request;
-        const std::string mutation = acMutationId.empty()
-            ? GenerateMutationId() : acMutationId;
+        const std::string mutation = acMutationId.empty() ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
         TiltedPhoques::String displayName;
@@ -99,18 +101,14 @@ std::string CampaignService::CreateCampaign(
     }
 }
 
-std::string CampaignService::JoinCampaign(
-    const std::string& acCampaignId,
-    std::uint64_t aExpectedRevision,
-    const std::string& acMutationId) noexcept
+std::string CampaignService::JoinCampaign(const std::string& acCampaignId, std::uint64_t aExpectedRevision, const std::string& acMutationId) noexcept
 {
     if (!m_bindingCacheAvailable)
         return {};
     try
     {
         CampaignJoinRequest request;
-        const std::string mutation = acMutationId.empty()
-            ? GenerateMutationId() : acMutationId;
+        const std::string mutation = acMutationId.empty() ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
         request.CampaignId = acCampaignId.c_str();
@@ -174,28 +172,21 @@ bool CampaignService::ResumeCampaign(
     }
     if (!binding.Value)
     {
-        spdlog::error(
-            "[STRE][CampaignIdentity] no cached binding for campaign={}",
-            acCampaignId);
+        spdlog::error("[STRE][CampaignIdentity] no cached binding for campaign={}", acCampaignId);
         return false;
     }
     CampaignResumeRequest request;
     request.CampaignId = acCampaignId.c_str();
-    request.CharacterBindingId =
-        binding.Value->CharacterBindingId.c_str();
+    request.CharacterBindingId = binding.Value->CharacterBindingId.c_str();
     return m_transport.Send(request);
 }
 
-std::string CampaignService::StartCampaign(
-    const std::string& acCampaignId,
-    std::uint64_t aExpectedRevision,
-    const std::string& acMutationId) noexcept
+std::string CampaignService::StartCampaign(const std::string& acCampaignId, std::uint64_t aExpectedRevision, const std::string& acMutationId) noexcept
 {
     try
     {
         CampaignStartRequest request;
-        const std::string mutation = acMutationId.empty()
-            ? GenerateMutationId() : acMutationId;
+        const std::string mutation = acMutationId.empty() ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
         request.CampaignId = acCampaignId.c_str();
@@ -210,17 +201,12 @@ std::string CampaignService::StartCampaign(
     }
 }
 
-std::string CampaignService::SetReady(
-    const std::string& acCampaignId,
-    std::uint64_t aExpectedRevision,
-    bool aReady,
-    const std::string& acMutationId) noexcept
+std::string CampaignService::SetReady(const std::string& acCampaignId, std::uint64_t aExpectedRevision, bool aReady, const std::string& acMutationId) noexcept
 {
     try
     {
         CampaignSetReadyRequest request;
-        const std::string mutation = acMutationId.empty()
-            ? GenerateMutationId() : acMutationId;
+        const std::string mutation = acMutationId.empty() ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
         request.CampaignId = acCampaignId.c_str();
@@ -236,16 +222,12 @@ std::string CampaignService::SetReady(
     }
 }
 
-std::string CampaignService::LeaveCampaign(
-    const std::string& acCampaignId,
-    std::uint64_t aExpectedRevision,
-    const std::string& acMutationId) noexcept
+std::string CampaignService::LeaveCampaign(const std::string& acCampaignId, std::uint64_t aExpectedRevision, const std::string& acMutationId) noexcept
 {
     try
     {
         CampaignLeaveRequest request;
-        const std::string mutation = acMutationId.empty()
-            ? GenerateMutationId() : acMutationId;
+        const std::string mutation = acMutationId.empty() ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
         request.CampaignId = acCampaignId.c_str();
@@ -260,13 +242,11 @@ std::string CampaignService::LeaveCampaign(
     }
 }
 
-void CampaignService::OnCommandResponse(
-    const CampaignCommandResponse& acResponse) noexcept
+void CampaignService::OnCommandResponse(const CampaignCommandResponse& acResponse) noexcept
 {
     if (!acResponse.IsValid())
     {
-        spdlog::error(
-            "[STRE][CampaignProtocol] ignored malformed command response");
+        spdlog::error("[STRE][CampaignProtocol] ignored malformed command response");
         return;
     }
     m_lastCommandOutcome = CampaignClientCommandOutcome{
@@ -279,10 +259,8 @@ void CampaignService::OnCommandResponse(
     if (!Succeeded(acResponse.Result))
     {
         spdlog::warn(
-            "[STRE][CampaignProtocol] command rejected operation={} result={} campaign={} revision={}",
-            static_cast<unsigned>(acResponse.Operation),
-            static_cast<unsigned>(acResponse.Result),
-            acResponse.CampaignId.c_str(), acResponse.StateVersion);
+            "[STRE][CampaignProtocol] command rejected operation={} result={} campaign={} revision={}", static_cast<unsigned>(acResponse.Operation),
+            static_cast<unsigned>(acResponse.Result), acResponse.CampaignId.c_str(), acResponse.StateVersion);
         return;
     }
 
@@ -290,18 +268,16 @@ void CampaignService::OnCommandResponse(
          acResponse.Operation == CampaignProtocolOperation::Join ||
          acResponse.Operation == CampaignProtocolOperation::JoinByCode ||
          acResponse.Operation == CampaignProtocolOperation::Resume) &&
-        !acResponse.CampaignSlotId.empty() &&
-        !acResponse.CharacterBindingId.empty())
+        !acResponse.CampaignSlotId.empty() && !acResponse.CharacterBindingId.empty())
     {
-        CampaignClientAdmission admission{
-            acResponse.CampaignId.c_str(),
-            acResponse.CampaignSlotId.c_str(),
-            acResponse.CharacterBindingId.c_str()};
+        CampaignClientAdmission admission{acResponse.CampaignId.c_str(), acResponse.CampaignSlotId.c_str(), acResponse.CharacterBindingId.c_str()};
+        if (!m_admission || m_admission->CampaignId != admission.CampaignId)
+        {
+            m_helgenState.Reset();
+        }
         if (m_store)
         {
-            const auto saved = m_store->SaveBinding(
-                {admission.CampaignId, admission.CampaignSlotId,
-                 admission.CharacterBindingId});
+            const auto saved = m_store->SaveBinding({admission.CampaignId, admission.CampaignSlotId, admission.CharacterBindingId});
             if (!saved)
             {
                 m_storageError = saved.Message;
@@ -316,8 +292,7 @@ void CampaignService::OnCommandResponse(
     {
         if (m_store)
         {
-            const auto removed = m_store->RemoveBinding(
-                acResponse.CampaignId.c_str());
+            const auto removed = m_store->RemoveBinding(acResponse.CampaignId.c_str());
             if (!removed)
             {
                 m_storageError = removed.Message;
@@ -328,21 +303,18 @@ void CampaignService::OnCommandResponse(
         m_admission.reset();
         m_latestSnapshot.reset();
         m_lobbyState.reset();
+        m_helgenState.Reset();
     }
 }
 
-void CampaignService::OnSnapshot(
-    const NotifyCampaignSnapshot& acNotification) noexcept
+void CampaignService::OnSnapshot(const NotifyCampaignSnapshot& acNotification) noexcept
 {
     if (!acNotification.IsValid())
     {
-        spdlog::error(
-            "[STRE][CampaignProtocol] ignored malformed campaign snapshot");
+        spdlog::error("[STRE][CampaignProtocol] ignored malformed campaign snapshot");
         return;
     }
-    if (m_latestSnapshot &&
-        m_latestSnapshot->CampaignId == acNotification.Snapshot.CampaignId &&
-        m_latestSnapshot->StateVersion > acNotification.Snapshot.StateVersion)
+    if (m_latestSnapshot && m_latestSnapshot->CampaignId == acNotification.Snapshot.CampaignId && m_latestSnapshot->StateVersion > acNotification.Snapshot.StateVersion)
     {
         return;
     }
@@ -383,10 +355,19 @@ void CampaignService::OnLobbyState(
     m_lobbyState = std::move(state);
 }
 
+void CampaignService::OnHelgenState(const NotifyCampaignHelgenState& acNotification) noexcept
+{
+    if (!acNotification.IsValid() || !m_admission)
+        return;
+
+    m_helgenState.Apply(acNotification.InvestigationStartAuthorized, acNotification.SpatialStatus == CampaignHelgenSpatialStatus::Known, acNotification.AllRequiredPlayersOutside);
+}
+
 void CampaignService::OnDisconnected(const DisconnectedEvent&) noexcept
 {
     m_admission.reset();
     m_latestSnapshot.reset();
     m_lastCommandOutcome.reset();
     m_lobbyState.reset();
+    m_helgenState.Reset();
 }

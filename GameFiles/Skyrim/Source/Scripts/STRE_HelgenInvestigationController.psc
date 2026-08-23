@@ -53,6 +53,8 @@ Location Property HelgenLocation Auto
 
 Int InvestigationState = 0
 Float InvestigationStartGameTime = -1.0
+Bool MultiplayerCampaignObserved = False
+Bool MultiplayerDeadlineArmed = False
 
 Int Property HadvarState = 0 Auto Conditional
 Int Property RalofState = 0 Auto Conditional
@@ -86,17 +88,14 @@ Function BeginInvestigation()
     ProjectHadvarState()
     ProjectRalofState()
 
-    ; In standalone Skyrim, this quest owns the relative T+4 deadline.
-    ; While connected to STR, Papyrus never makes the campaign transition.
+    ; Standalone uses the local start immediately. Connected campaigns first
+    ; wait for the exact sealed roster to cross the ephemeral start barrier.
     ArmStandaloneBanditOccupationDeadline()
 
 EndFunction
 
 ; ============================================================================
-; Standalone T+4 authority
-;
-; The multiplayer campaign adapter/server owns this transition while connected.
-; The local Papyrus timer exists only so STRE_AlternateStart remains standalone.
+; Standalone and connected T+4 scheduling
 ; ============================================================================
 
 Function ArmStandaloneBanditOccupationDeadline()
@@ -111,7 +110,7 @@ Function ArmStandaloneBanditOccupationDeadline()
     EndIf
 
     If SkyrimTogetherUtils.IsConnected()
-        Debug.Trace("[STRE][HelgenInvestigation] Connected to STR: standalone T+4 authority disabled")
+        ArmConnectedBanditOccupationDeadline()
         Return
     EndIf
 
@@ -129,12 +128,28 @@ Function ArmStandaloneBanditOccupationDeadline()
 
 EndFunction
 
+Function ArmConnectedBanditOccupationDeadline()
+
+    If InvestigationState != 1 || HelgenWorldPhase == 2
+        Return
+    EndIf
+
+    UnregisterForUpdateGameTime()
+    If SkyrimTogetherUtils.SignalHelgenInvestigationReady()
+        MultiplayerCampaignObserved = True
+    EndIf
+    UnregisterForUpdate()
+    RegisterForSingleUpdate(1.0)
+
+EndFunction
+
 Event OnUpdateGameTime()
 
     ; A timer may have been armed before the player connected. Never let that
     ; stale local registration become campaign authority while online.
     If SkyrimTogetherUtils.IsConnected()
-        Debug.Trace("[STRE][HelgenInvestigation] Standalone T+4 update ignored while connected to STR")
+        Debug.Trace("[STRE][HelgenInvestigation] Switching stale standalone timer to connected campaign gate")
+        ArmConnectedBanditOccupationDeadline()
         Return
     EndIf
 
@@ -199,14 +214,23 @@ EndFunction
 
 Event OnUpdate()
 
-    If HelgenWorldPhase != 1
+    If InvestigationState != 1 || HelgenWorldPhase == 2
         Return
     EndIf
 
-    ; Do not mutate campaign state online. Keep only a lightweight watcher so
-    ; standalone fallback can resume if this save is later disconnected.
     If SkyrimTogetherUtils.IsConnected()
+        EvaluateConnectedBanditOccupationDeadline()
+        Return
+    EndIf
+
+    ; A campaign save cannot become standalone authority during a disconnect.
+    ; Campaign v1 fences progression until collective checkpoint recovery.
+    If MultiplayerCampaignObserved
         ArmStandalonePendingPresenceCheck()
+        Return
+    EndIf
+
+    If HelgenWorldPhase != 1
         Return
     EndIf
 
@@ -218,11 +242,50 @@ Event OnUpdate()
 
 EndEvent
 
+Function EvaluateConnectedBanditOccupationDeadline()
+
+    If SkyrimTogetherUtils.SignalHelgenInvestigationReady()
+        MultiplayerCampaignObserved = True
+    EndIf
+
+    If !SkyrimTogetherUtils.IsHelgenInvestigationStartAuthorized()
+        ArmStandalonePendingPresenceCheck()
+        Return
+    EndIf
+
+    If !MultiplayerDeadlineArmed
+        InvestigationStartGameTime = Utility.GetCurrentGameTime()
+        MultiplayerDeadlineArmed = True
+        Debug.Trace("[STRE][HelgenInvestigation] Collective investigation T+4 start armed at game time " + InvestigationStartGameTime)
+    EndIf
+
+    Float remainingDays = (InvestigationStartGameTime + 4.0) - Utility.GetCurrentGameTime()
+
+    If remainingDays > 0.0
+        ArmStandalonePendingPresenceCheck()
+        Return
+    EndIf
+
+    Bool allRequiredPlayersOutside = SkyrimTogetherUtils.AreAllRequiredPlayersOutsideHelgen()
+
+    If HelgenWorldPhase == 0
+        Debug.Trace("[STRE][HelgenInvestigation] Collective T+4 reached; all required players outside = " + allRequiredPlayersOutside)
+    EndIf
+
+    If allRequiredPlayersOutside
+        CommitBanditOccupation()
+    Else
+        MarkBanditOccupationPending()
+        ArmStandalonePendingPresenceCheck()
+    EndIf
+
+EndFunction
+
 ; ============================================================================
 ; Bandit occupation state transition
 ;
-; In multiplayer the authoritative campaign layer calls these transitions.
-; In standalone Skyrim the T+4 fallback above calls them locally.
+; In multiplayer each client calls these transitions locally only after the
+; cached server predicate authorizes them. Standalone uses the local T+4 gate.
 ; ============================================================================
 
 Function MarkBanditOccupationPending()

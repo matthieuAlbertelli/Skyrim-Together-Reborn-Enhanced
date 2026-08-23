@@ -57,6 +57,8 @@ void PlayerService::HandleGridCellShift(const PacketEvent<ShiftGridCellRequest>&
     CellIdComponent cell = CellIdComponent{message.PlayerCell, message.WorldSpaceId, message.CenterCoords};
     pPlayer->SetCellComponent(cell);
 
+    m_world.GetCampaignProtocolService().OnPlayerLocationChanged(*pPlayer);
+
     m_world.GetDispatcher().trigger(PlayerLeaveCellEvent(oldCell));
 
     auto characterView = m_world.view<CellIdComponent, CharacterComponent, OwnerComponent>();
@@ -68,7 +70,9 @@ void PlayerService::HandleGridCellShift(const PacketEvent<ShiftGridCellRequest>&
         if (ownedComponent.GetOwner() == pPlayer)
             continue;
 
-        const auto cellIt = std::find_if(std::begin(message.Cells), std::end(message.Cells), [Cells = message.Cells, CharacterCell = characterCellComponent.Cell](auto playerCell) { return playerCell == CharacterCell; });
+        const auto cellIt = std::find_if(
+            std::begin(message.Cells), std::end(message.Cells),
+            [Cells = message.Cells, CharacterCell = characterCellComponent.Cell](auto playerCell) { return playerCell == CharacterCell; });
 
         if (cellIt == std::end(message.Cells))
         {
@@ -100,6 +104,8 @@ void PlayerService::HandleExteriorCellEnter(const PacketEvent<EnterExteriorCellR
 
         pPlayer->SetCellComponent(cell);
 
+        m_world.GetCampaignProtocolService().OnPlayerLocationChanged(*pPlayer);
+
         SendPlayerCellChanged(pPlayer);
     }
 }
@@ -114,6 +120,8 @@ void PlayerService::HandleInteriorCellEnter(const PacketEvent<EnterInteriorCellR
 
     auto cell = CellIdComponent{message.CellId, {}, {}};
     pPlayer->SetCellComponent(cell);
+
+    m_world.GetCampaignProtocolService().OnPlayerLocationChanged(*pPlayer);
 
     m_world.GetDispatcher().trigger(PlayerLeaveCellEvent(oldCell));
 

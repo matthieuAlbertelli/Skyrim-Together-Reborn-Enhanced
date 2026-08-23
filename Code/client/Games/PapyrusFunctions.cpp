@@ -34,4 +34,19 @@ bool IsConnected()
     return World::Get().GetTransport().IsConnected();
 }
 
+bool SignalHelgenInvestigationReady()
+{
+    return World::Get().GetCampaignService().SignalHelgenInvestigationReady();
+}
+
+bool IsHelgenInvestigationStartAuthorized()
+{
+    return World::Get().GetCampaignService().IsHelgenInvestigationStartAuthorized();
+}
+
+bool AreAllRequiredPlayersOutsideHelgen()
+{
+    return World::Get().GetCampaignService().AreAllRequiredPlayersOutsideHelgen();
+}
+
 } // namespace PapyrusFunctions

@@ -43,9 +43,10 @@
   `InvestigationStartGameTime`, uses `HelgenLocation [00018A4A]` as its local
   presence predicate, and defers through `BanditOccupationPending` until the
   player leaves;
-- connected clients explicitly decline local Papyrus authority through
-  `SkyrimTogetherUtils.IsConnected()`; multiplayer authority remains a campaign
-  adapter/server responsibility;
+- connected clients use an ephemeral exact-roster start barrier and a
+  server-evaluated outside-Helgen cache while retaining the T+4 timer and CK
+  projection locally; no Helgen-specific persistent server state is required by
+  the v1 checkpoint model;
 - the post-deadline physical projection reuses vanilla
   `PostHelgenEncountersMarker [000F8240]`, disables the vanilla pre-occupation
   bridge/debris references plus the temporary STRE squeeze activators, and does
@@ -89,11 +90,13 @@ Resolved:
 
 Remaining:
 
-- server-authoritative multiplayer ownership of the four-day deadline and the
-  all-roster predicate proving that no campaign player remains in the affected
-  Helgen footprint before occupation commits;
-- campaign adapter transport, snapshot, reconnect, and recovery semantics for
-  `HelgenWorldPhase`, Hadvar state, and Ralof state;
+- two-client runtime validation of the implemented ephemeral start barrier and
+  exact-roster outside-Helgen predicate, including both exit orders,
+  already-outside at T+4, and `HelgenKeep01`. It remains pending, with the
+  merged #71 gameplay bootstrap now providing the supported two-PC
+  Create/Join/Start precondition. No Helgen runtime result is recorded yet;
+- coordinated checkpoint/recovery validation of the local native Helgen state
+  once the general campaign recovery path exists;
 - release behavior for each captured survivor and the rescue interaction from
   `WoundedInCave` or `CapturedInKeep` to `Freed`;
 - physical `Freed` and `Departed` projections and their idempotent recovery;

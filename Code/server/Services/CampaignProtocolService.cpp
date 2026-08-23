@@ -6,9 +6,13 @@
 #include <Events/PlayerLeaveEvent.h>
 #include <Messages/CampaignMessages.h>
 #include <Messages/CampaignRequests.h>
+#include <Components.h>
+#include <GroupSpatialCondition.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <cstring>
 #include <utility>
 
 using namespace STRE::Campaign;
@@ -28,76 +32,119 @@ std::string FallbackDisplayName(std::string_view acDisplayName) noexcept
     }
     return "Player";
 }
+
+constexpr std::array<std::uint32_t, 11> kHelgenCellLocalFormIds{
+    0x000097ED, // HelgenExterior04
+    0x000097EE, // ChargenExit
+    0x0000980B, // HelgenExterior
+    0x0000980C, // HelgenExterior05
+    0x0000982A, // HelgenExterior02
+    0x0000982B, // HelgenExterior06
+    0x00009849, // HelgenExterior03
+    0x0000984A, // HelgenExterior07
+    0x00013A66, // HelgenTorolfsMill
+    0x00013A67, // HelgenHomestead
+    0x0005DE24  // HelgenKeep01
+};
+
+std::vector<GameId> BuildHelgenFootprint(const World& acWorld)
+{
+    const ModsComponent& mods = acWorld.ctx().at<ModsComponent>();
+    const auto findSkyrim = [](const auto& acMods) -> std::optional<std::uint32_t>
+    {
+        for (const auto& [name, entry] : acMods)
+        {
+            if (std::strcmp(name.c_str(), "Skyrim.esm") == 0)
+                return entry.id;
+        }
+        return std::nullopt;
+    };
+
+    std::optional<std::uint32_t> modId = findSkyrim(mods.GetStandardMods());
+    if (!modId)
+        modId = findSkyrim(mods.GetLiteMods());
+    if (!modId)
+        return {};
+
+    std::vector<GameId> footprint;
+    footprint.reserve(kHelgenCellLocalFormIds.size());
+    for (std::uint32_t localFormId : kHelgenCellLocalFormIds)
+        footprint.emplace_back(*modId, localFormId);
+    return footprint;
 }
 
-CampaignProtocolService::CampaignProtocolService(
-    World& aWorld,
-    entt::dispatcher& aDispatcher) noexcept
+CampaignHelgenSpatialStatus ToWireStatus(STRE::Spatial::EvaluationStatus aStatus) noexcept
+{
+    using STRE::Spatial::EvaluationStatus;
+    switch (aStatus)
+    {
+    case EvaluationStatus::Known: return CampaignHelgenSpatialStatus::Known;
+    case EvaluationStatus::GateClosed: return CampaignHelgenSpatialStatus::GateClosed;
+    case EvaluationStatus::EmptyFootprint: return CampaignHelgenSpatialStatus::EmptyFootprint;
+    case EvaluationStatus::IncompleteRoster: return CampaignHelgenSpatialStatus::IncompleteRoster;
+    case EvaluationStatus::UnknownPosition: return CampaignHelgenSpatialStatus::UnknownPosition;
+    }
+    return CampaignHelgenSpatialStatus::GateClosed;
+}
+} // namespace
+
+CampaignProtocolService::CampaignProtocolService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
     : m_world(aWorld)
     , m_admission(GameServer::Get()->GetCampaignRuntime())
-    , m_createConnection(aDispatcher.sink<PacketEvent<CampaignCreateRequest>>()
-          .connect<&CampaignProtocolService::OnCreate>(this))
-    , m_joinConnection(aDispatcher.sink<PacketEvent<CampaignJoinRequest>>()
-          .connect<&CampaignProtocolService::OnJoin>(this))
-    , m_resumeConnection(aDispatcher.sink<PacketEvent<CampaignResumeRequest>>()
-          .connect<&CampaignProtocolService::OnResume>(this))
-    , m_startConnection(aDispatcher.sink<PacketEvent<CampaignStartRequest>>()
-          .connect<&CampaignProtocolService::OnStart>(this))
-    , m_readyConnection(aDispatcher.sink<PacketEvent<CampaignSetReadyRequest>>()
-          .connect<&CampaignProtocolService::OnSetReady>(this))
-    , m_leaveConnection(aDispatcher.sink<PacketEvent<CampaignLeaveRequest>>()
-          .connect<&CampaignProtocolService::OnLeave>(this))
-    , m_joinByCodeConnection(
-          aDispatcher.sink<PacketEvent<CampaignJoinByCodeRequest>>()
-              .connect<&CampaignProtocolService::OnJoinByCode>(this))
-    , m_playerLeaveConnection(aDispatcher.sink<PlayerLeaveEvent>()
-          .connect<&CampaignProtocolService::OnPlayerLeave>(this))
+    , m_createConnection(aDispatcher.sink<PacketEvent<CampaignCreateRequest>>().connect<&CampaignProtocolService::OnCreate>(this))
+    , m_joinConnection(aDispatcher.sink<PacketEvent<CampaignJoinRequest>>().connect<&CampaignProtocolService::OnJoin>(this))
+    , m_resumeConnection(aDispatcher.sink<PacketEvent<CampaignResumeRequest>>().connect<&CampaignProtocolService::OnResume>(this))
+    , m_startConnection(aDispatcher.sink<PacketEvent<CampaignStartRequest>>().connect<&CampaignProtocolService::OnStart>(this))
+    , m_readyConnection(aDispatcher.sink<PacketEvent<CampaignSetReadyRequest>>().connect<&CampaignProtocolService::OnSetReady>(this))
+    , m_leaveConnection(aDispatcher.sink<PacketEvent<CampaignLeaveRequest>>().connect<&CampaignProtocolService::OnLeave>(this))
+    , m_joinByCodeConnection(aDispatcher.sink<PacketEvent<CampaignJoinByCodeRequest>>().connect<&CampaignProtocolService::OnJoinByCode>(this))
+    , m_helgenReadyConnection(aDispatcher.sink<PacketEvent<CampaignHelgenInvestigationReadyRequest>>().connect<&CampaignProtocolService::OnHelgenInvestigationReady>(this))
+    , m_playerLeaveConnection(aDispatcher.sink<PlayerLeaveEvent>().connect<&CampaignProtocolService::OnPlayerLeave>(this))
 {
 }
 
-CampaignConnectionHandle CampaignProtocolService::ToHandle(
-    const Player& acPlayer) noexcept
+void CampaignProtocolService::OnPlayerLocationChanged(const Player& acPlayer) noexcept
+{
+    const CampaignAdmissionRecord* const pAdmission = GetAdmission(acPlayer);
+    if (!pAdmission || !pAdmission->AdmittedIdentity)
+        return;
+
+    const CampaignId& campaign = pAdmission->AdmittedIdentity->Campaign;
+    if (m_helgenStartedCampaigns.contains(campaign.Value))
+        BroadcastHelgenState(campaign);
+}
+
+CampaignConnectionHandle CampaignProtocolService::ToHandle(const Player& acPlayer) noexcept
 {
     return static_cast<CampaignConnectionHandle>(acPlayer.GetId());
 }
 
-CampaignConnectionRegistration
-CampaignProtocolService::RegisterAuthenticatedPlayer(
-    Player& aPlayer,
-    const std::string& acDurablePlayerId) noexcept
+CampaignConnectionRegistration CampaignProtocolService::RegisterAuthenticatedPlayer(Player& aPlayer, const std::string& acDurablePlayerId) noexcept
 {
-    return m_admission.RegisterConnection(
-        ToHandle(aPlayer), acDurablePlayerId);
+    return m_admission.RegisterConnection(ToHandle(aPlayer), acDurablePlayerId);
 }
 
-void CampaignProtocolService::UnregisterAuthenticatedPlayer(
-    Player& aPlayer) noexcept
+void CampaignProtocolService::UnregisterAuthenticatedPlayer(Player& aPlayer) noexcept
 {
     (void)m_admission.Disconnect(ToHandle(aPlayer));
 }
 
-const CampaignAdmissionRecord* CampaignProtocolService::GetAdmission(
-    const Player& acPlayer) const noexcept
+const CampaignAdmissionRecord* CampaignProtocolService::GetAdmission(const Player& acPlayer) const noexcept
 {
     return m_admission.FindConnection(ToHandle(acPlayer));
 }
 
-bool CampaignProtocolService::SharesCampaignParty(
-    const Player& acPlayer,
-    const CampaignId& acCampaign,
-    bool aRequireCompleteRoster) noexcept
+bool CampaignProtocolService::SharesCampaignParty(const Player& acPlayer, const CampaignId& acCampaign, bool aRequireCompleteRoster) noexcept
 {
     const auto partyId = acPlayer.GetParty().JoinedPartyId;
     if (!partyId)
         return false;
 
     std::size_t matchingPlayers = 0;
-    const std::vector<CampaignConnectionHandle> connections =
-        m_admission.GetAdmittedConnections(acCampaign);
+    const std::vector<CampaignConnectionHandle> connections = m_admission.GetAdmittedConnections(acCampaign);
     for (CampaignConnectionHandle connection : connections)
     {
-        const auto* const pMember = m_world.GetPlayerManager().GetById(
-            static_cast<std::uint32_t>(connection));
+        const auto* const pMember = m_world.GetPlayerManager().GetById(static_cast<std::uint32_t>(connection));
         if (!pMember || pMember->GetParty().JoinedPartyId != partyId)
             return false;
         ++matchingPlayers;
@@ -105,8 +152,7 @@ bool CampaignProtocolService::SharesCampaignParty(
 
     if (aRequireCompleteRoster)
     {
-        const std::optional<CampaignSnapshotData> snapshot =
-            m_admission.BuildSnapshot(acCampaign);
+        const std::optional<CampaignSnapshotData> snapshot = m_admission.BuildSnapshot(acCampaign);
         if (!snapshot || snapshot->Roster.size() != matchingPlayers)
             return false;
         for (const CampaignPublicSlotData& slot : snapshot->Roster)
@@ -122,9 +168,7 @@ bool CampaignProtocolService::SharesCampaignParty(
     return matchingPlayers > 0;
 }
 
-void CampaignProtocolService::SendResult(
-    Player& aPlayer,
-    const CommandResult& acResult) const noexcept
+void CampaignProtocolService::SendResult(Player& aPlayer, const CommandResult& acResult) const noexcept
 {
     CampaignCommandResponse response;
     response.Operation = acResult.Operation;
@@ -138,17 +182,14 @@ void CampaignProtocolService::SendResult(
     aPlayer.Send(response);
 }
 
-void CampaignProtocolService::BroadcastSnapshot(
-    const CampaignSnapshotData& acSnapshot) const noexcept
+void CampaignProtocolService::BroadcastSnapshot(const CampaignSnapshotData& acSnapshot) const noexcept
 {
     NotifyCampaignSnapshot notification;
     notification.Snapshot = acSnapshot;
-    const auto connections = m_admission.GetAdmittedConnections(
-        CampaignId{acSnapshot.CampaignId.c_str()});
+    const auto connections = m_admission.GetAdmittedConnections(CampaignId{acSnapshot.CampaignId.c_str()});
     for (CampaignConnectionHandle connection : connections)
     {
-        auto* const pPlayer = m_world.GetPlayerManager().GetById(
-            static_cast<std::uint32_t>(connection));
+        auto* const pPlayer = m_world.GetPlayerManager().GetById(static_cast<std::uint32_t>(connection));
         if (pPlayer)
             pPlayer->Send(notification);
     }
@@ -215,11 +256,8 @@ void CampaignProtocolService::Finish(
     const auto* const pAdmission = GetAdmission(aPlayer);
     const char* const pLevel = aResult.Succeeded() ? "accepted" : "rejected";
     spdlog::info(
-        "[STRE][CampaignProtocol] command={} operation={} result={} transientPlayer={} durablePlayer={} campaign={} revision={}",
-        pLevel, static_cast<unsigned>(aResult.Operation),
-        static_cast<unsigned>(aResult.Result), aPlayer.GetId(),
-        pAdmission ? pAdmission->Player.Value : "unregistered",
-        aResult.CampaignId, aResult.Version);
+        "[STRE][CampaignProtocol] command={} operation={} result={} transientPlayer={} durablePlayer={} campaign={} revision={}", pLevel, static_cast<unsigned>(aResult.Operation),
+        static_cast<unsigned>(aResult.Result), aPlayer.GetId(), pAdmission ? pAdmission->Player.Value : "unregistered", aResult.CampaignId, aResult.Version);
     SendResult(aPlayer, aResult);
     if (aResult.Snapshot)
     {
@@ -228,8 +266,7 @@ void CampaignProtocolService::Finish(
     }
 }
 
-void CampaignProtocolService::OnCreate(
-    const PacketEvent<CampaignCreateRequest>& acPacket) noexcept
+void CampaignProtocolService::OnCreate(const PacketEvent<CampaignCreateRequest>& acPacket) noexcept
 {
     TiltedPhoques::String displayName;
     if (!acPacket.Packet.IsValid() ||
@@ -238,10 +275,7 @@ void CampaignProtocolService::OnCreate(
                 acPacket.Packet.DisplayName.size()),
             displayName))
     {
-        Finish(*acPacket.pPlayer,
-            {CampaignProtocolOperation::Create,
-             CampaignProtocolResult::InvalidRequest},
-            acPacket.Packet.MutationId.c_str());
+        Finish(*acPacket.pPlayer, {CampaignProtocolOperation::Create, CampaignProtocolResult::InvalidRequest}, acPacket.Packet.MutationId.c_str());
         return;
     }
     const std::optional<PartyService::CampaignLeaderParty> leaderParty =
@@ -310,23 +344,19 @@ void CampaignProtocolService::OnCreate(
         acPacket.Packet.MutationId.c_str());
 }
 
-void CampaignProtocolService::OnJoin(
-    const PacketEvent<CampaignJoinRequest>& acPacket) noexcept
+void CampaignProtocolService::OnJoin(const PacketEvent<CampaignJoinRequest>& acPacket) noexcept
 {
     if (!acPacket.Packet.IsValid())
     {
-        Finish(*acPacket.pPlayer,
-            {CampaignProtocolOperation::Join,
-             CampaignProtocolResult::InvalidRequest},
-            acPacket.Packet.MutationId.c_str());
+        Finish(*acPacket.pPlayer, {CampaignProtocolOperation::Join, CampaignProtocolResult::InvalidRequest}, acPacket.Packet.MutationId.c_str());
         return;
     }
     const CampaignId campaign{acPacket.Packet.CampaignId.c_str()};
-    Finish(*acPacket.pPlayer, m_admission.JoinCampaign(
-        ToHandle(*acPacket.pPlayer), campaign.Value,
-        acPacket.Packet.MutationId.c_str(),
-        acPacket.Packet.ExpectedRevision,
-        SharesCampaignParty(*acPacket.pPlayer, campaign, false)),
+    Finish(
+        *acPacket.pPlayer,
+        m_admission.JoinCampaign(
+            ToHandle(*acPacket.pPlayer), campaign.Value, acPacket.Packet.MutationId.c_str(), acPacket.Packet.ExpectedRevision,
+            SharesCampaignParty(*acPacket.pPlayer, campaign, false)),
         acPacket.Packet.MutationId.c_str());
 }
 
@@ -607,15 +637,11 @@ void CampaignProtocolService::OnResume(
     Finish(player, std::move(result));
 }
 
-void CampaignProtocolService::OnStart(
-    const PacketEvent<CampaignStartRequest>& acPacket) noexcept
+void CampaignProtocolService::OnStart(const PacketEvent<CampaignStartRequest>& acPacket) noexcept
 {
     if (!acPacket.Packet.IsValid())
     {
-        Finish(*acPacket.pPlayer,
-            {CampaignProtocolOperation::Start,
-             CampaignProtocolResult::InvalidRequest},
-            acPacket.Packet.MutationId.c_str());
+        Finish(*acPacket.pPlayer, {CampaignProtocolOperation::Start, CampaignProtocolResult::InvalidRequest}, acPacket.Packet.MutationId.c_str());
         return;
     }
     const CampaignId campaign{acPacket.Packet.CampaignId.c_str()};
@@ -631,33 +657,25 @@ void CampaignProtocolService::OnStart(
         acPacket.Packet.MutationId.c_str());
 }
 
-void CampaignProtocolService::OnSetReady(
-    const PacketEvent<CampaignSetReadyRequest>& acPacket) noexcept
+void CampaignProtocolService::OnSetReady(const PacketEvent<CampaignSetReadyRequest>& acPacket) noexcept
 {
     if (!acPacket.Packet.IsValid())
     {
-        Finish(*acPacket.pPlayer,
-            {CampaignProtocolOperation::SetReady,
-             CampaignProtocolResult::InvalidRequest},
-            acPacket.Packet.MutationId.c_str());
+        Finish(*acPacket.pPlayer, {CampaignProtocolOperation::SetReady, CampaignProtocolResult::InvalidRequest}, acPacket.Packet.MutationId.c_str());
         return;
     }
-    Finish(*acPacket.pPlayer, m_admission.SetReady(
-        ToHandle(*acPacket.pPlayer), acPacket.Packet.CampaignId.c_str(),
-        acPacket.Packet.MutationId.c_str(),
-        acPacket.Packet.ExpectedRevision, acPacket.Packet.Ready),
+    Finish(
+        *acPacket.pPlayer,
+        m_admission.SetReady(
+            ToHandle(*acPacket.pPlayer), acPacket.Packet.CampaignId.c_str(), acPacket.Packet.MutationId.c_str(), acPacket.Packet.ExpectedRevision, acPacket.Packet.Ready),
         acPacket.Packet.MutationId.c_str());
 }
 
-void CampaignProtocolService::OnLeave(
-    const PacketEvent<CampaignLeaveRequest>& acPacket) noexcept
+void CampaignProtocolService::OnLeave(const PacketEvent<CampaignLeaveRequest>& acPacket) noexcept
 {
     if (!acPacket.Packet.IsValid())
     {
-        Finish(*acPacket.pPlayer,
-            {CampaignProtocolOperation::Leave,
-             CampaignProtocolResult::InvalidRequest},
-            acPacket.Packet.MutationId.c_str());
+        Finish(*acPacket.pPlayer, {CampaignProtocolOperation::Leave, CampaignProtocolResult::InvalidRequest}, acPacket.Packet.MutationId.c_str());
         return;
     }
     const CampaignAdmissionRecord* const pAdmission =
@@ -678,23 +696,117 @@ void CampaignProtocolService::OnLeave(
         acPacket.Packet.MutationId.c_str());
 }
 
-void CampaignProtocolService::OnPlayerLeave(
-    const PlayerLeaveEvent& acEvent) noexcept
+void CampaignProtocolService::OnHelgenInvestigationReady(const PacketEvent<CampaignHelgenInvestigationReadyRequest>& acPacket) noexcept
+{
+    Player& player = *acPacket.pPlayer;
+    const CampaignAdmissionRecord* const pAdmission = GetAdmission(player);
+    if (!pAdmission || !pAdmission->AdmittedIdentity)
+        return;
+
+    const CampaignId campaign = pAdmission->AdmittedIdentity->Campaign;
+    const std::optional<CampaignSnapshotData> snapshot = m_admission.BuildSnapshot(campaign);
+    if (!snapshot || !snapshot->RosterSealed || snapshot->RuntimeState != static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE))
+    {
+        return;
+    }
+
+    const std::vector<CampaignConnectionHandle> connections = m_admission.GetAdmittedConnections(campaign);
+    if (connections.size() != snapshot->Roster.size() ||
+        std::any_of(snapshot->Roster.begin(), snapshot->Roster.end(), [](const CampaignPublicSlotData& acSlot) { return !acSlot.Present; }))
+    {
+        return;
+    }
+
+    auto& ready = m_helgenReadyConnections[campaign.Value];
+    const auto [readyIterator, firstAnnouncement] = ready.insert(ToHandle(player));
+    (void)readyIterator;
+    spdlog::log(
+        firstAnnouncement ? spdlog::level::info : spdlog::level::debug, "[STRE][Helgen] investigation readiness observed campaign={} player={} firstAnnouncement={} ready={}/{}",
+        campaign.Value, player.GetId(), firstAnnouncement, ready.size(), snapshot->Roster.size());
+
+    if (m_helgenStartedCampaigns.contains(campaign.Value))
+    {
+        BroadcastHelgenState(campaign, &player);
+        return;
+    }
+
+    const bool allReady = std::all_of(connections.begin(), connections.end(), [&](CampaignConnectionHandle aConnection) { return ready.contains(aConnection); });
+    if (!allReady)
+        return;
+
+    m_helgenStartedCampaigns.insert(campaign.Value);
+    spdlog::info("[STRE][Helgen] collective investigation start authorized campaign={} roster={}", campaign.Value, connections.size());
+    BroadcastHelgenState(campaign);
+}
+
+void CampaignProtocolService::BroadcastHelgenState(const CampaignId& acCampaign, Player* apOnlyPlayer) noexcept
+{
+    const std::optional<CampaignSnapshotData> snapshot = m_admission.BuildSnapshot(acCampaign);
+    const std::vector<CampaignConnectionHandle> connections = m_admission.GetAdmittedConnections(acCampaign);
+
+    const bool gateOpen = snapshot && snapshot->RosterSealed && snapshot->RuntimeState == static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE) &&
+                          snapshot->Roster.size() == connections.size() &&
+                          std::all_of(snapshot->Roster.begin(), snapshot->Roster.end(), [](const CampaignPublicSlotData& acSlot) { return acSlot.Present; });
+
+    std::vector<STRE::Spatial::MemberPosition> members;
+    members.reserve(connections.size());
+    for (CampaignConnectionHandle connection : connections)
+    {
+        const Player* const pMember = m_world.GetPlayerManager().GetById(static_cast<std::uint32_t>(connection));
+        if (!pMember)
+        {
+            members.push_back({false, std::nullopt});
+            continue;
+        }
+
+        const CellIdComponent& cell = pMember->GetCellComponent();
+        members.push_back({true, cell ? std::optional<GameId>(cell.Cell) : std::nullopt});
+    }
+
+    const STRE::Spatial::Evaluation evaluation = STRE::Spatial::EvaluateGroupSpatialCondition(members, BuildHelgenFootprint(m_world), STRE::Spatial::GroupOperator::None, gateOpen);
+
+    NotifyCampaignHelgenState notification;
+    notification.InvestigationStartAuthorized = m_helgenStartedCampaigns.contains(acCampaign.Value);
+    notification.SpatialStatus = ToWireStatus(evaluation.Status);
+    notification.AllRequiredPlayersOutside = evaluation.ConditionMet;
+
+    spdlog::log(
+        apOnlyPlayer ? spdlog::level::debug : spdlog::level::info, "[STRE][Helgen] spatial predicate campaign={} gateOpen={} status={} inside={}/{} allOutside={}",
+        acCampaign.Value, gateOpen, static_cast<unsigned>(evaluation.Status), evaluation.InsideCount, evaluation.RelevantCount, evaluation.ConditionMet);
+
+    if (apOnlyPlayer)
+    {
+        apOnlyPlayer->Send(notification);
+        return;
+    }
+
+    for (CampaignConnectionHandle connection : connections)
+    {
+        Player* const pPlayer = m_world.GetPlayerManager().GetById(static_cast<std::uint32_t>(connection));
+        if (pPlayer)
+            pPlayer->Send(notification);
+    }
+}
+
+void CampaignProtocolService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept
 {
     std::optional<CampaignId> campaign;
-    if (const CampaignAdmissionRecord* const pAdmission =
-            GetAdmission(*acEvent.pPlayer);
-        pAdmission && pAdmission->AdmittedIdentity)
+    if (const CampaignAdmissionRecord* const pAdmission = GetAdmission(*acEvent.pPlayer); pAdmission && pAdmission->AdmittedIdentity)
     {
         campaign = pAdmission->AdmittedIdentity->Campaign;
+        auto ready = m_helgenReadyConnections.find(campaign->Value);
+        if (ready != m_helgenReadyConnections.end())
+            ready->second.erase(ToHandle(*acEvent.pPlayer));
     }
+
     m_pendingResumeAlignments.erase(ToHandle(*acEvent.pPlayer));
-    const std::optional<CampaignSnapshotData> snapshot =
-        m_admission.Disconnect(ToHandle(*acEvent.pPlayer));
+    const std::optional<CampaignSnapshotData> snapshot = m_admission.Disconnect(ToHandle(*acEvent.pPlayer));
     if (snapshot)
     {
         BroadcastSnapshot(*snapshot);
         if (campaign)
             BroadcastLobbyState(*campaign);
     }
+    if (campaign && m_helgenStartedCampaigns.contains(campaign->Value))
+        BroadcastHelgenState(*campaign);
 }

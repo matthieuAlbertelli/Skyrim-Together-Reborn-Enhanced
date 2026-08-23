@@ -143,15 +143,26 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   [000F8240]`, removes the pre-occupation bridge/debris state and the temporary
   STRE squeeze traversal, and moves survivors still in `WoundedInCave` to
   independent locked `CapturedInKeep` jail projections;
-- connected STR clients explicitly decline this local Papyrus authority through
-  `SkyrimTogetherUtils.IsConnected()`; the corresponding server-authoritative
-  campaign transition is not implemented yet;
+- connected campaigns now use an ephemeral full-roster investigation-start
+  barrier plus a server-evaluated `NONE inside Helgen` predicate; clients cache
+  the reliable notification without blocking Papyrus, retain the local T+4
+  timer, and apply the existing CK projection only when the cached predicate is
+  known and true;
+- the Helgen footprint is the exact `Skyrim.esm` membership of
+  `HelgenLocation [00018A4A]`: eight exterior cells and three interiors,
+  resolved by plugin name plus local FormID; missing roster members, unknown
+  positions, a non-`ACTIVE` campaign, or an unresolved footprint all fail
+  closed;
+- no Helgen-specific persistent server state, event history, quest-stage sync,
+  or C++ duplication of the physical projection was introduced; campaign saves
+  retain the local state for future collective checkpoint recovery;
 - the player-present-at-deadline -> pending -> leave-Helgen -> occupied flow was
   runtime-validated on 23 August 2026, including vanilla bandit occupation and
   both survivor jail projections;
 - the strict CK manifest now covers 67 expected STRE-owned records and rejects
-  unexpected master overrides; CK packaging passes with 17 managed files, the
-  client build is green, and TPTests pass 1511 assertions in 112 test cases.
+  unexpected master overrides; CK packaging passes with 19 managed files, the
+  client/server builds are green, and TPTests pass 1794 assertions in 130 test
+  cases.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -162,10 +173,18 @@ The current catalog uses `BuildVersion = 5`.
   unfinished;
 - the Helgen investigation is still entered through a diagnostic quest
   bootstrap; Valen does not yet start it;
-- T+4 authority is implemented only for standalone Skyrim. While connected to
-  STR, Papyrus deliberately refuses to commit the campaign transition; the
-  server-owned deadline, all-roster Helgen-presence gate, adapter state,
-  snapshot, reconnect, and recovery path remain to be implemented;
+- the multiplayer T+4 vertical slice is implemented and automated-tested, but
+  its two-client in-game matrix (A exits while B remains, inverse exit order,
+  both already outside at T+4, and a member in `HelgenKeep01`) is not
+  runtime-validated yet. The gameplay-facing campaign bootstrap from #71 is
+  now available and is the supported path for the next two-PC validation
+  phase. No multiplayer Helgen runtime result is claimed here;
+- the diagnostic stage-10 starts are aligned only after every active sealed
+  roster member reaches `BeginInvestigation()`; Valen remains the missing
+  narrative trigger;
+- coordinated checkpoint creation and `RECOVERY_LOCK` restore are still future
+  campaign work. Helgen deliberately adds no parallel reconnect/persistence
+  mechanism and fences its local progression after a campaign disconnect;
 - rescue/liberation and physical `Freed`/`Departed` projections remain
   unimplemented; mixed-state and save/load/cell-reset regressions for the new
   occupation flow are still required;

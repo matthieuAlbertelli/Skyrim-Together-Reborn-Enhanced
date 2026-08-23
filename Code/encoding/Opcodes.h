@@ -71,6 +71,7 @@ enum ClientOpcode : unsigned char
     kCampaignSetReadyRequest,
     kCampaignLeaveRequest,
     kCampaignJoinByCodeRequest,
+    kCampaignHelgenInvestigationReadyRequest,
     kClientOpcodeMax
 };
 
@@ -144,5 +145,6 @@ enum ServerOpcode : unsigned char
     kCampaignCommandResponse,
     kNotifyCampaignSnapshot,
     kNotifyCampaignLobbyState,
+    kNotifyCampaignHelgenState,
     kServerOpcodeMax
 };
