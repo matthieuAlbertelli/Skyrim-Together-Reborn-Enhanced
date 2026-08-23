@@ -1,6 +1,6 @@
 # Alternate Start — Open questions
 
-> **Status: Remaining decisions after New Game and MQ101/post-Helgen continuity validation**
+> **Status: Remaining decisions after New Game, MQ101/post-Helgen continuity, wounded-survivor, and standalone T+4 occupation validation**
 
 ## Resolved decisions
 
@@ -31,7 +31,29 @@
   exposes a local bidirectional `Se faufiler` interaction through an opening
   explained by a dead bandit and abandoned pickaxe;
 - `STRE_QUEST_HelgenInvestigation` is a local CK orchestration/projection quest
-  and is excluded from generic quest-stage synchronization.
+  and is excluded from generic quest-stage synchronization;
+- the v1 Helgen deadline rule is fixed: before four full Skyrim days from
+  investigation start there are no occupation bandits; once the deadline is
+  reached, the post-deadline physical projection is deferred for as long as any
+  campaign player remains in the affected Helgen footprint;
+- when that footprint becomes empty, the deferred transition may commit directly
+  to bandit-occupied Helgen, and each survivor still in `WoundedInCave` becomes
+  `CapturedInKeep` independently; `Freed` and `Departed` never regress.
+- the standalone fallback now evaluates the relative four-day deadline from
+  `InvestigationStartGameTime`, uses `HelgenLocation [00018A4A]` as its local
+  presence predicate, and defers through `BanditOccupationPending` until the
+  player leaves;
+- connected clients explicitly decline local Papyrus authority through
+  `SkyrimTogetherUtils.IsConnected()`; multiplayer authority remains a campaign
+  adapter/server responsibility;
+- the post-deadline physical projection reuses vanilla
+  `PostHelgenEncountersMarker [000F8240]`, disables the vanilla pre-occupation
+  bridge/debris references plus the temporary STRE squeeze activators, and does
+  not create duplicate STRE occupation bandits;
+- captured-survivor placement is implemented with independent STRE jail markers
+  and conditional Sandbox packages for Hadvar and Ralof; the selected vanilla
+  jail doors are referenced through aliases and are closed/locked during the
+  `CapturedInKeep` projection.
 
 ## Persistence and checkpoints
 
@@ -67,12 +89,14 @@ Resolved:
 
 Remaining:
 
-- exact four-day deadline evaluation and the safe boundary for physically
-  changing Helgen while players may be nearby;
-- exact vanilla/STRE bandit-occupation projection after the deadline;
-- prison markers, AI packages, and release behavior for each unsaved survivor;
-- rescue interaction and the exact transition from `WoundedInCave` or
-  `CapturedInKeep` to `Freed`;
+- server-authoritative multiplayer ownership of the four-day deadline and the
+  all-roster predicate proving that no campaign player remains in the affected
+  Helgen footprint before occupation commits;
+- campaign adapter transport, snapshot, reconnect, and recovery semantics for
+  `HelgenWorldPhase`, Hadvar state, and Ralof state;
+- release behavior for each captured survivor and the rescue interaction from
+  `WoundedInCave` or `CapturedInKeep` to `Freed`;
+- physical `Freed` and `Departed` projections and their idempotent recovery;
 - whether the current vanilla corpse ActorBase used for the rubble excavator
   actually respawns after a relevant cell reset and whether it needs an
   STRE-owned non-respawning replacement;
@@ -84,6 +108,23 @@ Remaining:
 - compatibility policy for other alternate starts and supported MQ101/QF
   conflicts;
 - exact Departure destination and the route back to the main quest.
+
+## Post-v1 candidate: live Helgen occupation encounter
+
+The v1 path intentionally uses an off-screen/deferred transition rather than a
+scripted invasion. A possible post-v1 enhancement is to play the occupation in
+real time when players are present at the four-day boundary:
+
+- bandits approach and invest the exterior ruins;
+- occupation progresses toward the Keep instead of appearing fully established;
+- bandits enter the dungeon and advance through it;
+- a survivor would only be captured when the encounter reaches that survivor,
+  while an off-screen path would continue to fast-forward to the same canonical
+  result when no player is present.
+
+This idea is deliberately parked for post-v1. It must not add scope to the v1
+deadline/occupation implementation and would require a separate design for AI,
+navmesh, encounter progression, authority, recovery, and multiplayer projection.
 
 ## Remaining kits
 

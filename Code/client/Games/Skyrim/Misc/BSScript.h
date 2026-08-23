@@ -308,11 +308,11 @@ struct BSScript
         bool MarshallAndDispatch(Variable* apBaseVar, IVirtualMachine* apVm, uint32_t aStackID, Variable* apResult, StackFrame* apStackFrame) override;
     };
 
-    struct DidLaunchSkyrimTogetherFunc : NativeFunction
+    struct GlobalBoolFunc : NativeFunction
     {
         using FunctionType = bool();
 
-        DidLaunchSkyrimTogetherFunc(const char* apFunctionName, const char* apClassName, FunctionType aFunction, Variable::Type aType);
+        GlobalBoolFunc(const char* apFunctionName, const char* apClassName, FunctionType aFunction, Variable::Type aType);
 
         bool MarshallAndDispatch(Variable* apBaseVar, IVirtualMachine* apVm, uint32_t aStackID, Variable* apResult, StackFrame* apStackFrame) override;
     };

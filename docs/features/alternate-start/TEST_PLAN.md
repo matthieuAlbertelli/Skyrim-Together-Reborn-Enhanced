@@ -231,11 +231,53 @@ Still required for this slice:
 - cell reset to determine whether the current vanilla corpse ActorBase respawns;
 - multiplayer traversal with two players using the squeeze independently.
 
+## Standalone T+4 Helgen occupation regression
+
+Validated on 23 August 2026:
+
+- project the clean STRE post-MQ101 baseline and verify Helgen is destroyed and
+  burning, skipped MQ101 actors are absent, and occupation bandits are absent;
+- start `STRE_QUEST_HelgenInvestigation`, leave both survivors in
+  `WoundedInCave`, and advance four full game days while the player remains in
+  `HelgenLocation`;
+- verify the deadline moves `HelgenWorldPhase` to
+  `BanditOccupationPending` without introducing occupation bandits or moving the
+  survivors while the player remains in Helgen;
+- leave Helgen, wait for the standalone presence re-evaluation, and verify the
+  transition commits to `BanditOccupied`;
+- verify Bethesda's post-Helgen occupation appears in the exterior and
+  `HelgenKeep01`, the previous bridge/debris projection is removed, and the STRE
+  `Se faufiler` traversal is no longer active;
+- verify both survivors still in `WoundedInCave` transition to
+  `CapturedInKeep`, move to their respective STRE jail markers, use the captured
+  package, and have their selected vanilla jail doors closed and locked;
+- verify strict CK audit with 67 expected STRE-owned records and no unexpected
+  master overrides, CK packaging with 17 managed files, client build, TPTests
+  (1511 assertions / 112 test cases), and `git diff --check`.
+
+Still required for the T+4 slice:
+
+- reach the four-day deadline while already outside the affected Helgen footprint
+  and verify the direct `RecentPostAttack -> BanditOccupied` path;
+- verify mixed survivor states, especially `Freed + WoundedInCave`, and prove
+  that `Freed` never regresses to captivity;
+- verify `Departed` non-regression once that projection exists;
+- save/load before the deadline, while `BanditOccupationPending`, and after
+  `BanditOccupied`, then verify idempotent reprojection;
+- cell-reset regression for the bandit occupation, jail doors, survivor
+  projection, and current rubble-excavator corpse;
+- repeat the defer rule with multiple connected players and verify occupation
+  waits until the last relevant roster member leaves;
+- verify server-authoritative multiplayer clients converge on the same canonical
+  occupation/survivor state without synchronizing raw CK quest stages;
+- verify snapshot/reconnect/recovery of the same state once the campaign adapter
+  path is implemented.
+
 ## Tests still blocked by missing features
 
-- four-day deadline and safe-boundary world-phase transition;
-- post-deadline bandit occupation and prisoner placement;
-- rescue/liberation and `Freed`/`CapturedInKeep` survivor transitions;
+Other blocked coverage:
+
+- rescue/liberation and `Freed`/`Departed` survivor projections;
 - neutral MQ102/MQ103 vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;

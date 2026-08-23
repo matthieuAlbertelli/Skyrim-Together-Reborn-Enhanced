@@ -375,6 +375,26 @@
       "signature": "REFR",
       "editorId": "STRE_HelgenRubbleSqueezeMarker_SurvivorSide",
       "expectedLocalFormId": "0x000648FF"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_HadvarCaptured",
+      "expectedLocalFormId": "0x00096453"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_RalofCaptured",
+      "expectedLocalFormId": "0x00096454"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenHadvarCapturedMarker",
+      "expectedLocalFormId": "0x00096451"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRalofCapturedMarker",
+      "expectedLocalFormId": "0x00096452"
     }
   ],
   "spellEffectExpectations": {

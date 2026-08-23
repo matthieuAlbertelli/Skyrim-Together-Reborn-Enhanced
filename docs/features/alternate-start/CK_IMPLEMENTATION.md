@@ -1,6 +1,6 @@
 # Alternate Start — Creation Kit implementation
 
-> **Status: New Game/CK bootstrap, MQ101/post-Helgen projection, and the first pre-deadline wounded-survivor investigation slice are smoke-tested; the native campaign gate is automated-tested and manually validated on the Solo/two-player happy path; four-day transition, rescue/capture flow, negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
+> **Status: New Game/CK bootstrap, MQ101/post-Helgen projection, the wounded-survivor investigation slice, and standalone T+4 bandit occupation/capture are runtime-tested; the native campaign gate is automated-tested and manually validated on the Solo/two-player happy path; multiplayer Helgen validation, rescue/liberation, negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
 
 ## Versioned files
 
@@ -99,7 +99,7 @@ Never hard-code a loaded FormID that depends on load order. CK references use al
 
 ## M7 records and continuity helper
 
-The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 63 expected STRE-owned records:
+The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 67 expected STRE-owned records:
 
 - cells, quests, and seat references;
 - outfits and boots;
@@ -116,7 +116,9 @@ The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 63 expected STRE-owned reco
 - the shared rubble-squeeze activator, its two placed activators, and its two
   destination markers;
 - the dead excavator bandit and placed pickaxe used by the environmental
-  storytelling around the rubble opening.
+  storytelling around the rubble opening;
+- independent Hadvar/Ralof captured anchors and conditional Sandbox packages
+  used by the `CapturedInKeep` projection.
 
 The same strict manifest allows only the explicit named and anonymous
 Skyrim-master records listed in its allowlists. Any additional master-backed
@@ -156,7 +158,7 @@ Stormcloak MQ102 branch.
 This is a local Skyrim projection. The server must never synchronize raw
 `MQ101.SetStage` or future `MQ102.SetStage` calls as campaign protocol.
 
-## Pre-deadline Helgen investigation slice
+## Helgen investigation and standalone T+4 slice
 
 The first investigation increment is owned by:
 
@@ -180,7 +182,9 @@ RalofState
 MainQuestPath
 ```
 
-Only `WoundedInCave` projection is implemented in this increment.
+`WoundedInCave` and `CapturedInKeep` projections are implemented. `Freed` and
+`Departed` remain reserved logical states without physical projections in this
+increment.
 
 Hadvar and Ralof use Specific Reference aliases with `Allow Reserved` because
 their vanilla actor references are already reserved elsewhere in the active
@@ -229,14 +233,98 @@ respawn behavior still requires a cell-reset regression test.
 canonical investigation/survivor/world-phase facts through the dedicated STRE
 campaign boundary and locally project them into CK/Papyrus.
 
+The v1 post-deadline behavior is now fixed at the product level:
+
+- before four full Skyrim days have elapsed since the investigation starts,
+  Helgen remains in the recent-post-attack projection and no occupation bandits
+  are introduced;
+- when the four-day deadline is reached, the bandit-occupied projection is
+  applied only if no campaign player is inside the affected Helgen footprint;
+- if at least one player is still inside that footprint at the deadline, the
+  physical transition is deferred unchanged: no occupation bandits appear and
+  the current survivor projection remains in place;
+- when the last player leaves the affected footprint, the deferred transition
+  may commit directly to the bandit-occupied Helgen projection;
+- at that commit boundary, each survivor still in `WoundedInCave` transitions
+  independently to `CapturedInKeep`; survivors already `Freed` or `Departed`
+  never regress to captivity.
+
+The standalone v1 path is now implemented with `HelgenLocation [00018A4A]`
+as the local presence predicate. `STRE_HelgenInvestigationController` stores
+`InvestigationStartGameTime`, arms the relative four-day deadline through
+`RegisterForSingleUpdateGameTime`, and refuses local campaign authority whenever
+`SkyrimTogetherUtils.IsConnected()` reports an active STR connection. If the
+standalone player is still inside `HelgenLocation` at the deadline, the
+controller enters `BanditOccupationPending` and rechecks presence every five
+real-time seconds until the location is clear.
+
+`HelgenWorldPhase` is projected locally as:
+
+```text
+0 = RecentPostAttack
+1 = BanditOccupationPending
+2 = BanditOccupied
+```
+
+The `BanditOccupied` projection reuses Bethesda's complete late post-Helgen
+phase instead of creating duplicate STRE bandits:
+
+```text
+Enable  PostHelgenEncountersMarker       [000F8240]
+Disable MQ101CollapsingBridgeAnimRef      [000C8960]
+Disable dunCGKeepBridgeDebrisMarker       [0010AB26]
+Disable STRE squeeze activator entrance   [local 0x000677C9]
+Disable STRE squeeze activator survivor   [local 0x00081CD2]
+```
+
+At the same commit boundary, only survivors still in `WoundedInCave` transition
+to `CapturedInKeep`. The capture projection uses STRE-owned jail markers and
+conditional Sandbox packages:
+
+```text
+STRE_HelgenHadvarCapturedMarker  local 0x00096451
+STRE_HelgenRalofCapturedMarker   local 0x00096452
+STRE_PACK_HadvarCaptured         local 0x00096453
+STRE_PACK_RalofCaptured          local 0x00096454
+```
+
+The selected vanilla jail doors are referenced through quest aliases rather than
+overridden:
+
+```text
+Hadvar jail door [00091583]
+Ralof jail door  [00091587]
+```
+
+`CapturedInKeep` closes and locks the appropriate door, moves the survivor to
+the captured marker, and re-evaluates the actor package. Reprojection is
+idempotent for the implemented states. `Freed` and `Departed` never regress at
+the occupation commit, but their physical projections and liberation gameplay
+are not implemented yet.
+
 Not implemented yet:
 
-- four-day deadline evaluation;
-- `BanditOccupied` physical projection;
-- `CapturedInKeep`, `Freed`, or `Departed` survivor projection;
-- rescue/liberation interaction;
+- server-authoritative multiplayer ownership of the four-day deadline and
+  all-roster Helgen-presence predicate;
+- transport/snapshot/recovery of `HelgenWorldPhase` and survivor state through
+  the dedicated campaign adapter;
+- rescue/liberation interaction and physical `Freed`/`Departed` projections;
 - Valen-driven quest start;
 - neutral/Hadvar/Ralof MQ102 continuity.
+
+## Deferred post-v1 Helgen occupation encounter
+
+A more immersive occupation sequence is deliberately deferred beyond v1. One
+possible later enhancement is to play the bandit takeover in real time when one
+or more players are present at the four-day boundary: bandits would approach
+Helgen, secure the ruins, enter the Keep, and progressively reach any unsaved
+survivors. An off-screen fast-forward path would still resolve the same
+canonical result when nobody is present.
+
+This is a design candidate only. It is not part of the v1 acceptance criteria,
+must not complicate the simple occupancy-deferred transition above, and would
+require a separate CK/navmesh/AI and multiplayer-authority design pass before
+implementation.
 
 ## Navmesh
 
@@ -244,8 +332,12 @@ The cell contains several navmesh fragments. Avoid relying on complex NPC pathfi
 
 ## Remaining implementation
 
-- four-day deadline and safe-boundary transition into bandit occupation;
-- captured-survivor prison placement, rescue/liberation, and survivor lifecycle;
+- server-authoritative four-day deadline and all-roster Helgen presence gate for
+  multiplayer, using the dedicated campaign-state boundary rather than CK quest
+  stages;
+- multiplayer projection/snapshot/recovery for the implemented Helgen world and
+  survivor states;
+- rescue/liberation and the remaining survivor lifecycle projections;
 - neutral MQ102/MQ103 vanilla-continuity handoff and its Riverwood/Alduin/Civil
   War semantics;
 - Hadvar/Ralof branch commit without making rescue itself a faction choice;
@@ -323,6 +415,24 @@ Pre-deadline investigation slice validated on 20 August 2026:
 - CK packaging audit passes with no compiled PEX under `Scripts/Source`;
 - `STRE_QUEST_HelgenInvestigation` is excluded from generic quest-stage
   synchronization, and the client build plus TPTests pass.
+
+Standalone T+4 occupation slice validated on 23 August 2026:
+
+- a clean STRE post-MQ101 baseline shows destroyed/burning Helgen with the
+  skipped intro actors removed and no occupation bandits before the deadline;
+- after four full game days, remaining inside `HelgenLocation` transitions the
+  controller to `BanditOccupationPending` without changing the visible world or
+  survivor placement;
+- leaving Helgen after the deadline commits `BanditOccupied` on the next
+  standalone presence evaluation;
+- Bethesda's post-Helgen bandit occupation appears outside and inside the Keep,
+  the pre-occupation bridge/debris state and STRE squeeze traversal are removed,
+  and survivors still in `WoundedInCave` move to their locked jail projections;
+- the strict CK record audit conforms with 67 expected STRE-owned records and no
+  unexpected Skyrim-master override;
+- CK packaging passes with 17 managed files and no compiled PEX under
+  `Scripts/Source`; client build and TPTests remain green at 1511 assertions in
+  112 test cases.
 
 ## Local test
 

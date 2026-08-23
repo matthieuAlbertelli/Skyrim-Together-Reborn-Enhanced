@@ -120,9 +120,10 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   the already-collapsed rubble presentation;
 - the post-Helgen projection was runtime-smoke-tested after xEdit Quick Auto
   Clean, including Helgen exterior and `HelgenKeep01`;
-- `STRE_QUEST_HelgenInvestigation` now provides the first local pre-deadline
-  Helgen-investigation slice, with a diagnostic stage-10 bootstrap and persistent
-  investigation/survivor/path state owned by `STRE_HelgenInvestigationController`;
+- `STRE_QUEST_HelgenInvestigation` provides the local Helgen-investigation and
+  standalone T+4 projection path, with a diagnostic stage-10 bootstrap and
+  persistent investigation/survivor/world-phase/path state owned by
+  `STRE_HelgenInvestigationController`;
 - Hadvar and Ralof are independently projected to STRE-owned wounded positions
   in `HelgenKeep01` and use dedicated `SitTarget` packages with vanilla wounded
   furniture markers;
@@ -134,9 +135,23 @@ See [`docs/features/item-preview/`](../features/item-preview/).
 - `STRE_QUEST_HelgenInvestigation`, like the Alternate Start orchestration
   quest, is explicitly excluded from generic quest-stage synchronization so its
   CK stages cannot become shared campaign state;
-- the strict CK manifest now covers 63 expected STRE-owned records and rejects
-  unexpected master overrides; the current investigation slice passes that
-  strict audit.
+- the standalone T+4 Helgen occupation fallback is implemented: four game days
+  after investigation start it defers through `BanditOccupationPending` while
+  the player remains in `HelgenLocation [00018A4A]`, then commits
+  `BanditOccupied` after Helgen is clear;
+- the occupied projection reuses Bethesda's `PostHelgenEncountersMarker
+  [000F8240]`, removes the pre-occupation bridge/debris state and the temporary
+  STRE squeeze traversal, and moves survivors still in `WoundedInCave` to
+  independent locked `CapturedInKeep` jail projections;
+- connected STR clients explicitly decline this local Papyrus authority through
+  `SkyrimTogetherUtils.IsConnected()`; the corresponding server-authoritative
+  campaign transition is not implemented yet;
+- the player-present-at-deadline -> pending -> leave-Helgen -> occupied flow was
+  runtime-validated on 23 August 2026, including vanilla bandit occupation and
+  both survivor jail projections;
+- the strict CK manifest now covers 67 expected STRE-owned records and rejects
+  unexpected master overrides; CK packaging passes with 17 managed files, the
+  client build is green, and TPTests pass 1511 assertions in 112 test cases.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -145,11 +160,15 @@ The current catalog uses `BuildVersion = 5`.
 - the New Game bootstrap and MQ101/post-Helgen world-state projection are
   implemented, but the neutral MQ102/MQ103 vanilla main-quest handoff remains
   unfinished;
-- the current Helgen investigation slice is still entered through a diagnostic
-  quest bootstrap; Valen does not yet start it and the four-day deadline is not
-  implemented;
-- rescue/liberation, `Freed`/`CapturedInKeep` projection, bandit occupation, and
-  the post-deadline prison flow remain unimplemented;
+- the Helgen investigation is still entered through a diagnostic quest
+  bootstrap; Valen does not yet start it;
+- T+4 authority is implemented only for standalone Skyrim. While connected to
+  STR, Papyrus deliberately refuses to commit the campaign transition; the
+  server-owned deadline, all-roster Helgen-presence gate, adapter state,
+  snapshot, reconnect, and recovery path remain to be implemented;
+- rescue/liberation and physical `Freed`/`Departed` projections remain
+  unimplemented; mixed-state and save/load/cell-reset regressions for the new
+  occupation flow are still required;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;

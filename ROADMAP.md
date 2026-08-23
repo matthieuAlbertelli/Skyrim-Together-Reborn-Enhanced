@@ -43,6 +43,13 @@ The exact allocation of these outcomes to intermediate `0.x` releases remains pr
 
 Deliver a clean new-game path through the custom inn, exhaustive vanilla-start/Helgen bypass, RaceMenu and STRE character creation, complete reset policy, canonical build application and a coherent departure into the campaign. Preserve the explicit local fallback for solo play.
 
+For v1, the delayed Helgen occupation remains intentionally simple: no occupation
+bandits before the four-day investigation deadline; if players are still in the
+affected Helgen area when the deadline is reached, the physical transition waits
+until they have all left, then projects bandit-occupied Helgen and captures only
+survivors still left behind. A fully staged, real-time bandit assault on Helgen
+is explicitly a post-v1 enhancement candidate rather than a v1 requirement.
+
 The class program covers all 21 classes in the canonical v1 roster, all starting kits and schools, cooperative abilities/perks, balance/combination validation and a personal quest for each class. Logical catalog, CK records, Papyrus, UI and authoritative multiplayer application must remain one coherent contract.
 
 ### Messire Valen, headquarters inn and housing foundation

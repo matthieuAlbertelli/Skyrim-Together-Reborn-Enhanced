@@ -1,5 +1,5 @@
 ;BEGIN FRAGMENT CODE - Do not edit anything between this and the end comment
-;NEXT FRAGMENT INDEX 5
+;NEXT FRAGMENT INDEX 7
 Scriptname QF_STRE_QUEST_HelgenInvestig_0305BCA5 Extends Quest Hidden
 
 ;BEGIN ALIAS PROPERTY Hadvar
@@ -12,14 +12,59 @@ ReferenceAlias Property Alias_Hadvar Auto
 ReferenceAlias Property Alias_Ralof Auto
 ;END ALIAS PROPERTY
 
+;BEGIN ALIAS PROPERTY RalofCapturedDoor
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_RalofCapturedDoor Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY PostHelgenBridge
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_PostHelgenBridge Auto
+;END ALIAS PROPERTY
+
 ;BEGIN ALIAS PROPERTY RalofWoundedMarker
 ;ALIAS PROPERTY TYPE ReferenceAlias
 ReferenceAlias Property Alias_RalofWoundedMarker Auto
 ;END ALIAS PROPERTY
 
+;BEGIN ALIAS PROPERTY HadvarCapturedMarker
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_HadvarCapturedMarker Auto
+;END ALIAS PROPERTY
+
 ;BEGIN ALIAS PROPERTY HadvarWoundedMarker
 ;ALIAS PROPERTY TYPE ReferenceAlias
 ReferenceAlias Property Alias_HadvarWoundedMarker Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY RubbleSqueezeEntranceSide
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_RubbleSqueezeEntranceSide Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY RalofCapturedMarker
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_RalofCapturedMarker Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY HadvarCapturedDoor
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_HadvarCapturedDoor Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY PostHelgenEncountersMarker
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_PostHelgenEncountersMarker Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY RubbleSqueezeSurvivorSide
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_RubbleSqueezeSurvivorSide Auto
+;END ALIAS PROPERTY
+
+;BEGIN ALIAS PROPERTY PostHelgenBridgeDebris
+;ALIAS PROPERTY TYPE ReferenceAlias
+ReferenceAlias Property Alias_PostHelgenBridgeDebris Auto
 ;END ALIAS PROPERTY
 
 ;BEGIN FRAGMENT Fragment_0

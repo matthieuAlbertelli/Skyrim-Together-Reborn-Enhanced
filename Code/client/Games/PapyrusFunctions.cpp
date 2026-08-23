@@ -1,6 +1,8 @@
 #include "PapyrusFunctions.h"
 
 #include <Games/ActorExtension.h>
+#include <Services/TransportService.h>
+#include <World.h>
 
 namespace PapyrusFunctions
 {
@@ -25,6 +27,11 @@ bool IsPlayer(Actor* apActor)
         return false;
 
     return pExtension->IsPlayer();
+}
+
+bool IsConnected()
+{
+    return World::Get().GetTransport().IsConnected();
 }
 
 } // namespace PapyrusFunctions
