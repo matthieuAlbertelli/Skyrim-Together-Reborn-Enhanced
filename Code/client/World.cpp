@@ -6,6 +6,7 @@
 #include <Services/InputService.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <Services/CampaignService.h>
+#include <Services/CampaignBootstrapService.h>
 #include <Services/TransportService.h>
 #include <Services/RunnerService.h>
 #include <Services/ImguiService.h>
@@ -50,6 +51,12 @@ World::World()
         *this,
         ctx().at<UiSurfaceService>());
     ctx().emplace<CampaignService>(m_dispatcher, m_transport);
+    ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
+    ctx().emplace<CampaignBootstrapService>(
+        m_dispatcher,
+        m_transport,
+        ctx().at<CampaignService>(),
+        ctx().at<UiSurfaceService>());
     ctx().emplace<CharacterService>(*this, m_dispatcher, m_transport);
     ctx().emplace<DebugService>(m_dispatcher, *this, m_transport, ctx().at<ImguiService>());
     ctx().emplace<PapyrusService>(m_dispatcher);
@@ -60,8 +67,8 @@ World::World()
     ctx().emplace<CharacterCreationService>(
         *this,
         ctx().at<UiSurfaceService>(),
+        ctx().at<CampaignBootstrapService>(),
         m_dispatcher);
-    ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeService>(*this, m_dispatcher, m_transport);
     ctx().emplace<TradeItemPreviewService>(*this, m_dispatcher);
     ctx().emplace<TradeMenuService>(

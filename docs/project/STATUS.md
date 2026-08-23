@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 17, 2026.
+> **Last updated:** August 23, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -104,6 +104,11 @@ See [`docs/features/item-preview/`](../features/item-preview/).
 - direct world transition to the inn before starting the Alternate Start quest;
 - same-process New Game re-entry through explicit Alternate Start quest lifecycle reset in `CharacterCreationService`;
 - ordinary save loading verified not to retrigger the bootstrap;
+- a fresh stage-20 handoff now opens a mandatory native/CEF campaign-bootstrap
+  gate before RaceMenu; Solo releases the existing creation flow locally, while
+  multiplayer releases only from a canonical sealed `CharacterCreation` snapshot
+  with the complete roster `ACTIVE`; this addition is automated-tested and its
+  Solo/two-player Create/Join happy path is validated in Skyrim;
 - STRE-owned MQ101 continuity projection advances the required post-Helgen
   branches through stage 900, reaches MQ101 stage 1000, and leaves MQ102,
   MQ102A, and MQ102B untouched;
@@ -224,7 +229,9 @@ transport/service boundary:
 - explicit typed messages on the existing STR transport cover campaign create,
   pre-seal join/leave, exact pre-seal or sealed resume admission,
   host-authorized start/seal, readiness, bounded command results, and public
-  canonical snapshots;
+  canonical snapshots; an appended join-by-code request and bounded transient
+  lobby projection support the gameplay bootstrap without exposing durable
+  identifiers to Angular;
 - a focused server admission service keeps connection, party, and admission
   presence transient, uses `PartyService::IsPlayerLeader()` only as current
   administrative proof, and routes every durable roster/readiness/phase mutation
@@ -248,15 +255,50 @@ transport/service boundary:
   identity/cache behavior, authority and spoof rejection, idempotent/stale
   mutations, 2/4/10-slot flows, disconnect/resume, and readiness no-ops.
 
+The gameplay-facing #28 lobby slice is also implemented and automated-tested:
+
+- a server-owned ephemeral directory maps exact four-character codes from
+  `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` to canonical `CampaignId` values; codes are
+  collision-safe, bounded, non-persistent, and invalidated at seal;
+- campaign creation marks or creates an exclusive transient PartyService party,
+  and join-by-code deterministically aligns a player to that party before reusing
+  the existing canonical admission mutation; failed admission rolls back only
+  alignment introduced by the request, and `bAutoPartyJoin` does not admit
+  players to campaign-managed parties;
+- every creator/joiner supplies a trimmed, control-free pseudo bounded to 24
+  Unicode code points/96 UTF-8 bytes; it is stored only in the ephemeral lobby
+  directory keyed internally by `PlayerId`, projected without durable IDs, and
+  invalidated at seal. It is not a Skyrim character name, identity,
+  authorization input, ownership proof, binding, save, or checkpoint field;
+  malformed pseudos are rejected before connection/party/campaign mutation;
+  authorization remains derived server-side as `canStart`;
+- the Angular surface provides only Solo, Create, Join, connection fields when
+  required, code, member names/presence, Start, Back, and concise errors;
+- seven focused Playwright cases pass, including required Unicode pseudo
+  validation and reuse of the regular STR `last_connected_address` value
+  without campaign-specific or password storage; pure/native tests cover code
+  allocation, malformed wire/pseudo data, opcode stability, the five-argument
+  CEF contract, and exact one-shot gate release.
+- the first Skyrim validation confirmed that the stage-20 gate renders, then
+  exposed a missing `campaignBootstrapAction` registration in the real CEF
+  renderer; that registration is now implemented, native-tested, rebuilt, and
+  deployed locally. Revalidation confirmed Solo, Create, second-PC Join by the
+  four-character code, shared transient pseudos, reuse of the persisted last
+  server address, and both players progressing through Character Creation into
+  the STRE inn;
+- runtime validation also established that `Alternate Start - Live Another Life`
+  must not be active with `STRE_AlternateStart.esp`. Compatibility work is not
+  part of this slice;
+- the remaining campaign-bootstrap negative/runtime matrix is still pending and
+  is not implied by this happy-path evidence.
+
 The only production narrative transition currently executed by the live
 campaign runtime is `Lobby -> CharacterCreation`. The fixed-roster/readiness/
-phase-policy and live admission foundation developed in the #28 workstream is
-implemented, but durable Character Build binding, CEF/UI and CK/Valen
-projections, feature-owned later narrative phase execution, and Departure
-validation remain unimplemented. GitHub currently marks #28 completed; that
-tracking state does not override this implementation boundary. There is no
-gameplay-facing caller for those later phases yet and no in-game validation is
-claimed. `CHECKPOINTING`, `RECOVERY_LOCK`, and
+phase-policy, live admission foundation, and focused New Game lobby projection
+developed in the #28 workstream are implemented, but durable Character Build
+binding, CK/Valen projections, feature-owned later narrative phase execution,
+and Departure validation remain unimplemented. GitHub issue #28 remains open;
+this focused slice does not complete it. `CHECKPOINTING`, `RECOVERY_LOCK`, and
 `RESTORING_CHECKPOINT` are represented but have no #55/#56 behavior here;
 native-save/checkpoint identity and fingerprinting remain #55, while disconnect
 to recovery lock and collective checkpoint restore remain #56.

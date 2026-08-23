@@ -1,10 +1,12 @@
 <ng-container *ngIf="inGame$ | async">
   <app-trade-menu></app-trade-menu>
+  <app-campaign-bootstrap></app-campaign-bootstrap>
   <app-character-creation></app-character-creation>
 
   <ng-container
     *ngIf="
       (surface$ | async) !== 'trade' &&
+      (surface$ | async) !== 'campaignBootstrap' &&
       (surface$ | async) !== 'characterCreation'
     "
   >

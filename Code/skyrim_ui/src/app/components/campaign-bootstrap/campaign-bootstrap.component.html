@@ -1,0 +1,190 @@
+<section *ngIf="visible" class="bootstrap-shell" aria-modal="true">
+  <div class="veil"></div>
+  <div class="table-glow"></div>
+
+  <main class="bootstrap-frame" [attr.data-screen]="state.screen">
+    <span class="corner corner-tl"></span>
+    <span class="corner corner-tr"></span>
+    <span class="corner corner-bl"></span>
+    <span class="corner corner-br"></span>
+
+    <div class="ornament"><span></span><i></i><span></span></div>
+
+    <nav *ngIf="state.screen === 'entry'" class="entry-actions">
+      <button autofocus (click)="bootstrap.solo()">
+        {{ 'CAMPAIGN_BOOTSTRAP.SOLO' | transloco }}
+      </button>
+      <button (click)="bootstrap.showCreate()">
+        {{ 'CAMPAIGN_BOOTSTRAP.CREATE_CAMPAIGN' | transloco }}
+      </button>
+      <button (click)="bootstrap.showJoin()">
+        {{ 'CAMPAIGN_BOOTSTRAP.JOIN_CAMPAIGN' | transloco }}
+      </button>
+    </nav>
+
+    <form
+      *ngIf="state.screen === 'create'"
+      class="bootstrap-form"
+      (ngSubmit)="create()"
+    >
+      <label>
+        <span>{{ 'CAMPAIGN_BOOTSTRAP.PSEUDO' | transloco }}</span>
+        <input
+          name="pseudo"
+          [(ngModel)]="pseudo"
+          maxlength="96"
+          autocomplete="off"
+          autofocus
+          [disabled]="state.busy"
+        />
+      </label>
+      <ng-container *ngIf="!state.connected">
+        <label>
+          <span>{{ 'CAMPAIGN_BOOTSTRAP.ADDRESS' | transloco }}</span>
+          <input
+            name="address"
+            [(ngModel)]="address"
+            maxlength="255"
+            autocomplete="off"
+            [disabled]="state.busy"
+          />
+        </label>
+        <label>
+          <span>{{ 'CAMPAIGN_BOOTSTRAP.PASSWORD' | transloco }}</span>
+          <input
+            name="password"
+            [(ngModel)]="password"
+            type="password"
+            maxlength="128"
+            autocomplete="off"
+            [disabled]="state.busy"
+          />
+        </label>
+      </ng-container>
+      <div class="form-actions">
+        <button
+          type="button"
+          (click)="bootstrap.back()"
+          [disabled]="state.busy"
+        >
+          {{ 'CAMPAIGN_BOOTSTRAP.BACK' | transloco }}
+        </button>
+        <button
+          class="primary"
+          type="submit"
+          [disabled]="state.busy || !validPseudo"
+        >
+          {{ 'CAMPAIGN_BOOTSTRAP.CREATE' | transloco }}
+        </button>
+      </div>
+    </form>
+
+    <form
+      *ngIf="state.screen === 'join'"
+      class="bootstrap-form"
+      (ngSubmit)="join()"
+    >
+      <label>
+        <span>{{ 'CAMPAIGN_BOOTSTRAP.PSEUDO' | transloco }}</span>
+        <input
+          name="pseudo"
+          [(ngModel)]="pseudo"
+          maxlength="96"
+          autocomplete="off"
+          autofocus
+          [disabled]="state.busy"
+        />
+      </label>
+      <ng-container *ngIf="!state.connected">
+        <label>
+          <span>{{ 'CAMPAIGN_BOOTSTRAP.ADDRESS' | transloco }}</span>
+          <input
+            name="address"
+            [(ngModel)]="address"
+            maxlength="255"
+            autocomplete="off"
+            [disabled]="state.busy"
+          />
+        </label>
+        <label>
+          <span>{{ 'CAMPAIGN_BOOTSTRAP.PASSWORD' | transloco }}</span>
+          <input
+            name="password"
+            [(ngModel)]="password"
+            type="password"
+            maxlength="128"
+            autocomplete="off"
+            [disabled]="state.busy"
+          />
+        </label>
+      </ng-container>
+      <label>
+        <span>{{ 'CAMPAIGN_BOOTSTRAP.CODE' | transloco }}</span>
+        <input
+          class="code-input"
+          name="code"
+          [ngModel]="code"
+          (ngModelChange)="normalizeCode($event)"
+          maxlength="16"
+          autocomplete="off"
+          [disabled]="state.busy"
+        />
+      </label>
+      <div class="form-actions">
+        <button
+          type="button"
+          (click)="bootstrap.back()"
+          [disabled]="state.busy"
+        >
+          {{ 'CAMPAIGN_BOOTSTRAP.BACK' | transloco }}
+        </button>
+        <button
+          class="primary"
+          type="submit"
+          [disabled]="state.busy || !validCode || !validPseudo"
+        >
+          {{ 'CAMPAIGN_BOOTSTRAP.JOIN' | transloco }}
+        </button>
+      </div>
+    </form>
+
+    <section *ngIf="state.screen === 'lobby'" class="lobby">
+      <strong class="join-code">{{ state.joinCode }}</strong>
+      <ul>
+        <li
+          *ngFor="let member of state.members"
+          [class.absent]="!member.present"
+        >
+          <i></i><span>{{ member.name }}</span>
+        </li>
+      </ul>
+      <button
+        *ngIf="state.canStart"
+        class="primary start"
+        [disabled]="state.busy"
+        (click)="bootstrap.start()"
+      >
+        {{ 'CAMPAIGN_BOOTSTRAP.START' | transloco }}
+      </button>
+    </section>
+
+    <section *ngIf="state.screen === 'error'" class="error-state">
+      <div class="error-line">{{ errorKey() | transloco }}</div>
+      <button (click)="bootstrap.back()" [disabled]="state.busy">
+        {{ 'CAMPAIGN_BOOTSTRAP.BACK' | transloco }}
+      </button>
+    </section>
+
+    <div
+      *ngIf="state.error && state.screen !== 'error'"
+      class="inline-error"
+      role="alert"
+    >
+      {{ errorKey() | transloco }}
+    </div>
+
+    <div class="ornament ornament-bottom">
+      <span></span><i></i><span></span>
+    </div>
+  </main>
+</section>

@@ -1,6 +1,6 @@
 # Campaign State Model
 
-> **Status:** fixed-roster/runtime core and live admission protocol implemented and automated-tested; gameplay projection and later phase/recovery wiring pending.
+> **Status:** fixed-roster/runtime core, live admission protocol, and focused New Game lobby projection implemented, automated-tested, and manually validated on the Solo/two-player happy path; negative runtime coverage and later phase/recovery wiring remain pending.
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
@@ -27,17 +27,19 @@ for the accepted model but are not activated by this increment.
 
 The implemented narrative mutation is the atomic
 `Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
-the pure-domain boundary. A future session/network caller must first prove that
-the requesting connection holds the host/Session Manager administrative role,
-then issue the server-authorized command with an explicit target Session Manager
-that belongs to the proposed roster. That transient proof is not persisted in
-the aggregate, and roster membership alone never authorizes the seal. Policies
+the pure-domain boundary. The live protocol proves that the requesting
+connection holds the current PartyService leader role and that the complete
+candidate roster shares that exact transient party before issuing the
+server-authorized command with an explicit target Session Manager that belongs
+to the proposed roster. That transient proof is not persisted in the aggregate,
+and roster membership alone never authorizes the seal. Policies
 for the remaining phase edges define their source, target, actor authority,
 common roster/readiness preconditions, and resulting intent, but deliberately
 refuse execution until their feature-owned CK/Valen/build preconditions are
-implemented. The live protocol now exposes the implemented start transition,
-but no CEF/CK projection, coordinated native save, or recovery-lock behavior is
-part of this increment.
+implemented. A native/CEF bootstrap now gates fresh New Game at the existing
+stage-20 boundary and applies Character Creation locally only after canonical
+sealed/full-roster evidence. No new CK stage or record was required. Coordinated
+native save and recovery-lock behavior are not part of this increment.
 
 ## Live identity and admission boundary
 
@@ -54,6 +56,25 @@ The latter stores only live connection-to-identity/admission records and invokes
 `CampaignRuntimeService` for every durable change. Party leadership and party
 membership are evaluated live; neither party IDs nor transient player IDs are
 written into campaign persistence.
+
+The gameplay lobby automates that transient PartyService ceremony. Campaign
+creation ensures a campaign-managed party, while join-by-code aligns the joining
+connection with the resolved lobby party before invoking the existing canonical
+admission path. Alignment introduced by a failed admission is rolled back, and
+legacy automatic party joining skips campaign-managed parties. This preserves
+the accepted transient authority proof without exposing party mechanics to the
+player.
+
+Exactly four-character join codes are server-owned ephemeral aliases from
+`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`; they map to canonical `CampaignId` values,
+are collision-safe and bounded, and expire when the lobby seals. They are not
+persisted identity or authentication. Each creator/joiner supplies a lobby-only
+display name that is trimmed, valid UTF-8, free of control characters, and
+bounded to 24 Unicode code points and 96 UTF-8 bytes. The server lobby directory
+keys it internally by `PlayerId`, but Angular receives only the name/presence
+projection. It is neither the Skyrim character name nor identity,
+authorization, ownership, binding, save, or checkpoint data, and the complete
+name directory is invalidated when the campaign leaves `Lobby`/seals.
 
 The live protocol implements:
 
@@ -337,9 +358,13 @@ restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
 The server-owned campaign runtime and live protocol implemented in the #28
 workstream call this persistence substrate for Lobby roster configuration, the
 campaign start/seal, Session Manager transfer, readiness, journal entries, and
-outbox snapshot intents. Durable Character Build binding, client/CK/UI gameplay
-projection, feature-owned later narrative phase execution, and Departure
-validation remain incomplete. The tracking state of #28 does not supersede
+outbox snapshot intents. The focused native/CEF New Game lobby projection is
+implemented, automated-tested, and manually validated for Solo plus a two-PC
+Create/Join, Character Creation, and inn-arrival happy path. Negative and
+recovery runtime scenarios remain pending. Durable Character Build binding,
+CK/Valen projection,
+feature-owned later narrative phase execution, and Departure validation remain
+incomplete. Issue #28 remains open and its tracking state does not supersede
 those implementation gaps. Issue #55 owns coordinated native-save creation,
 identity/fingerprinting, acknowledgement, and `CampaignCheckpoint`
 coordination. Issue #56 owns disconnect recovery lock and collective checkpoint

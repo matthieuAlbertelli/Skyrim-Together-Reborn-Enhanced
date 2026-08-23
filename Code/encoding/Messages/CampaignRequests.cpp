@@ -43,6 +43,7 @@ void CampaignCreateRequest::SerializeRaw(
     TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     (void)WriteCampaignWireId(aWriter, MutationId);
+    (void)WriteCampaignWireId(aWriter, DisplayName);
 }
 
 void CampaignCreateRequest::DeserializeRaw(
@@ -51,11 +52,14 @@ void CampaignCreateRequest::DeserializeRaw(
     ClientMessage::DeserializeRaw(aReader);
     if (!ReadCampaignWireId(aReader, MutationId))
         MutationId.clear();
+    if (!ReadCampaignWireId(aReader, DisplayName))
+        DisplayName.clear();
 }
 
 bool CampaignCreateRequest::IsValid() const noexcept
 {
-    return IsValidCampaignWireId(MutationId);
+    return IsValidCampaignWireId(MutationId) &&
+        IsValidCampaignLobbyDisplayName(DisplayName);
 }
 
 void CampaignJoinRequest::SerializeRaw(
@@ -153,4 +157,31 @@ void CampaignLeaveRequest::DeserializeRaw(
 bool CampaignLeaveRequest::IsValid() const noexcept
 {
     return IsValidMutationRequest(CampaignId, MutationId);
+}
+
+void CampaignJoinByCodeRequest::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, JoinCode);
+    (void)WriteCampaignWireId(aWriter, MutationId);
+    (void)WriteCampaignWireId(aWriter, DisplayName);
+}
+
+void CampaignJoinByCodeRequest::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ClientMessage::DeserializeRaw(aReader);
+    if (!ReadCampaignWireId(aReader, JoinCode))
+        JoinCode.clear();
+    if (!ReadCampaignWireId(aReader, MutationId))
+        MutationId.clear();
+    if (!ReadCampaignWireId(aReader, DisplayName))
+        DisplayName.clear();
+}
+
+bool CampaignJoinByCodeRequest::IsValid() const noexcept
+{
+    return IsValidCampaignJoinCode(JoinCode) &&
+        IsValidCampaignWireId(MutationId) &&
+        IsValidCampaignLobbyDisplayName(DisplayName);
 }

@@ -76,6 +76,103 @@ PartyService::Party* PartyService::GetPlayerParty(Player* const apPlayer) noexce
     return nullptr;
 }
 
+std::optional<PartyService::CampaignLeaderParty>
+PartyService::EnsureCampaignLeaderParty(
+    Player* apPlayer) noexcept
+{
+    if (!apPlayer)
+        return std::nullopt;
+
+    PartyComponent& component = apPlayer->GetParty();
+    if (component.JoinedPartyId)
+    {
+        if (!IsPlayerLeader(apPlayer))
+            return std::nullopt;
+        Party& party = m_parties[*component.JoinedPartyId];
+        const bool previouslyManaged = party.CampaignManaged;
+        party.CampaignManaged = true;
+        return CampaignLeaderParty{
+            *component.JoinedPartyId, false, previouslyManaged};
+    }
+
+    const std::uint32_t partyId = m_nextId++;
+    Party& party = m_parties[partyId];
+    party.Members.push_back(apPlayer);
+    party.LeaderPlayerId = apPlayer->GetId();
+    party.CampaignManaged = true;
+    component.JoinedPartyId = partyId;
+    SendPartyJoinedEvent(party, apPlayer);
+    BroadcastPartyInfo(partyId);
+    spdlog::info(
+        "[STRE][CampaignLobby] created transient party={} leader={}",
+        partyId, apPlayer->GetId());
+    return CampaignLeaderParty{partyId, true, false};
+}
+
+void PartyService::RollbackCampaignLeaderParty(
+    Player* apPlayer,
+    const CampaignLeaderParty& acParty) noexcept
+{
+    if (!apPlayer ||
+        apPlayer->GetParty().JoinedPartyId != acParty.PartyId)
+    {
+        return;
+    }
+    if (acParty.Created)
+    {
+        RemovePlayerFromParty(apPlayer);
+        return;
+    }
+    m_parties[acParty.PartyId].CampaignManaged =
+        acParty.PreviouslyCampaignManaged;
+}
+
+PartyService::CampaignAlignment PartyService::AlignPlayerWithCampaignParty(
+    Player* apPlayer,
+    std::uint32_t aPartyId) noexcept
+{
+    if (!apPlayer)
+        return {CampaignAlignmentResult::PartyNotFound, aPartyId};
+
+    PartyComponent& component = apPlayer->GetParty();
+    if (component.JoinedPartyId)
+    {
+        return *component.JoinedPartyId == aPartyId
+            ? CampaignAlignment{CampaignAlignmentResult::AlreadyAligned, aPartyId}
+            : CampaignAlignment{CampaignAlignmentResult::AlreadyInAnotherParty, aPartyId};
+    }
+
+    auto party = m_parties.find(aPartyId);
+    if (party == m_parties.end())
+        return {CampaignAlignmentResult::PartyNotFound, aPartyId};
+
+    Party& targetParty = m_parties[aPartyId];
+    targetParty.Members.push_back(apPlayer);
+    component.JoinedPartyId = aPartyId;
+    SendPartyJoinedEvent(targetParty, apPlayer);
+    BroadcastPartyInfo(aPartyId);
+    spdlog::info(
+        "[STRE][CampaignLobby] aligned transient player={} party={}",
+        apPlayer->GetId(), aPartyId);
+    return {CampaignAlignmentResult::Added, aPartyId};
+}
+
+void PartyService::RollbackCampaignPartyAlignment(
+    Player* apPlayer,
+    const CampaignAlignment& acAlignment) noexcept
+{
+    if (!apPlayer || !acAlignment.WasAdded() ||
+        apPlayer->GetParty().JoinedPartyId != acAlignment.PartyId)
+    {
+        return;
+    }
+
+    spdlog::warn(
+        "[STRE][CampaignLobby] rolling back transient player={} party={} after admission failure",
+        apPlayer->GetId(), acAlignment.PartyId);
+    RemovePlayerFromParty(apPlayer);
+}
+
 void PartyService::OnUpdate(const UpdateEvent& acEvent) noexcept
 {
     const auto cCurrentTick = GameServer::Get()->GetTick();
@@ -226,6 +323,9 @@ void PartyService::OnPlayerJoin(const PlayerJoinEvent& acEvent) noexcept
             {
                 auto& playerPartyComponent = player->GetParty();
                 Party& party = m_parties[*playerPartyComponent.JoinedPartyId];
+
+                if (party.CampaignManaged)
+                    continue;
 
                 party.Members.push_back(acEvent.pPlayer);
                 acEvent.pPlayer->GetParty().JoinedPartyId = *playerPartyComponent.JoinedPartyId;

@@ -1,6 +1,6 @@
 # Alternate Start — STRE integration specification
 
-> **Status: First-party Character Build, server campaign core, and live admission protocol implemented; gameplay projection pending**
+> **Status: First-party Character Build, campaign core/admission, and focused New Game lobby projection implemented and automated-tested; Solo/two-player happy-path runtime validation completed, with negative coverage and later phases pending**
 
 ## Identity
 
@@ -30,8 +30,10 @@ Current messages:
 - `CampaignStartRequest`;
 - `CampaignSetReadyRequest`;
 - `CampaignLeaveRequest`;
+- `CampaignJoinByCodeRequest`;
 - `CampaignCommandResponse`;
-- `NotifyCampaignSnapshot`.
+- `NotifyCampaignSnapshot`;
+- `NotifyCampaignLobbyState`.
 
 ## Current semantics
 
@@ -42,8 +44,8 @@ The client sends only logical identifiers. The server constructs the canonical b
 The pure server campaign core behind these capabilities is implemented over the
 durable campaign store. Explicit bounded network commands, result opcodes,
 public snapshots, local durable `PlayerId`, and non-canonical binding cache are
-wired through the existing STR transport. CEF and CK projection remain
-intentionally unwired in this increment.
+wired through the existing STR transport. The focused native/CEF New Game lobby
+projection is also wired; later CK/Valen phase consequences remain unwired.
 
 | Capability | Authority | Canonical state |
 |---|---|---|
@@ -61,6 +63,8 @@ intentionally unwired in this increment.
 
 - `CreateCampaign`
 - `JoinCampaign` (before roster seal only)
+- `JoinCampaignByCode` through an exact four-character ephemeral alias owned by
+  the server lobby directory;
 - `CommitCampaignStart` (after live session-layer host-role authorization, the
   server-authorized command atomically seals the roster, establishes the
   requesting admitted leader as Session Manager, and enters
@@ -86,6 +90,13 @@ Class and build selection is already covered by the M7-specific protocol; migrat
 
 Currently:
 
+- gate a fresh stage-20 New Game handoff before RaceMenu;
+- release Solo locally with no server, or orchestrate existing transport
+  connection plus Create/Join/Resume/Start intents;
+- render bounded transient lobby names and server-derived `canStart` without
+  exposing campaign, player, slot, or binding IDs to Angular;
+- release multiplayer Character Creation only for sealed `CharacterCreation`
+  plus complete-roster `ACTIVE` canonical evidence;
 - clean the character;
 - add and equip items;
 - add spells;
@@ -121,6 +132,20 @@ campaign. Once the exact roster returns, the server selects the last committed
 `CampaignCheckpoint`; every client loads its slot's matching native save, the
 server restores the matching revision, and all participants acknowledge before
 the runtime returns to `ACTIVE`.
+
+The join code alphabet is `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, with exactly four
+characters after uppercase normalization. The alias is not persisted and is
+invalidated when the lobby seals. PartyService remains the live administrative
+proof: campaign parties are marked transiently, excluded from legacy automatic
+party joining, and join-by-code alignment is rolled back if admission fails.
+Create and Join-by-code both require a player-chosen pseudo. It is normalized
+and validated before connection/party/campaign mutation: non-empty after trim,
+valid Unicode, no C0/C1 control characters, at most 24 Unicode code points and
+96 UTF-8 bytes. The ephemeral lobby directory stores it under the internal
+`PlayerId` only until the campaign seals; Angular sees only bounded pseudo and
+presence values. The pseudo is not the Skyrim character name and is never
+canonical identity, authorization input, ownership proof, binding, persistence,
+save, or checkpoint data.
 
 Campaign opcodes are appended after the existing STRE ranges so earlier numeric
 values remain stable. See

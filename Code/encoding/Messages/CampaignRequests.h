@@ -12,6 +12,7 @@ struct CampaignCreateRequest final : ClientMessage
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
     TiltedPhoques::String MutationId;
+    TiltedPhoques::String DisplayName;
 };
 
 struct CampaignJoinRequest final : ClientMessage
@@ -72,4 +73,16 @@ struct CampaignLeaveRequest final : ClientMessage
     TiltedPhoques::String CampaignId;
     TiltedPhoques::String MutationId;
     std::uint64_t ExpectedRevision{};
+};
+
+struct CampaignJoinByCodeRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignJoinByCodeRequest;
+    CampaignJoinByCodeRequest() : ClientMessage(Opcode) {}
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+    TiltedPhoques::String JoinCode;
+    TiltedPhoques::String MutationId;
+    TiltedPhoques::String DisplayName;
 };

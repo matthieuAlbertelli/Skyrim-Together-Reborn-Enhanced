@@ -25,10 +25,12 @@ static_assert(kCampaignResumeRequest == 64);
 static_assert(kCampaignStartRequest == 65);
 static_assert(kCampaignSetReadyRequest == 66);
 static_assert(kCampaignLeaveRequest == 67);
+static_assert(kCampaignJoinByCodeRequest == 68);
 static_assert(kNotifyCharacterBuildState == 63);
 static_assert(kNotifyWorldEntityManipulation == 64);
 static_assert(kCampaignCommandResponse == 65);
 static_assert(kNotifyCampaignSnapshot == 66);
+static_assert(kNotifyCampaignLobbyState == 67);
 
 namespace
 {
@@ -70,7 +72,11 @@ TEST_CASE("Every campaign client command round-trips through the factory", "[cam
 {
     CampaignCreateRequest create;
     create.MutationId = "mutation-create";
-    REQUIRE(RoundTripClient(create)->MutationId == create.MutationId);
+    create.DisplayName = "Matthieu";
+    const auto created = RoundTripClient(create);
+    REQUIRE(created->MutationId == create.MutationId);
+    REQUIRE(created->DisplayName == create.DisplayName);
+    REQUIRE(created->IsValid());
 
     CampaignJoinRequest join;
     join.CampaignId = "campaign-1";
@@ -116,6 +122,16 @@ TEST_CASE("Every campaign client command round-trips through the factory", "[cam
     REQUIRE(left->CampaignId == leave.CampaignId);
     REQUIRE(left->MutationId == leave.MutationId);
     REQUIRE(left->ExpectedRevision == 10);
+
+    CampaignJoinByCodeRequest joinByCode;
+    joinByCode.JoinCode = "A7K2";
+    joinByCode.MutationId = "mutation-code";
+    joinByCode.DisplayName = "\xC3\x89" "owyn";
+    const auto joinedByCode = RoundTripClient(joinByCode);
+    REQUIRE(joinedByCode->JoinCode == "A7K2");
+    REQUIRE(joinedByCode->MutationId == "mutation-code");
+    REQUIRE(joinedByCode->DisplayName == joinByCode.DisplayName);
+    REQUIRE(joinedByCode->IsValid());
 }
 
 TEST_CASE("Campaign response and public snapshot round-trip through the server factory", "[campaign.protocol]")
@@ -163,6 +179,25 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
     const auto decodedSnapshot = RoundTripServer(notification);
     REQUIRE(decodedSnapshot->Snapshot == notification.Snapshot);
     REQUIRE(decodedSnapshot->IsValid());
+
+    NotifyCampaignLobbyState lobby;
+    lobby.JoinCode = "R5WT";
+    lobby.CampaignId = "campaign-1";
+    lobby.StateVersion = 4;
+    lobby.Members.push_back({"Matthieu", true});
+    lobby.Members.push_back({"\xC3\x89" "owyn", false});
+    lobby.CanStart = false;
+    const auto decodedLobby = RoundTripServer(lobby);
+    REQUIRE(decodedLobby->JoinCode == "R5WT");
+    REQUIRE(decodedLobby->CampaignId == "campaign-1");
+    REQUIRE(decodedLobby->StateVersion == 4);
+    REQUIRE(decodedLobby->Members.size() == 2);
+    REQUIRE(decodedLobby->Members[0].Name == "Matthieu");
+    REQUIRE(decodedLobby->Members[0].Present);
+    REQUIRE(decodedLobby->Members[1].Name == "\xC3\x89" "owyn");
+    REQUIRE_FALSE(decodedLobby->Members[1].Present);
+    REQUIRE_FALSE(decodedLobby->CanStart);
+    REQUIRE(decodedLobby->IsValid());
 }
 
 TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[campaign.protocol][robustness]")
@@ -218,4 +253,68 @@ TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[c
             {"slot-x", "player-x", false, false});
     }
     REQUIRE_FALSE(RoundTripServer(oversized)->IsValid());
+
+    for (const char* invalidCode : {
+             "A7K", "A7K22", "A7I2", "A7O2", "A702", "A712"})
+    {
+        CampaignJoinByCodeRequest invalidJoinCode;
+        invalidJoinCode.JoinCode = invalidCode;
+        invalidJoinCode.MutationId = "mutation-code";
+        invalidJoinCode.DisplayName = "Player";
+        REQUIRE_FALSE(RoundTripClient(invalidJoinCode)->IsValid());
+    }
+
+    const std::vector<std::string> invalidDisplayNames{
+        "",
+        "   ",
+        std::string(kCampaignLobbyMaximumDisplayNameLength + 1, 'x'),
+        std::string{"Player\nTwo"},
+        std::string{"Player\xC2\x80"},
+        std::string{"\xC3\x28", 2},
+        std::string(kCampaignLobbyMaximumDisplayNameBytes + 1, 'x')};
+    for (const std::string& invalidDisplayName : invalidDisplayNames)
+    {
+        CampaignCreateRequest invalidCreate;
+        invalidCreate.MutationId = "mutation-create";
+        invalidCreate.DisplayName = invalidDisplayName.c_str();
+        REQUIRE_FALSE(RoundTripClient(invalidCreate)->IsValid());
+
+        CampaignJoinByCodeRequest invalidJoin;
+        invalidJoin.JoinCode = "A7K2";
+        invalidJoin.MutationId = "mutation-code";
+        invalidJoin.DisplayName = invalidDisplayName.c_str();
+        REQUIRE_FALSE(RoundTripClient(invalidJoin)->IsValid());
+    }
+
+    NotifyCampaignLobbyState oversizedLobby;
+    oversizedLobby.JoinCode = "A7K2";
+    oversizedLobby.CampaignId = "campaign-1";
+    for (std::size_t index = 0; index < 11; ++index)
+        oversizedLobby.Members.push_back({"Player", true});
+    REQUIRE_FALSE(RoundTripServer(oversizedLobby)->IsValid());
+
+    NotifyCampaignLobbyState oversizedName;
+    oversizedName.JoinCode = "A7K2";
+    oversizedName.CampaignId = "campaign-1";
+    oversizedName.Members.push_back(
+        {String(kCampaignLobbyMaximumDisplayNameLength + 1, 'x'), true});
+    REQUIRE_FALSE(RoundTripServer(oversizedName)->IsValid());
+}
+
+TEST_CASE("Campaign lobby display names normalize bounded Unicode safely", "[campaign.protocol][presentation]")
+{
+    TiltedPhoques::String normalized;
+    const std::string unicodeName =
+        "  L\xC3\xA9" "a \xF0\x9F\x90\x89  ";
+    REQUIRE(NormalizeCampaignLobbyDisplayName(unicodeName, normalized));
+    REQUIRE(normalized == "L\xC3\xA9" "a \xF0\x9F\x90\x89");
+    REQUIRE(IsValidCampaignLobbyDisplayName(normalized));
+
+    std::string boundedUnicode;
+    for (std::size_t index = 0; index < 24; ++index)
+        boundedUnicode += "\xC3\xA9";
+    REQUIRE(NormalizeCampaignLobbyDisplayName(boundedUnicode, normalized));
+    boundedUnicode += "\xC3\xA9";
+    REQUIRE_FALSE(NormalizeCampaignLobbyDisplayName(
+        boundedUnicode, normalized));
 }

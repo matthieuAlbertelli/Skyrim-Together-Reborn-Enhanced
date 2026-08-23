@@ -1,6 +1,6 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits plus M7, New Game, and MQ101/post-Helgen smoke tests executed; exhaustive coverage remains**
+> **Status: Automated audits plus M7, New Game, and MQ101/post-Helgen smoke tests executed; focused campaign-bootstrap automation and the Solo/two-player happy path pass, while the remaining runtime matrix is pending**
 
 ## Completed checks
 
@@ -16,6 +16,15 @@
 - MQ101 structural and generated-fragment invariant audits conform;
 - post-Helgen MQ101/world-state projection validated in game after xEdit Quick
   Auto Clean while MQ102/MQ102A/MQ102B remain untouched.
+- native `TPTests` pass with 126 test cases and 1753 assertions, including the
+  focused join-code directory, wire validation, opcode stability, native CEF
+  binding manifest/action routing, bounded Unicode lobby-pseudo validation, and
+  one-shot local campaign-bootstrap gate tests;
+- the seven focused Playwright campaign-bootstrap scenarios pass: entry/create,
+  entry/join and code normalization, Solo intent, shared persisted connection
+  address without password persistence, lobby projection/Start authority,
+  disconnected form/back behavior, and required/trimmed/bounded Unicode pseudo
+  handling across the five-argument native action contract.
 
 These checks do not constitute exhaustive validation of every combination.
 
@@ -118,13 +127,79 @@ Validated on 16 August 2026:
   vanilla proximity collapse or dragon/collapse roar;
 - the accepted minor limitation is a brief rubble sound during Keep load.
 
+## Campaign-bootstrap runtime evidence and pending matrix
+
+Run from a fresh Skyrim process unless the scenario says otherwise. Retain the
+matching client and server logs; automated tests are not evidence that these
+runtime scenarios passed.
+
+Runtime prerequisite: disable `Alternate Start - Live Another Life` whenever
+`STRE_AlternateStart.esp` is active. The two alternate-start implementations
+were observed to be incompatible during this validation. This slice does not
+add compatibility behavior.
+
+### Executed happy-path evidence — 23 August 2026
+
+The following observations, and only these observations, are recorded as passed:
+
+- the Solo bootstrap works;
+- Create Campaign works on the first PC;
+- a second PC joins that campaign with its four-character code;
+- both players progress through Character Creation and arrive in the STRE inn;
+- the persisted last server address is reused;
+- the transient creator/joiner pseudos appear correctly in the lobby.
+
+### A — Solo regression — validated scope
+
+The Solo bootstrap was exercised successfully. No additional negative Solo
+scenario is claimed by this evidence.
+
+### B — two-PC Create/Join happy path — validated scope
+
+PC A created a campaign and PC B joined it with the displayed four-character
+code. Both selected pseudos were displayed correctly, the saved server address
+was reused, and both players completed Character Creation and arrived in the
+STRE inn.
+
+On a future repetition, retain server evidence for the create/join/start
+operation and result, internal campaign/revision context, PartyService
+alignment/leadership decision,
+and the sealed `CharacterCreation` snapshot. Retain client evidence for
+the bootstrap transition, lobby projection, canonical authorization, and a
+single CharacterCreation release. Logs must not contain passwords.
+
+### C–L — pending manual scenarios
+
+- C: A creates, B then C join, and Start seals exactly those three members.
+- D: an unknown valid-shaped code is rejected without roster/party mutation or
+  CharacterCreation release.
+- E: a valid code entered in lowercase is normalized and joins the same lobby.
+- E2: empty, control-containing, or over-24-code-point pseudos are rejected
+  before connection or party/campaign mutation; surrounding whitespace is
+  trimmed and ordinary Unicode pseudos are preserved.
+- F: after A+B seal, C cannot reuse that code and the sealed roster is unchanged.
+- G: B disconnects before Start; A cannot seal/progress until B legitimately
+  reconnects/resumes, after which Start succeeds.
+- H: B cannot force Start through a manipulated UI or direct request.
+- I: with two simultaneous lobbies, B joins A's code and D joins C's code with no
+  campaign or transient-party cross-wiring.
+- J: wrong password, unreachable server, and protocol mismatch keep the mandatory
+  bootstrap active and never release Character Creation.
+- K: a second New Game in the same process reopens a clean bootstrap.
+- L: loading an ordinary existing save does not open the bootstrap.
+
+For each pending scenario, retain the operation/result, internal campaign and revision
+where available, transient/durable player context allowed by logging policy, and
+PartyService decision. Confirm the roster is unchanged and no password is logged.
+None of C–L is claimed as manually passed by the happy-path run above.
+
 ## Tests still blocked by missing features
 
 - neutral MQ102/MQ103 vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;
 - save/load at every phase;
-- sealed roster, coordinated checkpoints, disconnect recovery, and collective
+- coordinated checkpoints, disconnect recovery lock, and collective
   build/campaign restoration;
 - 4 and 10 players.
 

@@ -178,5 +178,41 @@
     "PLAYER_LIST": {
       "PARTY_INVITE": "{{from}} invited you to join a party"
     }
+  },
+  "CAMPAIGN_BOOTSTRAP": {
+    "SOLO": "SOLO",
+    "CREATE_CAMPAIGN": "CREATE CAMPAIGN",
+    "JOIN_CAMPAIGN": "JOIN CAMPAIGN",
+    "PSEUDO": "PSEUDO",
+    "ADDRESS": "ADDRESS",
+    "PASSWORD": "PASSWORD",
+    "CODE": "CODE",
+    "CREATE": "CREATE",
+    "JOIN": "JOIN",
+    "START": "START",
+    "BACK": "BACK",
+    "ERROR": {
+      "campaign_already_admitted": "A campaign is already active.",
+      "invalid_address": "Invalid address.",
+      "invalid_code": "Invalid code.",
+      "invalid_pseudo": "Invalid pseudo.",
+      "start_failed": "Unable to start.",
+      "create_failed": "Unable to create campaign.",
+      "join_failed": "Unable to join campaign.",
+      "connection_lost": "Connection lost.",
+      "connection_failed": "Connection failed.",
+      "resume_failed": "Unable to resume campaign.",
+      "unauthorized": "You cannot start this campaign.",
+      "session_unavailable": "Campaign session unavailable.",
+      "lobby_unavailable": "Campaign unavailable.",
+      "lobby_closed": "Campaign already started.",
+      "member_missing": "A member is absent.",
+      "resume_required": "Resume required.",
+      "server_error": "Server error.",
+      "identity_error": "Campaign identity rejected.",
+      "state_changed": "Campaign state changed. Try again.",
+      "request_rejected": "Request rejected.",
+      "UNKNOWN": "Request failed."
+    }
   }
 }

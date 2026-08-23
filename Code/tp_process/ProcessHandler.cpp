@@ -1,6 +1,10 @@
 
 #include "ProcessHandler.h"
 
+#include <CampaignBootstrapBridge.h>
+
+#include <string>
+
 ProcessHandler::ProcessHandler() noexcept
     : OverlayRenderProcessHandler("skyrimtogether")
 {
@@ -28,7 +32,17 @@ void ProcessHandler::OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<C
     m_pCoreObject->SetValue("teleportToPlayer", CefV8Value::CreateFunction("teleportToPlayer", m_pOverlayHandler), V8_PROPERTY_ATTRIBUTE_NONE);
     m_pCoreObject->SetValue("toggleDebugUI", CefV8Value::CreateFunction("toggleDebugUI", m_pOverlayHandler), V8_PROPERTY_ATTRIBUTE_NONE);
     m_pCoreObject->SetValue("characterCreationAction", CefV8Value::CreateFunction("characterCreationAction", m_pOverlayHandler), V8_PROPERTY_ATTRIBUTE_NONE);
-
+    for (const std::string_view functionName :
+         STRE::Campaign::kCampaignBootstrapCefFunctions)
+    {
+        const std::string name{functionName};
+        m_pCoreObject->SetValue(
+            name,
+            CefV8Value::CreateFunction(name, m_pOverlayHandler),
+            V8_PROPERTY_ATTRIBUTE_NONE);
+        LOG(INFO) << "[STRE][CampaignBootstrapBridge] registered JS function="
+                  << name;
+    }
 }
 
 void ProcessHandler::OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context)

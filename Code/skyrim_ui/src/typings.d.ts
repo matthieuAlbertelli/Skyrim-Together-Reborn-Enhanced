@@ -101,6 +101,14 @@ declare const skyrimtogether: SkyrimTogether;
 
 /** Global Skyrim: Together object type. */
 interface SkyrimTogether {
+  campaignBootstrapAction(
+    action: string,
+    address?: string,
+    password?: string,
+    code?: string,
+    pseudo?: string,
+  ): void;
+
   /** Add listener to when the UI is first initialized. */
   on(event: 'init', callback: SkyrimTogetherTypes.InitCallback): void;
 

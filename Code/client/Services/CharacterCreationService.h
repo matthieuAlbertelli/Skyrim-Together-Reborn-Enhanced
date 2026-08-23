@@ -13,6 +13,8 @@
 
 struct Actor;
 struct CharacterBuildResponse;
+struct CampaignBootstrapAuthorizedEvent;
+class CampaignBootstrapService;
 struct DisconnectedEvent;
 struct NotifyCharacterBuildState;
 struct PlayerCharacter;
@@ -51,6 +53,7 @@ public:
     CharacterCreationService(
         World& aWorld,
         UiSurfaceService& aUiSurfaceService,
+        CampaignBootstrapService& aCampaignBootstrapService,
         entt::dispatcher& aDispatcher) noexcept;
     ~CharacterCreationService() noexcept override;
 
@@ -111,6 +114,8 @@ private:
     void OnCharacterBuildResponse(const CharacterBuildResponse& acMessage) noexcept;
     void OnNotifyCharacterBuildState(const NotifyCharacterBuildState& acMessage) noexcept;
     void OnDisconnected(const DisconnectedEvent& acEvent) noexcept;
+    void OnCampaignBootstrapAuthorized(
+        const CampaignBootstrapAuthorizedEvent&) noexcept;
     [[nodiscard]] bool ResetForFreshCharacterCreation() noexcept;
     void BeginFromStage20(TESQuest* apQuest) noexcept;
     void OpenRaceMenu() noexcept;
@@ -181,11 +186,13 @@ private:
 
     World& m_world;
     UiSurfaceService& m_uiSurfaceService;
+    CampaignBootstrapService& m_campaignBootstrapService;
 
     entt::scoped_connection m_updateConnection;
     entt::scoped_connection m_buildResponseConnection;
     entt::scoped_connection m_buildStateConnection;
     entt::scoped_connection m_disconnectedConnection;
+    entt::scoped_connection m_bootstrapAuthorizedConnection;
 
     TESQuest* m_pQuest{};
     CharacterCreationPhase m_phase{CharacterCreationPhase::Inactive};

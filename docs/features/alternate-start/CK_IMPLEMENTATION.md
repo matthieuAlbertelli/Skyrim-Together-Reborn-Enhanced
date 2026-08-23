@@ -1,6 +1,6 @@
 # Alternate Start — Creation Kit implementation
 
-> **Status: New Game bootstrap and MQ101/post-Helgen projection implemented and smoke-tested; MQ102/MQ103 handoff, introduction, and Departure remain**
+> **Status: New Game/CK bootstrap and MQ101/post-Helgen projection smoke-tested; native campaign gate automated-tested and manually validated on the Solo/two-player happy path; negative runtime coverage, MQ102/MQ103 handoff, introduction, and Departure remain**
 
 ## Versioned files
 
@@ -72,9 +72,18 @@ Main menu: New Game
 → MoveTo the seat through its alias
 → wait for the seated state
 → advance to stage 20
+→ CharacterCreationService locks controls and opens the campaign-bootstrap CEF gate
+→ Solo authorizes locally, or canonical sealed CharacterCreation + full-roster ACTIVE authorizes multiplayer
 → CharacterCreationService opens RaceMenu
 → Angular Character Creation
 ```
+
+This gate is entirely native/CEF. No ESP, PSC, PEX, quest stage, or generic
+quest-synchronization change was required for the lobby slice.
+
+Runtime prerequisite: `Alternate Start - Live Another Life` must be disabled
+when `STRE_AlternateStart.esp` is active. Running both was observed to be
+incompatible during validation. Compatibility work is outside this slice.
 
 The vanilla `MQQuickstart == 0` fragment remains unchanged and still calls `SetStage(10)`. The STRE branch must never call MQ101 stage 10.
 
