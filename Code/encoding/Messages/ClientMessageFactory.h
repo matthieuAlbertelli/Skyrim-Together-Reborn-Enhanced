@@ -83,7 +83,7 @@ struct ClientMessageFactory
             RequestOwnershipTransfer, RequestOwnershipClaim, RequestObjectInventoryChanges, SpellCastRequest, ProjectileLaunchRequest, InterruptCastRequest, AddTargetRequest, ScriptAnimationRequest, DrawWeaponRequest, MountRequest, NewPackageRequest, RequestRespawn, SyncExperienceRequest,
             RequestEquipmentChanges, SendChatMessageRequest, TeleportCommandRequest, PlayerRespawnRequest, DialogueRequest, SubtitleRequest, PlayerDialogueRequest, PlayerLevelRequest, TeleportRequest, RequestPlayerHealthUpdate, RequestWeatherChange, RequestCurrentWeather, RequestSetWaypoint,
             RequestRemoveWaypoint, RemoveSpellRequest, SetTimeCommandRequest, TradeInviteRequest, TradeInviteResponseRequest, TradeOfferUpdateRequest, TradeConfirmRequest, TradeCancelRequest, TradeApplyResultRequest, TradeReconcileResultRequest, CharacterBuildRequest, CharacterBuildAppliedRequest, RequestWorldEntityManipulation,
-            CampaignCreateRequest, CampaignJoinRequest, CampaignResumeRequest, CampaignStartRequest, CampaignSetReadyRequest, CampaignLeaveRequest>;
+            CampaignCreateRequest, CampaignJoinRequest, CampaignResumeRequest, CampaignStartRequest, CampaignSetReadyRequest, CampaignLeaveRequest, CampaignJoinByCodeRequest>;
 
         return s_visitor(std::forward<T>(func));
     }

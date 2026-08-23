@@ -2,6 +2,9 @@
 
 #include <Events/PacketEvent.h>
 
+#include <cstdint>
+#include <optional>
+
 struct World;
 struct UpdateEvent;
 struct PlayerJoinEvent;
@@ -19,11 +22,43 @@ struct PartyKickRequest;
  */
 struct PartyService
 {
+    enum class CampaignAlignmentResult
+    {
+        AlreadyAligned,
+        Added,
+        PartyNotFound,
+        AlreadyInAnotherParty
+    };
+
+    struct CampaignAlignment
+    {
+        CampaignAlignmentResult Result{CampaignAlignmentResult::PartyNotFound};
+        std::uint32_t PartyId{};
+
+        [[nodiscard]] bool Succeeded() const noexcept
+        {
+            return Result == CampaignAlignmentResult::AlreadyAligned ||
+                Result == CampaignAlignmentResult::Added;
+        }
+        [[nodiscard]] bool WasAdded() const noexcept
+        {
+            return Result == CampaignAlignmentResult::Added;
+        }
+    };
+
+    struct CampaignLeaderParty
+    {
+        std::uint32_t PartyId{};
+        bool Created{};
+        bool PreviouslyCampaignManaged{};
+    };
+
     struct Party
     {
         uint32_t LeaderPlayerId;
         Vector<Player*> Members;
         GameId CachedWeather{};
+        bool CampaignManaged{};
     };
 
     PartyService(World& aWorld, entt::dispatcher& aDispatcher) noexcept;
@@ -35,6 +70,17 @@ struct PartyService
     bool IsPlayerInParty(Player* const apPlayer) const noexcept;
     bool IsPlayerLeader(const Player* const apPlayer) const noexcept;
     Party* GetPlayerParty(Player* const apPlayer) noexcept;
+    [[nodiscard]] std::optional<CampaignLeaderParty> EnsureCampaignLeaderParty(
+        Player* apPlayer) noexcept;
+    void RollbackCampaignLeaderParty(
+        Player* apPlayer,
+        const CampaignLeaderParty& acParty) noexcept;
+    [[nodiscard]] CampaignAlignment AlignPlayerWithCampaignParty(
+        Player* apPlayer,
+        std::uint32_t aPartyId) noexcept;
+    void RollbackCampaignPartyAlignment(
+        Player* apPlayer,
+        const CampaignAlignment& acAlignment) noexcept;
 
 protected:
     void OnUpdate(const UpdateEvent& acEvent) noexcept;

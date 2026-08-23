@@ -8,7 +8,8 @@ target("TPProcess")
     end
 
     add_includedirs(
-        ".")
+        ".",
+        "../campaign_client")
     add_headerfiles("*.h")
     add_files(
         "*.cpp",

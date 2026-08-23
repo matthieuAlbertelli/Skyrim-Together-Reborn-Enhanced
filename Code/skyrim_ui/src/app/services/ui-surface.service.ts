@@ -6,6 +6,7 @@ export type UiSurface =
   | 'none'
   | 'str'
   | 'trade'
+  | 'campaignBootstrap'
   | 'characterCreation';
 
 type NativeEventArgument = string | number | boolean | unknown[] | null;
@@ -36,6 +37,7 @@ export class UiSurfaceService implements OnDestroy {
       value !== 'none' &&
       value !== 'str' &&
       value !== 'trade' &&
+      value !== 'campaignBootstrap' &&
       value !== 'characterCreation'
     ) {
       return;

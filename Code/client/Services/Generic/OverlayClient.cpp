@@ -7,12 +7,16 @@
 #include <Services/TradeMenuService.h>
 #include <Services/TradeItemPreviewService.h>
 #include <Services/CharacterCreationService.h>
+#include <Services/CampaignBootstrapService.h>
 #include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
 #include <Messages/TeleportRequest.h>
 
 #include <Events/SetTimeCommandEvent.h>
+
+#include <CampaignBootstrapBridge.h>
+#include <Structs/Campaign.h>
 
 #include <World.h>
 
@@ -155,6 +159,96 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
                         spdlog::warn(
                             "Unknown character creation action: {}",
                             action);
+                });
+        }
+        else if (eventName ==
+            STRE::Campaign::kCampaignBootstrapActionFunction)
+        {
+            if (!eventArgs || eventArgs->GetSize() < 1 ||
+                eventArgs->GetSize() >
+                    STRE::Campaign::kCampaignBootstrapMaximumArgumentCount)
+            {
+                spdlog::warn(
+                    "[STRE][CampaignBootstrapBridge] rejected action with invalid argument count={}",
+                    eventArgs ? eventArgs->GetSize() : 0);
+                return true;
+            }
+
+            for (std::size_t index = 0;
+                 index < eventArgs->GetSize(); ++index)
+            {
+                if (eventArgs->GetType(index) != VTYPE_STRING)
+                {
+                    spdlog::warn(
+                        "[STRE][CampaignBootstrapBridge] rejected non-string argument index={}",
+                        index);
+                    return true;
+                }
+            }
+
+            const std::string action =
+                eventArgs->GetString(0).ToString();
+            const std::string address = eventArgs->GetSize() >= 2
+                ? eventArgs->GetString(1).ToString()
+                : std::string{};
+            const std::string password = eventArgs->GetSize() >= 3
+                ? eventArgs->GetString(2).ToString()
+                : std::string{};
+            const std::string code = eventArgs->GetSize() >= 4
+                ? eventArgs->GetString(3).ToString()
+                : std::string{};
+            const std::string displayName = eventArgs->GetSize() >
+                    STRE::Campaign::kCampaignBootstrapDisplayNameArgumentIndex
+                ? eventArgs->GetString(
+                      STRE::Campaign::kCampaignBootstrapDisplayNameArgumentIndex)
+                      .ToString()
+                : std::string{};
+
+            const STRE::Campaign::CampaignBootstrapAction parsedAction =
+                STRE::Campaign::ParseCampaignBootstrapAction(action);
+            if (parsedAction ==
+                    STRE::Campaign::CampaignBootstrapAction::Unknown ||
+                action.size() > 16 || address.size() > 255 ||
+                password.size() > 128 || code.size() > 4 ||
+                displayName.size() >
+                    kCampaignLobbyMaximumDisplayNameBytes)
+            {
+                spdlog::warn(
+                    "[STRE][CampaignBootstrapBridge] rejected invalid action={} argumentCount={}",
+                    action, eventArgs->GetSize());
+                return true;
+            }
+
+            spdlog::info(
+                "[STRE][CampaignBootstrapBridge] received action={} argumentCount={}",
+                action, eventArgs->GetSize());
+            World::Get().GetRunner().Queue(
+                [parsedAction, action, address, password, code, displayName]()
+                {
+                    auto& service = World::Get()
+                        .ctx()
+                        .at<CampaignBootstrapService>();
+                    const auto before = service.GetPhase();
+                    using STRE::Campaign::CampaignBootstrapAction;
+                    if (parsedAction == CampaignBootstrapAction::Solo)
+                        service.ChooseSolo();
+                    else if (parsedAction == CampaignBootstrapAction::ShowCreate)
+                        service.ShowCreate();
+                    else if (parsedAction == CampaignBootstrapAction::ShowJoin)
+                        service.ShowJoin();
+                    else if (parsedAction == CampaignBootstrapAction::Create)
+                        service.Create(address, password, displayName);
+                    else if (parsedAction == CampaignBootstrapAction::Join)
+                        service.Join(
+                            address, password, code, displayName);
+                    else if (parsedAction == CampaignBootstrapAction::Start)
+                        service.Start();
+                    else if (parsedAction == CampaignBootstrapAction::Back)
+                        service.Back();
+                    spdlog::info(
+                        "[STRE][CampaignBootstrapBridge] processed action={} phaseBefore={} phaseAfter={}",
+                        action, static_cast<unsigned>(before),
+                        static_cast<unsigned>(service.GetPhase()));
                 });
         }
         else if (eventName == "toggleDebugUI")

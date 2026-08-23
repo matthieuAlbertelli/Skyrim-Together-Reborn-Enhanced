@@ -2,6 +2,8 @@
 
 #include <Services/CharacterCreationService.h>
 
+#include <Services/CampaignBootstrapService.h>
+
 #include <Services/OverlayService.h>
 #include <Services/PapyrusService.h>
 #include <Services/TradeItemPreviewService.h>
@@ -10,6 +12,7 @@
 
 #include <Events/UpdateEvent.h>
 #include <Events/DisconnectedEvent.h>
+#include <Events/CampaignBootstrapAuthorizedEvent.h>
 
 #include <Components/TESContainer.h>
 #include <CharacterCreation/CharacterBuildCatalog.h>
@@ -415,9 +418,11 @@ void AppendJsonString(
 CharacterCreationService::CharacterCreationService(
     World& aWorld,
     UiSurfaceService& aUiSurfaceService,
+    CampaignBootstrapService& aCampaignBootstrapService,
     entt::dispatcher& aDispatcher) noexcept
     : m_world(aWorld)
     , m_uiSurfaceService(aUiSurfaceService)
+    , m_campaignBootstrapService(aCampaignBootstrapService)
     , m_updateConnection(
           aDispatcher.sink<UpdateEvent>().connect<
               &CharacterCreationService::OnUpdate>(this))
@@ -430,6 +435,9 @@ CharacterCreationService::CharacterCreationService(
     , m_disconnectedConnection(
           aDispatcher.sink<DisconnectedEvent>().connect<
               &CharacterCreationService::OnDisconnected>(this))
+    , m_bootstrapAuthorizedConnection(
+          aDispatcher.sink<CampaignBootstrapAuthorizedEvent>().connect<
+              &CharacterCreationService::OnCampaignBootstrapAuthorized>(this))
 {
     if (auto* const pEvents = EventDispatcherManager::Get())
     {
@@ -772,6 +780,23 @@ void CharacterCreationService::OnDisconnected(
     Fail("La connexion au serveur a été interrompue pendant le scellement.");
 }
 
+void CharacterCreationService::OnCampaignBootstrapAuthorized(
+    const CampaignBootstrapAuthorizedEvent&) noexcept
+{
+    if (!m_pQuest || m_pQuest->IsStopped() ||
+        m_phase != CharacterCreationPhase::Inactive ||
+        !m_controlsLocked)
+    {
+        spdlog::error(
+            "[STRE][CharacterCreation] bootstrap authorization ignored because the local stage-20 gate is not armed");
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CharacterCreation] campaign bootstrap authorized; opening RaceMenu");
+    OpenRaceMenu();
+}
+
 bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
 {
     spdlog::info(
@@ -842,7 +867,8 @@ void CharacterCreationService::BeginFromStage20(
         return;
     }
 
-    OpenRaceMenu();
+    m_suppressStageRecovery = true;
+    m_campaignBootstrapService.BeginFreshGame();
 }
 
 void CharacterCreationService::OpenRaceMenu() noexcept

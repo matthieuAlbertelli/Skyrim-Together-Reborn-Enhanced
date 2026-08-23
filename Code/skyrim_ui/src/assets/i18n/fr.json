@@ -168,5 +168,41 @@
     "PLAYER_LIST": {
       "PARTY_INVITE": "{{from}} vous a invité à jouer."
     }
+  },
+  "CAMPAIGN_BOOTSTRAP": {
+    "SOLO": "SOLO",
+    "CREATE_CAMPAIGN": "CRÉER UNE CAMPAGNE",
+    "JOIN_CAMPAIGN": "REJOINDRE UNE CAMPAGNE",
+    "PSEUDO": "PSEUDO",
+    "ADDRESS": "ADRESSE",
+    "PASSWORD": "MOT DE PASSE",
+    "CODE": "CODE",
+    "CREATE": "CRÉER",
+    "JOIN": "REJOINDRE",
+    "START": "COMMENCER",
+    "BACK": "RETOUR",
+    "ERROR": {
+      "campaign_already_admitted": "Une campagne est déjà active.",
+      "invalid_address": "Adresse invalide.",
+      "invalid_code": "Code invalide.",
+      "invalid_pseudo": "Pseudo invalide.",
+      "start_failed": "Démarrage impossible.",
+      "create_failed": "Création impossible.",
+      "join_failed": "Impossible de rejoindre la campagne.",
+      "connection_lost": "Connexion perdue.",
+      "connection_failed": "Échec de la connexion.",
+      "resume_failed": "Reprise impossible.",
+      "unauthorized": "Vous ne pouvez pas démarrer cette campagne.",
+      "session_unavailable": "Session de campagne indisponible.",
+      "lobby_unavailable": "Campagne indisponible.",
+      "lobby_closed": "La campagne a déjà commencé.",
+      "member_missing": "Un membre est absent.",
+      "resume_required": "Reprise requise.",
+      "server_error": "Erreur du serveur.",
+      "identity_error": "Identité de campagne refusée.",
+      "state_changed": "La campagne a changé. Réessayez.",
+      "request_rejected": "Demande refusée.",
+      "UNKNOWN": "Échec de la demande."
+    }
   }
 }

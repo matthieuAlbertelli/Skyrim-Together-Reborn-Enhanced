@@ -38,6 +38,7 @@ struct CampaignProtocolCommandResult
     StateVersion Version{};
     std::string CampaignSlotId;
     std::string CharacterBindingId;
+    std::string JoinCode;
     std::optional<CampaignSnapshotData> Snapshot;
 
     [[nodiscard]] bool Succeeded() const noexcept

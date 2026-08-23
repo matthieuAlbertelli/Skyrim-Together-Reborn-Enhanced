@@ -17,6 +17,8 @@ const char* SurfaceName(UiSurface aSurface) noexcept
         return "str";
     case UiSurface::Trade:
         return "trade";
+    case UiSurface::CampaignBootstrap:
+        return "campaignBootstrap";
     case UiSurface::CharacterCreation:
         return "characterCreation";
     case UiSurface::None:

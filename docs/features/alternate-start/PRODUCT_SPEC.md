@@ -1,6 +1,6 @@
 # Alternate Start — Product specification
 
-> **Status: Product target accepted; character bootstrap and MQ101/post-Helgen projection implemented, full departure journey incomplete**
+> **Status: Product target accepted; New Game campaign gate, character bootstrap, and MQ101/post-Helgen projection implemented; the campaign happy path is runtime-validated while negative coverage and the full departure journey remain**
 
 ## Pitch
 
@@ -20,6 +20,9 @@ Start a campaign in an inn without importing an already-advanced character. Each
 10. Intercept a fresh New Game before vanilla MQ101 stage 10.
 11. Project MQ101 and Helgen to the validated post-attack boundary while leaving
     MQ102/MQ102A/MQ102B untouched for the later handoff.
+12. Before RaceMenu, choose Solo or create/join a campaign through the focused
+    CEF lobby; multiplayer Character Creation opens only after the server seals
+    the current roster and reports the complete roster `ACTIVE`.
 
 ## Complete product goals
 
@@ -53,16 +56,23 @@ Warrior, Mage, and Thief form the first implemented vertical slice. The kits, it
 8. Complete the ready check.
 9. Depart for Skyrim together without changing the sealed roster.
 
-The appearance/build flow, automatic New Game redirect, and MQ101/post-Helgen
-projection are present. The server campaign core and live create/join/resume/
-start/readiness protocol provide the fixed-roster foundation, but gameplay-facing
-campaign UI/CK projection is not yet wired. Valen, integrated ready/departure
-behavior, and the neutral MQ102/MQ103 handoff remain to be completed.
+The appearance/build flow, automatic New Game redirect, MQ101/post-Helgen
+projection, and gameplay-facing Solo/Create/Join lobby are present. Four-character
+codes are ephemeral aliases for server-owned campaigns, and the current mutable
+roster is sealed only by the existing authoritative start path. This native/CEF
+slice asks every creator/joiner for a transient lobby pseudo, including when the
+transport is already connected. It is shown to lobby members only and is not a
+Skyrim character name or durable campaign identity. The slice is automated-tested
+and its Solo/two-player Create/Join happy path is runtime-validated. Negative
+runtime coverage remains pending. Valen, integrated
+ready/departure behavior, durable Character Build binding, and the neutral
+MQ102/MQ103 handoff remain to be completed.
 
 ## Single-player
 
 - the same creation flow in the inn;
 - the same local catalog;
+- a mandatory Solo/Create/Join choice before RaceMenu on a fresh New Game;
 - no mandatory roster or ready check;
 - no mandatory server dependency;
 - state retained in the Skyrim save.

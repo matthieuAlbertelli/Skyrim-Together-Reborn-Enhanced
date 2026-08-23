@@ -5,9 +5,17 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 inline constexpr std::size_t kCampaignWireMaximumIdLength = 128;
 inline constexpr std::size_t kCampaignWireMaximumRosterSize = 10;
+inline constexpr std::size_t kCampaignJoinCodeLength = 4;
+inline constexpr std::size_t kCampaignLobbyMaximumDisplayNameLength = 24;
+inline constexpr std::size_t kCampaignLobbyMaximumDisplayNameBytes = 96;
+inline constexpr std::uint8_t kCampaignWirePhaseCharacterCreation = 1;
+inline constexpr std::uint8_t kCampaignWireRuntimeActive = 1;
+inline constexpr std::string_view kCampaignJoinCodeAlphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 enum class CampaignProtocolOperation : std::uint8_t
 {
@@ -16,7 +24,8 @@ enum class CampaignProtocolOperation : std::uint8_t
     Resume,
     Start,
     SetReady,
-    Leave
+    Leave,
+    JoinByCode
 };
 
 enum class CampaignProtocolResult : std::uint8_t
@@ -38,7 +47,10 @@ enum class CampaignProtocolResult : std::uint8_t
     IdempotencyConflict,
     RosterIncomplete,
     PersistenceFailure,
-    ExistingMembershipRequiresResume
+    ExistingMembershipRequiresResume,
+    InvalidJoinCode,
+    JoinCodeUnavailable,
+    PartyAlignmentFailed
 };
 
 struct CampaignPublicSlotData
@@ -90,3 +102,13 @@ struct CampaignSnapshotData
 [[nodiscard]] bool ReadCampaignWireId(
     TiltedPhoques::Buffer::Reader& aReader,
     TiltedPhoques::String& aValue) noexcept;
+[[nodiscard]] bool NormalizeCampaignJoinCode(
+    std::string_view acValue,
+    TiltedPhoques::String& aNormalized) noexcept;
+[[nodiscard]] bool IsValidCampaignJoinCode(
+    const TiltedPhoques::String& acValue) noexcept;
+[[nodiscard]] bool NormalizeCampaignLobbyDisplayName(
+    std::string_view acValue,
+    TiltedPhoques::String& aNormalized) noexcept;
+[[nodiscard]] bool IsValidCampaignLobbyDisplayName(
+    const TiltedPhoques::String& acValue) noexcept;

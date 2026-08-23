@@ -6,10 +6,12 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 struct CampaignCommandResponse;
 struct DisconnectedEvent;
 struct NotifyCampaignSnapshot;
+struct NotifyCampaignLobbyState;
 struct TransportService;
 
 struct CampaignClientAdmission
@@ -26,6 +28,21 @@ struct CampaignClientCommandOutcome
     std::string MutationId;
     std::string CampaignId;
     std::uint64_t StateVersion{};
+    std::string JoinCode;
+};
+
+struct CampaignClientLobbyMember
+{
+    std::string Name;
+    bool Present{};
+};
+
+struct CampaignClientLobbyState
+{
+    std::string JoinCode;
+    std::uint64_t StateVersion{};
+    std::vector<CampaignClientLobbyMember> Members;
+    bool CanStart{};
 };
 
 class CampaignService final
@@ -43,16 +60,23 @@ public:
     GetAdmission() const noexcept { return m_admission; }
     [[nodiscard]] const std::optional<CampaignClientCommandOutcome>&
     GetLastCommandOutcome() const noexcept { return m_lastCommandOutcome; }
+    [[nodiscard]] const std::optional<CampaignClientLobbyState>&
+    GetLobbyState() const noexcept { return m_lobbyState; }
     [[nodiscard]] const std::string& GetStorageError() const noexcept
     {
         return m_storageError;
     }
 
     [[nodiscard]] std::string CreateCampaign(
+        const std::string& acDisplayName,
         const std::string& acMutationId = {}) noexcept;
     [[nodiscard]] std::string JoinCampaign(
         const std::string& acCampaignId,
         std::uint64_t aExpectedRevision,
+        const std::string& acMutationId = {}) noexcept;
+    [[nodiscard]] std::string JoinCampaignByCode(
+        const std::string& acJoinCode,
+        const std::string& acDisplayName,
         const std::string& acMutationId = {}) noexcept;
     [[nodiscard]] bool ResumeCampaign(
         const std::string& acCampaignId) noexcept;
@@ -76,6 +100,8 @@ private:
         const CampaignCommandResponse& acResponse) noexcept;
     void OnSnapshot(
         const NotifyCampaignSnapshot& acNotification) noexcept;
+    void OnLobbyState(
+        const NotifyCampaignLobbyState& acNotification) noexcept;
     void OnDisconnected(const DisconnectedEvent&) noexcept;
 
     TransportService& m_transport;
@@ -86,8 +112,10 @@ private:
     std::optional<CampaignClientAdmission> m_admission;
     std::optional<CampaignSnapshotData> m_latestSnapshot;
     std::optional<CampaignClientCommandOutcome> m_lastCommandOutcome;
+    std::optional<CampaignClientLobbyState> m_lobbyState;
 
     entt::scoped_connection m_responseConnection;
     entt::scoped_connection m_snapshotConnection;
+    entt::scoped_connection m_lobbyStateConnection;
     entt::scoped_connection m_disconnectedConnection;
 };

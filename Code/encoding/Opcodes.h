@@ -70,6 +70,7 @@ enum ClientOpcode : unsigned char
     kCampaignStartRequest,
     kCampaignSetReadyRequest,
     kCampaignLeaveRequest,
+    kCampaignJoinByCodeRequest,
     kClientOpcodeMax
 };
 
@@ -142,5 +143,6 @@ enum ServerOpcode : unsigned char
     kNotifyWorldEntityManipulation,
     kCampaignCommandResponse,
     kNotifyCampaignSnapshot,
+    kNotifyCampaignLobbyState,
     kServerOpcodeMax
 };

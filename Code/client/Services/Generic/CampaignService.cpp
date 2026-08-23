@@ -24,6 +24,8 @@ CampaignService::CampaignService(
           .connect<&CampaignService::OnCommandResponse>(this))
     , m_snapshotConnection(aDispatcher.sink<NotifyCampaignSnapshot>()
           .connect<&CampaignService::OnSnapshot>(this))
+    , m_lobbyStateConnection(aDispatcher.sink<NotifyCampaignLobbyState>()
+          .connect<&CampaignService::OnLobbyState>(this))
     , m_disconnectedConnection(aDispatcher.sink<DisconnectedEvent>()
           .connect<&CampaignService::OnDisconnected>(this))
 {
@@ -71,6 +73,7 @@ std::string CampaignService::GenerateMutationId() const
 }
 
 std::string CampaignService::CreateCampaign(
+    const std::string& acDisplayName,
     const std::string& acMutationId) noexcept
 {
     if (!m_bindingCacheAvailable)
@@ -82,7 +85,11 @@ std::string CampaignService::CreateCampaign(
             ? GenerateMutationId() : acMutationId;
         if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
             return {};
+        TiltedPhoques::String displayName;
+        if (!NormalizeCampaignLobbyDisplayName(acDisplayName, displayName))
+            return {};
         request.MutationId = mutation.c_str();
+        request.DisplayName = displayName;
         (void)m_transport.Send(request);
         return mutation;
     }
@@ -109,6 +116,38 @@ std::string CampaignService::JoinCampaign(
         request.CampaignId = acCampaignId.c_str();
         request.MutationId = mutation.c_str();
         request.ExpectedRevision = aExpectedRevision;
+        (void)m_transport.Send(request);
+        return mutation;
+    }
+    catch (...)
+    {
+        return {};
+    }
+}
+
+std::string CampaignService::JoinCampaignByCode(
+    const std::string& acJoinCode,
+    const std::string& acDisplayName,
+    const std::string& acMutationId) noexcept
+{
+    if (!m_bindingCacheAvailable)
+        return {};
+    try
+    {
+        TiltedPhoques::String normalized;
+        if (!NormalizeCampaignJoinCode(acJoinCode, normalized))
+            return {};
+        TiltedPhoques::String displayName;
+        if (!NormalizeCampaignLobbyDisplayName(acDisplayName, displayName))
+            return {};
+        CampaignJoinByCodeRequest request;
+        const std::string mutation = acMutationId.empty()
+            ? GenerateMutationId() : acMutationId;
+        if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(mutation))
+            return {};
+        request.JoinCode = normalized;
+        request.MutationId = mutation.c_str();
+        request.DisplayName = displayName;
         (void)m_transport.Send(request);
         return mutation;
     }
@@ -235,7 +274,8 @@ void CampaignService::OnCommandResponse(
         acResponse.Result,
         acResponse.MutationId.c_str(),
         acResponse.CampaignId.c_str(),
-        acResponse.StateVersion};
+        acResponse.StateVersion,
+        acResponse.JoinCode.c_str()};
     if (!Succeeded(acResponse.Result))
     {
         spdlog::warn(
@@ -248,6 +288,7 @@ void CampaignService::OnCommandResponse(
 
     if ((acResponse.Operation == CampaignProtocolOperation::Create ||
          acResponse.Operation == CampaignProtocolOperation::Join ||
+         acResponse.Operation == CampaignProtocolOperation::JoinByCode ||
          acResponse.Operation == CampaignProtocolOperation::Resume) &&
         !acResponse.CampaignSlotId.empty() &&
         !acResponse.CharacterBindingId.empty())
@@ -286,6 +327,7 @@ void CampaignService::OnCommandResponse(
         }
         m_admission.reset();
         m_latestSnapshot.reset();
+        m_lobbyState.reset();
     }
 }
 
@@ -305,6 +347,40 @@ void CampaignService::OnSnapshot(
         return;
     }
     m_latestSnapshot = acNotification.Snapshot;
+    if (acNotification.Snapshot.RosterSealed)
+        m_lobbyState.reset();
+}
+
+void CampaignService::OnLobbyState(
+    const NotifyCampaignLobbyState& acNotification) noexcept
+{
+    if (!acNotification.IsValid())
+    {
+        spdlog::error(
+            "[STRE][CampaignLobby] ignored malformed lobby projection");
+        return;
+    }
+    if (!m_admission ||
+        m_admission->CampaignId != acNotification.CampaignId.c_str())
+    {
+        spdlog::warn(
+            "[STRE][CampaignLobby] ignored projection for an unrelated campaign");
+        return;
+    }
+    if (m_lobbyState &&
+        m_lobbyState->StateVersion > acNotification.StateVersion)
+    {
+        return;
+    }
+
+    CampaignClientLobbyState state;
+    state.JoinCode = acNotification.JoinCode.c_str();
+    state.StateVersion = acNotification.StateVersion;
+    state.CanStart = acNotification.CanStart;
+    state.Members.reserve(acNotification.Members.size());
+    for (const CampaignLobbyMemberData& member : acNotification.Members)
+        state.Members.push_back({member.Name.c_str(), member.Present});
+    m_lobbyState = std::move(state);
 }
 
 void CampaignService::OnDisconnected(const DisconnectedEvent&) noexcept
@@ -312,4 +388,5 @@ void CampaignService::OnDisconnected(const DisconnectedEvent&) noexcept
     m_admission.reset();
     m_latestSnapshot.reset();
     m_lastCommandOutcome.reset();
+    m_lobbyState.reset();
 }

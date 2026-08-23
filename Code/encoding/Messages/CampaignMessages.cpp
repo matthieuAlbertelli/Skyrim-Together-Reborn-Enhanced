@@ -2,6 +2,8 @@
 
 #include <TiltedCore/Serialization.hpp>
 
+#include <algorithm>
+
 using TiltedPhoques::Serialization;
 
 void CampaignCommandResponse::SerializeRaw(
@@ -16,6 +18,7 @@ void CampaignCommandResponse::SerializeRaw(
     Serialization::WriteVarInt(aWriter, StateVersion);
     (void)WriteCampaignWireId(aWriter, CampaignSlotId);
     (void)WriteCampaignWireId(aWriter, CharacterBindingId);
+    (void)WriteCampaignWireId(aWriter, JoinCode);
 }
 
 void CampaignCommandResponse::DeserializeRaw(
@@ -31,6 +34,7 @@ void CampaignCommandResponse::DeserializeRaw(
     StateVersion = Serialization::ReadVarInt(aReader);
     WireValid = ReadCampaignWireId(aReader, CampaignSlotId) && WireValid;
     WireValid = ReadCampaignWireId(aReader, CharacterBindingId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, JoinCode) && WireValid;
 }
 
 bool CampaignCommandResponse::IsValid() const noexcept
@@ -43,13 +47,14 @@ bool CampaignCommandResponse::IsValid() const noexcept
         Result == CampaignProtocolResult::AcceptedNoOp ||
         Result == CampaignProtocolResult::IdempotentReplay;
     return WireValid && static_cast<std::uint8_t>(Operation) <=
-            static_cast<std::uint8_t>(CampaignProtocolOperation::Leave) &&
+            static_cast<std::uint8_t>(CampaignProtocolOperation::JoinByCode) &&
         static_cast<std::uint8_t>(Result) <=
             static_cast<std::uint8_t>(
-                CampaignProtocolResult::ExistingMembershipRequiresResume) &&
+                CampaignProtocolResult::PartyAlignmentFailed) &&
         IsValidCampaignWireId(MutationId, true) &&
         IsValidCampaignWireId(CampaignId, !succeeded) &&
-        (assignmentEmpty || assignmentValid);
+        (assignmentEmpty || assignmentValid) &&
+        (JoinCode.empty() || IsValidCampaignJoinCode(JoinCode));
 }
 
 void NotifyCampaignSnapshot::SerializeRaw(
@@ -63,4 +68,60 @@ void NotifyCampaignSnapshot::DeserializeRaw(
 {
     ServerMessage::DeserializeRaw(aReader);
     Snapshot.Deserialize(aReader);
+}
+
+void NotifyCampaignLobbyState::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, JoinCode);
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    Serialization::WriteVarInt(aWriter, StateVersion);
+    Serialization::WriteVarInt(aWriter, Members.size());
+    for (const CampaignLobbyMemberData& member : Members)
+    {
+        (void)WriteCampaignWireId(aWriter, member.Name);
+        Serialization::WriteBool(aWriter, member.Present);
+    }
+    Serialization::WriteBool(aWriter, CanStart);
+}
+
+void NotifyCampaignLobbyState::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, JoinCode);
+    WireValid = ReadCampaignWireId(aReader, CampaignId) && WireValid;
+    StateVersion = Serialization::ReadVarInt(aReader);
+    Members.clear();
+    const std::uint64_t count = Serialization::ReadVarInt(aReader);
+    if (count > kCampaignWireMaximumRosterSize)
+    {
+        WireValid = false;
+        return;
+    }
+    Members.reserve(static_cast<std::size_t>(count));
+    for (std::uint64_t index = 0; index < count; ++index)
+    {
+        CampaignLobbyMemberData member;
+        WireValid = ReadCampaignWireId(aReader, member.Name) && WireValid;
+        member.Present = Serialization::ReadBool(aReader);
+        Members.push_back(std::move(member));
+    }
+    CanStart = Serialization::ReadBool(aReader);
+}
+
+bool NotifyCampaignLobbyState::IsValid() const noexcept
+{
+    if (!WireValid || !IsValidCampaignJoinCode(JoinCode) ||
+        !IsValidCampaignWireId(CampaignId) ||
+        Members.empty() || Members.size() > kCampaignWireMaximumRosterSize)
+    {
+        return false;
+    }
+    return std::all_of(
+        Members.begin(), Members.end(),
+        [](const CampaignLobbyMemberData& acMember)
+        {
+            return IsValidCampaignLobbyDisplayName(acMember.Name);
+        });
 }

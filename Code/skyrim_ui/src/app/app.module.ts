@@ -32,6 +32,7 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { ToggleComponent } from './components/toggle/toggle.component';
 import { TradeMenuComponent } from './components/trade-menu/trade-menu.component';
 import { CharacterCreationComponent } from './components/character-creation/character-creation.component';
+import { CampaignBootstrapComponent } from './components/campaign-bootstrap/campaign-bootstrap.component';
 import { WindowComponent } from './components/window/window.component';
 import { HealthDirective } from './directives/health.directive';
 import { RadioDirective } from './directives/radio.directive';
@@ -92,6 +93,7 @@ import { TranslocoRootModule } from './transloco-root.module';
     OverlayModule,
     TradeMenuComponent,
     CharacterCreationComponent,
+    CampaignBootstrapComponent,
   ],
   providers: [
     ClientService,

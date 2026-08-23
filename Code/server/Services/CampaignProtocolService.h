@@ -1,9 +1,13 @@
 #pragma once
 
 #include <CampaignAdmissionService.h>
+#include <CampaignLobbyDirectory.h>
 #include <Events/PacketEvent.h>
 
+#include <cstdint>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 struct CampaignCreateRequest;
 struct CampaignJoinRequest;
@@ -11,6 +15,7 @@ struct CampaignResumeRequest;
 struct CampaignStartRequest;
 struct CampaignSetReadyRequest;
 struct CampaignLeaveRequest;
+struct CampaignJoinByCodeRequest;
 struct Player;
 struct PlayerLeaveEvent;
 struct World;
@@ -44,10 +49,12 @@ private:
     void SendResult(Player& aPlayer, const CommandResult& acResult) const noexcept;
     void BroadcastSnapshot(
         const CampaignSnapshotData& acSnapshot) const noexcept;
+    void BroadcastLobbyState(
+        const STRE::Campaign::CampaignId& acCampaign) noexcept;
     void Finish(
         Player& aPlayer,
         CommandResult aResult,
-        std::string_view acMutationId = {}) const noexcept;
+        std::string_view acMutationId = {}) noexcept;
 
     void OnCreate(
         const PacketEvent<CampaignCreateRequest>& acPacket) noexcept;
@@ -61,10 +68,23 @@ private:
         const PacketEvent<CampaignSetReadyRequest>& acPacket) noexcept;
     void OnLeave(
         const PacketEvent<CampaignLeaveRequest>& acPacket) noexcept;
+    void OnJoinByCode(
+        const PacketEvent<CampaignJoinByCodeRequest>& acPacket) noexcept;
     void OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept;
 
     World& m_world;
     STRE::Campaign::CampaignAdmissionService m_admission;
+    STRE::Campaign::CampaignLobbyDirectory m_lobbies;
+
+    struct PendingResumeAlignment
+    {
+        std::uint32_t PartyId{};
+        bool Added{};
+        std::string DisplayName;
+    };
+    std::unordered_map<
+        STRE::Campaign::CampaignConnectionHandle,
+        PendingResumeAlignment> m_pendingResumeAlignments;
 
     entt::scoped_connection m_createConnection;
     entt::scoped_connection m_joinConnection;
@@ -72,5 +92,6 @@ private:
     entt::scoped_connection m_startConnection;
     entt::scoped_connection m_readyConnection;
     entt::scoped_connection m_leaveConnection;
+    entt::scoped_connection m_joinByCodeConnection;
     entt::scoped_connection m_playerLeaveConnection;
 };

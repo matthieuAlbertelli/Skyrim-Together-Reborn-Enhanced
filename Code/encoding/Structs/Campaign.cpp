@@ -60,6 +60,176 @@ bool ReadCampaignWireId(
     return true;
 }
 
+bool NormalizeCampaignJoinCode(
+    std::string_view acValue,
+    TiltedPhoques::String& aNormalized) noexcept
+{
+    aNormalized.clear();
+    if (acValue.size() != kCampaignJoinCodeLength)
+        return false;
+
+    for (char value : acValue)
+    {
+        if (value >= 'a' && value <= 'z')
+            value = static_cast<char>(value - ('a' - 'A'));
+        if (kCampaignJoinCodeAlphabet.find(value) == std::string_view::npos)
+        {
+            aNormalized.clear();
+            return false;
+        }
+        aNormalized.push_back(value);
+    }
+    return true;
+}
+
+bool IsValidCampaignJoinCode(
+    const TiltedPhoques::String& acValue) noexcept
+{
+    TiltedPhoques::String normalized;
+    return NormalizeCampaignJoinCode(acValue.c_str(), normalized);
+}
+
+namespace
+{
+struct Utf8CodePoint
+{
+    std::size_t Begin{};
+    std::size_t End{};
+    std::uint32_t Value{};
+};
+
+bool IsContinuationByte(unsigned char aValue) noexcept
+{
+    return (aValue & 0xC0) == 0x80;
+}
+
+bool DecodeUtf8CodePoint(
+    std::string_view acValue,
+    std::size_t& aOffset,
+    std::uint32_t& aCodePoint) noexcept
+{
+    const auto first = static_cast<unsigned char>(acValue[aOffset]);
+    if (first <= 0x7F)
+    {
+        aCodePoint = first;
+        ++aOffset;
+        return true;
+    }
+
+    std::size_t length{};
+    std::uint32_t value{};
+    if (first >= 0xC2 && first <= 0xDF)
+    {
+        length = 2;
+        value = first & 0x1F;
+    }
+    else if (first >= 0xE0 && first <= 0xEF)
+    {
+        length = 3;
+        value = first & 0x0F;
+    }
+    else if (first >= 0xF0 && first <= 0xF4)
+    {
+        length = 4;
+        value = first & 0x07;
+    }
+    else
+    {
+        return false;
+    }
+
+    if (aOffset + length > acValue.size())
+        return false;
+    for (std::size_t index = 1; index < length; ++index)
+    {
+        const auto next = static_cast<unsigned char>(acValue[aOffset + index]);
+        if (!IsContinuationByte(next))
+            return false;
+        value = (value << 6) | (next & 0x3F);
+    }
+
+    if ((length == 3 && value < 0x800) ||
+        (length == 4 && value < 0x10000) ||
+        value > 0x10FFFF ||
+        (value >= 0xD800 && value <= 0xDFFF))
+    {
+        return false;
+    }
+
+    aOffset += length;
+    aCodePoint = value;
+    return true;
+}
+
+bool IsUnicodeWhitespace(std::uint32_t aCodePoint) noexcept
+{
+    return aCodePoint == 0x20 || aCodePoint == 0xA0 ||
+        aCodePoint == 0x1680 ||
+        (aCodePoint >= 0x2000 && aCodePoint <= 0x200A) ||
+        aCodePoint == 0x2028 || aCodePoint == 0x2029 ||
+        aCodePoint == 0x202F || aCodePoint == 0x205F ||
+        aCodePoint == 0x3000 || aCodePoint == 0xFEFF;
+}
+
+bool IsControlCodePoint(std::uint32_t aCodePoint) noexcept
+{
+    return aCodePoint <= 0x1F ||
+        (aCodePoint >= 0x7F && aCodePoint <= 0x9F);
+}
+}
+
+bool NormalizeCampaignLobbyDisplayName(
+    std::string_view acValue,
+    TiltedPhoques::String& aNormalized) noexcept
+{
+    aNormalized.clear();
+    if (acValue.empty() ||
+        acValue.size() > kCampaignLobbyMaximumDisplayNameBytes)
+    {
+        return false;
+    }
+
+    std::array<Utf8CodePoint, kCampaignLobbyMaximumDisplayNameBytes> points{};
+    std::size_t pointCount{};
+    std::size_t offset{};
+    while (offset < acValue.size())
+    {
+        const std::size_t begin = offset;
+        std::uint32_t codePoint{};
+        if (!DecodeUtf8CodePoint(acValue, offset, codePoint) ||
+            IsControlCodePoint(codePoint))
+        {
+            return false;
+        }
+        points[pointCount++] = {begin, offset, codePoint};
+    }
+
+    std::size_t first{};
+    while (first < pointCount && IsUnicodeWhitespace(points[first].Value))
+        ++first;
+    std::size_t last = pointCount;
+    while (last > first && IsUnicodeWhitespace(points[last - 1].Value))
+        --last;
+    if (first == last ||
+        last - first > kCampaignLobbyMaximumDisplayNameLength)
+    {
+        return false;
+    }
+
+    aNormalized.assign(
+        acValue.data() + points[first].Begin,
+        points[last - 1].End - points[first].Begin);
+    return true;
+}
+
+bool IsValidCampaignLobbyDisplayName(
+    const TiltedPhoques::String& acValue) noexcept
+{
+    TiltedPhoques::String normalized;
+    return NormalizeCampaignLobbyDisplayName(
+        std::string_view(acValue.data(), acValue.size()), normalized);
+}
+
 void CampaignPublicSlotData::Serialize(
     TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
