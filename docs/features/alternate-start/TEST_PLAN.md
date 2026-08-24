@@ -1,6 +1,6 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign Solo/two-player happy path passes, while the multiplayer T+4 path awaits two-client smoke validation**
+> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
 ## Completed checks
 
@@ -31,7 +31,7 @@
   prompt, fade, and local player transfer;
 - investigation quest exclusion from generic quest synchronization builds
   successfully;
-- TPTests pass with 1794 assertions in 130 test cases;
+- TPTests pass with 1837 assertions in 137 test cases;
 - CK packaging audit passes with 19 managed files and zero compiled PEX files
   under `Scripts/Source`;
 - `git diff --check` passes for the current increment.
@@ -246,8 +246,9 @@ Validated on 23 August 2026:
 - leave Helgen, wait for the standalone presence re-evaluation, and verify the
   transition commits to `BanditOccupied`;
 - verify Bethesda's post-Helgen occupation appears in the exterior and
-  `HelgenKeep01`, the previous bridge/debris projection is removed, and the STRE
-  `Se faufiler` traversal is no longer active;
+  `HelgenKeep01`, the major post-attack fire/smoke FX retires, the collapsed
+  bridge and its debris remain projected, and the STRE `Se faufiler` traversal
+  is no longer active;
 - verify both survivors still in `WoundedInCave` transition to
   `CapturedInKeep`, move to their respective STRE jail markers, use the captured
   package, and have their selected vanilla jail doors closed and locked;
@@ -280,12 +281,14 @@ Native and protocol automation validated on 23 August 2026:
 - the generic group evaluator passes 1-player, all 2-player inside/outside
   combinations, N-player last-exit, exact interior/exterior, unknown-position,
   missing-member, empty-footprint, and closed-gate cases;
-- client and server builds pass; TPTests pass 1794 assertions in 130 test cases.
+- client and server builds pass; TPTests pass 1837 assertions in 137 test cases.
 
-Two-client runtime validation is still required. The merged #71
-gameplay-facing bootstrap now supplies the supported Create/Join/Start path for
-bringing two real Skyrim clients into a sealed campaign. The following matrix
-is the next manual phase; none of its Helgen outcomes is claimed as passed yet:
+Runtime revalidation on 24 August 2026 confirmed the final occupied projection
+in standalone and in a multiplayer campaign: the readiness/admission path
+authorizes the transition, major post-attack FX retires, occupation encounters
+appear, the temporary STRE traversal retires, and the collapsed bridge/debris
+projection remains intact. The following additional permutations remain manual;
+this runtime evidence does not mark them as passed:
 
 1. start the investigation on A and B, verify neither local T+4 clock arms until
    both have crossed the collective start barrier;

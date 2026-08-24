@@ -47,8 +47,9 @@ Intentional Skyrim master overrides include:
   `MQ101SetStage267 [000BAC16]`, `MQ101SetStage368 [000F778E]`,
   `MQ101SetStage485 [000FDA33]`, and `MQ101SetStage210 [00103AF4]`, promoted as
   required by CK property binding;
-- three anonymous approved master-backed records validated by exact signature
-  and FormID: `NAVI [00012FB4]`, `CELL [00000D74]`, and `REFR [0010FDE3]`.
+- five anonymous approved master-backed records validated by exact signature
+  and FormID: `NAVI [00012FB4]`, `CELL [00000D74]`, `REFR [0010FDE3]`, and the
+  two captured-survivor jail doors `REFR [00091583]`/`REFR [00091587]`.
 
 The strict manifest is the authority for this allowlist; do not infer approval
 for any additional master-backed record from this prose summary.
@@ -302,11 +303,12 @@ The `BanditOccupied` projection reuses Bethesda's complete late post-Helgen
 phase instead of creating duplicate STRE bandits:
 
 ```text
-Enable  PostHelgenEncountersMarker       [000F8240]
-Disable MQ101CollapsingBridgeAnimRef      [000C8960]
-Disable dunCGKeepBridgeDebrisMarker       [0010AB26]
-Disable STRE squeeze activator entrance   [local 0x000677C9]
-Disable STRE squeeze activator survivor   [local 0x00081CD2]
+Disable dunCGPostMajorFXMarker            [000F829B]
+Enable  PostHelgenEncountersMarker        [000F8240]
+Keep    MQ101CollapsingBridgeAnimRef       [000C8960]
+Keep    dunCGKeepBridgeDebrisMarker        [0010AB26]
+Disable STRE squeeze activator entrance    [local 0x000677C9]
+Disable STRE squeeze activator survivor    [local 0x00081CD2]
 ```
 
 At the same commit boundary, only survivors still in `WoundedInCave` transition
@@ -320,8 +322,9 @@ STRE_PACK_HadvarCaptured         local 0x00096453
 STRE_PACK_RalofCaptured          local 0x00096454
 ```
 
-The selected vanilla jail doors are referenced through quest aliases rather than
-overridden:
+The selected vanilla jail doors are referenced through quest aliases. The CK
+promotes those exact references for the bindings, so their master overrides are
+explicitly allowlisted by signature and FormID:
 
 ```text
 Hadvar jail door [00091583]
@@ -461,8 +464,9 @@ Standalone T+4 occupation slice validated on 23 August 2026:
 - leaving Helgen after the deadline commits `BanditOccupied` on the next
   standalone presence evaluation;
 - Bethesda's post-Helgen bandit occupation appears outside and inside the Keep,
-  the pre-occupation bridge/debris state and STRE squeeze traversal are removed,
-  and survivors still in `WoundedInCave` move to their locked jail projections;
+  the major post-attack fire/smoke FX and STRE squeeze traversal are removed,
+  the collapsed bridge and its debris remain projected, and survivors still in
+  `WoundedInCave` move to their locked jail projections;
 - the strict CK record audit conforms with 67 expected STRE-owned records and no
   unexpected Skyrim-master override;
 - CK packaging passes with 19 managed files and no compiled PEX under
@@ -482,10 +486,14 @@ Multiplayer T+4 vertical slice implemented and automated-validated on 23 August
   footprint, and closed campaign gate;
 - protocol round trips cover the readiness request and Helgen cache
   notification;
-- `SkyrimTogetherClient`, `SkyrimTogetherServer`, and TPTests build; all 1794
-  assertions in 130 test cases pass;
-- two-client in-game validation remains required before this slice can be
-  called runtime-validated.
+- `SkyrimTogetherClient`, `SkyrimTogetherServer`, and TPTests build; all 1837
+  assertions in 137 test cases pass;
+- runtime revalidation on 24 August 2026 confirmed the final occupied projection
+  in standalone and in a multiplayer campaign: major post-attack FX retire,
+  occupation encounters appear, STRE squeeze traversal retires, and the
+  collapsed bridge/debris projection remains intact. The additional ordering,
+  mixed-state, disconnect, save/load, and cell-reset permutations remain tracked
+  in `TEST_PLAN.md` and are not implied by this evidence.
 
 ## Local test
 

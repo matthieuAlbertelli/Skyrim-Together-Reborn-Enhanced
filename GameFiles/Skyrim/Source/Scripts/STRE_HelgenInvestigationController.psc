@@ -328,17 +328,24 @@ EndFunction
 Function ProjectBanditOccupied()
 
     ObjectReference encountersRef = GetRequiredAliasReference(PostHelgenEncountersMarker, "PostHelgenEncountersMarker")
+    STRE_HelgenContinuityController continuityController = Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup") as STRE_HelgenContinuityController
 
     If encountersRef == None
         Debug.Trace("[STRE][HelgenInvestigation] ERROR: cannot project BanditOccupied without PostHelgenEncountersMarker")
         Return
     EndIf
 
+    If continuityController == None || !continuityController.IsRunning()
+        Debug.Trace("[STRE][HelgenInvestigation] ERROR: cannot project BanditOccupied without the running Helgen continuity controller")
+        Return
+    EndIf
+
+    ; Retire only the recent post-attack fire/smoke while preserving the
+    ; collapsed bridge and debris established by the #66 continuity projection.
+    continuityController.RetirePostAttackMajorFX()
+
     ; Reuse Bethesda's complete late post-Helgen encounter phase.
     encountersRef.Enable()
-
-    DisableAliasReference(PostHelgenBridge, "PostHelgenBridge")
-    DisableAliasReference(PostHelgenBridgeDebris, "PostHelgenBridgeDebris")
 
     ; STRE's temporary rubble squeeze is only useful in RecentPostAttack.
     DisableAliasReference(RubbleSqueezeEntranceSide, "RubbleSqueezeEntranceSide")

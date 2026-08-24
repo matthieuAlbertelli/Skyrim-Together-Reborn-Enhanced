@@ -497,6 +497,18 @@
       "expectedFormId": "0x0010FDE3",
       "master": "Skyrim.esm",
       "reason": "Anonymous ChargenFxTrigger reference promoted by the CK to Persistent for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x00091583",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla Helgen Keep jail door promoted by the CK for the HadvarCapturedDoor quest-alias binding."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x00091587",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla Helgen Keep jail door promoted by the CK for the RalofCapturedDoor quest-alias binding."
     }
   ]
 }

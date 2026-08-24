@@ -48,9 +48,10 @@
   projection locally; no Helgen-specific persistent server state is required by
   the v1 checkpoint model;
 - the post-deadline physical projection reuses vanilla
-  `PostHelgenEncountersMarker [000F8240]`, disables the vanilla pre-occupation
-  bridge/debris references plus the temporary STRE squeeze activators, and does
-  not create duplicate STRE occupation bandits;
+  `PostHelgenEncountersMarker [000F8240]`, retires
+  `dunCGPostMajorFXMarker [000F829B]` plus the temporary STRE squeeze activators,
+  preserves the collapsed bridge/debris projection, and does not create
+  duplicate STRE occupation bandits;
 - captured-survivor placement is implemented with independent STRE jail markers
   and conditional Sandbox packages for Hadvar and Ralof; the selected vanilla
   jail doors are referenced through aliases and are closed/locked during the

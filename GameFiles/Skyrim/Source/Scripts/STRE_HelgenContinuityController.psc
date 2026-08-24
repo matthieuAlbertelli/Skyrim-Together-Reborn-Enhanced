@@ -182,6 +182,20 @@ Function ApplyPostAttackProjection()
     LastApplyCompleted = True
 EndFunction
 
+Function RetirePostAttackMajorFX()
+
+    If dunCGPostMajorFXMarker == None
+        Debug.Trace("[STRE][HelgenContinuity] ERROR: cannot retire post-attack major FX without dunCGPostMajorFXMarker")
+        Return
+    EndIf
+
+    ; Disable() is intentionally safe to repeat when BanditOccupied is re-projected.
+    dunCGPostMajorFXMarker.Disable()
+
+    Debug.Trace("[STRE][HelgenContinuity] Post-attack major FX retired")
+
+EndFunction
+
 ; ============================================================================
 ; Loaded-cell visual projection
 ;

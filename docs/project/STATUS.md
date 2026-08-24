@@ -140,9 +140,10 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   the player remains in `HelgenLocation [00018A4A]`, then commits
   `BanditOccupied` after Helgen is clear;
 - the occupied projection reuses Bethesda's `PostHelgenEncountersMarker
-  [000F8240]`, removes the pre-occupation bridge/debris state and the temporary
-  STRE squeeze traversal, and moves survivors still in `WoundedInCave` to
-  independent locked `CapturedInKeep` jail projections;
+  [000F8240]`, retires the major post-attack fire/smoke FX and the temporary STRE
+  squeeze traversal, preserves the collapsed bridge/debris projection, and moves
+  survivors still in `WoundedInCave` to independent locked `CapturedInKeep`
+  jail projections;
 - connected campaigns now use an ephemeral full-roster investigation-start
   barrier plus a server-evaluated `NONE inside Helgen` predicate; clients cache
   the reliable notification without blocking Papyrus, retain the local T+4
@@ -158,11 +159,13 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   retain the local state for future collective checkpoint recovery;
 - the player-present-at-deadline -> pending -> leave-Helgen -> occupied flow was
   runtime-validated on 23 August 2026, including vanilla bandit occupation and
-  both survivor jail projections;
+  both survivor jail projections; revalidation on 24 August confirmed the final
+  FX/encounters/rubble/bridge invariant in standalone and in a multiplayer
+  campaign;
 - the strict CK manifest now covers 67 expected STRE-owned records and rejects
-  unexpected master overrides; CK packaging passes with 19 managed files, the
-  client/server builds are green, and TPTests pass 1794 assertions in 130 test
-  cases.
+  unexpected master overrides, including exact allowlisting of the two captured
+  jail-door bindings; CK packaging passes with 19 managed files, the client/server
+  builds are green, and TPTests pass 1837 assertions in 137 test cases.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -173,12 +176,10 @@ The current catalog uses `BuildVersion = 5`.
   unfinished;
 - the Helgen investigation is still entered through a diagnostic quest
   bootstrap; Valen does not yet start it;
-- the multiplayer T+4 vertical slice is implemented and automated-tested, but
-  its two-client in-game matrix (A exits while B remains, inverse exit order,
-  both already outside at T+4, and a member in `HelgenKeep01`) is not
-  runtime-validated yet. The gameplay-facing campaign bootstrap from #71 is
-  now available and is the supported path for the next two-PC validation
-  phase. No multiplayer Helgen runtime result is claimed here;
+- the multiplayer T+4 vertical slice and its final occupied projection are
+  runtime-validated in a multiplayer campaign, but the complete permutation
+  matrix (both exit orders, both already outside at T+4, interior/exterior,
+  disconnect, mixed survivor states, save/load, and cell reset) remains pending;
 - the diagnostic stage-10 starts are aligned only after every active sealed
   roster member reaches `BeginInvestigation()`; Valen remains the missing
   narrative trigger;

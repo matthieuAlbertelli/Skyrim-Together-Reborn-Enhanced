@@ -701,12 +701,22 @@ void CampaignProtocolService::OnHelgenInvestigationReady(const PacketEvent<Campa
     Player& player = *acPacket.pPlayer;
     const CampaignAdmissionRecord* const pAdmission = GetAdmission(player);
     if (!pAdmission || !pAdmission->AdmittedIdentity)
+    {
+        spdlog::debug(
+            "[STRE][Helgen] readiness rejected transientPlayer={} reason=no-admission",
+            player.GetId());
         return;
+    }
 
     const CampaignId campaign = pAdmission->AdmittedIdentity->Campaign;
     const std::optional<CampaignSnapshotData> snapshot = m_admission.BuildSnapshot(campaign);
     if (!snapshot || !snapshot->RosterSealed || snapshot->RuntimeState != static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE))
     {
+        spdlog::debug(
+            "[STRE][Helgen] readiness rejected campaign={} transientPlayer={} reason=runtime-gate snapshot={} sealed={} runtime={}",
+            campaign.Value, player.GetId(), snapshot.has_value(),
+            snapshot && snapshot->RosterSealed,
+            snapshot ? static_cast<unsigned>(snapshot->RuntimeState) : 0u);
         return;
     }
 
@@ -714,6 +724,10 @@ void CampaignProtocolService::OnHelgenInvestigationReady(const PacketEvent<Campa
     if (connections.size() != snapshot->Roster.size() ||
         std::any_of(snapshot->Roster.begin(), snapshot->Roster.end(), [](const CampaignPublicSlotData& acSlot) { return !acSlot.Present; }))
     {
+        spdlog::debug(
+            "[STRE][Helgen] readiness rejected campaign={} transientPlayer={} reason=incomplete-roster connections={} roster={}",
+            campaign.Value, player.GetId(), connections.size(),
+            snapshot->Roster.size());
         return;
     }
 

@@ -315,7 +315,7 @@ void CampaignBootstrapService::Join(
 
 void CampaignBootstrapService::Start() noexcept
 {
-    const auto& admission = m_campaignService.GetAdmission();
+    const auto admission = m_campaignService.GetAdmission();
     const auto& snapshot = m_campaignService.GetLatestSnapshot();
     const auto& lobby = m_campaignService.GetLobbyState();
     if (m_state.GetPhase() !=

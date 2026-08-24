@@ -2,9 +2,12 @@
 
 #include <Services/TransportService.h>
 
+#include <Events/ConnectedEvent.h>
 #include <Events/DisconnectedEvent.h>
 #include <Messages/CampaignMessages.h>
 #include <Messages/CampaignRequests.h>
+
+#include <algorithm>
 
 namespace
 {
@@ -24,6 +27,8 @@ CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService
           .connect<&CampaignService::OnLobbyState>(this))
     , m_helgenStateConnection(aDispatcher.sink<NotifyCampaignHelgenState>()
           .connect<&CampaignService::OnHelgenState>(this))
+    , m_connectedConnection(aDispatcher.sink<ConnectedEvent>()
+          .connect<&CampaignService::OnConnected>(this))
     , m_disconnectedConnection(aDispatcher.sink<DisconnectedEvent>()
           .connect<&CampaignService::OnDisconnected>(this))
 {
@@ -56,11 +61,34 @@ CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService
 
 bool CampaignService::SignalHelgenInvestigationReady() noexcept
 {
-    if (!m_admission)
+    const auto readiness = m_admissionState.GetHelgenReadinessView();
+    if (!readiness.Admission)
+    {
+        if (!m_helgenReadinessRejectionLogged.exchange(
+                true, std::memory_order_relaxed))
+        {
+            spdlog::warn(
+                "[STRE][CampaignAdmission] Helgen readiness rejected: no client admission");
+        }
         return false;
+    }
+    if (!readiness.CanSignal)
+    {
+        if (!m_helgenReadinessRejectionLogged.exchange(
+                true, std::memory_order_relaxed))
+        {
+            spdlog::warn(
+                "[STRE][CampaignAdmission] Helgen readiness rejected: canonical ACTIVE exact-roster snapshot unavailable campaign={}",
+                readiness.Admission->CampaignId);
+        }
+        return false;
+    }
     CampaignHelgenInvestigationReadyRequest request;
-    (void)m_transport.Send(request);
-    return true;
+    const bool sent = m_transport.Send(request);
+    spdlog::debug(
+        "[STRE][CampaignAdmission] Helgen readiness transport boundary campaign={} sent={}",
+        readiness.Admission->CampaignId, sent);
+    return sent;
 }
 
 std::optional<TiltedPhoques::String> CampaignService::GetDurablePlayerIdForAuthentication() const noexcept
@@ -258,6 +286,8 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
         acResponse.JoinCode.c_str()};
     if (!Succeeded(acResponse.Result))
     {
+        if (acResponse.Operation == CampaignProtocolOperation::Resume)
+            m_admissionState.ResumeRejected();
         spdlog::warn(
             "[STRE][CampaignProtocol] command rejected operation={} result={} campaign={} revision={}", static_cast<unsigned>(acResponse.Operation),
             static_cast<unsigned>(acResponse.Result), acResponse.CampaignId.c_str(), acResponse.StateVersion);
@@ -270,8 +300,13 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
          acResponse.Operation == CampaignProtocolOperation::Resume) &&
         !acResponse.CampaignSlotId.empty() && !acResponse.CharacterBindingId.empty())
     {
-        CampaignClientAdmission admission{acResponse.CampaignId.c_str(), acResponse.CampaignSlotId.c_str(), acResponse.CharacterBindingId.c_str()};
-        if (!m_admission || m_admission->CampaignId != admission.CampaignId)
+        STRE::Campaign::CampaignClientAdmission admission{
+            acResponse.CampaignId.c_str(),
+            acResponse.CampaignSlotId.c_str(),
+            acResponse.CharacterBindingId.c_str()};
+        const auto previousAdmission = m_admissionState.GetAdmission();
+        if (!previousAdmission ||
+            previousAdmission->CampaignId != admission.CampaignId)
         {
             m_helgenState.Reset();
         }
@@ -286,7 +321,24 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
                 return;
             }
         }
-        m_admission = std::move(admission);
+        m_admissionState.Accept(std::move(admission));
+        m_helgenReadinessRejectionLogged.store(
+            false, std::memory_order_relaxed);
+        spdlog::info(
+            "[STRE][CampaignAdmission] server-validated admission accepted operation={} campaign={} revision={}",
+            static_cast<unsigned>(acResponse.Operation),
+            acResponse.CampaignId.c_str(), acResponse.StateVersion);
+    }
+    else if (acResponse.Operation == CampaignProtocolOperation::Start)
+    {
+        const auto admission = m_admissionState.GetAdmission();
+        const bool admissionRetained = admission &&
+            admission->CampaignId == acResponse.CampaignId.c_str();
+        spdlog::log(
+            admissionRetained ? spdlog::level::info : spdlog::level::err,
+            "[STRE][CampaignAdmission] campaign Start accepted campaign={} revision={} admissionRetained={}",
+            acResponse.CampaignId.c_str(), acResponse.StateVersion,
+            admissionRetained);
     }
     else if (acResponse.Operation == CampaignProtocolOperation::Leave)
     {
@@ -300,7 +352,7 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
                 spdlog::error("[STRE][CampaignIdentity] {}", removed.Message);
             }
         }
-        m_admission.reset();
+        m_admissionState.Leave(acResponse.CampaignId.c_str());
         m_latestSnapshot.reset();
         m_lobbyState.reset();
         m_helgenState.Reset();
@@ -319,6 +371,26 @@ void CampaignService::OnSnapshot(const NotifyCampaignSnapshot& acNotification) n
         return;
     }
     m_latestSnapshot = acNotification.Snapshot;
+    const std::size_t presentCount = static_cast<std::size_t>(std::count_if(
+        acNotification.Snapshot.Roster.begin(),
+        acNotification.Snapshot.Roster.end(),
+        [](const CampaignPublicSlotData& acSlot) { return acSlot.Present; }));
+    m_admissionState.ObserveSnapshot(
+        acNotification.Snapshot.CampaignId.c_str(),
+        acNotification.Snapshot.RosterSealed,
+        acNotification.Snapshot.RuntimeState == kCampaignWireRuntimeActive,
+        acNotification.Snapshot.Roster.size(), presentCount);
+    spdlog::log(
+        acNotification.Snapshot.RosterSealed &&
+                acNotification.Snapshot.RuntimeState == kCampaignWireRuntimeActive
+            ? spdlog::level::info
+            : spdlog::level::debug,
+        "[STRE][CampaignAdmission] canonical snapshot observed campaign={} revision={} sealed={} runtime={} present={}/{}",
+        acNotification.Snapshot.CampaignId.c_str(),
+        acNotification.Snapshot.StateVersion,
+        acNotification.Snapshot.RosterSealed,
+        static_cast<unsigned>(acNotification.Snapshot.RuntimeState),
+        presentCount, acNotification.Snapshot.Roster.size());
     if (acNotification.Snapshot.RosterSealed)
         m_lobbyState.reset();
 }
@@ -332,8 +404,9 @@ void CampaignService::OnLobbyState(
             "[STRE][CampaignLobby] ignored malformed lobby projection");
         return;
     }
-    if (!m_admission ||
-        m_admission->CampaignId != acNotification.CampaignId.c_str())
+    const auto admission = m_admissionState.GetAdmission();
+    if (!admission ||
+        admission->CampaignId != acNotification.CampaignId.c_str())
     {
         spdlog::warn(
             "[STRE][CampaignLobby] ignored projection for an unrelated campaign");
@@ -357,15 +430,50 @@ void CampaignService::OnLobbyState(
 
 void CampaignService::OnHelgenState(const NotifyCampaignHelgenState& acNotification) noexcept
 {
-    if (!acNotification.IsValid() || !m_admission)
+    if (!acNotification.IsValid() || !m_admissionState.GetAdmission())
         return;
 
+    const bool wasAuthorized =
+        m_helgenState.IsInvestigationStartAuthorized();
     m_helgenState.Apply(acNotification.InvestigationStartAuthorized, acNotification.SpatialStatus == CampaignHelgenSpatialStatus::Known, acNotification.AllRequiredPlayersOutside);
+    if (!wasAuthorized && acNotification.InvestigationStartAuthorized)
+    {
+        spdlog::info(
+            "[STRE][CampaignAdmission] Helgen investigation authorization received");
+    }
+}
+
+void CampaignService::OnConnected(const ConnectedEvent&) noexcept
+{
+    const auto campaign = m_admissionState.BeginResume();
+    if (!campaign)
+    {
+        spdlog::debug(
+            "[STRE][CampaignAdmission] transport connected without a pending campaign resume");
+        return;
+    }
+
+    if (!ResumeCampaign(*campaign))
+    {
+        m_admissionState.ResumeRejected();
+        spdlog::warn(
+            "[STRE][CampaignAdmission] explicit resume could not be sent campaign={}",
+            *campaign);
+        return;
+    }
+    spdlog::info(
+        "[STRE][CampaignAdmission] explicit resume sent after reconnect campaign={}",
+        *campaign);
 }
 
 void CampaignService::OnDisconnected(const DisconnectedEvent&) noexcept
 {
-    m_admission.reset();
+    const auto resumeCandidate = m_admissionState.Disconnect();
+    m_helgenReadinessRejectionLogged.store(
+        false, std::memory_order_relaxed);
+    spdlog::info(
+        "[STRE][CampaignAdmission] transport disconnected; volatile admission cleared resumeCandidate={}",
+        resumeCandidate ? *resumeCandidate : "none");
     m_latestSnapshot.reset();
     m_lastCommandOutcome.reset();
     m_lobbyState.reset();
