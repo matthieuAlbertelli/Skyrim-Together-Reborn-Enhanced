@@ -408,6 +408,47 @@ void GameServer::BindServerCommands()
             }
         });
 
+    m_commands.RegisterCommand<std::string>(
+        "stre_checkpoint",
+        "Begin one explicit coordinated campaign checkpoint",
+        [&](Console::ArgStack& aStack)
+        {
+            const auto campaign = aStack.Pop<String>();
+            auto out = spdlog::get("ConOut");
+            if (m_pWorld->GetCampaignProtocolService()
+                    .BeginCheckpointDevelopment(campaign.c_str()))
+            {
+                out->info(
+                    "Campaign checkpoint started for {}", campaign.c_str());
+            }
+            else
+            {
+                out->error(
+                    "Campaign checkpoint could not start for {}", campaign.c_str());
+            }
+        });
+
+    m_commands.RegisterCommand<std::string>(
+        "stre_checkpoint_resend",
+        "Resend the exact active campaign checkpoint request",
+        [&](Console::ArgStack& aStack)
+        {
+            const auto campaign = aStack.Pop<String>();
+            auto out = spdlog::get("ConOut");
+            if (m_pWorld->GetCampaignProtocolService()
+                    .ResendCheckpointDevelopment(campaign.c_str()))
+            {
+                out->info(
+                    "Campaign checkpoint request resent for {}", campaign.c_str());
+            }
+            else
+            {
+                out->error(
+                    "No active campaign checkpoint could be resent for {}",
+                    campaign.c_str());
+            }
+        });
+
     m_commands.RegisterCommand<>(
         "mods", "List all installed mods on this server",
         [&](Console::ArgStack&)

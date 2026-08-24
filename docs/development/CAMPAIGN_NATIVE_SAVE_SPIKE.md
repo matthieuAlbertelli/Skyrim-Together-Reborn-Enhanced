@@ -1,19 +1,20 @@
 # Campaign native-save completion spike
 
-> **Status:** the deferred v2 save-request path is human-validated on Skyrim AE
-> 1.6.1170 with SKSE 2.2.6. The bounded v3 completion observer, two-member
-> bundle model, SHA-256 fingerprint, and metadata codec are implemented and
-> automated/build-tested, but have not yet been validated in Skyrim. Checkpoint
-> protocol, acknowledgement, coordination, recovery, retention, and cleanup
-> remain unimplemented.
+> **Status:** the deferred v2 save-request path and bounded v3 completion proof
+> are human-validated in Skyrim. V3 was exercised through the production #55
+> two-PC checkpoint flow on 24 August 2026, including native path resolution,
+> two-member hashing, and successful load of the generated save. Remaining live
+> resilience validation is tracked by
+> [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72);
+> recovery, retention, and cleanup remain out of scope.
 
 ## Question
 
 When is one requested STRE native save fully complete and safe to fingerprint?
 
 The answer must cover the recoverable local bundle, not merely a native boolean
-or the existence of one `.ess`. This spike deliberately stops before server
-checkpoint orchestration.
+or the existence of one `.ess`. Production checkpoint orchestration now consumes
+this primitive through issue #55 and remains documented separately.
 
 ## Spike v1 — rejected direct call
 
@@ -169,7 +170,8 @@ contract is therefore:
 - `SaveMetadata =` the canonical manifest above.
 
 This maps directly to the existing `CheckpointSlotRecord` fields without a
-schema change. V3 does not send or persist the artifact yet.
+schema change. The production #55 client now persists this artifact locally
+before acknowledgement and the server records it against the canonical slot.
 
 ## Lifecycle and failure behavior
 
@@ -211,50 +213,63 @@ Logs contain the logical identity, roles, sizes, hashes, evidence, and thread
 IDs, but not full filesystem paths. Any terminal error emits `REQUEST_FAILED`
 with a bounded reason.
 
-## One-PC runtime validation required
+## Runtime validation evidence — 2026-08-24
 
-Use the fresh default checkpoint ID `native-save-spike-3`, producing logical
-identity `stre-native-save-spike-3`:
+The production #55 network flow automatically invoked v3 on two real Skyrim
+clients for checkpoint
+`checkpoint-4a33f050b434778db8b09094658831d5`, using the shared logical identity
+`stre-checkpoint-4a33f050b434778db8b09094658831d5`.
+Both clients produced the exact files
+`stre-checkpoint-4a33f050b434778db8b09094658831d5.ess` and
+`stre-checkpoint-4a33f050b434778db8b09094658831d5.skse`.
 
-1. identify the real save directory used by the active vanilla/MO2/Vortex
-   profile and confirm no v3 targets already exist;
-2. deploy a non-master client, start AE 1.6.1170 with SKSE 2.2.6, and load a
-   playable save;
-3. press `F3`, open `Debuggers -> Campaign native save probe`, and select
-   `Queue dedicated native save` once;
-4. verify responsiveness and the ordered logs above;
-5. verify that `REQUEST_COMPLETED` appears only after both member hashes;
-6. compare logged sizes and per-member hashes with PowerShell;
-7. load `stre-native-save-spike-3.ess` manually in Skyrim.
+Skyrim remained responsive. `SAVE_CALL_RETURN` continued to report
+`completion=unproven`; acceptance occurred only after `.ess.tmp` was absent,
+the required `.ess` and `.skse` were available together under the implemented
+no-write/delete sharing proof, their sizes remained stable while every byte was
+hashed, and the canonical two-member artifact was built. The generated save was
+successfully loaded in Skyrim.
 
-PowerShell inspection, after replacing the path with the exact active profile
-save directory:
+PC 1 evidence:
 
-```powershell
-$saveDir = 'C:\exact\active\profile\save-directory'
-$names = @(
-    'stre-native-save-spike-3.ess',
-    'stre-native-save-spike-3.skse'
-)
-$members = Get-ChildItem -LiteralPath $saveDir -File |
-    Where-Object { $_.Name -in $names } |
-    Sort-Object Name
-$members | Select-Object Name, Length, LastWriteTimeUtc
-$members | Get-FileHash -Algorithm SHA256 |
-    Select-Object Path, Hash
-Get-ChildItem -LiteralPath $saveDir -Filter 'stre-native-save-spike-3*' |
-    Select-Object Name, Length, LastWriteTimeUtc
-```
+- `.ess`: 2,600,863 bytes, SHA-256
+  `8ac74662c3ac18f599c36690253907465326ad721b5bce5d357176f0f83e6123`;
+- `.skse`: 2,789 bytes, SHA-256
+  `3fc8ea1291be750871f23094e93723bc964edf3e7c7cfe20b45d4d51033403cf`;
+- global bundle fingerprint:
+  `df3375f2a880046c219edd91b3249c176a788c37756d9da5e9f23573c5f1ea45`;
+- `SAVE_RESULT_SENT success=true sent=true`.
+
+PC 2 evidence:
+
+- `.ess`: 2,953,963 bytes, SHA-256
+  `16e64497f4ba16e8573a76bd8819d2e89ccad61720792d8402d61d4345a4c4c0`;
+- `.skse`: 4,900 bytes, SHA-256
+  `c0151b7dd840b6023a9c98c38bd8b0c06fb7383a1f638bf74d552715b0fdbc9a`;
+- global bundle fingerprint:
+  `19f95c49fa39ba16084e37a243199456c583fcbf04950a3086e78a3d07d61c51`;
+- `SAVE_RESULT_SENT success=true sent=true`.
+
+Independent PowerShell `Get-FileHash -Algorithm SHA256` results matched every
+STRE per-member hash exactly. The distinct global fingerprints are expected:
+each roster member owns a different native Skyrim bundle even though both share
+the coordinated checkpoint identity and server commit boundary.
 
 ## Remaining unproved work
 
-- in-game validation of the native path resolver call and v3 sharing proof;
-- observed v3 log ordering and size/hash agreement on the target profile;
-- persistence/restart retention of the local artifact;
-- idempotent retry behavior after an acknowledgement loss;
-- server request/acknowledgement and Candidate-to-Committed coordination;
+- live local-artifact persistence and exact no-overwrite replay after an
+  acknowledgement loss;
+- live client failure or disconnect while checkpointing;
+- live server interruption before and after the commit boundary;
 - collective recovery and restore, owned by #56;
 - retention, pruning, cleanup, and save upload, all outside this spike.
+
+The three #55 resilience scenarios are tracked by
+[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+
+See
+[`CAMPAIGN_COORDINATED_CHECKPOINTS.md`](CAMPAIGN_COORDINATED_CHECKPOINTS.md)
+for the production integration contract and nominal two-PC evidence.
 
 ## Sources
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <NativeSaveBundle.h>
+#include <Structs/NativeSaveBundle.h>
 
 #include <mutex>
 #include <optional>
@@ -148,6 +148,13 @@ public:
     // engine save/load processing boundary and returns without calling Save.
     [[nodiscard]] static CampaignNativeSaveRequestResult RequestOnGameThread(
         std::string_view acNativeSaveIdentity) noexcept;
+
+    // Re-opens an already completed checkpoint bundle for idempotent protocol
+    // replay. It never calls Skyrim Save and never writes either member.
+    [[nodiscard]] static CampaignNativeSaveRequestResult
+    ValidateExistingOnGameThread(
+        std::string_view acNativeSaveIdentity,
+        const STRE::Campaign::NativeSaveBundleArtifact& acExpectedArtifact) noexcept;
 
     [[nodiscard]] static CampaignNativeSaveLifecycleSnapshot GetStatus();
 };

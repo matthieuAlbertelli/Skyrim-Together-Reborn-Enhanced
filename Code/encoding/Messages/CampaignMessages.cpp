@@ -138,3 +138,36 @@ bool NotifyCampaignHelgenState::IsValid() const noexcept
     return static_cast<std::uint8_t>(SpatialStatus) <= static_cast<std::uint8_t>(CampaignHelgenSpatialStatus::UnknownPosition) &&
            (!AllRequiredPlayersOutside || SpatialStatus == CampaignHelgenSpatialStatus::Known);
 }
+
+void CampaignCheckpointSaveRequest::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    (void)WriteCampaignWireId(aWriter, CheckpointId);
+    Serialization::WriteVarInt(aWriter, SourceRevision);
+    (void)WriteCampaignWireId(aWriter, NativeSaveIdentity);
+}
+
+void CampaignCheckpointSaveRequest::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignId);
+    WireValid = ReadCampaignWireId(aReader, CheckpointId) && WireValid;
+    SourceRevision = Serialization::ReadVarInt(aReader);
+    WireValid = ReadCampaignWireId(aReader, NativeSaveIdentity) && WireValid;
+}
+
+bool CampaignCheckpointSaveRequest::IsValid() const noexcept
+{
+    if (!WireValid || SourceRevision == 0 ||
+        !IsValidCampaignWireId(CampaignId) ||
+        !IsValidCampaignWireId(CheckpointId) ||
+        !IsValidCampaignNativeSaveIdentity(NativeSaveIdentity))
+    {
+        return false;
+    }
+    TiltedPhoques::String expectedIdentity;
+    return BuildCampaignNativeSaveIdentity(CheckpointId, expectedIdentity) &&
+        expectedIdentity == NativeSaveIdentity;
+}

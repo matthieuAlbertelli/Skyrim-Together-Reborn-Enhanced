@@ -97,6 +97,19 @@ struct NativeSaveBundleDecodeResult
     explicit operator bool() const noexcept { return Succeeded(); }
 };
 
+struct NativeSaveBundleArtifactParseResult
+{
+    NativeSaveBundleError Error{NativeSaveBundleError::None};
+    NativeSaveBundleArtifact Value;
+
+    [[nodiscard]] bool Succeeded() const noexcept
+    {
+        return Error == NativeSaveBundleError::None;
+    }
+
+    explicit operator bool() const noexcept { return Succeeded(); }
+};
+
 [[nodiscard]] std::vector<NativeSaveMemberExpectation>
 BuildExpectedNativeSaveMembers(std::string_view acLogicalIdentity) noexcept;
 
@@ -112,5 +125,10 @@ BuildExpectedNativeSaveMembers(std::string_view acLogicalIdentity) noexcept;
     std::vector<NativeSaveBundleMember> aMembers) noexcept;
 
 [[nodiscard]] NativeSaveBundleDecodeResult DecodeNativeSaveMetadata(
+    std::span<const std::uint8_t> acMetadata) noexcept;
+
+[[nodiscard]] NativeSaveBundleArtifactParseResult ParseNativeSaveBundleArtifact(
+    std::string_view acExpectedLogicalIdentity,
+    std::span<const std::uint8_t> acFingerprint,
     std::span<const std::uint8_t> acMetadata) noexcept;
 }

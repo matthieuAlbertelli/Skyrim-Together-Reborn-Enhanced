@@ -53,6 +53,10 @@ enum class CampaignError
     NotCampaignMember,
     RosterIncomplete,
     TransitionNotImplemented,
+    CheckpointInProgress,
+    CheckpointNotActive,
+    CheckpointMismatch,
+    InvalidCheckpointArtifact,
     StaleRevision,
     PersistenceFailure,
     IntegrityFailure

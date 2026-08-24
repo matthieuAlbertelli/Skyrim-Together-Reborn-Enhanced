@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Structs/NativeSaveBundle.h>
+
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -54,6 +56,15 @@ public:
         const CampaignBindingCacheEntry& acBinding) noexcept;
     [[nodiscard]] LocalStoreResult RemoveBinding(
         const std::string& acCampaignId) noexcept;
+    [[nodiscard]] LocalStoreValueResult<
+        std::optional<NativeSaveBundleArtifact>>
+    LoadCheckpointArtifact(
+        const std::string& acCampaignId,
+        const std::string& acCheckpointId) noexcept;
+    [[nodiscard]] LocalStoreResult SaveCheckpointArtifact(
+        const std::string& acCampaignId,
+        const std::string& acCheckpointId,
+        const NativeSaveBundleArtifact& acArtifact) noexcept;
 
     [[nodiscard]] static LocalStoreValueResult<std::filesystem::path>
     ResolveDefaultDirectory() noexcept;

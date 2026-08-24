@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
+
+#include <Structs/NativeSaveBundle.h>
 
 namespace CampaignNativeSaveDetail
 {
@@ -26,8 +29,15 @@ inline constexpr std::uint32_t kDeadlineMilliseconds = 30000;
     CampaignNativeSaveCompletionPaths& aPaths,
     std::string& aFailureReason);
 
+[[nodiscard]] bool PrepareExisting(
+    const std::string& acIdentity,
+    CampaignNativeSaveCompletionPaths& aPaths,
+    std::string& aFailureReason);
+
 [[nodiscard]] bool Start(
     std::string aIdentity,
     CampaignNativeSaveCompletionPaths aPaths,
-    CampaignNativeSaveDetail::RequestSlot& aRequestSlot);
+    CampaignNativeSaveDetail::RequestSlot& aRequestSlot,
+    std::optional<STRE::Campaign::NativeSaveBundleArtifact>
+        aExpectedArtifact = std::nullopt);
 }

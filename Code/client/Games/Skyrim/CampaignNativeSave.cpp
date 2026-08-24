@@ -248,6 +248,85 @@ CampaignNativeSaveRequestResult CampaignNativeSave::RequestOnGameThread(
     }
 }
 
+CampaignNativeSaveRequestResult
+CampaignNativeSave::ValidateExistingOnGameThread(
+    std::string_view acNativeSaveIdentity,
+    const STRE::Campaign::NativeSaveBundleArtifact& acExpectedArtifact) noexcept
+{
+    try
+    {
+        constexpr std::size_t kMaximumNativeSaveIdentityLength =
+            kCampaignNativeSaveIdentityPrefix.size() +
+            kCampaignWireMaximumIdLength;
+        if (acNativeSaveIdentity.empty() ||
+            acNativeSaveIdentity.size() > kMaximumNativeSaveIdentityLength)
+        {
+            return {CampaignNativeSaveRequestState::InvalidIdentity};
+        }
+        TiltedPhoques::String nativeSaveIdentity;
+        nativeSaveIdentity.assign(
+            acNativeSaveIdentity.data(), acNativeSaveIdentity.size());
+        const auto parsed = STRE::Campaign::ParseNativeSaveBundleArtifact(
+            acNativeSaveIdentity,
+            acExpectedArtifact.Fingerprint,
+            acExpectedArtifact.Metadata);
+        if (!IsValidCampaignNativeSaveIdentity(nativeSaveIdentity) ||
+            acExpectedArtifact.Bundle.LogicalIdentity !=
+                acNativeSaveIdentity ||
+            !parsed || parsed.Value != acExpectedArtifact)
+        {
+            return {CampaignNativeSaveRequestState::InvalidIdentity};
+        }
+        if (!CampaignNativeSaveCompletion::IsAvailable())
+            return {CampaignNativeSaveRequestState::BoundaryUnavailable};
+
+        std::string requestedIdentity(
+            nativeSaveIdentity.data(), nativeSaveIdentity.size());
+        if (!s_requestSlot.TryRequest(requestedIdentity))
+            return {CampaignNativeSaveRequestState::RequestAlreadyActive};
+        const auto processingIdentity = s_requestSlot.BeginProcessing();
+        if (!processingIdentity)
+        {
+            MarkFailed(requestedIdentity, "replay-processing-state-mismatch");
+            return {CampaignNativeSaveRequestState::InternalFailure};
+        }
+        CampaignNativeSaveCompletionPaths paths;
+        std::string failureReason;
+        if (!CampaignNativeSaveCompletion::PrepareExisting(
+                *processingIdentity, paths, failureReason))
+        {
+            MarkFailed(*processingIdentity, failureReason);
+            return {CampaignNativeSaveRequestState::InternalFailure};
+        }
+        if (!s_requestSlot.BeginAwaitingCompletion())
+        {
+            MarkFailed(
+                *processingIdentity,
+                "replay-awaiting-completion-state-mismatch");
+            return {CampaignNativeSaveRequestState::InternalFailure};
+        }
+        if (!CampaignNativeSaveCompletion::Start(
+                *processingIdentity,
+                std::move(paths),
+                s_requestSlot,
+                acExpectedArtifact))
+        {
+            MarkFailed(*processingIdentity, "completion-worker-busy");
+            return {CampaignNativeSaveRequestState::InternalFailure};
+        }
+        spdlog::info(
+            "[STRE][CampaignNativeSave] REPLAY_VALIDATION_ACCEPTED "
+            "nativeSaveIdentity={} thread_id={}",
+            nativeSaveIdentity.c_str(),
+            GetCurrentThreadId());
+        return {CampaignNativeSaveRequestState::Accepted};
+    }
+    catch (...)
+    {
+        return {CampaignNativeSaveRequestState::InternalFailure};
+    }
+}
+
 CampaignNativeSaveLifecycleSnapshot CampaignNativeSave::GetStatus()
 {
     return s_requestSlot.Snapshot();

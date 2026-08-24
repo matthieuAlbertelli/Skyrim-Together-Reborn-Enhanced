@@ -35,6 +35,7 @@ struct CompletionJob
     std::string Identity;
     CampaignNativeSaveCompletionPaths Paths;
     CampaignNativeSaveDetail::RequestSlot* pRequestSlot{};
+    std::optional<NativeSaveBundleArtifact> ExpectedArtifact;
 };
 
 enum class PathPresence
@@ -106,6 +107,60 @@ PathPresence InspectPath(const std::string& acPath) noexcept
     if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
         return PathPresence::Missing;
     return PathPresence::Error;
+}
+
+bool ResolvePaths(
+    const std::string& acIdentity,
+    CampaignNativeSaveCompletionPaths& aPaths,
+    std::string& aFailureReason)
+{
+    const std::vector<NativeSaveMemberExpectation> expected =
+        BuildExpectedNativeSaveMembers(acIdentity);
+    if (expected.size() != 2 || !s_getSaveDataSystemUtility)
+    {
+        aFailureReason = "save-path-resolver-unavailable";
+        return false;
+    }
+    BSWin32SaveDataSystemUtility* const pUtility =
+        s_getSaveDataSystemUtility();
+    if (!pUtility)
+    {
+        aFailureReason = "save-path-utility-unavailable";
+        return false;
+    }
+    std::array<char, 0x104> resolved{};
+    if (pUtility->PrepareFileSavePath(
+            expected[0].FileName.c_str(),
+            resolved.data(),
+            false,
+            false) != 0 ||
+        resolved[0] == '\0')
+    {
+        aFailureReason = "save-path-resolution-failed";
+        return false;
+    }
+    std::filesystem::path essPath(resolved.data());
+    if (!essPath.is_absolute() ||
+        _stricmp(
+            essPath.filename().string().c_str(),
+            expected[0].FileName.c_str()) != 0)
+    {
+        aFailureReason = "native-identity-path-mismatch";
+        return false;
+    }
+    std::filesystem::path sksePath = essPath;
+    sksePath.replace_extension(".skse");
+    if (_stricmp(
+            sksePath.filename().string().c_str(),
+            expected[1].FileName.c_str()) != 0)
+    {
+        aFailureReason = "cosave-identity-path-mismatch";
+        return false;
+    }
+    aPaths.Ess = essPath.string();
+    aPaths.Skse = sksePath.string();
+    aPaths.EssTemporary = aPaths.Ess + ".tmp";
+    return true;
 }
 
 bool TargetsAreFresh(
@@ -229,6 +284,12 @@ ObservationState TryObserveCompletion(
     if (!artifact)
     {
         aFailureReason = "bundle-metadata-build-failed";
+        return ObservationState::Failed;
+    }
+    if (acJob.ExpectedArtifact &&
+        artifact.Value != *acJob.ExpectedArtifact)
+    {
+        aFailureReason = "existing-save-bundle-conflict";
         return ObservationState::Failed;
     }
 
@@ -414,67 +475,36 @@ bool CampaignNativeSaveCompletion::PrepareFresh(
     CampaignNativeSaveCompletionPaths& aPaths,
     std::string& aFailureReason)
 {
-    const std::vector<NativeSaveMemberExpectation> expected =
-        BuildExpectedNativeSaveMembers(acIdentity);
-    if (expected.size() != 2 || !s_getSaveDataSystemUtility)
+    return ResolvePaths(acIdentity, aPaths, aFailureReason) &&
+        TargetsAreFresh(aPaths, aFailureReason);
+}
+
+bool CampaignNativeSaveCompletion::PrepareExisting(
+    const std::string& acIdentity,
+    CampaignNativeSaveCompletionPaths& aPaths,
+    std::string& aFailureReason)
+{
+    if (!ResolvePaths(acIdentity, aPaths, aFailureReason))
+        return false;
+    if (InspectPath(aPaths.EssTemporary) != PathPresence::Missing ||
+        InspectPath(aPaths.Ess) != PathPresence::Present ||
+        InspectPath(aPaths.Skse) != PathPresence::Present)
     {
-        aFailureReason = "save-path-resolver-unavailable";
+        aFailureReason = "existing-save-bundle-incomplete";
         return false;
     }
-
-    BSWin32SaveDataSystemUtility* const pUtility =
-        s_getSaveDataSystemUtility();
-    if (!pUtility)
-    {
-        aFailureReason = "save-path-utility-unavailable";
-        return false;
-    }
-
-    std::array<char, 0x104> resolved{};
-    if (pUtility->PrepareFileSavePath(
-            expected[0].FileName.c_str(),
-            resolved.data(),
-            false,
-            false) != 0 ||
-        resolved[0] == '\0')
-    {
-        aFailureReason = "save-path-resolution-failed";
-        return false;
-    }
-
-    std::filesystem::path essPath(resolved.data());
-    if (!essPath.is_absolute() ||
-        _stricmp(
-            essPath.filename().string().c_str(),
-            expected[0].FileName.c_str()) != 0)
-    {
-        aFailureReason = "native-identity-path-mismatch";
-        return false;
-    }
-
-    std::filesystem::path sksePath = essPath;
-    sksePath.replace_extension(".skse");
-    if (_stricmp(
-            sksePath.filename().string().c_str(),
-            expected[1].FileName.c_str()) != 0)
-    {
-        aFailureReason = "cosave-identity-path-mismatch";
-        return false;
-    }
-
-    aPaths.Ess = essPath.string();
-    aPaths.Skse = sksePath.string();
-    aPaths.EssTemporary = aPaths.Ess + ".tmp";
-    return TargetsAreFresh(aPaths, aFailureReason);
+    return true;
 }
 
 bool CampaignNativeSaveCompletion::Start(
     std::string aIdentity,
     CampaignNativeSaveCompletionPaths aPaths,
-    CampaignNativeSaveDetail::RequestSlot& aRequestSlot)
+    CampaignNativeSaveDetail::RequestSlot& aRequestSlot,
+    std::optional<NativeSaveBundleArtifact> aExpectedArtifact)
 {
     return GetCompletionWorker().Start(
-        {std::move(aIdentity), std::move(aPaths), &aRequestSlot});
+        {std::move(aIdentity), std::move(aPaths), &aRequestSlot,
+         std::move(aExpectedArtifact)});
 }
 
 static TiltedPhoques::Initializer s_campaignNativeSaveCompletionPath(

@@ -1,6 +1,11 @@
 # Campaign State Model
 
-> **Status:** fixed-roster/runtime core, live admission protocol, and focused New Game lobby projection implemented, automated-tested, and manually validated on the Solo/two-player happy path; negative runtime coverage and later phase/recovery wiring remain pending.
+> **Status:** fixed-roster/runtime core, live admission protocol, focused New
+> Game lobby projection, and coordinated checkpoint implementation are
+> automated-tested. The lobby happy path is manually validated on Solo/two PCs;
+> the nominal coordinated checkpoint path is manually validated on two PCs,
+> while its remaining resilience matrix is tracked by
+> [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
@@ -22,8 +27,10 @@ transactional migration needed to represent this.
 
 Transport connectivity and campaign admission are now wired as transient inputs
 rather than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE`
-through one exact-roster predicate. The other runtime enum values are represented
-for the accepted model but are not activated by this increment.
+through one exact-roster predicate. Issue #55 also activates `CHECKPOINTING`
+while one server-owned Candidate is in flight. `RECOVERY_LOCK` and
+`RESTORING_CHECKPOINT` remain represented target states owned by #56 and are not
+activated by the current implementation.
 
 The implemented narrative mutation is the atomic
 `Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
@@ -39,7 +46,8 @@ refuse execution until their feature-owned CK/Valen/build preconditions are
 implemented. A native/CEF bootstrap now gates fresh New Game at the existing
 stage-20 boundary and applies Character Creation locally only after canonical
 sealed/full-roster evidence. No new CK stage or record was required. Coordinated
-native save and recovery-lock behavior are not part of this increment.
+native save is implemented separately by the #55 flow described below;
+recovery-lock behavior is not.
 
 ## Live identity and admission boundary
 
@@ -199,7 +207,9 @@ ACTIVE or CHECKPOINTING
 - `ACTIVE`: the full-roster predicate holds and normal phase mutations may be
   considered by the server.
 - `CHECKPOINTING`: a coordinated checkpoint candidate is in flight; its exact
-  mutation fence is an implementation decision, but commit is all-or-nothing.
+  server snapshot is fixed and the runtime rejects unrelated durable mutations
+  for that campaign. Only canonical per-slot acknowledgements and the final
+  all-slots commit may advance it. Other campaigns remain independent.
 - `RECOVERY_LOCK`: a required member is absent or recovery failed; persistent
   campaign mutations and new checkpoint commits are rejected.
 - `RESTORING_CHECKPOINT`: the complete roster is restoring one server-selected
@@ -290,9 +300,24 @@ does not upload `.ess` files.
 5. A failed or incomplete candidate never replaces the previous committed
    checkpoint. Duplicate requests and acknowledgements are idempotent.
 
-Checkpoint cadence, triggers, safe points, autosave/manual-save interaction,
-combat/dialogue/cell-transition behavior, and exact fingerprint are deliberately
-not fixed by this architecture.
+The implemented native artifact is the path-independent codec-v1
+`.ess`/`.skse` manifest with per-member SHA-256 hashes and a SHA-256 fingerprint
+over the exact metadata. The client persists that completed artifact before
+acknowledgement. An exact retransmission reopens and re-hashes both existing
+files against the cached artifact; it never calls Skyrim Save again or
+overwrites the bundle. A mismatch fails closed.
+
+The server exposes only explicit `stre_checkpoint <CampaignId>` and
+`stre_checkpoint_resend <CampaignId>` development/validation triggers.
+Production cadence, safe points, autosave/manual-save interaction, and
+combat/dialogue/cell-transition policy remain deliberately undecided.
+
+On client failure or required-member disconnect during the currently
+implemented #55 flow, transient `CHECKPOINTING` is abandoned, the durable row
+remains `Candidate`, and `LastCommittedCheckpoint` is unchanged. The ordinary
+full-roster predicate then derives `ACTIVE` or `WAITING_FOR_ROSTER`; #55 does
+not enter `RECOVERY_LOCK`. Old and failed native saves and Candidate rows are
+not deleted. A server restart does not resume an unfinished Candidate.
 
 ## Snapshots and audience
 
@@ -306,6 +331,10 @@ absent roster member to catch up after the campaign has progressed without them,
 because such progression is forbidden.
 
 ## Disconnect, crash, and restore
+
+The recovery sequence below is the accepted #56 target contract, not behavior
+implemented by #55. Until #56 lands, the #55 disconnect behavior is the
+Candidate-abandonment and `WAITING_FOR_ROSTER` projection described above.
 
 On a required-member disconnect during `ACTIVE` or `CHECKPOINTING`, the server
 enters `RECOVERY_LOCK`, fences persistent campaign mutations, and refuses new
@@ -365,11 +394,16 @@ recovery runtime scenarios remain pending. Durable Character Build binding,
 CK/Valen projection,
 feature-owned later narrative phase execution, and Departure validation remain
 incomplete. Issue #28 remains open and its tracking state does not supersede
-those implementation gaps. Issue #55 owns coordinated native-save creation,
-identity/fingerprinting, acknowledgement, and `CampaignCheckpoint`
-coordination. Issue #56 owns disconnect recovery lock and collective checkpoint
-restore/reload gameplay. Durable WorldEntity persistence remains separate
-future work rather than part of #55.
+those implementation gaps. Issue #55 coordinated native-save creation,
+identity/fingerprinting, acknowledgement, and `CampaignCheckpoint` coordination
+are implemented, automated/build-tested, and nominally validated with two real
+Skyrim clients. Failure/disconnect, exact ACK replay, no-overwrite replay, and
+commit-boundary interruption remain tracked by
+[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+Issue #56 owns
+disconnect recovery lock and collective checkpoint restore/reload gameplay.
+Durable WorldEntity persistence remains separate future work rather than part
+of #55.
 
 The standalone solo Alternate Start path remains independent of this multiplayer
 full-roster rule and continues to restore from its local Skyrim save.

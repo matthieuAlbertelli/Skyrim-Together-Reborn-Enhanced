@@ -1,4 +1,4 @@
-#include <NativeSaveBundle.h>
+#include <Structs/NativeSaveBundle.h>
 
 #include <cryptopp/sha.h>
 
@@ -387,6 +387,55 @@ NativeSaveBundleDecodeResult DecodeNativeSaveMetadata(
         {
             result.Error = NativeSaveBundleError::MalformedMetadata;
         }
+    }
+    catch (...)
+    {
+        result.Error = NativeSaveBundleError::MalformedMetadata;
+    }
+    return result;
+}
+
+NativeSaveBundleArtifactParseResult ParseNativeSaveBundleArtifact(
+    std::string_view acExpectedLogicalIdentity,
+    std::span<const std::uint8_t> acFingerprint,
+    std::span<const std::uint8_t> acMetadata) noexcept
+{
+    NativeSaveBundleArtifactParseResult result;
+    try
+    {
+        if (acFingerprint.size() != kNativeSaveSha256Size)
+        {
+            result.Error = NativeSaveBundleError::MalformedMetadata;
+            return result;
+        }
+        NativeSaveBundleDecodeResult decoded =
+            DecodeNativeSaveMetadata(acMetadata);
+        if (!decoded)
+        {
+            result.Error = decoded.Error;
+            return result;
+        }
+        if (decoded.Value.LogicalIdentity != acExpectedLogicalIdentity)
+        {
+            result.Error = NativeSaveBundleError::InvalidIdentity;
+            return result;
+        }
+
+        NativeSaveSha256 computed{};
+        if (!ComputeNativeSaveSha256(acMetadata, computed))
+        {
+            result.Error = NativeSaveBundleError::HashFailure;
+            return result;
+        }
+        if (!std::equal(computed.begin(), computed.end(), acFingerprint.begin()))
+        {
+            result.Error = NativeSaveBundleError::MalformedMetadata;
+            return result;
+        }
+
+        result.Value.Bundle = std::move(decoded.Value);
+        result.Value.Metadata.assign(acMetadata.begin(), acMetadata.end());
+        result.Value.Fingerprint = computed;
     }
     catch (...)
     {

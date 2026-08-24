@@ -1,5 +1,6 @@
 #include <CampaignAdmissionService.h>
 #include <campaign_persistence_test_helpers.h>
+#include <Structs/NativeSaveBundle.h>
 
 #include <catch2/catch.hpp>
 
@@ -79,6 +80,100 @@ struct ProtocolFixture
     std::size_t GeneratedIds{};
     CampaignAdmissionService Admission;
 };
+
+NativeSaveBundleArtifact CheckpointArtifact(
+    const std::string& acIdentity,
+    std::uint8_t aMarker)
+{
+    std::vector<NativeSaveBundleMember> members(2);
+    members[0].Role = NativeSaveMemberRole::Ess;
+    members[0].Size = 10 + aMarker;
+    members[0].Sha256.fill(aMarker);
+    members[1].Role = NativeSaveMemberRole::Skse;
+    members[1].Size = 20 + aMarker;
+    members[1].Sha256.fill(static_cast<std::uint8_t>(aMarker + 1));
+    const auto built = BuildNativeSaveBundleArtifact(
+        acIdentity, std::move(members));
+    REQUIRE(built.Succeeded());
+    return built.Value;
+}
+}
+
+TEST_CASE(
+    "Checkpoint admission derives slot authority from the connection and abandons on disconnect",
+    "[campaign.admission][checkpoint]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.StartCampaign(
+        1, created.CampaignId, "mutation-start", 1, true, true)
+                .Succeeded());
+
+    const CampaignId campaign{created.CampaignId};
+    const auto begun = fixture.Admission.BeginCheckpoint(campaign);
+    REQUIRE(begun.Succeeded());
+    REQUIRE(begun.Activity);
+    const auto artifact = CheckpointArtifact(
+        begun.Activity->NativeSaveIdentity, 4);
+
+    const auto noConnection = fixture.Admission.HandleCheckpointSaveResult(
+        99,
+        campaign,
+        begun.Activity->Checkpoint,
+        begun.Activity->NativeSaveIdentity,
+        true,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(artifact.Fingerprint.begin(), artifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        artifact.Metadata);
+    REQUIRE(noConnection.Command.Error == CampaignError::NotCampaignMember);
+
+    REQUIRE(fixture.Admission.RegisterConnection(2, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto notAdmitted = fixture.Admission.HandleCheckpointSaveResult(
+        2,
+        campaign,
+        begun.Activity->Checkpoint,
+        begun.Activity->NativeSaveIdentity,
+        false);
+    REQUIRE(notAdmitted.Command.Error == CampaignError::NotCampaignMember);
+
+    const auto wrongCampaign = fixture.Admission.HandleCheckpointSaveResult(
+        1,
+        CampaignId{"campaign-other"},
+        begun.Activity->Checkpoint,
+        begun.Activity->NativeSaveIdentity,
+        false);
+    REQUIRE(wrongCampaign.Command.Error == CampaignError::CheckpointMismatch);
+
+    const auto committed = fixture.Admission.HandleCheckpointSaveResult(
+        1,
+        campaign,
+        begun.Activity->Checkpoint,
+        begun.Activity->NativeSaveIdentity,
+        true,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(artifact.Fingerprint.begin(), artifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        artifact.Metadata);
+    REQUIRE(committed.Succeeded());
+    REQUIRE(committed.Committed);
+
+    const auto next = fixture.Admission.BeginCheckpoint(campaign);
+    REQUIRE(next.Succeeded());
+    REQUIRE(fixture.Admission.Disconnect(1));
+    REQUIRE_FALSE(fixture.Admission.GetActiveCheckpoint(campaign));
+    const auto snapshot = fixture.Admission.BuildSnapshot(campaign);
+    REQUIRE(snapshot);
+    REQUIRE(snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(
+            CampaignRuntimeState::WAITING_FOR_ROSTER));
+    REQUIRE(fixture.Store->LoadCheckpoint(
+        campaign, next.Activity->Checkpoint).Value.State ==
+        CheckpointState::Candidate);
 }
 
 TEST_CASE("Live campaign creation join and pre-seal leave use canonical assignments", "[campaign.admission]")

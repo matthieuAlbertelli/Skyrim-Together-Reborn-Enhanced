@@ -165,7 +165,7 @@ See [`docs/features/item-preview/`](../features/item-preview/).
 - the strict CK manifest now covers 67 expected STRE-owned records and rejects
   unexpected master overrides, including exact allowlisting of the two captured
   jail-door bindings; CK packaging passes with 19 managed files, the client/server
-  builds are green, and TPTests pass 1837 assertions in 137 test cases.
+  builds are green, and TPTests pass 2199 assertions in 158 test cases.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -183,9 +183,13 @@ The current catalog uses `BuildVersion = 5`.
 - the diagnostic stage-10 starts are aligned only after every active sealed
   roster member reaches `BeginInvestigation()`; Valen remains the missing
   narrative trigger;
-- coordinated checkpoint creation and `RECOVERY_LOCK` restore are still future
-  campaign work. Helgen deliberately adds no parallel reconnect/persistence
-  mechanism and fences its local progression after a campaign disconnect;
+- coordinated checkpoint creation is implemented and automated/build-tested;
+  its nominal sealed-roster Candidate/ACK/commit path is runtime-validated with
+  two real Skyrim clients. Failure, disconnect, ACK-replay, and commit-boundary
+  resilience remain tracked by [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72),
+  while `RECOVERY_LOCK` restore is still future campaign work. Helgen
+  deliberately adds no parallel reconnect/persistence mechanism and fences its
+  local progression after a campaign disconnect;
 - rescue/liberation and physical `Freed`/`Departed` projections remain
   unimplemented; mixed-state and save/load/cell-reset regressions for the new
   occupation flow are still required;
@@ -225,15 +229,17 @@ The current catalog uses `BuildVersion = 5`.
 
 The durable server campaign/checkpoint persistence substrate is implemented,
 automated-tested, and runtime-validated. The fixed-roster/runtime core and live
-admission protocol described below now use it, while coordinated native saves
-and collective reconnect recovery remain unimplemented. `CharacterBuildService`
+admission protocol described below now use it, and the coordinated native-save
+flow described below drives its Candidate/ACK/commit primitives. Collective
+reconnect recovery remains unimplemented. `CharacterBuildService`
 continues to use session state; durable binding to the admitted campaign slot
-and character identity remains unimplemented. Coordinated
-native-save/checkpoint work remains #55, and disconnect recovery lock plus
-collective restore/reload remains #56. No native `.ess` payload, save/load
-engine call, recovery UI, or WorldEntity persistence is part of this
-foundation; durable WorldEntity persistence remains separate future work rather
-than part of #55.
+and character identity remains unimplemented. The nominal #55 two-PC checkpoint
+path is runtime-validated; its remaining live resilience matrix is tracked by
+[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+Disconnect recovery lock plus collective restore/reload remains #56. No native
+`.ess` payload, save/load engine call, recovery UI, or WorldEntity persistence
+is part of this foundation; durable WorldEntity persistence remains separate
+future work rather than part of #55.
 
 ### Campaign roster/runtime and live protocol
 
@@ -359,10 +365,11 @@ phase-policy, live admission foundation, and focused New Game lobby projection
 developed in the #28 workstream are implemented, but durable Character Build
 binding, CK/Valen projections, feature-owned later narrative phase execution,
 and Departure validation remain unimplemented. GitHub issue #28 remains open;
-this focused slice does not complete it. `CHECKPOINTING`, `RECOVERY_LOCK`, and
-`RESTORING_CHECKPOINT` are represented but have no #55/#56 behavior here;
-native-save/checkpoint identity and fingerprinting remain #55, while disconnect
-to recovery lock and collective checkpoint restore remain #56.
+this focused slice does not complete it. `CHECKPOINTING` is now active for the
+#55 Candidate lifecycle and fences unrelated durable mutations per campaign.
+`RECOVERY_LOCK` and `RESTORING_CHECKPOINT` remain represented but have no #56
+behavior; disconnect to recovery lock and collective checkpoint restore remain
+#56.
 
 ### Campaign save-load runtime gate spike
 
@@ -403,7 +410,8 @@ levels:
 - v2 is human-validated on AE 1.6.1170 with SKSE 2.2.6: request and processing
   ran on different threads, Skyrim remained responsive, `Save_Impl` returned
   true, `.ess` plus `.skse` were produced, and the `.ess` reloaded successfully;
-- v3 is implemented and automated/build-tested: Skyrim's ID `109278` resolves
+- v3 is implemented, automated/build-tested, and human runtime-validated through
+  the production #55 two-PC flow on 24 August 2026: Skyrim's ID `109278` resolves
   the profile-aware local save path, and a bounded off-thread observer declares
   completion only after a fresh `.ess`/`.skse` bundle has no `.ess.tmp`, both
   members are simultaneously open without write/delete sharing, and all bytes
@@ -413,11 +421,75 @@ levels:
   bundle fingerprint is SHA-256 of those exact metadata bytes and fits the
   existing checkpoint persistence fields without a schema change.
 
-The v3 completion observer, native path resolution, and hashes have not yet been
-validated in Skyrim. No checkpoint request/acknowledgement, server orchestration,
-Candidate/Committed transition, recovery, retention, cleanup, or upload is
-implemented by these spikes. The production #55 flow remains incomplete. See
+The production run kept Skyrim responsive, produced both required files, matched
+STRE's per-member hashes against independent PowerShell `Get-FileHash` results,
+and successfully loaded the generated save in Skyrim. `SAVE_CALL_RETURN` itself
+remains explicitly untrusted as completion proof. Live failure, disconnect, and
+exact replay resilience are tracked by
+[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+Recovery, retention, cleanup, and upload are not implemented by these spikes. See
 [`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
+
+### Coordinated campaign checkpoints
+
+The production issue #55 implementation is complete, automated-tested, and
+build-tested:
+
+- the server owns `CheckpointId`, derives `stre-<CheckpointId>`, creates the
+  exact SQLite Candidate snapshot/source revision, and publishes transient
+  per-campaign `CHECKPOINTING` only for a sealed, fully admitted roster;
+- one runtime mutation fence rejects unrelated durable mutations for that
+  campaign while leaving other campaigns independent;
+- one bounded server-to-client save request and one bounded client-to-server
+  result carry only campaign/checkpoint/native identity and the canonical
+  artifact. Player, slot, binding, paths, expected revision, and client
+  `MutationId` are absent;
+- admission derives the exact slot/player/binding tuple from the connection,
+  validates the fixed SHA-256/codec-v1 artifact, records the ACK through the
+  existing store primitive, and commits only after every Candidate slot is
+  complete;
+- stable server mutation IDs cover Candidate creation, each canonical slot ACK,
+  and commit. ACK replay recovers its original expected revision from the
+  durable journal rather than duplicating a revision ledger in memory;
+- the small client checkpoint service persists the completed bundle artifact
+  atomically before ACK. An exact replay reopens and hashes the existing
+  `.ess`/`.skse` against that cache without invoking Skyrim Save or overwriting
+  files; malformed or conflicting evidence fails closed;
+- explicit server console commands `stre_checkpoint <CampaignId>` and
+  `stre_checkpoint_resend <CampaignId>` provide deterministic validation and
+  logical lost-ACK replay. There is no scheduler or autosave cadence;
+- client failure or disconnect abandons only the transient activity. The
+  Candidate and all saves remain, the previous committed checkpoint remains
+  selected, and runtime derives `ACTIVE` or `WAITING_FOR_ROSTER`. #55 does not
+  enter `RECOVERY_LOCK`;
+- crash-before-commit does not resume unfinished Candidates; crash-after-commit
+  resolves the new `LastCommittedCheckpoint`. No save/Candidate cleanup,
+  retention, pruning, deletion, upload, or recovery was added.
+
+TPTests pass 2199 assertions in 158 test cases, including strict wire failures,
+client cache restart/conflict, authority spoof rejection, duplicate/reversed
+ACKs, mutation fencing, independent campaigns, failure/disconnect preservation,
+and exact 2/4/10-slot commits. The Windows TPTests, client, immersive launcher,
+and server targets build successfully.
+
+On 24 August 2026, the nominal #55 path was validated end-to-end with two real
+Skyrim clients in sealed campaign
+`campaign-367760f49cba23fd72a5ad5013a75e1b`. Checkpoint
+`checkpoint-4a33f050b434778db8b09094658831d5` captured source revision 3 as a
+Candidate at revision 4. Slot 1 was accepted at revision 5 with
+`committed=false`; slot 2 was accepted at revision 7 with `committed=true`, then
+the server emitted `CHECKPOINT_COMMITTED` at revision 7. Both clients produced
+their own `.ess`/`.skse` bundle under the shared logical identity, and each
+server-accepted bundle fingerprint matched its originating client. This proves
+the nominal full-roster commit barrier in live multiplayer without granting host
+save authority. The two fingerprints differ by design because the native
+payloads are per-player.
+
+Live client failure/disconnect, lost-ACK exact replay and no-overwrite behavior,
+and server interruption around the commit boundary remain tracked by
+[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72);
+they are not claimed as completed runtime validation here. See
+[`CAMPAIGN_COORDINATED_CHECKPOINTS.md`](../development/CAMPAIGN_COORDINATED_CHECKPOINTS.md).
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 

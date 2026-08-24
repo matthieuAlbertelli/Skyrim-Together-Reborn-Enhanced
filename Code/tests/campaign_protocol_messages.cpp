@@ -11,6 +11,7 @@
 #include <Messages/CampaignRequests.h>
 #include <Messages/ClientMessageFactory.h>
 #include <Messages/ServerMessageFactory.h>
+#include <Structs/NativeSaveBundle.h>
 
 #include <catch2/catch.hpp>
 
@@ -27,12 +28,14 @@ static_assert(kCampaignSetReadyRequest == 66);
 static_assert(kCampaignLeaveRequest == 67);
 static_assert(kCampaignJoinByCodeRequest == 68);
 static_assert(kCampaignHelgenInvestigationReadyRequest == 69);
+static_assert(kCampaignCheckpointSaveResult == 70);
 static_assert(kNotifyCharacterBuildState == 63);
 static_assert(kNotifyWorldEntityManipulation == 64);
 static_assert(kCampaignCommandResponse == 65);
 static_assert(kNotifyCampaignSnapshot == 66);
 static_assert(kNotifyCampaignLobbyState == 67);
 static_assert(kNotifyCampaignHelgenState == 68);
+static_assert(kCampaignCheckpointSaveRequest == 69);
 
 namespace
 {
@@ -209,6 +212,130 @@ TEST_CASE("Campaign response and public snapshot round-trip through the server f
     REQUIRE(decodedHelgen->SpatialStatus == CampaignHelgenSpatialStatus::Known);
     REQUIRE(decodedHelgen->AllRequiredPlayersOutside);
     REQUIRE(decodedHelgen->IsValid());
+}
+
+TEST_CASE(
+    "Campaign checkpoint request and result round-trip through their factories",
+    "[campaign.protocol][checkpoint]")
+{
+    CampaignCheckpointSaveRequest request;
+    request.CampaignId = "campaign-1";
+    request.CheckpointId = "cp-42";
+    request.SourceRevision = 9;
+    request.NativeSaveIdentity = "stre-cp-42";
+    const auto decodedRequest = RoundTripServer(request);
+    REQUIRE(decodedRequest->CampaignId == request.CampaignId);
+    REQUIRE(decodedRequest->CheckpointId == request.CheckpointId);
+    REQUIRE(decodedRequest->SourceRevision == 9);
+    REQUIRE(decodedRequest->NativeSaveIdentity == request.NativeSaveIdentity);
+    REQUIRE(decodedRequest->IsValid());
+
+    std::vector<STRE::Campaign::NativeSaveBundleMember> members(2);
+    members[0].Role = STRE::Campaign::NativeSaveMemberRole::Ess;
+    members[0].Size = 100;
+    members[0].Sha256.fill(1);
+    members[1].Role = STRE::Campaign::NativeSaveMemberRole::Skse;
+    members[1].Size = 20;
+    members[1].Sha256.fill(2);
+    const auto artifact = STRE::Campaign::BuildNativeSaveBundleArtifact(
+        "stre-cp-42", std::move(members));
+    REQUIRE(artifact.Succeeded());
+
+    CampaignCheckpointSaveResult result;
+    result.CampaignId = "campaign-1";
+    result.CheckpointId = "cp-42";
+    result.NativeSaveIdentity = "stre-cp-42";
+    result.Result = CampaignCheckpointSaveResultCode::Success;
+    result.FingerprintAlgorithm = "SHA-256";
+    result.FingerprintVersion = 1;
+    result.Fingerprint.assign(
+        artifact.Value.Fingerprint.begin(),
+        artifact.Value.Fingerprint.end());
+    result.SaveMetadataCodecVersion = 1;
+    result.SaveMetadata.assign(
+        artifact.Value.Metadata.begin(), artifact.Value.Metadata.end());
+    const auto decodedResult = RoundTripClient(result);
+    REQUIRE(decodedResult->CampaignId == result.CampaignId);
+    REQUIRE(decodedResult->CheckpointId == result.CheckpointId);
+    REQUIRE(decodedResult->NativeSaveIdentity == result.NativeSaveIdentity);
+    REQUIRE(decodedResult->Fingerprint == result.Fingerprint);
+    REQUIRE(decodedResult->SaveMetadata == result.SaveMetadata);
+    REQUIRE(decodedResult->IsValid());
+
+    CampaignCheckpointSaveResult failure;
+    failure.CampaignId = "campaign-1";
+    failure.CheckpointId = "cp-42";
+    failure.NativeSaveIdentity = "stre-cp-42";
+    failure.Result = CampaignCheckpointSaveResultCode::Failure;
+    const auto decodedFailure = RoundTripClient(failure);
+    REQUIRE(decodedFailure->IsValid());
+    REQUIRE(decodedFailure->Result ==
+        CampaignCheckpointSaveResultCode::Failure);
+}
+
+TEST_CASE(
+    "Malformed campaign checkpoint packets fail strict validation",
+    "[campaign.protocol][checkpoint][robustness]")
+{
+    CampaignCheckpointSaveRequest invalidRequest;
+    invalidRequest.CampaignId = "campaign-1";
+    invalidRequest.CheckpointId = "cp-42";
+    invalidRequest.SourceRevision = 0;
+    invalidRequest.NativeSaveIdentity = "stre-cp-42";
+    REQUIRE_FALSE(RoundTripServer(invalidRequest)->IsValid());
+    invalidRequest.SourceRevision = 1;
+    invalidRequest.NativeSaveIdentity = "stre-cp-other";
+    REQUIRE_FALSE(RoundTripServer(invalidRequest)->IsValid());
+
+    Buffer truncatedRequest(8);
+    Buffer::Writer requestWriter(&truncatedRequest);
+    requestWriter.WriteBits(kCampaignCheckpointSaveRequest, 8);
+    Buffer::Reader requestReader(&truncatedRequest);
+    auto requestMessage = ServerMessageFactory{}.Extract(requestReader);
+    REQUIRE(requestMessage);
+    REQUIRE_FALSE(CastUnique<CampaignCheckpointSaveRequest>(
+        std::move(requestMessage))->IsValid());
+
+    Buffer truncatedResult(8);
+    Buffer::Writer resultWriter(&truncatedResult);
+    resultWriter.WriteBits(kCampaignCheckpointSaveResult, 8);
+    Buffer::Reader resultReader(&truncatedResult);
+    auto resultMessage = ClientMessageFactory{}.Extract(resultReader);
+    REQUIRE(resultMessage);
+    REQUIRE_FALSE(CastUnique<CampaignCheckpointSaveResult>(
+        std::move(resultMessage))->IsValid());
+
+    CampaignCheckpointSaveResult invalid;
+    invalid.CampaignId = "campaign-1";
+    invalid.CheckpointId = "cp-42";
+    invalid.NativeSaveIdentity = "stre-cp-42";
+    invalid.Result = static_cast<CampaignCheckpointSaveResultCode>(9);
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+
+    invalid.Result = CampaignCheckpointSaveResultCode::Success;
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+
+    invalid.Result = CampaignCheckpointSaveResultCode::Failure;
+    invalid.FingerprintAlgorithm = "SHA-256";
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+
+    invalid.Result = CampaignCheckpointSaveResultCode::Success;
+    invalid.Fingerprint.assign(
+        STRE::Campaign::kNativeSaveSha256Size + 1, 1);
+    invalid.SaveMetadata.assign(1, 1);
+    invalid.FingerprintVersion = 1;
+    invalid.SaveMetadataCodecVersion = 1;
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+
+    invalid.Fingerprint.assign(
+        STRE::Campaign::kNativeSaveSha256Size, 1);
+    invalid.SaveMetadata.assign(
+        STRE::Campaign::kMaximumNativeSaveMetadataSize + 1, 1);
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+
+    invalid.CampaignId = String(kCampaignWireMaximumIdLength + 1, 'x');
+    invalid.SaveMetadata.assign(1, 1);
+    REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
 }
 
 TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[campaign.protocol][robustness]")

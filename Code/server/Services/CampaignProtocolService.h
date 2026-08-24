@@ -18,6 +18,7 @@ struct CampaignSetReadyRequest;
 struct CampaignLeaveRequest;
 struct CampaignJoinByCodeRequest;
 struct CampaignHelgenInvestigationReadyRequest;
+struct CampaignCheckpointSaveResult;
 struct Player;
 struct PlayerLeaveEvent;
 struct World;
@@ -32,6 +33,10 @@ public:
 
     [[nodiscard]] const STRE::Campaign::CampaignAdmissionRecord* GetAdmission(const Player& acPlayer) const noexcept;
     void OnPlayerLocationChanged(const Player& acPlayer) noexcept;
+    [[nodiscard]] bool BeginCheckpointDevelopment(
+        const std::string& acCampaignId) noexcept;
+    [[nodiscard]] bool ResendCheckpointDevelopment(
+        const std::string& acCampaignId) noexcept;
 
 private:
     using CommandResult = STRE::Campaign::CampaignProtocolCommandResult;
@@ -64,7 +69,12 @@ private:
     void OnJoinByCode(
         const PacketEvent<CampaignJoinByCodeRequest>& acPacket) noexcept;
     void OnHelgenInvestigationReady(const PacketEvent<CampaignHelgenInvestigationReadyRequest>& acPacket) noexcept;
+    void OnCheckpointSaveResult(
+        const PacketEvent<CampaignCheckpointSaveResult>& acPacket) noexcept;
     void OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept;
+
+    [[nodiscard]] bool SendCheckpointRequest(
+        const STRE::Campaign::CampaignCheckpointActivity& acActivity) noexcept;
 
     void BroadcastHelgenState(const STRE::Campaign::CampaignId& acCampaign, Player* apOnlyPlayer = nullptr) noexcept;
 
@@ -92,5 +102,6 @@ private:
     entt::scoped_connection m_leaveConnection;
     entt::scoped_connection m_joinByCodeConnection;
     entt::scoped_connection m_helgenReadyConnection;
+    entt::scoped_connection m_checkpointResultConnection;
     entt::scoped_connection m_playerLeaveConnection;
 };
