@@ -50,7 +50,26 @@ jobs:
 
     # Build the server
     - name: Build
-      run: xmake -y
+      shell: bash
+      run: |
+        set +e
+
+        uname -a
+        uname -m
+        gcc --version
+        g++ --version
+        ld --version
+        xmake --version
+
+        xmake -y -vD
+        build_status=$?
+
+        while IFS= read -r install_log; do
+          echo "===== $install_log ====="
+          sed -n '1,$p' "$install_log"
+        done < <(find "$HOME/.xmake" -type f -path '*/tiltedcore/*/installdir.failed/logs/install.txt' -print)
+
+        exit "$build_status"
 
     # Create install
     #- name: Install
