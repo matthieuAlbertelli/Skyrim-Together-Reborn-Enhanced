@@ -53,6 +53,7 @@ if is_plat("windows") then
 end
 
 -- dependencies' dependencies version pinning
+add_requireconfs("tiltedcore", { version = "v0.2.9", override = true })
 add_requireconfs("*.mimalloc", { version = "2.2.4", override = true })
 add_requireconfs("*.cmake", { version = "3.30.2", override = true })
 add_requireconfs("*.openssl", { version = "1.1.1-w", override = true })
