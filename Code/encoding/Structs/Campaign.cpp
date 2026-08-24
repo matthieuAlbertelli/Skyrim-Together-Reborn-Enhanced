@@ -60,6 +60,40 @@ bool ReadCampaignWireId(
     return true;
 }
 
+bool BuildCampaignNativeSaveIdentity(
+    const TiltedPhoques::String& acCheckpointId,
+    TiltedPhoques::String& aNativeSaveIdentity) noexcept
+{
+    aNativeSaveIdentity.clear();
+    if (!IsValidCampaignWireId(acCheckpointId))
+        return false;
+
+    aNativeSaveIdentity.assign(
+        kCampaignNativeSaveIdentityPrefix.data(),
+        kCampaignNativeSaveIdentityPrefix.size());
+    aNativeSaveIdentity.append(acCheckpointId);
+    return true;
+}
+
+bool IsValidCampaignNativeSaveIdentity(
+    const TiltedPhoques::String& acValue) noexcept
+{
+    if (acValue.size() <= kCampaignNativeSaveIdentityPrefix.size() ||
+        !std::equal(
+            kCampaignNativeSaveIdentityPrefix.begin(),
+            kCampaignNativeSaveIdentityPrefix.end(),
+            acValue.begin()))
+    {
+        return false;
+    }
+
+    TiltedPhoques::String checkpointId;
+    checkpointId.assign(
+        acValue.data() + kCampaignNativeSaveIdentityPrefix.size(),
+        acValue.size() - kCampaignNativeSaveIdentityPrefix.size());
+    return IsValidCampaignWireId(checkpointId);
+}
+
 bool NormalizeCampaignJoinCode(
     std::string_view acValue,
     TiltedPhoques::String& aNormalized) noexcept

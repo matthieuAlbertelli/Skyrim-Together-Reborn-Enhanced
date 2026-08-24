@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 23, 2026.
+> **Last updated:** August 24, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -383,6 +383,33 @@ successful test. No production campaign save detection, automatic gate
 arming/release, checkpoint coordination, or recovery state is implemented by
 this spike. Production integration remains future work; #55 owns coordinated
 checkpoint saves and #56 owns recovery lock plus collective restore.
+
+### Campaign native-save request spike
+
+The bounded #55 native request spike v2 is implemented and
+automated/build-tested:
+
+- one canonical `CheckpointId -> stre-<CheckpointId>` transformation reuses the
+  existing bounded campaign ID validator and rejects path syntax;
+- human validation rejected v1: the direct game-update
+  `BGSSaveLoadManager::Save_Impl(2, 0, name)` call froze Skyrim, left a
+  zero-byte `.ess.tmp`, produced no final `.ess`, and never reached its
+  post-call log;
+- v2 accepts one owned save intent on STRE's game-update path, returns without
+  calling `Save_Impl`, and consumes the intent after the original Skyrim
+  save/load process function at Address Library ID `35772`;
+- the v2 separation matches the audited SKSE request/process architecture
+  without treating SKSE's `RequestSave` abstraction as Bethesda-native;
+- `REQUEST_ACCEPTED`, `PROCESS_BOUNDARY_ENTER`, `SAVE_CALL_ENTER`,
+  `SAVE_CALL_RETURN`, and `PROCESS_BOUNDARY_EXIT` record identity and thread
+  evidence; the literal native return is explicitly not completion proof.
+
+The v2 path has not been validated in Skyrim. This spike does not yet prove the
+end of the native write, resolve the final file/cosave set, compute a
+fingerprint, send a checkpoint acknowledgement, or coordinate
+Candidate/Committed state. The production #55 protocol/runtime/client flow
+remains unimplemented pending that native evidence. See
+[`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
 

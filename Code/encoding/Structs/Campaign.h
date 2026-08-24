@@ -16,6 +16,7 @@ inline constexpr std::uint8_t kCampaignWirePhaseCharacterCreation = 1;
 inline constexpr std::uint8_t kCampaignWireRuntimeActive = 1;
 inline constexpr std::string_view kCampaignJoinCodeAlphabet =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+inline constexpr std::string_view kCampaignNativeSaveIdentityPrefix = "stre-";
 
 enum class CampaignProtocolOperation : std::uint8_t
 {
@@ -102,6 +103,11 @@ struct CampaignSnapshotData
 [[nodiscard]] bool ReadCampaignWireId(
     TiltedPhoques::Buffer::Reader& aReader,
     TiltedPhoques::String& aValue) noexcept;
+[[nodiscard]] bool BuildCampaignNativeSaveIdentity(
+    const TiltedPhoques::String& acCheckpointId,
+    TiltedPhoques::String& aNativeSaveIdentity) noexcept;
+[[nodiscard]] bool IsValidCampaignNativeSaveIdentity(
+    const TiltedPhoques::String& acValue) noexcept;
 [[nodiscard]] bool NormalizeCampaignJoinCode(
     std::string_view acValue,
     TiltedPhoques::String& aNormalized) noexcept;

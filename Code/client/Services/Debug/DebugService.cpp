@@ -13,6 +13,9 @@
 #include <Services/PapyrusService.h>
 #include <Services/QuestService.h>
 
+#include <CampaignNativeSave.h>
+#include <Structs/Campaign.h>
+
 #include <Events/UpdateEvent.h>
 #include <Events/DialogueEvent.h>
 #include <Events/SubtitleEvent.h>
@@ -233,6 +236,44 @@ static bool g_enableWeatherWindow{false};
 static bool g_enableCombatWindow{false};
 static bool g_enableCalendarWindow{false};
 static bool g_enableDragonSpawnerWindow{false};
+static bool g_enableCampaignNativeSaveProbe{false};
+
+void DebugService::DrawCampaignNativeSaveProbe()
+{
+    ImGui::SetNextWindowSize(ImVec2(460, 180), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Campaign native save probe");
+
+    static char s_checkpointId[kCampaignWireMaximumIdLength + 1] =
+        "native-save-spike-2";
+    ImGui::InputText(
+        "Checkpoint ID", s_checkpointId, std::size(s_checkpointId));
+    ImGui::TextWrapped(
+        "The request is deferred to Skyrim's save/load process boundary. "
+        "Native save completion remains unproven.");
+
+    if (ImGui::Button("Queue dedicated native save"))
+    {
+        TiltedPhoques::String checkpointId{s_checkpointId};
+        TiltedPhoques::String identity;
+        if (!BuildCampaignNativeSaveIdentity(checkpointId, identity))
+        {
+            spdlog::error(
+                "[STRE][CampaignNativeSave] probe rejected "
+                "reason=invalid-checkpoint-id");
+        }
+        else
+        {
+            std::string requestedIdentity(identity.data(), identity.size());
+            m_world.GetRunner().Queue(
+                [identity = std::move(requestedIdentity)]()
+                {
+                    (void)CampaignNativeSave::RequestOnGameThread(identity);
+                });
+        }
+    }
+
+    ImGui::End();
+}
 
 void DebugService::DrawServerView() noexcept
 {
@@ -350,6 +391,10 @@ void DebugService::OnDraw() noexcept
         ImGui::MenuItem("Weather", nullptr, &g_enableWeatherWindow);
         ImGui::MenuItem("Combat", nullptr, &g_enableCombatWindow);
         ImGui::MenuItem("Calendar", nullptr, &g_enableCalendarWindow);
+        ImGui::MenuItem(
+            "Campaign native save probe",
+            nullptr,
+            &g_enableCampaignNativeSaveProbe);
 #endif
 
         ImGui::EndMenu();
@@ -409,6 +454,8 @@ void DebugService::OnDraw() noexcept
         DrawCombatView();
     if (g_enableCalendarWindow)
         DrawCalendarView();
+    if (g_enableCampaignNativeSaveProbe)
+        DrawCampaignNativeSaveProbe();
 
     if (m_drawComponentsInWorldSpace)
         DrawComponentDebugView();
