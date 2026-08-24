@@ -1,10 +1,6 @@
-#include <CampaignIdentityStore.h>
-#include <CampaignNativeLoadBridge.h>
 #include <CampaignNativeLoadState.h>
 
 #include <catch2/catch.hpp>
-
-#include <algorithm>
 
 using namespace STRE::Campaign;
 
@@ -23,32 +19,6 @@ CampaignNativeLoadRequest ReadyRequest()
 }
 }
 
-TEST_CASE("Campaign native load CEF functions are registered by their shared manifest", "[campaign.native-load][cef]")
-{
-    REQUIRE(kCampaignNativeLoadFunction ==
-        std::string_view{"campaignNativeLoad"});
-    REQUIRE(kCampaignNativeLoadReleaseFunction ==
-        std::string_view{"campaignNativeLoadRelease"});
-    REQUIRE(kCampaignNativeLoadResumeFunction ==
-        std::string_view{"campaignNativeLoadResume"});
-    REQUIRE(kCampaignNativeLoadCefFunctions.size() == 3);
-    REQUIRE(std::find(
-                kCampaignNativeLoadCefFunctions.begin(),
-                kCampaignNativeLoadCefFunctions.end(),
-                kCampaignNativeLoadFunction) !=
-        kCampaignNativeLoadCefFunctions.end());
-    REQUIRE(std::find(
-                kCampaignNativeLoadCefFunctions.begin(),
-                kCampaignNativeLoadCefFunctions.end(),
-                kCampaignNativeLoadReleaseFunction) !=
-        kCampaignNativeLoadCefFunctions.end());
-    REQUIRE(std::find(
-                kCampaignNativeLoadCefFunctions.begin(),
-                kCampaignNativeLoadCefFunctions.end(),
-                kCampaignNativeLoadResumeFunction) !=
-        kCampaignNativeLoadCefFunctions.end());
-}
-
 TEST_CASE("Campaign native load rejects invalid identities", "[campaign.native-load]")
 {
     CampaignNativeLoadRequest request;
@@ -56,15 +26,6 @@ TEST_CASE("Campaign native load rejects invalid identities", "[campaign.native-l
     REQUIRE_FALSE(request.Request("checkpoint-without-stre-prefix"));
     REQUIRE(request.Snapshot().State == CampaignNativeLoadState::Idle);
     REQUIRE_FALSE(request.OnNativeLoadEnter(kIdentity));
-}
-
-TEST_CASE("Cold-session resume rejects malformed campaign identifiers", "[campaign.native-load][cef]")
-{
-    REQUIRE(CampaignIdentityStore::IsValidCacheId(
-        "campaign-367760f49cba23fd72a5ad5013a75e1b"));
-    REQUIRE_FALSE(CampaignIdentityStore::IsValidCacheId(""));
-    REQUIRE_FALSE(CampaignIdentityStore::IsValidCacheId("../campaign"));
-    REQUIRE_FALSE(CampaignIdentityStore::IsValidCacheId("campaign with spaces"));
 }
 
 TEST_CASE("Ordinary native loads are never correlated while idle", "[campaign.native-load]")

@@ -1,6 +1,7 @@
 # Campaign native-load Slice 0 spike
 
-> **Status:** human runtime-validated on 25 August 2026; production #56
+> **Status:** human runtime-validated on 25 August 2026; the temporary
+> CEF/chat validation harness was removed before integration. Production #56
 > recovery orchestration remains outside this spike.
 > **Issue:** #56, Slice 0 only.
 
@@ -45,10 +46,12 @@ established save-completion path already treats `.ess` and `.skse` as the
 required native bundle. An owned `std::string` keeps the C string alive through
 the synchronous call boundary.
 
-The call is queued from CEF through `RunnerService` and runs while
-`World::Update` drains the runner on the established game-update thread. The
-native Boolean proves only that `Load_Impl` accepted/succeeded at its boundary;
-it is never used as final recovery proof.
+During validation, the removed CEF harness queued the call through
+`RunnerService`; it ran while `World::Update` drained the runner on the
+established game-update thread. The retained primitive preserves that
+game-thread requirement for its future #56 caller. The native Boolean proves
+only that `Load_Impl` accepted/succeeded at its boundary; it is never used as
+final recovery proof.
 
 ## Validation and ownership
 
@@ -86,12 +89,12 @@ native call. The existing `TESLoadGameEvent` callback performs the transition
 to `LockedAfterLoad`, applies the input lock, and requests
 `STRECampaignGateMenu`. The menu's `PostDisplay` callback must then observe
 `UI::GameIsPaused() == true`. A real connected `TransportService` update while
-locked is the last required proof. Only the explicit validation release can
-remove the gate and reset the terminal correlation.
+locked is the last required proof. Only an explicit service release can remove
+the gate and reset the terminal correlation.
 
 A second request is rejected while validation, invocation, or proof is active,
 and remains rejected after completion while the gate is locked. Terminal state
-is cleared only by the explicit release command. There is no retry and no
+is cleared only by the explicit service release. There is no retry and no
 fallback save. Failure reasons are bounded, including invalid identity,
 unavailable/invalid artifact, native-save busy, validation rejection/failure,
 gate-arm failure, unavailable native boundary, unrelated native load, native
@@ -102,54 +105,29 @@ Validation has a failure deadline only: 35 seconds for artifact validation and
 60 seconds for post-load/safety proof. Elapsed time can never establish
 success.
 
-## Temporary development controls
+## Removed validation harness
 
-Open the STRE overlay with F2 and enter the exact chat command:
-
-After a cold client restart, a simple transport connection is not sufficient:
-the prior admission and reconnect candidate are intentionally volatile. Request
-the persisted campaign binding through the existing authoritative resume path:
+Human validation used three temporary chat commands:
 
 ```text
-/stre-campaign-resume campaign-367760f49cba23fd72a5ad5013a75e1b
-```
-
-The harness validates the argument, queues `CampaignService::ResumeCampaign`
-on `RunnerService`, and does not modify `CampaignClientAdmissionState`. The
-cached binding is used only to build `CampaignResumeRequest`; the server must
-accept the exact PlayerId, membership, and CharacterBinding before the existing
-command-response handler creates admission. Missing binding, offline transport,
-or server rejection leaves the client unadmitted. Wait for the existing
-`server-validated admission accepted` record before requesting a native load.
-
-Then enter the exact native-load command:
-
-```text
-/stre-native-load stre-checkpoint-4a33f050b434778db8b09094658831d5
-```
-
-Replace the example with the known checkpoint ID from the local #55 bundle.
-The CEF bridge queues the request onto `RunnerService`; it never invokes Skyrim
-from the CEF thread.
-
-After a terminal success or failure, explicitly release/reset with:
-
-```text
+/stre-campaign-resume <CampaignId>
+/stre-native-load stre-<CheckpointId>
 /stre-native-load-release
 ```
 
-These commands are Slice 0 validation controls, not production recovery UX.
-They remain intentionally available on this spike branch for subsequent #56
-development and validation, but must not be treated as player-facing recovery
-controls or proof that #56 is implemented.
+Their Angular commands, TypeScript declarations/mock methods, TPProcess V8
+registrations, OverlayClient handlers, shared bridge manifest, and bridge-only
+tests were removed after the successful run. They are not present as
+production-facing UX. No replacement debug key, console command, or local
+admission shortcut was added.
 
-All three runtime functions are declared once in
-`CampaignNativeLoadBridge.h`. `TPProcess` iterates that shared manifest from
-`ProcessHandler::OnContextCreated` and creates each function on the live
-`skyrimtogether` CEF V8 object with the existing overlay handler. The native
-`OverlayClient` compares incoming `ui-event` names against the same constants.
-TypeScript declarations describe this contract but do not create the runtime
-functions.
+The cold-session harness called the existing
+`CampaignService::ResumeCampaign` on `RunnerService` and never modified
+`CampaignClientAdmissionState`. The cached binding was used only to build the
+existing `CampaignResumeRequest`; the server still had to accept the exact
+PlayerId, membership, and CharacterBinding before the normal response handler
+created admission. That behavior remains historical validation evidence, not a
+new production resume surface.
 
 ## Runtime validation evidence — 2026-08-25
 
@@ -273,126 +251,23 @@ not implement issue #56. The following remain unimplemented:
 - no-checkpoint recovery diagnostics;
 - live multi-client resilience validation.
 
-## Reproduction procedure
+## Historical validation procedure
 
-Do not perform this procedure until `TPTests`, `SkyrimTogetherClient`,
-`TPProcess`, and the `SkyrimImmersiveLauncher` relink build successfully.
+The detailed run above was completed before the temporary harness was removed.
+It used a production Angular build plus the three now-removed commands to obtain
+authoritative admission, invoke the exact load, reject a duplicate, and release
+the terminal gate. Before/after hashes and timestamps proved that the native
+bundle remained immutable, and a subsequent ordinary Skyrim load proved the
+unarmed path remained unmanaged.
 
-1. Build and stage the current branch:
+That procedure is intentionally no longer executable from player-facing UI.
+Future #56 work must call the retained service from the production recovery
+orchestrator and must not restore a chat, debug-key, or console trigger.
 
-   ```powershell
-   xmake config -m releasedbg
-   xmake -b -j 4 SkyrimTogetherClient
-   xmake -b -j 4 TPProcess
-   xmake -b -j 4 SkyrimImmersiveLauncher
-   xmake install -o distrib
-   ```
+## Historical ordered evidence
 
-2. Deploy the staged `distrib` contents using the repository's normal mod
-   deployment so the built executable and UI replace their installed
-   counterparts under:
-
-   ```text
-   <Skyrim>\Data\SkyrimTogetherReborn\SkyrimTogether.exe
-   <Skyrim>\Data\SkyrimTogetherReborn\TPProcess.exe
-   <Skyrim>\Data\SkyrimTogetherReborn\UI\
-   ```
-
-   Launch that `SkyrimTogether.exe`, never `skse64_loader.exe`.
-
-3. Set an explicit PowerShell path to the active Skyrim/MO2 save directory and
-   the exact logical identity, then capture the immutable baseline:
-
-   ```powershell
-   $streSaveDir = 'C:\replace\with\the\active\Skyrim\save\directory'
-   $streIdentity = 'stre-checkpoint-4a33f050b434778db8b09094658831d5'
-   $streMembers = @(
-     Join-Path $streSaveDir ($streIdentity + '.ess')
-     Join-Path $streSaveDir ($streIdentity + '.skse')
-   )
-   $streBefore = $streMembers | ForEach-Object {
-     $item = Get-Item -LiteralPath $_
-     [pscustomobject]@{
-       Path = $item.FullName
-       Length = $item.Length
-       LastWriteTimeUtc = $item.LastWriteTimeUtc
-       SHA256 = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash
-     }
-   }
-   $streBefore | Format-Table -AutoSize
-   Test-Path -LiteralPath (Join-Path $streSaveDir ($streIdentity + '.ess.tmp'))
-   ```
-
-   Both members must exist, and the final command must print `False`.
-
-4. Start Skyrim in a visibly different, later state and connect STRE normally.
-   After a cold client restart, open F2 and first restore authoritative
-   admission:
-
-   ```text
-   /stre-campaign-resume campaign-367760f49cba23fd72a5ad5013a75e1b
-   ```
-
-   Require this ordered evidence before continuing:
-
-   ```text
-   [STRE][CampaignNativeLoad] RESUME_QUEUED campaign=...
-   [STRE][CampaignNativeLoad] RESUME_SENT campaign=... sent=true
-   [STRE][CampaignAdmission] server-validated admission accepted operation=...
-   ```
-
-   A `sent=false`, missing cached binding, or server rejection must leave the
-   client unadmitted. Do not invoke native load until server acceptance appears.
-
-5. Enter the exact load command:
-
-   ```text
-   /stre-native-load stre-checkpoint-4a33f050b434778db8b09094658831d5
-   ```
-
-6. Stop immediately if Skyrim freezes/crashes during loading, loads another
-   save, returns `NATIVE_RETURN success=false`, or does not emit `POST_LOAD`.
-   Preserve the exact ordered log instead of adding another hook.
-
-7. On success, verify visually that the checkpoint state loaded and that,
-   while locked, movement, combat, interaction, pause/save/load, and console
-   access are unavailable. Confirm F2/CEF remains usable and transport-update
-   records continue.
-
-8. While still locked, enter the same load command again. It must log a rejected
-   request and must not emit a second `INVOKE` or `NATIVE_ENTER`.
-
-9. Enter `/stre-native-load-release`. Confirm the guard disappears and normal
-   gameplay resumes.
-
-10. Recompute file evidence and compare every field:
-
-   ```powershell
-   $streAfter = $streMembers | ForEach-Object {
-     $item = Get-Item -LiteralPath $_
-     [pscustomobject]@{
-       Path = $item.FullName
-       Length = $item.Length
-       LastWriteTimeUtc = $item.LastWriteTimeUtc
-       SHA256 = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash
-     }
-   }
-   Compare-Object $streBefore $streAfter -Property Path,Length,LastWriteTimeUtc,SHA256
-   Test-Path -LiteralPath (Join-Path $streSaveDir ($streIdentity + '.ess.tmp'))
-   ```
-
-   `Compare-Object` must produce no rows and the temporary-file check must still
-   print `False`.
-
-11. Through Skyrim's ordinary load UI, load a different save without first
-    issuing the managed command. It must load normally, produce no
-    `CampaignNativeLoad NATIVE_ENTER`, acquire no STRE gate, and leave gameplay
-    unpaused by STRE.
-
-## Expected ordered evidence
-
-Filter the client log for `CampaignNativeLoad|CampaignGate`. A successful run
-must contain one ordered native-load trace (gate records may interleave):
+The accepted client log contained this ordered native-load trace (gate records
+could interleave):
 
 ```text
 [STRE][CampaignNativeLoad] REQUEST_QUEUED identity=...
@@ -411,9 +286,10 @@ must contain one ordered native-load trace (gate records may interleave):
 [STRE][CampaignNativeLoad] COMPLETED identity=... proof=...
 ```
 
-The engine may order `NATIVE_RETURN` before `POST_LOAD`; both orders are
-accepted, but all distinct milestones are mandatory. A duplicate while locked
-must show `REQUEST_REJECTED reason=request-not-idle` with no second invocation.
+The engine could order `NATIVE_RETURN` before `POST_LOAD`; both orders were
+accepted, but all distinct milestones were mandatory. The duplicate while
+locked showed `REQUEST_REJECTED reason=request-not-idle` with no second
+invocation.
 
 ## Current verdict
 
