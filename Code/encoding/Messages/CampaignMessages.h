@@ -7,7 +7,10 @@
 struct CampaignCommandResponse final : ServerMessage
 {
     static constexpr ServerOpcode Opcode = kCampaignCommandResponse;
-    CampaignCommandResponse() : ServerMessage(Opcode) {}
+    CampaignCommandResponse()
+        : ServerMessage(Opcode)
+    {
+    }
 
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
@@ -27,7 +30,10 @@ struct CampaignCommandResponse final : ServerMessage
 struct NotifyCampaignSnapshot final : ServerMessage
 {
     static constexpr ServerOpcode Opcode = kNotifyCampaignSnapshot;
-    NotifyCampaignSnapshot() : ServerMessage(Opcode) {}
+    NotifyCampaignSnapshot()
+        : ServerMessage(Opcode)
+    {
+    }
 
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
@@ -57,4 +63,30 @@ struct NotifyCampaignLobbyState final : ServerMessage
     TiltedPhoques::Vector<CampaignLobbyMemberData> Members;
     bool CanStart{};
     bool WireValid{true};
+};
+
+enum class CampaignHelgenSpatialStatus : std::uint8_t
+{
+    Known = 0,
+    GateClosed,
+    EmptyFootprint,
+    IncompleteRoster,
+    UnknownPosition
+};
+
+struct NotifyCampaignHelgenState final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode = kNotifyCampaignHelgenState;
+    NotifyCampaignHelgenState()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    bool InvestigationStartAuthorized{};
+    CampaignHelgenSpatialStatus SpatialStatus{CampaignHelgenSpatialStatus::GateClosed};
+    bool AllRequiredPlayersOutside{};
 };

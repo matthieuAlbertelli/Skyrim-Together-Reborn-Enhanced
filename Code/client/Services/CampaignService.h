@@ -1,25 +1,23 @@
 #pragma once
 
+#include <CampaignClientAdmissionState.h>
 #include <CampaignIdentityStore.h>
+#include <CampaignHelgenStateCache.h>
 #include <Structs/Campaign.h>
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 struct CampaignCommandResponse;
+struct ConnectedEvent;
 struct DisconnectedEvent;
 struct NotifyCampaignSnapshot;
 struct NotifyCampaignLobbyState;
+struct NotifyCampaignHelgenState;
 struct TransportService;
-
-struct CampaignClientAdmission
-{
-    std::string CampaignId;
-    std::string CampaignSlotId;
-    std::string CharacterBindingId;
-};
 
 struct CampaignClientCommandOutcome
 {
@@ -48,16 +46,14 @@ struct CampaignClientLobbyState
 class CampaignService final
 {
 public:
-    CampaignService(
-        entt::dispatcher& aDispatcher,
-        TransportService& aTransport) noexcept;
+    CampaignService(entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept;
 
     [[nodiscard]] std::optional<TiltedPhoques::String>
     GetDurablePlayerIdForAuthentication() const noexcept;
     [[nodiscard]] const std::optional<CampaignSnapshotData>&
     GetLatestSnapshot() const noexcept { return m_latestSnapshot; }
-    [[nodiscard]] const std::optional<CampaignClientAdmission>&
-    GetAdmission() const noexcept { return m_admission; }
+    [[nodiscard]] std::optional<STRE::Campaign::CampaignClientAdmission>
+    GetAdmission() const noexcept { return m_admissionState.GetAdmission(); }
     [[nodiscard]] const std::optional<CampaignClientCommandOutcome>&
     GetLastCommandOutcome() const noexcept { return m_lastCommandOutcome; }
     [[nodiscard]] const std::optional<CampaignClientLobbyState>&
@@ -94,6 +90,16 @@ public:
         std::uint64_t aExpectedRevision,
         const std::string& acMutationId = {}) noexcept;
 
+    [[nodiscard]] bool SignalHelgenInvestigationReady() noexcept;
+    [[nodiscard]] bool IsHelgenInvestigationStartAuthorized() const noexcept
+    {
+        return m_helgenState.IsInvestigationStartAuthorized();
+    }
+    [[nodiscard]] bool AreAllRequiredPlayersOutsideHelgen() const noexcept
+    {
+        return m_helgenState.AreAllRequiredPlayersOutside();
+    }
+
 private:
     [[nodiscard]] std::string GenerateMutationId() const;
     void OnCommandResponse(
@@ -102,6 +108,8 @@ private:
         const NotifyCampaignSnapshot& acNotification) noexcept;
     void OnLobbyState(
         const NotifyCampaignLobbyState& acNotification) noexcept;
+    void OnHelgenState(const NotifyCampaignHelgenState& acNotification) noexcept;
+    void OnConnected(const ConnectedEvent&) noexcept;
     void OnDisconnected(const DisconnectedEvent&) noexcept;
 
     TransportService& m_transport;
@@ -109,13 +117,17 @@ private:
     std::optional<std::string> m_playerId;
     std::string m_storageError;
     bool m_bindingCacheAvailable{};
-    std::optional<CampaignClientAdmission> m_admission;
+    STRE::Campaign::CampaignClientAdmissionState m_admissionState;
     std::optional<CampaignSnapshotData> m_latestSnapshot;
     std::optional<CampaignClientCommandOutcome> m_lastCommandOutcome;
     std::optional<CampaignClientLobbyState> m_lobbyState;
+    CampaignHelgenStateCache m_helgenState;
+    std::atomic_bool m_helgenReadinessRejectionLogged{};
 
     entt::scoped_connection m_responseConnection;
     entt::scoped_connection m_snapshotConnection;
     entt::scoped_connection m_lobbyStateConnection;
+    entt::scoped_connection m_helgenStateConnection;
+    entt::scoped_connection m_connectedConnection;
     entt::scoped_connection m_disconnectedConnection;
 };

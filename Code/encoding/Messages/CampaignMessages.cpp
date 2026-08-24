@@ -6,13 +6,10 @@
 
 using TiltedPhoques::Serialization;
 
-void CampaignCommandResponse::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignCommandResponse::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
-    Serialization::WriteVarInt(aWriter,
-        static_cast<std::uint8_t>(Operation));
-    Serialization::WriteVarInt(aWriter,
-        static_cast<std::uint8_t>(Result));
+    Serialization::WriteVarInt(aWriter, static_cast<std::uint8_t>(Operation));
+    Serialization::WriteVarInt(aWriter, static_cast<std::uint8_t>(Result));
     (void)WriteCampaignWireId(aWriter, MutationId);
     (void)WriteCampaignWireId(aWriter, CampaignId);
     Serialization::WriteVarInt(aWriter, StateVersion);
@@ -21,14 +18,11 @@ void CampaignCommandResponse::SerializeRaw(
     (void)WriteCampaignWireId(aWriter, JoinCode);
 }
 
-void CampaignCommandResponse::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignCommandResponse::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ServerMessage::DeserializeRaw(aReader);
-    Operation = static_cast<CampaignProtocolOperation>(
-        static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader)));
-    Result = static_cast<CampaignProtocolResult>(
-        static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader)));
+    Operation = static_cast<CampaignProtocolOperation>(static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader)));
+    Result = static_cast<CampaignProtocolResult>(static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader)));
     WireValid = ReadCampaignWireId(aReader, MutationId);
     WireValid = ReadCampaignWireId(aReader, CampaignId) && WireValid;
     StateVersion = Serialization::ReadVarInt(aReader);
@@ -57,14 +51,12 @@ bool CampaignCommandResponse::IsValid() const noexcept
         (JoinCode.empty() || IsValidCampaignJoinCode(JoinCode));
 }
 
-void NotifyCampaignSnapshot::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void NotifyCampaignSnapshot::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     Snapshot.Serialize(aWriter);
 }
 
-void NotifyCampaignSnapshot::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void NotifyCampaignSnapshot::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ServerMessage::DeserializeRaw(aReader);
     Snapshot.Deserialize(aReader);
@@ -124,4 +116,25 @@ bool NotifyCampaignLobbyState::IsValid() const noexcept
         {
             return IsValidCampaignLobbyDisplayName(acMember.Name);
         });
+}
+
+void NotifyCampaignHelgenState::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    Serialization::WriteBool(aWriter, InvestigationStartAuthorized);
+    Serialization::WriteVarInt(aWriter, static_cast<std::uint8_t>(SpatialStatus));
+    Serialization::WriteBool(aWriter, AllRequiredPlayersOutside);
+}
+
+void NotifyCampaignHelgenState::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    InvestigationStartAuthorized = Serialization::ReadBool(aReader);
+    SpatialStatus = static_cast<CampaignHelgenSpatialStatus>(static_cast<std::uint8_t>(Serialization::ReadVarInt(aReader)));
+    AllRequiredPlayersOutside = Serialization::ReadBool(aReader);
+}
+
+bool NotifyCampaignHelgenState::IsValid() const noexcept
+{
+    return static_cast<std::uint8_t>(SpatialStatus) <= static_cast<std::uint8_t>(CampaignHelgenSpatialStatus::UnknownPosition) &&
+           (!AllRequiredPlayersOutside || SpatialStatus == CampaignHelgenSpatialStatus::Known);
 }

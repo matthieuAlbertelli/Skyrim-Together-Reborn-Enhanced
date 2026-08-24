@@ -544,6 +544,31 @@ TEST_CASE("Host-authorized seal and ready commands derive actor identity from ad
     REQUIRE_FALSE(withdrawn.Snapshot->Roster[1].Ready);
 }
 
+TEST_CASE("Single-player campaign start keeps its canonical admission ACTIVE", "[campaign.admission][helgen]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+
+    const auto started = fixture.Admission.StartCampaign(
+        1, created.CampaignId, "mutation-start-solo-roster", 1, true, true);
+    REQUIRE(started.Result == CampaignProtocolResult::Applied);
+    REQUIRE(started.Snapshot);
+    REQUIRE(started.Snapshot->RosterSealed);
+    REQUIRE(started.Snapshot->Roster.size() == 1);
+    REQUIRE(started.Snapshot->Roster.front().Present);
+    REQUIRE(started.Snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE));
+
+    const auto* admission =
+        static_cast<const CampaignAdmissionService&>(fixture.Admission)
+            .FindConnection(1);
+    REQUIRE(admission);
+    REQUIRE(admission->AdmittedIdentity);
+    REQUIRE(admission->AdmittedIdentity->Campaign.Value == created.CampaignId);
+    REQUIRE(admission->AdmittedIdentity->Slot.Value == created.CampaignSlotId);
+}
+
 TEST_CASE("Sealed reconnect admission preserves roster and derives runtime presence", "[campaign.admission][reconnect]")
 {
     ProtocolFixture fixture;

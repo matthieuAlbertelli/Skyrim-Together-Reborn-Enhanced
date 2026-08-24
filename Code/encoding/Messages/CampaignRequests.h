@@ -7,7 +7,10 @@
 struct CampaignCreateRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignCreateRequest;
-    CampaignCreateRequest() : ClientMessage(Opcode) {}
+    CampaignCreateRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -18,7 +21,10 @@ struct CampaignCreateRequest final : ClientMessage
 struct CampaignJoinRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignJoinRequest;
-    CampaignJoinRequest() : ClientMessage(Opcode) {}
+    CampaignJoinRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -30,7 +36,10 @@ struct CampaignJoinRequest final : ClientMessage
 struct CampaignResumeRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignResumeRequest;
-    CampaignResumeRequest() : ClientMessage(Opcode) {}
+    CampaignResumeRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -41,7 +50,10 @@ struct CampaignResumeRequest final : ClientMessage
 struct CampaignStartRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignStartRequest;
-    CampaignStartRequest() : ClientMessage(Opcode) {}
+    CampaignStartRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -53,7 +65,10 @@ struct CampaignStartRequest final : ClientMessage
 struct CampaignSetReadyRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignSetReadyRequest;
-    CampaignSetReadyRequest() : ClientMessage(Opcode) {}
+    CampaignSetReadyRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -66,7 +81,10 @@ struct CampaignSetReadyRequest final : ClientMessage
 struct CampaignLeaveRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignLeaveRequest;
-    CampaignLeaveRequest() : ClientMessage(Opcode) {}
+    CampaignLeaveRequest()
+        : ClientMessage(Opcode)
+    {
+    }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
     [[nodiscard]] bool IsValid() const noexcept;
@@ -85,4 +103,15 @@ struct CampaignJoinByCodeRequest final : ClientMessage
     TiltedPhoques::String JoinCode;
     TiltedPhoques::String MutationId;
     TiltedPhoques::String DisplayName;
+};
+
+struct CampaignHelgenInvestigationReadyRequest final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignHelgenInvestigationReadyRequest;
+    CampaignHelgenInvestigationReadyRequest()
+        : ClientMessage(Opcode)
+    {
+    }
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
 };

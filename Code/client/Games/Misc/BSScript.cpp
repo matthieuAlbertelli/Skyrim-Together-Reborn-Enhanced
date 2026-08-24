@@ -35,7 +35,15 @@ void TP_MAKE_THISCALL(HookBindEverythingToScript, BSScript::IVirtualMachine*)
 {
     (*apThis)->BindNativeMethod(new BSScript::IsRemotePlayerFunc("IsRemotePlayer", "SkyrimTogetherUtils", PapyrusFunctions::IsRemotePlayer, BSScript::Variable::kBoolean));
     (*apThis)->BindNativeMethod(new BSScript::IsPlayerFunc("IsPlayer", "SkyrimTogetherUtils", PapyrusFunctions::IsPlayer, BSScript::Variable::kBoolean));
-    (*apThis)->BindNativeMethod(new BSScript::DidLaunchSkyrimTogetherFunc("DidLaunchSkyrimTogether", "SkyrimTogetherVerifyLaunchScript", PapyrusFunctions::DidLaunchSkyrimTogether, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc("IsConnected", "SkyrimTogetherUtils", PapyrusFunctions::IsConnected, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(
+        new BSScript::GlobalBoolFunc("SignalHelgenInvestigationReady", "SkyrimTogetherUtils", PapyrusFunctions::SignalHelgenInvestigationReady, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc(
+        "IsHelgenInvestigationStartAuthorized", "SkyrimTogetherUtils", PapyrusFunctions::IsHelgenInvestigationStartAuthorized, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc(
+        "AreAllRequiredPlayersOutsideHelgen", "SkyrimTogetherUtils", PapyrusFunctions::AreAllRequiredPlayersOutsideHelgen, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(
+        new BSScript::GlobalBoolFunc("DidLaunchSkyrimTogether", "SkyrimTogetherVerifyLaunchScript", PapyrusFunctions::DidLaunchSkyrimTogether, BSScript::Variable::kBoolean));
 
     TiltedPhoques::ThisCall(RealBindEverythingToScript, apThis);
 }
@@ -65,7 +73,8 @@ int64_t TP_MAKE_THISCALL(HookCompareVariables, void, BSScript::Variable* apVar1,
 
     auto* pPolicy = GameVM::Get()->virtualMachine->GetObjectHandlePolicy();
 
-    if (!pPolicy || !handle1 || !handle2 || !pPolicy->HandleIsType((uint32_t)Actor::Type, handle1) || !pPolicy->HandleIsType((uint32_t)Actor::Type, handle2) || !pPolicy->IsHandleObjectAvailable(handle1) || !pPolicy->IsHandleObjectAvailable(handle2))
+    if (!pPolicy || !handle1 || !handle2 || !pPolicy->HandleIsType((uint32_t)Actor::Type, handle1) || !pPolicy->HandleIsType((uint32_t)Actor::Type, handle2) ||
+        !pPolicy->IsHandleObjectAvailable(handle1) || !pPolicy->IsHandleObjectAvailable(handle2))
     {
         return TiltedPhoques::ThisCall(RealCompareVariables, apThis, apVar1, apVar2);
     }

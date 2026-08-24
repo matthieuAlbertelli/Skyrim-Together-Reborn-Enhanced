@@ -119,7 +119,53 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   reference state and neutralizes the Keep collapse trigger while preserving
   the already-collapsed rubble presentation;
 - the post-Helgen projection was runtime-smoke-tested after xEdit Quick Auto
-  Clean, including Helgen exterior and `HelgenKeep01`.
+  Clean, including Helgen exterior and `HelgenKeep01`;
+- `STRE_QUEST_HelgenInvestigation` provides the local Helgen-investigation and
+  standalone T+4 projection path, with a diagnostic stage-10 bootstrap and
+  persistent investigation/survivor/world-phase/path state owned by
+  `STRE_HelgenInvestigationController`;
+- Hadvar and Ralof are independently projected to STRE-owned wounded positions
+  in `HelgenKeep01` and use dedicated `SitTarget` packages with vanilla wounded
+  furniture markers;
+- the collapsed Keep passage has a bidirectional `Se faufiler` interaction using
+  one reusable activator script, linked destination markers, a short fade, and
+  local `MoveTo`, without changing the rubble collision or navmesh;
+- a dead bandit and abandoned pickaxe provide environmental explanation for the
+  opening through the rubble;
+- `STRE_QUEST_HelgenInvestigation`, like the Alternate Start orchestration
+  quest, is explicitly excluded from generic quest-stage synchronization so its
+  CK stages cannot become shared campaign state;
+- the standalone T+4 Helgen occupation fallback is implemented: four game days
+  after investigation start it defers through `BanditOccupationPending` while
+  the player remains in `HelgenLocation [00018A4A]`, then commits
+  `BanditOccupied` after Helgen is clear;
+- the occupied projection reuses Bethesda's `PostHelgenEncountersMarker
+  [000F8240]`, retires the major post-attack fire/smoke FX and the temporary STRE
+  squeeze traversal, preserves the collapsed bridge/debris projection, and moves
+  survivors still in `WoundedInCave` to independent locked `CapturedInKeep`
+  jail projections;
+- connected campaigns now use an ephemeral full-roster investigation-start
+  barrier plus a server-evaluated `NONE inside Helgen` predicate; clients cache
+  the reliable notification without blocking Papyrus, retain the local T+4
+  timer, and apply the existing CK projection only when the cached predicate is
+  known and true;
+- the Helgen footprint is the exact `Skyrim.esm` membership of
+  `HelgenLocation [00018A4A]`: eight exterior cells and three interiors,
+  resolved by plugin name plus local FormID; missing roster members, unknown
+  positions, a non-`ACTIVE` campaign, or an unresolved footprint all fail
+  closed;
+- no Helgen-specific persistent server state, event history, quest-stage sync,
+  or C++ duplication of the physical projection was introduced; campaign saves
+  retain the local state for future collective checkpoint recovery;
+- the player-present-at-deadline -> pending -> leave-Helgen -> occupied flow was
+  runtime-validated on 23 August 2026, including vanilla bandit occupation and
+  both survivor jail projections; revalidation on 24 August confirmed the final
+  FX/encounters/rubble/bridge invariant in standalone and in a multiplayer
+  campaign;
+- the strict CK manifest now covers 67 expected STRE-owned records and rejects
+  unexpected master overrides, including exact allowlisting of the two captured
+  jail-door bindings; CK packaging passes with 19 managed files, the client/server
+  builds are green, and TPTests pass 1837 assertions in 137 test cases.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -128,6 +174,21 @@ The current catalog uses `BuildVersion = 5`.
 - the New Game bootstrap and MQ101/post-Helgen world-state projection are
   implemented, but the neutral MQ102/MQ103 vanilla main-quest handoff remains
   unfinished;
+- the Helgen investigation is still entered through a diagnostic quest
+  bootstrap; Valen does not yet start it;
+- the multiplayer T+4 vertical slice and its final occupied projection are
+  runtime-validated in a multiplayer campaign, but the complete permutation
+  matrix (both exit orders, both already outside at T+4, interior/exterior,
+  disconnect, mixed survivor states, save/load, and cell reset) remains pending;
+- the diagnostic stage-10 starts are aligned only after every active sealed
+  roster member reaches `BeginInvestigation()`; Valen remains the missing
+  narrative trigger;
+- coordinated checkpoint creation and `RECOVERY_LOCK` restore are still future
+  campaign work. Helgen deliberately adds no parallel reconnect/persistence
+  mechanism and fences its local progression after a campaign disconnect;
+- rescue/liberation and physical `Freed`/`Departed` projections remain
+  unimplemented; mixed-state and save/load/cell-reset regressions for the new
+  occupation flow are still required;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;

@@ -304,6 +304,97 @@
       "signature": "QUST",
       "editorId": "STRE_QUEST_HelgenNPCCleanup",
       "expectedLocalFormId": "0x0002D022"
+    },
+    {
+      "signature": "ACHR",
+      "editorId": "STRE_HelgenRubbleExcavatorCorpse",
+      "expectedLocalFormId": "0x00084B9B"
+    },
+    {
+      "signature": "ACTI",
+      "editorId": "STRE_ACTI_HelgenRubbleSqueeze",
+      "expectedLocalFormId": "0x00064900",
+      "displayName": "Passage étroit"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_HadvarWounded",
+      "expectedLocalFormId": "0x00087A67"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_RalofWounded",
+      "expectedLocalFormId": "0x00087A68"
+    },
+    {
+      "signature": "QUST",
+      "editorId": "STRE_QUEST_HelgenInvestigation",
+      "expectedLocalFormId": "0x0005BCA5"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenHadvarWoundedFurniture",
+      "expectedLocalFormId": "0x00087A65"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenHadvarWoundedMarker",
+      "expectedLocalFormId": "0x00058DDB"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRalofWoundedFurniture",
+      "expectedLocalFormId": "0x00087A66"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRalofWoundedMarker",
+      "expectedLocalFormId": "0x00058DDC"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRubbleExcavatorPickaxe",
+      "expectedLocalFormId": "0x00084B9C"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRubbleSqueezeActivator_EntranceSide",
+      "expectedLocalFormId": "0x000677C9"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRubbleSqueezeActivator_SurvivorSide",
+      "expectedLocalFormId": "0x00081CD2"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRubbleSqueezeMarker_EntranceSide",
+      "expectedLocalFormId": "0x000648FE"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRubbleSqueezeMarker_SurvivorSide",
+      "expectedLocalFormId": "0x000648FF"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_HadvarCaptured",
+      "expectedLocalFormId": "0x00096453"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_RalofCaptured",
+      "expectedLocalFormId": "0x00096454"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenHadvarCapturedMarker",
+      "expectedLocalFormId": "0x00096451"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_HelgenRalofCapturedMarker",
+      "expectedLocalFormId": "0x00096452"
     }
   ],
   "spellEffectExpectations": {
@@ -406,6 +497,18 @@
       "expectedFormId": "0x0010FDE3",
       "master": "Skyrim.esm",
       "reason": "Anonymous ChargenFxTrigger reference promoted by the CK to Persistent for STRE Helgen continuity property binding."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x00091583",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla Helgen Keep jail door promoted by the CK for the HadvarCapturedDoor quest-alias binding."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x00091587",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla Helgen Keep jail door promoted by the CK for the RalofCapturedDoor quest-alias binding."
     }
   ]
 }

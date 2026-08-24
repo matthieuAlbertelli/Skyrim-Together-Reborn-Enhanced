@@ -1,11 +1,11 @@
 # Alternate Start — Test plan
 
-> **Status: Automated audits plus M7, New Game, and MQ101/post-Helgen smoke tests executed; focused campaign-bootstrap automation and the Solo/two-player happy path pass, while the remaining runtime matrix is pending**
+> **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
 ## Completed checks
 
 - successful Windows xmake build;
-- conforming strict audit of 49 STRE-owned CK records plus the explicit
+- conforming strict audit of 63 STRE-owned CK records plus the explicit
   Skyrim-master override allowlist;
 - conforming audit of 41 catalog/ESP references;
 - compiled `Code/tests/character_build.cpp` tests;
@@ -15,7 +15,7 @@
 - New Game interception validated for first and same-process second New Game;
 - MQ101 structural and generated-fragment invariant audits conform;
 - post-Helgen MQ101/world-state projection validated in game after xEdit Quick
-  Auto Clean while MQ102/MQ102A/MQ102B remain untouched.
+  Auto Clean while MQ102/MQ102A/MQ102B remain untouched;
 - native `TPTests` pass with 126 test cases and 1753 assertions, including the
   focused join-code directory, wire validation, opcode stability, native CEF
   binding manifest/action routing, bounded Unicode lobby-pseudo validation, and
@@ -24,7 +24,17 @@
   entry/join and code normalization, Solo intent, shared persisted connection
   address without password persistence, lobby projection/Start authority,
   disconnected form/back behavior, and required/trimmed/bounded Unicode pseudo
-  handling across the five-argument native action contract.
+  handling across the five-argument native action contract;
+- pre-deadline Helgen investigation bootstrap validated with independent Hadvar
+  and Ralof wounded positions and dedicated wounded packages;
+- bidirectional rubble-squeeze interaction validated in game with the expected
+  prompt, fade, and local player transfer;
+- investigation quest exclusion from generic quest synchronization builds
+  successfully;
+- TPTests pass with 1837 assertions in 137 test cases;
+- CK packaging audit passes with 19 managed files and zero compiled PEX files
+  under `Scripts/Source`;
+- `git diff --check` passes for the current increment.
 
 These checks do not constitute exhaustive validation of every combination.
 
@@ -193,13 +203,119 @@ where available, transient/durable player context allowed by logging policy, and
 PartyService decision. Confirm the roster is unchanged and no password is logged.
 None of C–L is claimed as manually passed by the happy-path run above.
 
+## Pre-deadline Helgen investigation regression
+
+Validated on 20 August 2026:
+
+- project post-Helgen continuity first and confirm MQ101 reaches stage 1000;
+- start `STRE_QUEST_HelgenInvestigation` and advance its diagnostic stage 10;
+- verify Hadvar, Ralof, and both wounded-marker aliases are filled;
+- verify Hadvar and Ralof reach their independent intended locations;
+- verify Hadvar uses the Wounded02-based furniture pose and Ralof the
+  Wounded03-based furniture pose;
+- verify neither actor immediately resumes an incompatible vanilla travel
+  package;
+- verify `Se faufiler` appears only around the intended rubble opening;
+- traverse the rubble in both directions and verify fade, destination, and
+  immediate movement after arrival;
+- verify the dead bandit and pickaxe do not obstruct the interaction;
+- verify the strict record audit reports 63 expected records with no unexpected
+  master override;
+- verify `audit_ck_packaging.py`, client build, TPTests, and
+  `git diff --check`.
+
+Still required for this slice:
+
+- save/load while the investigation is active;
+- repeat/reapply stage-10 projection and confirm safe behavior;
+- cell reset to determine whether the current vanilla corpse ActorBase respawns;
+- multiplayer traversal with two players using the squeeze independently.
+
+## Standalone T+4 Helgen occupation regression
+
+Validated on 23 August 2026:
+
+- project the clean STRE post-MQ101 baseline and verify Helgen is destroyed and
+  burning, skipped MQ101 actors are absent, and occupation bandits are absent;
+- start `STRE_QUEST_HelgenInvestigation`, leave both survivors in
+  `WoundedInCave`, and advance four full game days while the player remains in
+  `HelgenLocation`;
+- verify the deadline moves `HelgenWorldPhase` to
+  `BanditOccupationPending` without introducing occupation bandits or moving the
+  survivors while the player remains in Helgen;
+- leave Helgen, wait for the standalone presence re-evaluation, and verify the
+  transition commits to `BanditOccupied`;
+- verify Bethesda's post-Helgen occupation appears in the exterior and
+  `HelgenKeep01`, the major post-attack fire/smoke FX retires, the collapsed
+  bridge and its debris remain projected, and the STRE `Se faufiler` traversal
+  is no longer active;
+- verify both survivors still in `WoundedInCave` transition to
+  `CapturedInKeep`, move to their respective STRE jail markers, use the captured
+  package, and have their selected vanilla jail doors closed and locked;
+- verify strict CK audit with 67 expected STRE-owned records and no unexpected
+  master overrides, CK packaging with 17 managed files, client build, TPTests
+  (1552 assertions / 116 test cases), and `git diff --check`.
+
+Still required for the T+4 slice:
+
+- reach the four-day deadline while already outside the affected Helgen footprint
+  and verify the direct `RecentPostAttack -> BanditOccupied` path;
+- verify mixed survivor states, especially `Freed + WoundedInCave`, and prove
+  that `Freed` never regresses to captivity;
+- verify `Departed` non-regression once that projection exists;
+- save/load before the deadline, while `BanditOccupationPending`, and after
+  `BanditOccupied`, then verify idempotent reprojection;
+- cell-reset regression for the bandit occupation, jail doors, survivor
+  projection, and current rubble-excavator corpse;
+- run the multiplayer vertical-slice matrix below;
+- verify collective checkpoint/recovery once the campaign recovery path is
+  implemented; Helgen has no separate state replay mechanism.
+
+## Multiplayer T+4 Helgen vertical slice
+
+Native and protocol automation validated on 23 August 2026:
+
+- exact sealed roster and `ACTIVE` gate are required;
+- readiness and spatial notification messages round-trip through their
+  factories;
+- the generic group evaluator passes 1-player, all 2-player inside/outside
+  combinations, N-player last-exit, exact interior/exterior, unknown-position,
+  missing-member, empty-footprint, and closed-gate cases;
+- client and server builds pass; TPTests pass 1837 assertions in 137 test cases.
+
+Runtime revalidation on 24 August 2026 confirmed the final occupied projection
+in standalone and in a multiplayer campaign: the readiness/admission path
+authorizes the transition, major post-attack FX retires, occupation encounters
+appear, the temporary STRE traversal retires, and the collapsed bridge/debris
+projection remains intact. The following additional permutations remain manual;
+this runtime evidence does not mark them as passed:
+
+1. start the investigation on A and B, verify neither local T+4 clock arms until
+   both have crossed the collective start barrier;
+2. at T+4, move A outside while B remains in any exact Helgen cell and verify
+   both remain `BanditOccupationPending` with no physical occupation;
+3. move B outside and verify both clients call the existing local
+   `CommitBanditOccupation()` projection within the five-second convergence
+   interval;
+4. repeat with B leaving before A;
+5. repeat with both players already outside when T+4 arrives and verify direct
+   occupation on both;
+6. repeat with one player in `HelgenKeep01` and one in a Helgen exterior cell;
+7. disconnect either required member before commit and verify the remaining
+   client receives no progression authorization;
+8. verify `Freed` and `Departed` never become `CapturedInKeep`, and confirm no
+   `STRE_QUEST_HelgenInvestigation` stage packet is emitted.
+
 ## Tests still blocked by missing features
 
+Other blocked coverage:
+
+- rescue/liberation and `Freed`/`Departed` survivor projections;
 - neutral MQ102/MQ103 vanilla main-quest handoff;
 - Valen and scene;
 - exit and vanilla resumption;
-- save/load at every phase;
-- coordinated checkpoints, disconnect recovery lock, and collective
+- save/load at every campaign phase;
+- sealed roster, coordinated checkpoints, disconnect recovery, and collective
   build/campaign restoration;
 - 4 and 10 players.
 

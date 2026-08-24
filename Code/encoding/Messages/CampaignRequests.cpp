@@ -7,21 +7,14 @@ using TiltedPhoques::Serialization;
 namespace
 {
 void WriteMutationRequest(
-    TiltedPhoques::Buffer::Writer& aWriter,
-    const TiltedPhoques::String& acCampaignId,
-    const TiltedPhoques::String& acMutationId,
-    std::uint64_t aExpectedRevision) noexcept
+    TiltedPhoques::Buffer::Writer& aWriter, const TiltedPhoques::String& acCampaignId, const TiltedPhoques::String& acMutationId, std::uint64_t aExpectedRevision) noexcept
 {
     (void)WriteCampaignWireId(aWriter, acCampaignId);
     (void)WriteCampaignWireId(aWriter, acMutationId);
     Serialization::WriteVarInt(aWriter, aExpectedRevision);
 }
 
-void ReadMutationRequest(
-    TiltedPhoques::Buffer::Reader& aReader,
-    TiltedPhoques::String& aCampaignId,
-    TiltedPhoques::String& aMutationId,
-    std::uint64_t& aExpectedRevision) noexcept
+void ReadMutationRequest(TiltedPhoques::Buffer::Reader& aReader, TiltedPhoques::String& aCampaignId, TiltedPhoques::String& aMutationId, std::uint64_t& aExpectedRevision) noexcept
 {
     if (!ReadCampaignWireId(aReader, aCampaignId))
         aCampaignId.clear();
@@ -30,24 +23,19 @@ void ReadMutationRequest(
     aExpectedRevision = Serialization::ReadVarInt(aReader);
 }
 
-bool IsValidMutationRequest(
-    const TiltedPhoques::String& acCampaignId,
-    const TiltedPhoques::String& acMutationId) noexcept
+bool IsValidMutationRequest(const TiltedPhoques::String& acCampaignId, const TiltedPhoques::String& acMutationId) noexcept
 {
-    return IsValidCampaignWireId(acCampaignId) &&
-        IsValidCampaignWireId(acMutationId);
+    return IsValidCampaignWireId(acCampaignId) && IsValidCampaignWireId(acMutationId);
 }
-}
+} // namespace
 
-void CampaignCreateRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignCreateRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     (void)WriteCampaignWireId(aWriter, MutationId);
     (void)WriteCampaignWireId(aWriter, DisplayName);
 }
 
-void CampaignCreateRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignCreateRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     if (!ReadCampaignWireId(aReader, MutationId))
@@ -62,14 +50,12 @@ bool CampaignCreateRequest::IsValid() const noexcept
         IsValidCampaignLobbyDisplayName(DisplayName);
 }
 
-void CampaignJoinRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignJoinRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     WriteMutationRequest(aWriter, CampaignId, MutationId, ExpectedRevision);
 }
 
-void CampaignJoinRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignJoinRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     ReadMutationRequest(aReader, CampaignId, MutationId, ExpectedRevision);
@@ -80,15 +66,13 @@ bool CampaignJoinRequest::IsValid() const noexcept
     return IsValidMutationRequest(CampaignId, MutationId);
 }
 
-void CampaignResumeRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignResumeRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     (void)WriteCampaignWireId(aWriter, CampaignId);
     (void)WriteCampaignWireId(aWriter, CharacterBindingId);
 }
 
-void CampaignResumeRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignResumeRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     if (!ReadCampaignWireId(aReader, CampaignId))
@@ -99,18 +83,15 @@ void CampaignResumeRequest::DeserializeRaw(
 
 bool CampaignResumeRequest::IsValid() const noexcept
 {
-    return IsValidCampaignWireId(CampaignId) &&
-        IsValidCampaignWireId(CharacterBindingId);
+    return IsValidCampaignWireId(CampaignId) && IsValidCampaignWireId(CharacterBindingId);
 }
 
-void CampaignStartRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignStartRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     WriteMutationRequest(aWriter, CampaignId, MutationId, ExpectedRevision);
 }
 
-void CampaignStartRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignStartRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     ReadMutationRequest(aReader, CampaignId, MutationId, ExpectedRevision);
@@ -121,15 +102,13 @@ bool CampaignStartRequest::IsValid() const noexcept
     return IsValidMutationRequest(CampaignId, MutationId);
 }
 
-void CampaignSetReadyRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignSetReadyRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     WriteMutationRequest(aWriter, CampaignId, MutationId, ExpectedRevision);
     Serialization::WriteBool(aWriter, Ready);
 }
 
-void CampaignSetReadyRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignSetReadyRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     ReadMutationRequest(aReader, CampaignId, MutationId, ExpectedRevision);
@@ -141,14 +120,12 @@ bool CampaignSetReadyRequest::IsValid() const noexcept
     return IsValidMutationRequest(CampaignId, MutationId);
 }
 
-void CampaignLeaveRequest::SerializeRaw(
-    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+void CampaignLeaveRequest::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
     WriteMutationRequest(aWriter, CampaignId, MutationId, ExpectedRevision);
 }
 
-void CampaignLeaveRequest::DeserializeRaw(
-    TiltedPhoques::Buffer::Reader& aReader) noexcept
+void CampaignLeaveRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
 {
     ClientMessage::DeserializeRaw(aReader);
     ReadMutationRequest(aReader, CampaignId, MutationId, ExpectedRevision);
@@ -184,4 +161,13 @@ bool CampaignJoinByCodeRequest::IsValid() const noexcept
     return IsValidCampaignJoinCode(JoinCode) &&
         IsValidCampaignWireId(MutationId) &&
         IsValidCampaignLobbyDisplayName(DisplayName);
+}
+
+void CampaignHelgenInvestigationReadyRequest::SerializeRaw(TiltedPhoques::Buffer::Writer&) const noexcept
+{
+}
+
+void CampaignHelgenInvestigationReadyRequest::DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ClientMessage::DeserializeRaw(aReader);
 }

@@ -221,13 +221,31 @@ bool QuestService::IsNonSyncableQuest(TESQuest* apQuest)
     if (!apQuest)
         return true;
 
+    static constexpr std::array kNonSyncableQuestEditorIds =
+    std::to_array<const char*>({
+        "STRE_QUEST_AlternateStart",
+        "STRE_QUEST_HelgenInvestigation",
+    });
+
     const char* const pEditorId = apQuest->idName.AsAscii();
-    if (pEditorId &&
-        std::strcmp(pEditorId, "STRE_QUEST_AlternateStart") == 0)
+    if (pEditorId)
     {
-        // Character creation is a local per-player flow. Synchronizing the CK
-        // stage would make one player's RaceMenu drive every party member.
-        return true;
+        const auto it = std::find_if(
+            kNonSyncableQuestEditorIds.begin(),
+            kNonSyncableQuestEditorIds.end(),
+            [pEditorId](const char* apNonSyncableEditorId)
+            {
+                return std::strcmp(pEditorId, apNonSyncableEditorId) == 0;
+            });
+
+        if (it != kNonSyncableQuestEditorIds.end())
+        {
+            // STRE-owned orchestration quests are local CK projections.
+            // Their raw quest stages must never become shared campaign state through
+            // the generic QuestService. Shared facts are synchronized by their
+            // dedicated STRE systems/adapters instead.
+            return true;
+        }
     }
 
     // Quests with no quest stages are never synced. Most TESQues::Type:: quests should

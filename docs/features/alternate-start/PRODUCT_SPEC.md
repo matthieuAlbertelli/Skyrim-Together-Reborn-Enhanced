@@ -68,6 +68,24 @@ runtime coverage remains pending. Valen, integrated
 ready/departure behavior, durable Character Build binding, and the neutral
 MQ102/MQ103 handoff remain to be completed.
 
+## Helgen investigation v1 boundary
+
+The v1 occupation rule is intentionally deterministic and off-screen:
+
+- no occupation bandits are present before four full Skyrim days have elapsed
+  from the investigation start;
+- if the deadline arrives while at least one campaign player is still inside the
+  affected Helgen footprint, the post-deadline physical transition is deferred;
+- while deferred, Helgen and the survivor projection remain unchanged;
+- once the affected footprint is empty, Helgen may project directly to the
+  bandit-occupied state;
+- each survivor still left behind in `WoundedInCave` becomes
+  `CapturedInKeep` independently, while an already `Freed` or `Departed`
+  survivor remains unchanged.
+
+A staged real-time bandit invasion when players are present is a post-v1
+enhancement candidate, not part of the v1 product target.
+
 ## Single-player
 
 - the same creation flow in the inn;

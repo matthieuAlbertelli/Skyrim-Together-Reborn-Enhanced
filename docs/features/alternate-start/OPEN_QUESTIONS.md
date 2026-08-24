@@ -1,6 +1,6 @@
 # Alternate Start — Open questions
 
-> **Status: Remaining decisions after New Game and MQ101/post-Helgen continuity validation**
+> **Status: Remaining decisions after New Game, MQ101/post-Helgen continuity, wounded-survivor, and standalone T+4 occupation validation**
 
 ## Resolved decisions
 
@@ -24,7 +24,38 @@
 - a required disconnect suspends progression and collective rollback restores
   every member from the same committed `CampaignCheckpoint`;
 - every roster member retains a native Skyrim `.ess` for local
-  Skyrim/Papyrus/quest runtime restoration; it is not shared-state authority.
+  Skyrim/Papyrus/quest runtime restoration; it is not shared-state authority;
+- before the four-day transition, Hadvar and Ralof are independently projected
+  as wounded survivors in the final `HelgenKeep01` cave section;
+- the recent-post-attack route keeps the validated collapsed rubble intact and
+  exposes a local bidirectional `Se faufiler` interaction through an opening
+  explained by a dead bandit and abandoned pickaxe;
+- `STRE_QUEST_HelgenInvestigation` is a local CK orchestration/projection quest
+  and is excluded from generic quest-stage synchronization;
+- the v1 Helgen deadline rule is fixed: before four full Skyrim days from
+  investigation start there are no occupation bandits; once the deadline is
+  reached, the post-deadline physical projection is deferred for as long as any
+  campaign player remains in the affected Helgen footprint;
+- when that footprint becomes empty, the deferred transition may commit directly
+  to bandit-occupied Helgen, and each survivor still in `WoundedInCave` becomes
+  `CapturedInKeep` independently; `Freed` and `Departed` never regress.
+- the standalone fallback now evaluates the relative four-day deadline from
+  `InvestigationStartGameTime`, uses `HelgenLocation [00018A4A]` as its local
+  presence predicate, and defers through `BanditOccupationPending` until the
+  player leaves;
+- connected clients use an ephemeral exact-roster start barrier and a
+  server-evaluated outside-Helgen cache while retaining the T+4 timer and CK
+  projection locally; no Helgen-specific persistent server state is required by
+  the v1 checkpoint model;
+- the post-deadline physical projection reuses vanilla
+  `PostHelgenEncountersMarker [000F8240]`, retires
+  `dunCGPostMajorFXMarker [000F829B]` plus the temporary STRE squeeze activators,
+  preserves the collapsed bridge/debris projection, and does not create
+  duplicate STRE occupation bandits;
+- captured-survivor placement is implemented with independent STRE jail markers
+  and conditional Sandbox packages for Hadvar and Ralof; the selected vanilla
+  jail doors are referenced through aliases and are closed/locked during the
+  `CapturedInKeep` projection.
 
 ## Persistence and checkpoints
 
@@ -51,10 +82,28 @@ Resolved:
 - New Game interception is the dedicated `MQQuickstart == 5` MQ101 stage-0
   branch before vanilla stage 10;
 - MQ101/post-Helgen projection now reaches the validated stage-1000/destroyed
-  Helgen boundary while leaving MQ102/MQ102A/MQ102B untouched.
+  Helgen boundary while leaving MQ102/MQ102A/MQ102B untouched;
+- the first pre-deadline investigation slice can project both Hadvar and Ralof
+  independently into wounded positions without choosing MQ102A or MQ102B;
+- the collapsed Keep route remains intact and the survivors are reachable
+  through the STRE-owned squeeze interaction rather than a navmesh/collision
+  rewrite.
 
 Remaining:
 
+- two-client runtime validation of the implemented ephemeral start barrier and
+  exact-roster outside-Helgen predicate, including both exit orders,
+  already-outside at T+4, and `HelgenKeep01`. It remains pending, with the
+  merged #71 gameplay bootstrap now providing the supported two-PC
+  Create/Join/Start precondition. No Helgen runtime result is recorded yet;
+- coordinated checkpoint/recovery validation of the local native Helgen state
+  once the general campaign recovery path exists;
+- release behavior for each captured survivor and the rescue interaction from
+  `WoundedInCave` or `CapturedInKeep` to `Freed`;
+- physical `Freed` and `Departed` projections and their idempotent recovery;
+- whether the current vanilla corpse ActorBase used for the rubble excavator
+  actually respawns after a relevant cell reset and whether it needs an
+  STRE-owned non-respawning replacement;
 - exact neutral MQ102/MQ103 handoff stages and quest-running/completion state;
 - Alduin marker/reference state and Riverwood/Whiterun dialogue dependencies;
 - neutral Civil War initialization without implicit Imperial/Stormcloak
@@ -63,6 +112,23 @@ Remaining:
 - compatibility policy for other alternate starts and supported MQ101/QF
   conflicts;
 - exact Departure destination and the route back to the main quest.
+
+## Post-v1 candidate: live Helgen occupation encounter
+
+The v1 path intentionally uses an off-screen/deferred transition rather than a
+scripted invasion. A possible post-v1 enhancement is to play the occupation in
+real time when players are present at the four-day boundary:
+
+- bandits approach and invest the exterior ruins;
+- occupation progresses toward the Keep instead of appearing fully established;
+- bandits enter the dungeon and advance through it;
+- a survivor would only be captured when the encounter reaches that survivor,
+  while an off-screen path would continue to fast-forward to the same canonical
+  result when no player is present.
+
+This idea is deliberately parked for post-v1. It must not add scope to the v1
+deadline/occupation implementation and would require a separate design for AI,
+navmesh, encounter progression, authority, recovery, and multiplayer projection.
 
 ## Remaining kits
 
