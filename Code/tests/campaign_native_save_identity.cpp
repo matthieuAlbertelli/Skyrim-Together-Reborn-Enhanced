@@ -56,30 +56,59 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "The native save request slot owns one request through processing",
+    "The native save request slot fails closed and resets for the next request",
     "[campaign.checkpoint][native-save]")
 {
     using CampaignNativeSaveDetail::RequestSlot;
-    using CampaignNativeSaveDetail::RequestSlotState;
+    using STRE::Campaign::BuildNativeSaveBundleArtifact;
+    using STRE::Campaign::NativeSaveBundleMember;
+    using STRE::Campaign::NativeSaveMemberRole;
 
     RequestSlot slot;
-    REQUIRE(slot.GetState() == RequestSlotState::Idle);
+    REQUIRE(slot.Snapshot().State == CampaignNativeSaveLifecycleState::Idle);
     REQUIRE_FALSE(slot.TryRequest({}));
     REQUIRE(slot.TryRequest("stre-checkpoint_A-42"));
-    REQUIRE(slot.GetState() == RequestSlotState::Requested);
+    REQUIRE(
+        slot.Snapshot().State == CampaignNativeSaveLifecycleState::Requested);
     REQUIRE(slot.RequestedIdentity());
     REQUIRE(*slot.RequestedIdentity() == "stre-checkpoint_A-42");
     REQUIRE_FALSE(slot.TryRequest("stre-duplicate"));
 
-    const std::string* const processingIdentity = slot.BeginProcessing();
+    const std::optional<std::string> processingIdentity =
+        slot.BeginProcessing();
     REQUIRE(processingIdentity);
     REQUIRE(*processingIdentity == "stre-checkpoint_A-42");
-    REQUIRE(slot.GetState() == RequestSlotState::Processing);
+    REQUIRE(
+        slot.Snapshot().State == CampaignNativeSaveLifecycleState::Processing);
     REQUIRE_FALSE(slot.BeginProcessing());
     REQUIRE_FALSE(slot.TryRequest("stre-while-processing"));
+    REQUIRE(slot.Fail("native-save-returned-false"));
+    REQUIRE(slot.Snapshot().State == CampaignNativeSaveLifecycleState::Failed);
+    REQUIRE(
+        slot.Snapshot().FailureReason == "native-save-returned-false");
 
-    slot.FinishProcessing();
-    REQUIRE(slot.GetState() == RequestSlotState::Idle);
-    REQUIRE_FALSE(slot.RequestedIdentity());
     REQUIRE(slot.TryRequest("stre-next"));
+    REQUIRE(slot.BeginProcessing());
+    REQUIRE(slot.BeginAwaitingCompletion());
+    REQUIRE_FALSE(slot.TryRequest("stre-while-awaiting"));
+    REQUIRE(slot.Fail("completion-timeout"));
+
+    REQUIRE(slot.TryRequest("stre-complete"));
+    REQUIRE(slot.BeginProcessing());
+    REQUIRE(slot.BeginAwaitingCompletion());
+    auto artifact = BuildNativeSaveBundleArtifact(
+        "stre-complete",
+        {
+            NativeSaveBundleMember{NativeSaveMemberRole::Skse, 20, {}},
+            NativeSaveBundleMember{NativeSaveMemberRole::Ess, 4096, {}}
+        });
+    REQUIRE(artifact);
+    REQUIRE(slot.Complete(std::move(artifact.Value)));
+    const CampaignNativeSaveLifecycleSnapshot completed = slot.Snapshot();
+    REQUIRE(completed.State == CampaignNativeSaveLifecycleState::Completed);
+    REQUIRE(completed.Artifact);
+    REQUIRE(completed.Artifact->Bundle.LogicalIdentity == "stre-complete");
+
+    REQUIRE(slot.TryRequest("stre-after-completion"));
+    REQUIRE_FALSE(slot.Snapshot().Artifact);
 }

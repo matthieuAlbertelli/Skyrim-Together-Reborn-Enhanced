@@ -240,16 +240,46 @@ static bool g_enableCampaignNativeSaveProbe{false};
 
 void DebugService::DrawCampaignNativeSaveProbe()
 {
-    ImGui::SetNextWindowSize(ImVec2(460, 180), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(520, 240), ImGuiCond_FirstUseEver);
     ImGui::Begin("Campaign native save probe");
 
     static char s_checkpointId[kCampaignWireMaximumIdLength + 1] =
-        "native-save-spike-2";
+        "native-save-spike-3";
     ImGui::InputText(
         "Checkpoint ID", s_checkpointId, std::size(s_checkpointId));
     ImGui::TextWrapped(
-        "The request is deferred to Skyrim's save/load process boundary. "
-        "Native save completion remains unproven.");
+        "Completion requires a fresh target, no .ess.tmp, and simultaneous "
+        "read handles that deny write/delete sharing for .ess and .skse while "
+        "both members are hashed.");
+
+    const CampaignNativeSaveLifecycleSnapshot status =
+        CampaignNativeSave::GetStatus();
+    const char* pState = "Idle";
+    switch (status.State)
+    {
+    case CampaignNativeSaveLifecycleState::Requested:
+        pState = "Requested";
+        break;
+    case CampaignNativeSaveLifecycleState::Processing:
+        pState = "Processing";
+        break;
+    case CampaignNativeSaveLifecycleState::AwaitingCompletion:
+        pState = "AwaitingCompletion";
+        break;
+    case CampaignNativeSaveLifecycleState::Completed:
+        pState = "Completed";
+        break;
+    case CampaignNativeSaveLifecycleState::Failed:
+        pState = "Failed";
+        break;
+    case CampaignNativeSaveLifecycleState::Idle:
+        break;
+    }
+    ImGui::Text("Status: %s", pState);
+    if (!status.Identity.empty())
+        ImGui::Text("Identity: %s", status.Identity.c_str());
+    if (!status.FailureReason.empty())
+        ImGui::TextWrapped("Failure: %s", status.FailureReason.c_str());
 
     if (ImGui::Button("Queue dedicated native save"))
     {

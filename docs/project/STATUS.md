@@ -384,10 +384,10 @@ arming/release, checkpoint coordination, or recovery state is implemented by
 this spike. Production integration remains future work; #55 owns coordinated
 checkpoint saves and #56 owns recovery lock plus collective restore.
 
-### Campaign native-save request spike
+### Campaign native-save completion spike
 
-The bounded #55 native request spike v2 is implemented and
-automated/build-tested:
+The bounded #55 native-save spikes have progressed through three evidence
+levels:
 
 - one canonical `CheckpointId -> stre-<CheckpointId>` transformation reuses the
   existing bounded campaign ID validator and rejects path syntax;
@@ -400,15 +400,23 @@ automated/build-tested:
   save/load process function at Address Library ID `35772`;
 - the v2 separation matches the audited SKSE request/process architecture
   without treating SKSE's `RequestSave` abstraction as Bethesda-native;
-- `REQUEST_ACCEPTED`, `PROCESS_BOUNDARY_ENTER`, `SAVE_CALL_ENTER`,
-  `SAVE_CALL_RETURN`, and `PROCESS_BOUNDARY_EXIT` record identity and thread
-  evidence; the literal native return is explicitly not completion proof.
+- v2 is human-validated on AE 1.6.1170 with SKSE 2.2.6: request and processing
+  ran on different threads, Skyrim remained responsive, `Save_Impl` returned
+  true, `.ess` plus `.skse` were produced, and the `.ess` reloaded successfully;
+- v3 is implemented and automated/build-tested: Skyrim's ID `109278` resolves
+  the profile-aware local save path, and a bounded off-thread observer declares
+  completion only after a fresh `.ess`/`.skse` bundle has no `.ess.tmp`, both
+  members are simultaneously open without write/delete sharing, and all bytes
+  have been SHA-256 hashed while those handles remain open;
+- the deterministic, path-independent metadata codec v1 records the logical
+  identity plus canonical `ess`/`skse` roles, sizes, and per-member hashes; the
+  bundle fingerprint is SHA-256 of those exact metadata bytes and fits the
+  existing checkpoint persistence fields without a schema change.
 
-The v2 path has not been validated in Skyrim. This spike does not yet prove the
-end of the native write, resolve the final file/cosave set, compute a
-fingerprint, send a checkpoint acknowledgement, or coordinate
-Candidate/Committed state. The production #55 protocol/runtime/client flow
-remains unimplemented pending that native evidence. See
+The v3 completion observer, native path resolution, and hashes have not yet been
+validated in Skyrim. No checkpoint request/acknowledgement, server orchestration,
+Candidate/Committed transition, recovery, retention, cleanup, or upload is
+implemented by these spikes. The production #55 flow remains incomplete. See
 [`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).

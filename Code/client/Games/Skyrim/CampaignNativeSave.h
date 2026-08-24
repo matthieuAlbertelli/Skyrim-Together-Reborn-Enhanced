@@ -1,62 +1,123 @@
 #pragma once
 
+#include <NativeSaveBundle.h>
+
+#include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 
-namespace CampaignNativeSaveDetail
-{
-enum class RequestSlotState
+enum class CampaignNativeSaveLifecycleState
 {
     Idle,
     Requested,
-    Processing
+    Processing,
+    AwaitingCompletion,
+    Completed,
+    Failed
 };
 
+struct CampaignNativeSaveLifecycleSnapshot
+{
+    CampaignNativeSaveLifecycleState State{
+        CampaignNativeSaveLifecycleState::Idle};
+    std::string Identity;
+    std::optional<STRE::Campaign::NativeSaveBundleArtifact> Artifact;
+    std::string FailureReason;
+};
+
+namespace CampaignNativeSaveDetail
+{
 class RequestSlot final
 {
 public:
-    [[nodiscard]] bool TryRequest(std::string aIdentity) noexcept
+    [[nodiscard]] bool TryRequest(std::string aIdentity)
     {
-        if (m_state != RequestSlotState::Idle || aIdentity.empty())
+        std::lock_guard lock(m_mutex);
+        if (IsActive(m_state) || aIdentity.empty())
             return false;
 
         m_identity = std::move(aIdentity);
-        m_state = RequestSlotState::Requested;
+        m_artifact.reset();
+        m_failureReason.clear();
+        m_state = CampaignNativeSaveLifecycleState::Requested;
         return true;
     }
 
-    [[nodiscard]] const std::string* RequestedIdentity() const noexcept
+    [[nodiscard]] std::optional<std::string> RequestedIdentity() const
     {
-        return m_state == RequestSlotState::Requested ? &m_identity : nullptr;
+        std::lock_guard lock(m_mutex);
+        if (m_state != CampaignNativeSaveLifecycleState::Requested)
+            return std::nullopt;
+        return m_identity;
     }
 
-    [[nodiscard]] const std::string* BeginProcessing() noexcept
+    [[nodiscard]] std::optional<std::string> BeginProcessing()
     {
-        if (m_state != RequestSlotState::Requested)
-            return nullptr;
+        std::lock_guard lock(m_mutex);
+        if (m_state != CampaignNativeSaveLifecycleState::Requested)
+            return std::nullopt;
 
-        m_state = RequestSlotState::Processing;
-        return &m_identity;
+        m_state = CampaignNativeSaveLifecycleState::Processing;
+        return m_identity;
     }
 
-    void FinishProcessing() noexcept
+    [[nodiscard]] bool BeginAwaitingCompletion() noexcept
     {
-        if (m_state != RequestSlotState::Processing)
-            return;
-
-        m_identity.clear();
-        m_state = RequestSlotState::Idle;
+        std::lock_guard lock(m_mutex);
+        if (m_state != CampaignNativeSaveLifecycleState::Processing)
+            return false;
+        m_state = CampaignNativeSaveLifecycleState::AwaitingCompletion;
+        return true;
     }
 
-    [[nodiscard]] RequestSlotState GetState() const noexcept
+    [[nodiscard]] bool Complete(
+        STRE::Campaign::NativeSaveBundleArtifact aArtifact)
     {
-        return m_state;
+        std::lock_guard lock(m_mutex);
+        if (m_state != CampaignNativeSaveLifecycleState::AwaitingCompletion ||
+            aArtifact.Bundle.LogicalIdentity != m_identity)
+        {
+            return false;
+        }
+        m_artifact = std::move(aArtifact);
+        m_failureReason.clear();
+        m_state = CampaignNativeSaveLifecycleState::Completed;
+        return true;
+    }
+
+    [[nodiscard]] bool Fail(std::string aReason)
+    {
+        std::lock_guard lock(m_mutex);
+        if (!IsActive(m_state) || aReason.empty())
+            return false;
+        m_artifact.reset();
+        m_failureReason = std::move(aReason);
+        m_state = CampaignNativeSaveLifecycleState::Failed;
+        return true;
+    }
+
+    [[nodiscard]] CampaignNativeSaveLifecycleSnapshot Snapshot() const
+    {
+        std::lock_guard lock(m_mutex);
+        return {m_state, m_identity, m_artifact, m_failureReason};
     }
 
 private:
-    RequestSlotState m_state{RequestSlotState::Idle};
+    static bool IsActive(CampaignNativeSaveLifecycleState aState) noexcept
+    {
+        return aState == CampaignNativeSaveLifecycleState::Requested ||
+            aState == CampaignNativeSaveLifecycleState::Processing ||
+            aState == CampaignNativeSaveLifecycleState::AwaitingCompletion;
+    }
+
+    mutable std::mutex m_mutex;
+    CampaignNativeSaveLifecycleState m_state{
+        CampaignNativeSaveLifecycleState::Idle};
     std::string m_identity;
+    std::optional<STRE::Campaign::NativeSaveBundleArtifact> m_artifact;
+    std::string m_failureReason;
 };
 }
 
@@ -65,6 +126,7 @@ enum class CampaignNativeSaveRequestState
     InvalidIdentity,
     BoundaryUnavailable,
     RequestAlreadyActive,
+    InternalFailure,
     Accepted
 };
 
@@ -86,4 +148,6 @@ public:
     // engine save/load processing boundary and returns without calling Save.
     [[nodiscard]] static CampaignNativeSaveRequestResult RequestOnGameThread(
         std::string_view acNativeSaveIdentity) noexcept;
+
+    [[nodiscard]] static CampaignNativeSaveLifecycleSnapshot GetStatus();
 };
