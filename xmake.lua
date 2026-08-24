@@ -35,7 +35,7 @@ end
 add_requires(
     "entt v3.10.0", 
     "recastnavigation v1.6.0", 
-    "tiltedcore 0.2.8", 
+    "tiltedcore v0.2.9",
     "cryptopp 8.9.0", 
     "spdlog v1.13.0", 
     "cpp-httplib 0.14.0",
@@ -53,6 +53,7 @@ if is_plat("windows") then
 end
 
 -- dependencies' dependencies version pinning
+add_requireconfs("tiltedcore", { version = "v0.2.9", override = true })
 add_requireconfs("*.mimalloc", { version = "2.2.4", override = true })
 add_requireconfs("*.cmake", { version = "3.30.2", override = true })
 add_requireconfs("*.openssl", { version = "1.1.1-w", override = true })
