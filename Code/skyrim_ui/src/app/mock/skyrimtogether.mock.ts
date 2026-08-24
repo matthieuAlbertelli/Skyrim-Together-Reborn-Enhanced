@@ -209,6 +209,31 @@ export class SkyrimtogetherMock extends EventEmitter implements SkyrimTogether {
     );
   }
 
+  campaignNativeLoad(nativeSaveIdentity: string): void {
+    console.log(
+      `%cCAMPAIGN NATIVE LOAD`,
+      'background: #4b3522; color: #fff; padding: 3px; font-size: 9px;',
+      nativeSaveIdentity,
+    );
+  }
+
+  campaignNativeLoadRelease(): void {
+    console.log(
+      `%cCAMPAIGN NATIVE LOAD`,
+      'background: #4b3522; color: #fff; padding: 3px; font-size: 9px;',
+      'release',
+    );
+  }
+
+  campaignNativeLoadResume(campaignId: string): void {
+    console.log(
+      `%cCAMPAIGN NATIVE LOAD`,
+      'background: #4b3522; color: #fff; padding: 3px; font-size: 9px;',
+      'resume',
+      campaignId,
+    );
+  }
+
   changePartyLeader(playerId: number): void {
     playerStore.update(updateEntities(playerId, { hasOwnParty: true }));
     this.emit(

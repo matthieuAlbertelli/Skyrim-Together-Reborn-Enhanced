@@ -8,6 +8,8 @@
 #include <Services/TradeItemPreviewService.h>
 #include <Services/CharacterCreationService.h>
 #include <Services/CampaignBootstrapService.h>
+#include <Services/CampaignNativeLoadService.h>
+#include <Services/CampaignService.h>
 #include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
@@ -16,6 +18,8 @@
 #include <Events/SetTimeCommandEvent.h>
 
 #include <CampaignBootstrapBridge.h>
+#include <CampaignIdentityStore.h>
+#include <CampaignNativeLoadBridge.h>
 #include <Structs/Campaign.h>
 
 #include <World.h>
@@ -80,6 +84,15 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
             ProcessChatMessage(eventArgs);
         else if (eventName == "setTime")
             ProcessSetTimeCommand(eventArgs);
+        else if (std::string_view{eventName} ==
+                 STRE::Campaign::kCampaignNativeLoadFunction)
+            ProcessCampaignNativeLoad(eventArgs);
+        else if (std::string_view{eventName} ==
+                 STRE::Campaign::kCampaignNativeLoadReleaseFunction)
+            ProcessCampaignNativeLoadRelease();
+        else if (std::string_view{eventName} ==
+                 STRE::Campaign::kCampaignNativeLoadResumeFunction)
+            ProcessCampaignNativeLoadResume(eventArgs);
         else if (eventName == "launchParty")
             World::Get().GetPartyService().CreateParty();
         else if (eventName == "leaveParty")
@@ -452,6 +465,95 @@ void OverlayClient::ProcessSetTimeCommand(CefRefPtr<CefListValue> aEventArgs)
     const uint8_t minutes = static_cast<uint8_t>(aEventArgs->GetInt(1));
     const uint32_t senderId = m_transport.GetLocalPlayerId();
     World::Get().GetDispatcher().trigger(SetTimeCommandEvent(hours, minutes, senderId));
+}
+
+void OverlayClient::ProcessCampaignNativeLoad(
+    CefRefPtr<CefListValue> aEventArgs)
+{
+    if (!aEventArgs || aEventArgs->GetSize() != 1 ||
+        aEventArgs->GetType(0) != VTYPE_STRING)
+    {
+        spdlog::warn(
+            "[STRE][CampaignNativeLoad] REQUEST_REJECTED "
+            "reason=invalid-cef-arguments");
+        return;
+    }
+
+    const std::string identity = aEventArgs->GetString(0).ToString();
+    spdlog::info(
+        "[STRE][CampaignNativeLoad] REQUEST_QUEUED "
+        "identity={} source=cef thread_id={}",
+        identity,
+        GetCurrentThreadId());
+    World::Get().GetRunner().Queue(
+        [identity]()
+        {
+            (void)World::Get()
+                .ctx()
+                .at<CampaignNativeLoadService>()
+                .RequestForValidation(identity);
+        });
+}
+
+void OverlayClient::ProcessCampaignNativeLoadRelease()
+{
+    spdlog::info(
+        "[STRE][CampaignNativeLoad] RELEASE_QUEUED "
+        "source=cef thread_id={}",
+        GetCurrentThreadId());
+    World::Get().GetRunner().Queue(
+        []()
+        {
+            (void)World::Get()
+                .ctx()
+                .at<CampaignNativeLoadService>()
+                .ReleaseForValidation();
+        });
+}
+
+void OverlayClient::ProcessCampaignNativeLoadResume(
+    CefRefPtr<CefListValue> aEventArgs)
+{
+    if (!aEventArgs || aEventArgs->GetSize() != 1 ||
+        aEventArgs->GetType(0) != VTYPE_STRING)
+    {
+        spdlog::warn(
+            "[STRE][CampaignNativeLoad] RESUME_REJECTED "
+            "reason=invalid-cef-arguments");
+        return;
+    }
+
+    const std::string campaignId =
+        aEventArgs->GetString(0).ToString();
+    if (!STRE::Campaign::CampaignIdentityStore::IsValidCacheId(
+            campaignId))
+    {
+        spdlog::warn(
+            "[STRE][CampaignNativeLoad] RESUME_REJECTED "
+            "reason=invalid-campaign-id campaign={}",
+            campaignId);
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CampaignNativeLoad] RESUME_QUEUED "
+        "campaign={} source=cef thread_id={}",
+        campaignId,
+        GetCurrentThreadId());
+    World::Get().GetRunner().Queue(
+        [campaignId]()
+        {
+            const bool sent = World::Get()
+                .ctx()
+                .at<CampaignService>()
+                .ResumeCampaign(campaignId);
+            spdlog::log(
+                sent ? spdlog::level::info : spdlog::level::warn,
+                "[STRE][CampaignNativeLoad] RESUME_SENT "
+                "campaign={} sent={}",
+                campaignId,
+                sent);
+        });
 }
 
 void OverlayClient::ProcessTeleportMessage(CefRefPtr<CefListValue> aEventArgs)

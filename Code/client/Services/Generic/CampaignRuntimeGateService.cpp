@@ -7,6 +7,7 @@
 #include <Games/Skyrim/Interface/MenuControls.h>
 #include <Games/Skyrim/Interface/Menus/CampaignGateMenu.h>
 #include <Games/Skyrim/Interface/UI.h>
+#include <Services/CampaignNativeLoadService.h>
 #include <Services/TransportService.h>
 #include <Services/UiSurfaceService.h>
 #include <World.h>
@@ -43,6 +44,33 @@ CampaignRuntimeGateService::~CampaignRuntimeGateService() noexcept
 CampaignRuntimeGateService* CampaignRuntimeGateService::TryGet() noexcept
 {
     return s_pCampaignRuntimeGateService;
+}
+
+bool CampaignRuntimeGateService::ArmManagedLoad() noexcept
+{
+    const bool armed = m_gate.ArmNextLoad();
+    Log(armed ? "LoadArmed" : "LoadArmRejected",
+        "owner=CampaignNativeLoadService");
+    return armed;
+}
+
+bool CampaignRuntimeGateService::CancelManagedLoad() noexcept
+{
+    const bool cancelled = m_gate.CancelArmedLoad();
+    if (cancelled)
+        Log("LoadArmCancelled", "owner=CampaignNativeLoadService");
+    return cancelled;
+}
+
+bool CampaignRuntimeGateService::ReleaseManagedLoad() noexcept
+{
+    if (!m_gate.Release())
+        return false;
+
+    RestoreInputState();
+    CampaignGateMenu::Hide();
+    Log("Released", "owner=CampaignNativeLoadService");
+    return true;
 }
 
 bool CampaignRuntimeGateService::OnNativeLoadEnter(
@@ -83,6 +111,11 @@ BSTEventResult CampaignRuntimeGateService::OnEvent(
     Log("PostLoad", "boundary=TESLoadGameEvent");
     ApplyInputLock();
     RequestGuardMenu();
+    if (CampaignNativeLoadService* const pLoad =
+            CampaignNativeLoadService::TryGet())
+    {
+        pLoad->OnPostLoad();
+    }
     return BSTEventResult::kOk;
 }
 
@@ -116,6 +149,12 @@ void CampaignRuntimeGateService::OnTransportUpdate(bool aConnected) noexcept
     if (!m_gate.IsLocked())
         return;
 
+    if (CampaignNativeLoadService* const pLoad =
+            CampaignNativeLoadService::TryGet())
+    {
+        pLoad->OnTransportUpdate(aConnected);
+    }
+
     if (m_lastTransportLogFrame == 0 ||
         m_frame - m_lastTransportLogFrame >= 300)
     {
@@ -131,10 +170,16 @@ void CampaignRuntimeGateService::OnGuardMenuPostDisplay() noexcept
     Log("PauseMenuPostDisplay", "menu=STRECampaignGateMenu");
 
     UI* const pUI = UI::Get();
+    const bool paused = pUI && pUI->GameIsPaused();
     Log("GameIsPaused",
-        pUI && pUI->GameIsPaused()
+        paused
             ? "value=true"
             : "value=false");
+    if (CampaignNativeLoadService* const pLoad =
+            CampaignNativeLoadService::TryGet())
+    {
+        pLoad->OnGuardMenuPostDisplay(paused);
+    }
 }
 
 void CampaignRuntimeGateService::OnGuardMenuDestroyed() noexcept

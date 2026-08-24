@@ -101,6 +101,15 @@ declare const skyrimtogether: SkyrimTogether;
 
 /** Global Skyrim: Together object type. */
 interface SkyrimTogether {
+  /** Development-only validation trigger for Campaign #56 Slice 0. */
+  campaignNativeLoad(nativeSaveIdentity: string): void;
+
+  /** Explicitly release the Slice 0 validation gate after terminal proof. */
+  campaignNativeLoadRelease(): void;
+
+  /** Request authoritative campaign resume for cold-session validation. */
+  campaignNativeLoadResume(campaignId: string): void;
+
   campaignBootstrapAction(
     action: string,
     address?: string,

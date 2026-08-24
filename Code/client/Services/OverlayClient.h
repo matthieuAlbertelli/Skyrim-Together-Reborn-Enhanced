@@ -27,6 +27,10 @@ private:
     void ProcessRevealPlayersMessage();
     void ProcessChatMessage(CefRefPtr<CefListValue> aEventArgs);
     void ProcessSetTimeCommand(CefRefPtr<CefListValue> aEventArgs);
+    void ProcessCampaignNativeLoad(CefRefPtr<CefListValue> aEventArgs);
+    void ProcessCampaignNativeLoadRelease();
+    void ProcessCampaignNativeLoadResume(
+        CefRefPtr<CefListValue> aEventArgs);
     void ProcessTeleportMessage(CefRefPtr<CefListValue> aEventArgs);
     void ProcessToggleDebugUI();
     void SetUIVisible(bool aVisible) noexcept;

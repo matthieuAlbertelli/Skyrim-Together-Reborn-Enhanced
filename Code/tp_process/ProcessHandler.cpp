@@ -2,6 +2,7 @@
 #include "ProcessHandler.h"
 
 #include <CampaignBootstrapBridge.h>
+#include <CampaignNativeLoadBridge.h>
 
 #include <string>
 
@@ -41,6 +42,17 @@ void ProcessHandler::OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<C
             CefV8Value::CreateFunction(name, m_pOverlayHandler),
             V8_PROPERTY_ATTRIBUTE_NONE);
         LOG(INFO) << "[STRE][CampaignBootstrapBridge] registered JS function="
+                  << name;
+    }
+    for (const std::string_view functionName :
+         STRE::Campaign::kCampaignNativeLoadCefFunctions)
+    {
+        const std::string name{functionName};
+        m_pCoreObject->SetValue(
+            name,
+            CefV8Value::CreateFunction(name, m_pOverlayHandler),
+            V8_PROPERTY_ATTRIBUTE_NONE);
+        LOG(INFO) << "[STRE][CampaignNativeLoadBridge] registered JS function="
                   << name;
     }
 }

@@ -430,6 +430,62 @@ exact replay resilience are tracked by
 Recovery, retention, cleanup, and upload are not implemented by these spikes. See
 [`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
 
+### Programmatic campaign native-load Slice 0
+
+The #56 Slice 0 native-load primitive is implemented, Windows build-tested,
+and human runtime-validated on 25 August 2026. It adds one validation-only
+client path from an exact cached `stre-<CheckpointId>` artifact through the
+existing `CampaignNativeSave` reopen/hash proof, `RunnerService` game-update execution,
+the existing `BGSSaveLoadManager::Load_Impl` hook, `TESLoadGameEvent`, the #60
+runtime gate/menu, and a connected transport update. Success requires every
+milestone independently; the native Boolean is not sufficient. One request is
+single-flight until explicit terminal release, and ordinary unarmed loads are
+not managed.
+
+TPTests pass 2288 assertions in 170 test cases; `TPProcess`,
+`SkyrimTogetherClient`, and the `SkyrimImmersiveLauncher` relink build,
+including the production Angular UI. The CEF
+renderer registers all three spike functions on the live `skyrimtogether` V8
+object from the same shared name manifest consumed by `OverlayClient`; typings
+alone are not treated as runtime registration. The temporary validation commands
+are `/stre-campaign-resume <CampaignId>`,
+`/stre-native-load stre-<CheckpointId>`, and
+`/stre-native-load-release`. Cold-session resume only calls the existing
+server-authoritative `CampaignService::ResumeCampaign`; it never synthesizes
+local admission. No recovery authority, protocol, server behavior,
+SQLite state, or #56 recovery state machine is implemented.
+
+The validated cold-session run used campaign
+`campaign-367760f49cba23fd72a5ad5013a75e1b`, checkpoint
+`checkpoint-4a33f050b434778db8b09094658831d5`, and native identity
+`stre-checkpoint-4a33f050b434778db8b09094658831d5`. The harness sent the
+existing Resume request and admission was accepted only by the authoritative
+server response at revision 7 (`operation=2`); no local admission was
+synthesized. The exact load then passed artifact validation, entered the
+existing `Load_Impl` hook, returned true, observed `TESLoadGameEvent`, locked
+the campaign gate, kept transport connected, displayed the guard menu with
+`UI::GameIsPaused() == true`, and reached `COMPLETED`. The expected checkpoint
+visibly loaded while gameplay froze and F2/CEF remained responsive.
+
+A duplicate request while terminal and locked was rejected as
+`request-not-idle` without another invocation. Explicit release destroyed the
+guard with `gateRemainsLocked=false` and immediately restored gameplay. Before
+and after evidence was identical: `.ess` length 2,600,863, timestamp
+`2026-08-24 18:01:39`, SHA-256
+`8AC74662C3AC18F599C36690253907465326AD721B5BCE5D357176F0F83E6123`;
+`.skse` length 2,789, the same timestamp, SHA-256
+`3FC8EA1291BE750871F23094E93723BC964EDF3E7C7CFE20B45D4D51033403CF`;
+no matching `.tmp` existed before or after. A subsequent vanilla/manual load
+remained unmanaged and acquired no STRE gate.
+
+This proves a production-capable deterministic local primitive, not issue #56.
+Still missing are `RecoveryService`/client recovery state, `RestoreAttemptId`
+protocol orchestration, full-roster rollback, `LoadedAndLocked` and
+`SnapshotApplied` acknowledgement barriers, canonical server snapshot restore,
+durable completion/restart reconstruction, no-checkpoint diagnostics, and live
+multi-client resilience validation. See
+[`CAMPAIGN_NATIVE_LOAD_SPIKE.md`](../development/CAMPAIGN_NATIVE_LOAD_SPIKE.md).
+
 ### Coordinated campaign checkpoints
 
 The production issue #55 implementation is complete, automated-tested, and

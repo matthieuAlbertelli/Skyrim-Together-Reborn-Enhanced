@@ -94,11 +94,56 @@ export class ChatService {
     },
   };
 
+  private CampaignNativeLoad: Command = {
+    name: 'stre-native-load',
+    executor: async args => {
+      if (args.length !== 1) {
+        this.pushMessage({
+          type: MessageTypes.SYSTEM_MESSAGE,
+          content: 'Usage: /stre-native-load stre-<CheckpointId>',
+        });
+        return;
+      }
+      skyrimtogether.campaignNativeLoad(args[0]);
+    },
+  };
+
+  private CampaignNativeLoadRelease: Command = {
+    name: 'stre-native-load-release',
+    executor: async args => {
+      if (args.length !== 0) {
+        this.pushMessage({
+          type: MessageTypes.SYSTEM_MESSAGE,
+          content: 'Usage: /stre-native-load-release',
+        });
+        return;
+      }
+      skyrimtogether.campaignNativeLoadRelease();
+    },
+  };
+
+  private CampaignResume: Command = {
+    name: 'stre-campaign-resume',
+    executor: async args => {
+      if (args.length !== 1) {
+        this.pushMessage({
+          type: MessageTypes.SYSTEM_MESSAGE,
+          content: 'Usage: /stre-campaign-resume <campaign-id>',
+        });
+        return;
+      }
+      skyrimtogether.campaignNativeLoadResume(args[0]);
+    },
+  };
+
   constructor() {
     skyrimtogether.on('message', this.onMessageRecieved.bind(this));
 
     this.CommandHandler = new CommandHandler(this);
     this.CommandHandler.register(this.LocalChat);
     this.CommandHandler.register(this.PartyChat);
+    this.CommandHandler.register(this.CampaignNativeLoad);
+    this.CommandHandler.register(this.CampaignNativeLoadRelease);
+    this.CommandHandler.register(this.CampaignResume);
   }
 }

@@ -11,6 +11,17 @@ bool CampaignRuntimeGate::ArmNextLoad() noexcept
     return m_nextLoadManaged.compare_exchange_strong(expected, true);
 }
 
+bool CampaignRuntimeGate::CancelArmedLoad() noexcept
+{
+    const bool wasPending = m_nextLoadManaged.exchange(false);
+    CampaignRuntimeGateState expected =
+        CampaignRuntimeGateState::ArmedDuringLoad;
+    const bool wasEntered = m_state.compare_exchange_strong(
+        expected,
+        CampaignRuntimeGateState::Open);
+    return wasPending || wasEntered;
+}
+
 bool CampaignRuntimeGate::OnNativeLoadEnter() noexcept
 {
     if (!m_nextLoadManaged.exchange(false))

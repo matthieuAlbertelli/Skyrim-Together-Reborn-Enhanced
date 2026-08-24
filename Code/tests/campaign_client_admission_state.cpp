@@ -90,6 +90,21 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Cold-session resume remains unadmitted until a server response is accepted",
+    "[campaign.client][campaign.admission][reconnect][security]")
+{
+    CampaignClientAdmissionState state;
+
+    REQUIRE_FALSE(state.GetAdmission());
+    REQUIRE_FALSE(state.BeginResume());
+    state.ResumeRejected();
+    REQUIRE_FALSE(state.GetAdmission());
+
+    state.Accept(Admission());
+    REQUIRE(state.GetAdmission() == Admission());
+}
+
+TEST_CASE(
     "Helgen readiness requires the complete ACTIVE admitted roster",
     "[campaign.client][campaign.admission][helgen]")
 {
