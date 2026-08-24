@@ -84,7 +84,8 @@ struct ClientMessageFactory
             RequestEquipmentChanges, SendChatMessageRequest, TeleportCommandRequest, PlayerRespawnRequest, DialogueRequest, SubtitleRequest, PlayerDialogueRequest, PlayerLevelRequest, TeleportRequest, RequestPlayerHealthUpdate, RequestWeatherChange, RequestCurrentWeather, RequestSetWaypoint,
             RequestRemoveWaypoint, RemoveSpellRequest, SetTimeCommandRequest, TradeInviteRequest, TradeInviteResponseRequest, TradeOfferUpdateRequest, TradeConfirmRequest, TradeCancelRequest, TradeApplyResultRequest, TradeReconcileResultRequest, CharacterBuildRequest, CharacterBuildAppliedRequest, RequestWorldEntityManipulation,
             CampaignCreateRequest, CampaignJoinRequest, CampaignResumeRequest, CampaignStartRequest, CampaignSetReadyRequest, CampaignLeaveRequest,
-            CampaignJoinByCodeRequest, CampaignHelgenInvestigationReadyRequest>;
+            CampaignJoinByCodeRequest, CampaignHelgenInvestigationReadyRequest,
+            CampaignCheckpointSaveResult>;
 
         return s_visitor(std::forward<T>(func));
     }

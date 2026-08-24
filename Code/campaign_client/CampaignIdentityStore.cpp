@@ -22,8 +22,11 @@ constexpr char kPlayerIdentityHeader[] = "stre-player-id-v1";
 constexpr char kBindingCacheHeader[] = "stre-campaign-bindings-v1";
 constexpr char kPlayerIdentityFilename[] = "stre-player-id-v1.txt";
 constexpr char kBindingCacheFilename[] = "stre-campaign-bindings-v1.txt";
+constexpr char kCheckpointArtifactHeader[] =
+    "stre-campaign-checkpoint-artifact-v1";
 constexpr std::uintmax_t kMaximumPlayerIdentityFileSize = 256;
 constexpr std::uintmax_t kMaximumBindingCacheFileSize = 64 * 1024;
+constexpr std::uintmax_t kMaximumCheckpointArtifactFileSize = 2048;
 constexpr std::size_t kMaximumBindingCacheEntries = 256;
 
 LocalStoreResult Failure(LocalIdentityError aError, std::string aMessage)
@@ -56,6 +59,47 @@ bool IsHexLower(char aValue) noexcept
 {
     return (aValue >= '0' && aValue <= '9') ||
         (aValue >= 'a' && aValue <= 'f');
+}
+
+std::string BytesToHex(std::span<const std::uint8_t> acBytes)
+{
+    static constexpr std::array<char, 16> cHex{
+        '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    std::string result;
+    result.reserve(acBytes.size() * 2);
+    for (std::uint8_t byte : acBytes)
+    {
+        result.push_back(cHex[byte >> 4]);
+        result.push_back(cHex[byte & 0x0F]);
+    }
+    return result;
+}
+
+bool HexToBytes(
+    std::string_view acValue,
+    std::size_t aMaximumBytes,
+    std::vector<std::uint8_t>& aBytes) noexcept
+{
+    aBytes.clear();
+    if (acValue.size() % 2 != 0 ||
+        acValue.size() > aMaximumBytes * 2 ||
+        !std::all_of(acValue.begin(), acValue.end(), IsHexLower))
+    {
+        return false;
+    }
+    auto nibble = [](char aValue) -> std::uint8_t
+    {
+        return static_cast<std::uint8_t>(
+            aValue <= '9' ? aValue - '0' : aValue - 'a' + 10);
+    };
+    aBytes.reserve(acValue.size() / 2);
+    for (std::size_t index = 0; index < acValue.size(); index += 2)
+    {
+        aBytes.push_back(static_cast<std::uint8_t>(
+            (nibble(acValue[index]) << 4) | nibble(acValue[index + 1])));
+    }
+    return true;
 }
 }
 
@@ -477,6 +521,183 @@ LocalStoreResult CampaignIdentityStore::RemoveBinding(
     {
         return Failure(LocalIdentityError::IoFailure,
             "STRE campaign binding removal failed safely");
+    }
+}
+
+
+LocalStoreValueResult<std::optional<NativeSaveBundleArtifact>>
+CampaignIdentityStore::LoadCheckpointArtifact(
+    const std::string& acCampaignId,
+    const std::string& acCheckpointId) noexcept
+{
+    LocalStoreValueResult<std::optional<NativeSaveBundleArtifact>> result;
+    try
+    {
+        if (!IsValidCacheId(acCampaignId) ||
+            !IsValidCacheId(acCheckpointId))
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message = "invalid local checkpoint artifact identity";
+            return result;
+        }
+        const std::string key = acCampaignId + "\n" + acCheckpointId;
+        NativeSaveSha256 keyHash{};
+        if (!ComputeNativeSaveSha256(
+                std::span<const std::uint8_t>(
+                    reinterpret_cast<const std::uint8_t*>(key.data()),
+                    key.size()),
+                keyHash))
+        {
+            result.Error = LocalIdentityError::IoFailure;
+            result.Message = "failed to derive local checkpoint artifact key";
+            return result;
+        }
+        const std::filesystem::path path = m_directory /
+            ("stre-checkpoint-" + NativeSaveSha256ToHex(keyHash) + ".txt");
+        std::error_code error;
+        if (!std::filesystem::exists(path, error))
+        {
+            if (error)
+            {
+                result.Error = LocalIdentityError::IoFailure;
+                result.Message = "failed to inspect local checkpoint artifact";
+            }
+            return result;
+        }
+        const auto size = std::filesystem::file_size(path, error);
+        if (error)
+        {
+            result.Error = LocalIdentityError::IoFailure;
+            result.Message = "failed to inspect local checkpoint artifact size";
+            return result;
+        }
+        if (size > kMaximumCheckpointArtifactFileSize)
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message =
+                "existing local checkpoint artifact is oversized and was preserved";
+            return result;
+        }
+
+        std::ifstream stream(path, std::ios::binary);
+        std::string header;
+        std::string campaign;
+        std::string checkpoint;
+        std::string identity;
+        std::string fingerprintHex;
+        std::string metadataHex;
+        std::string trailing;
+        if (!stream || !std::getline(stream, header) ||
+            !std::getline(stream, campaign) ||
+            !std::getline(stream, checkpoint) ||
+            !std::getline(stream, identity) ||
+            !std::getline(stream, fingerprintHex) ||
+            !std::getline(stream, metadataHex) ||
+            std::getline(stream, trailing) || stream.bad() ||
+            header != kCheckpointArtifactHeader ||
+            campaign != acCampaignId || checkpoint != acCheckpointId ||
+            identity != "stre-" + acCheckpointId)
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message =
+                "existing local checkpoint artifact is malformed or unsupported and was preserved";
+            return result;
+        }
+        std::vector<std::uint8_t> fingerprint;
+        std::vector<std::uint8_t> metadata;
+        if (!HexToBytes(
+                fingerprintHex, kNativeSaveSha256Size, fingerprint) ||
+            fingerprint.size() != kNativeSaveSha256Size ||
+            !HexToBytes(
+                metadataHex, kMaximumNativeSaveMetadataSize, metadata))
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message =
+                "existing local checkpoint artifact contains invalid hex data and was preserved";
+            return result;
+        }
+        NativeSaveBundleArtifactParseResult parsed =
+            ParseNativeSaveBundleArtifact(identity, fingerprint, metadata);
+        if (!parsed)
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message =
+                "existing local checkpoint artifact failed canonical validation and was preserved";
+            return result;
+        }
+        result.Value = std::move(parsed.Value);
+    }
+    catch (...)
+    {
+        result.Error = LocalIdentityError::IoFailure;
+        result.Message = "local checkpoint artifact load failed safely";
+    }
+    return result;
+}
+
+LocalStoreResult CampaignIdentityStore::SaveCheckpointArtifact(
+    const std::string& acCampaignId,
+    const std::string& acCheckpointId,
+    const NativeSaveBundleArtifact& acArtifact) noexcept
+{
+    try
+    {
+        const NativeSaveBundleArtifactParseResult parsed =
+            ParseNativeSaveBundleArtifact(
+                acArtifact.Bundle.LogicalIdentity,
+                acArtifact.Fingerprint,
+                acArtifact.Metadata);
+        if (!IsValidCacheId(acCampaignId) ||
+            !IsValidCacheId(acCheckpointId) ||
+            acArtifact.Bundle.LogicalIdentity != "stre-" + acCheckpointId ||
+            !parsed || parsed.Value != acArtifact)
+        {
+            return Failure(
+                LocalIdentityError::Malformed,
+                "refused to persist an invalid local checkpoint artifact");
+        }
+        auto existing = LoadCheckpointArtifact(acCampaignId, acCheckpointId);
+        if (!existing)
+            return {existing.Error, std::move(existing.Message)};
+        if (existing.Value)
+        {
+            if (*existing.Value == acArtifact)
+                return {};
+            return Failure(
+                LocalIdentityError::Malformed,
+                "existing local checkpoint artifact conflicts and was preserved");
+        }
+
+        const std::string key = acCampaignId + "\n" + acCheckpointId;
+        NativeSaveSha256 keyHash{};
+        if (!ComputeNativeSaveSha256(
+                std::span<const std::uint8_t>(
+                    reinterpret_cast<const std::uint8_t*>(key.data()),
+                    key.size()),
+                keyHash))
+        {
+            return Failure(
+                LocalIdentityError::IoFailure,
+                "failed to derive local checkpoint artifact key");
+        }
+        std::ostringstream contents;
+        contents << kCheckpointArtifactHeader << '\n'
+                 << acCampaignId << '\n'
+                 << acCheckpointId << '\n'
+                 << acArtifact.Bundle.LogicalIdentity << '\n'
+                 << NativeSaveSha256ToHex(acArtifact.Fingerprint) << '\n'
+                 << BytesToHex(acArtifact.Metadata) << '\n';
+        return WriteAtomically(
+            m_directory /
+                ("stre-checkpoint-" + NativeSaveSha256ToHex(keyHash) +
+                 ".txt"),
+            contents.str());
+    }
+    catch (...)
+    {
+        return Failure(
+            LocalIdentityError::IoFailure,
+            "local checkpoint artifact persistence failed safely");
     }
 }
 }

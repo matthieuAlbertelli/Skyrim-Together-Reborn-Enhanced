@@ -1,5 +1,7 @@
 #include <CampaignRuntimeService.h>
 
+#include <Structs/NativeSaveBundle.h>
+
 #include <algorithm>
 #include <array>
 #include <optional>
@@ -207,11 +209,42 @@ LoadedCampaign LoadAggregate(
             loaded.Message = "campaign uses an unsupported core-state codec";
             return loaded;
         }
+        StateVersion coreStateRevision =
+            projection.Value.Campaign.CurrentRevision;
+        auto journal = aStore.LoadJournal(acCampaign);
+        if (!journal)
+        {
+            loaded.Error = TranslateStoreError(journal.Error);
+            loaded.PersistenceError = journal.Error;
+            loaded.Message = journal.Message;
+            return loaded;
+        }
+        const auto changesCoreState = [](std::string_view acKind) noexcept
+        {
+            return acKind != "CreateCheckpointCandidate" &&
+                acKind != "RecordCheckpointSlotSave" &&
+                acKind != "CommitCheckpoint";
+        };
+        const auto coreMutation = std::find_if(
+            journal.Value.rbegin(), journal.Value.rend(),
+            [&](const JournalRecord& acRecord)
+            {
+                return changesCoreState(acRecord.Kind);
+            });
+        if (coreMutation == journal.Value.rend())
+        {
+            loaded.Error = CampaignError::IntegrityFailure;
+            loaded.PersistenceError = StoreError::IntegrityFailure;
+            loaded.Message =
+                "campaign journal has no core-state-producing mutation";
+            return loaded;
+        }
+        coreStateRevision = coreMutation->ResultingRevision;
         auto decoded = RuntimeCodec::DecodeCoreState(
             projection.Value.Campaign.Id,
             projection.Value.Campaign.RosterSealed,
             projection.Value.Slots,
-            projection.Value.Campaign.CurrentRevision,
+            coreStateRevision,
             projection.Value.Campaign.CoreStatePayload);
         if (!decoded)
         {
@@ -221,6 +254,8 @@ LoadedCampaign LoadAggregate(
             return loaded;
         }
         loaded.Campaign = std::move(decoded.Value);
+        loaded.Campaign.Version =
+            projection.Value.Campaign.CurrentRevision;
     }
     catch (...)
     {
@@ -361,11 +396,80 @@ std::optional<CampaignCommandResult> FindMutationReplay(
     replay.IdempotentReplay = true;
     return replay;
 }
+
+CampaignCommandResult CheckpointFailure(
+    CampaignError aError,
+    std::string aMessage,
+    StoreError aPersistenceError = StoreError::None)
+{
+    CampaignCommandResult result;
+    result.Error = aError;
+    result.PersistenceError = aPersistenceError;
+    result.Message = std::move(aMessage);
+    return result;
+}
+
+std::string CheckpointMutationId(
+    std::string_view acOperation,
+    const CheckpointId& acCheckpoint,
+    const CampaignSlotId* apSlot = nullptr)
+{
+    std::string result("checkpoint-");
+    result.append(acOperation);
+    result.push_back('-');
+    result.append(acCheckpoint.Value);
+    if (apSlot)
+    {
+        result.push_back('-');
+        result.append(apSlot->Value);
+    }
+    return result;
+}
+
+bool IsExactCheckpointArtifact(
+    const CheckpointSlotRecord& acSlot,
+    std::string_view acExpectedIdentity) noexcept
+{
+    if (!acSlot.NativeSaveIdentity ||
+        *acSlot.NativeSaveIdentity != acExpectedIdentity ||
+        !acSlot.FingerprintAlgorithm ||
+        *acSlot.FingerprintAlgorithm != kNativeSaveFingerprintAlgorithm ||
+        acSlot.FingerprintVersion != kNativeSaveFingerprintVersion ||
+        acSlot.Fingerprint.size() != kNativeSaveSha256Size ||
+        acSlot.SaveMetadataCodecVersion != kNativeSaveMetadataCodecVersion ||
+        acSlot.SaveMetadata.empty() ||
+        acSlot.SaveMetadata.size() > kMaximumNativeSaveMetadataSize)
+    {
+        return false;
+    }
+    return ParseNativeSaveBundleArtifact(
+        acExpectedIdentity, acSlot.Fingerprint, acSlot.SaveMetadata)
+        .Succeeded();
+}
+
+bool IsExactCheckpointMember(
+    const CheckpointSlotRecord& acSlot,
+    const CampaignMemberIdentity& acActor) noexcept
+{
+    return acSlot.Slot == acActor.Slot && acSlot.Player == acActor.Player &&
+        acSlot.CharacterBinding == acActor.CharacterBinding;
+}
 }
 
 CampaignRuntimeService::CampaignRuntimeService(ICampaignStore& aStore) noexcept
     : m_store(aStore)
 {
+}
+
+std::optional<CampaignCommandResult>
+CampaignRuntimeService::CheckMutationFence(
+    const CampaignId& acCampaign) const noexcept
+{
+    if (!m_activeCheckpoints.contains(acCampaign.Value))
+        return std::nullopt;
+    return CheckpointFailure(
+        CampaignError::CheckpointInProgress,
+        "persistent campaign mutation rejected while checkpoint is active");
 }
 
 CampaignCommandResult CampaignRuntimeService::CreateLobbyCampaign(
@@ -429,6 +533,8 @@ CampaignCommandResult CampaignRuntimeService::CreateLobbyCampaign(
 CampaignCommandResult CampaignRuntimeService::AddRosterSlot(
     const AddRosterSlotCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("AddRosterSlot");
     AppendSlot(commandPayload, acCommand.Slot);
     if (auto replay = FindMutationReplay(
@@ -478,6 +584,8 @@ catch (...)
 CampaignCommandResult CampaignRuntimeService::RemoveRosterSlot(
     const RemoveRosterSlotCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("RemoveRosterSlot");
     AppendField(commandPayload, acCommand.Slot.Value);
     if (auto replay = FindMutationReplay(
@@ -527,6 +635,8 @@ catch (...)
 CampaignCommandResult CampaignRuntimeService::ReplaceRosterSlot(
     const ReplaceRosterSlotCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("ReplaceRosterSlot");
     AppendSlot(commandPayload, acCommand.Slot);
     if (auto replay = FindMutationReplay(
@@ -586,6 +696,8 @@ catch (...)
 CampaignCommandResult CampaignRuntimeService::CommitCampaignStart(
     const CommitCampaignStartCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("CommitCampaignStart");
     AppendField(commandPayload, acCommand.SessionManager.Value);
     if (auto replay = FindMutationReplay(
@@ -637,6 +749,8 @@ catch (...)
 CampaignCommandResult CampaignRuntimeService::TransferSessionManager(
     const TransferSessionManagerCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("TransferSessionManager");
     AppendField(commandPayload, acCommand.Actor.Value);
     AppendField(commandPayload, acCommand.NewManager.Value);
@@ -698,6 +812,8 @@ catch (...)
 CampaignCommandResult CampaignRuntimeService::SetReady(
     const SetCampaignReadyCommand& acCommand) noexcept try
 {
+    if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        return *fenced;
     Bytes commandPayload = BeginCommandPayload("SetReady");
     AppendField(commandPayload, acCommand.Actor.Campaign.Value);
     AppendField(commandPayload, acCommand.Actor.Slot.Value);
@@ -758,6 +874,338 @@ catch (...)
         {StoreError::DatabaseFailure, "SetReady failed safely"});
 }
 
+CampaignCheckpointCommandResult CampaignRuntimeService::BeginCheckpoint(
+    const BeginCampaignCheckpointCommand& acCommand) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        if (m_activeCheckpoints.contains(acCommand.Campaign.Value))
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::CheckpointInProgress,
+                "campaign already has an active checkpoint");
+            result.Activity = m_activeCheckpoints.at(acCommand.Campaign.Value);
+            return result;
+        }
+        if (acCommand.Checkpoint.Value.empty() ||
+            acCommand.NativeSaveIdentity !=
+                "stre-" + acCommand.Checkpoint.Value)
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::InvalidIdentity,
+                "checkpoint and native save identities do not match");
+            return result;
+        }
+
+        LoadedCampaign loaded = LoadAggregate(m_store, acCommand.Campaign);
+        if (loaded.Error != CampaignError::None)
+        {
+            result.Command = {
+                loaded.Error, loaded.PersistenceError, loaded.Message};
+            return result;
+        }
+        const FullRosterEvaluation fullRoster =
+            CampaignStateMachine::EvaluateFullRoster(
+                loaded.Campaign, acCommand.Presence);
+        if (!fullRoster.Eligible())
+        {
+            result.Command = CheckpointFailure(
+                loaded.Campaign.RosterSealed
+                    ? CampaignError::RosterIncomplete
+                    : CampaignError::RosterNotSealed,
+                fullRoster.Message);
+            return result;
+        }
+
+        CreateCheckpointCandidateRequest request;
+        request.Campaign = acCommand.Campaign;
+        request.ExpectedRevision = loaded.Campaign.Version;
+        request.Mutation = MutationId{CheckpointMutationId(
+            "create", acCommand.Checkpoint)};
+        request.Checkpoint = acCommand.Checkpoint;
+        request.Snapshot = SnapshotId{"snapshot-" + acCommand.Checkpoint.Value};
+        request.MutationPayload = BeginCommandPayload(
+            "CreateCheckpointCandidate");
+        AppendField(request.MutationPayload, acCommand.Checkpoint.Value);
+        AppendField(request.MutationPayload, acCommand.NativeSaveIdentity);
+
+        const MutationResult persisted =
+            m_store.CreateCheckpointCandidate(request);
+        result.Command = FromMutationResult(persisted);
+        if (!result.Command)
+            return result;
+
+        CampaignCheckpointActivity activity{
+            acCommand.Campaign,
+            acCommand.Checkpoint,
+            loaded.Campaign.Version,
+            acCommand.NativeSaveIdentity};
+        m_activeCheckpoints.emplace(
+            acCommand.Campaign.Value, activity);
+        result.Activity = std::move(activity);
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = CheckpointFailure(
+            CampaignError::PersistenceFailure,
+            "BeginCheckpoint failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+CampaignCheckpointCommandResult
+CampaignRuntimeService::RecordCheckpointSave(
+    const RecordCampaignCheckpointSaveCommand& acCommand) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        const auto active = m_activeCheckpoints.find(acCommand.Campaign.Value);
+        if (active == m_activeCheckpoints.end())
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::CheckpointNotActive,
+                "campaign has no active checkpoint");
+            return result;
+        }
+        result.Activity = active->second;
+        if (active->second.Checkpoint != acCommand.Checkpoint ||
+            active->second.NativeSaveIdentity != acCommand.NativeSaveIdentity ||
+            acCommand.Actor.Campaign != acCommand.Campaign)
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::CheckpointMismatch,
+                "checkpoint result does not match the active operation");
+            return result;
+        }
+
+        auto checkpoint = m_store.LoadCheckpoint(
+            acCommand.Campaign, acCommand.Checkpoint);
+        if (!checkpoint)
+        {
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        const auto slot = std::find_if(
+            checkpoint.Value.Slots.begin(), checkpoint.Value.Slots.end(),
+            [&](const CheckpointSlotRecord& acSlot)
+            {
+                return IsExactCheckpointMember(acSlot, acCommand.Actor);
+            });
+        if (slot == checkpoint.Value.Slots.end())
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::NotCampaignMember,
+                "admitted identity is not an exact checkpoint slot");
+            return result;
+        }
+
+        CheckpointSlotRecord canonical{
+            slot->Slot,
+            slot->Player,
+            slot->CharacterBinding,
+            acCommand.NativeSaveIdentity,
+            acCommand.FingerprintAlgorithm,
+            acCommand.FingerprintVersion,
+            acCommand.Fingerprint,
+            acCommand.SaveMetadataCodecVersion,
+            acCommand.SaveMetadata};
+        if (!IsExactCheckpointArtifact(
+                canonical, active->second.NativeSaveIdentity))
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::InvalidCheckpointArtifact,
+                "checkpoint native save metadata is incomplete or invalid");
+            return result;
+        }
+
+        const MutationId mutation{CheckpointMutationId(
+            "ack", acCommand.Checkpoint, &slot->Slot)};
+        StateVersion expectedRevision{};
+        auto journal = m_store.LoadJournal(acCommand.Campaign);
+        if (!journal)
+        {
+            result.Command = StoreFailure(journal);
+            return result;
+        }
+        const auto replay = std::find_if(
+            journal.Value.begin(), journal.Value.end(),
+            [&](const JournalRecord& acRecord)
+            {
+                return acRecord.Mutation == mutation;
+            });
+        if (replay != journal.Value.end())
+        {
+            expectedRevision = replay->ExpectedRevision;
+        }
+        else
+        {
+            auto campaign = m_store.LoadCampaign(acCommand.Campaign);
+            if (!campaign)
+            {
+                result.Command = StoreFailure(campaign);
+                return result;
+            }
+            expectedRevision = campaign.Value.CurrentRevision;
+        }
+
+        Bytes payload = BeginCommandPayload("RecordCheckpointSlotSave");
+        AppendField(payload, acCommand.Checkpoint.Value);
+        AppendField(payload, slot->Slot.Value);
+        RecordCheckpointSlotSaveRequest record;
+        record.Campaign = acCommand.Campaign;
+        record.ExpectedRevision = expectedRevision;
+        record.Mutation = mutation;
+        record.Checkpoint = acCommand.Checkpoint;
+        record.Slot = std::move(canonical);
+        record.MutationPayload = std::move(payload);
+        const MutationResult recorded =
+            m_store.RecordCheckpointSlotSave(record);
+        result.Command = FromMutationResult(recorded);
+        if (!result.Command)
+            return result;
+
+        checkpoint = m_store.LoadCheckpoint(
+            acCommand.Campaign, acCommand.Checkpoint);
+        if (!checkpoint)
+        {
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        const bool complete = !checkpoint.Value.Slots.empty() &&
+            std::all_of(
+                checkpoint.Value.Slots.begin(), checkpoint.Value.Slots.end(),
+                [&](const CheckpointSlotRecord& acSlot)
+                {
+                    return IsExactCheckpointArtifact(
+                        acSlot, active->second.NativeSaveIdentity);
+                });
+        if (!complete)
+            return result;
+
+        auto campaign = m_store.LoadCampaign(acCommand.Campaign);
+        if (!campaign)
+        {
+            result.Command = StoreFailure(campaign);
+            return result;
+        }
+        CommitCheckpointRequest commit;
+        commit.Campaign = acCommand.Campaign;
+        commit.ExpectedRevision = campaign.Value.CurrentRevision;
+        commit.Mutation = MutationId{CheckpointMutationId(
+            "commit", acCommand.Checkpoint)};
+        commit.Checkpoint = acCommand.Checkpoint;
+        commit.MutationPayload = BeginCommandPayload("CommitCheckpoint");
+        AppendField(commit.MutationPayload, acCommand.Checkpoint.Value);
+        const MutationResult committed = m_store.CommitCheckpoint(commit);
+        result.Command = FromMutationResult(committed);
+        if (!result.Command)
+            return result;
+
+        result.Committed = true;
+        m_activeCheckpoints.erase(active);
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = CheckpointFailure(
+            CampaignError::PersistenceFailure,
+            "RecordCheckpointSave failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+CampaignCheckpointCommandResult CampaignRuntimeService::FailCheckpoint(
+    const FailCampaignCheckpointCommand& acCommand) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        const auto active = m_activeCheckpoints.find(acCommand.Campaign.Value);
+        if (active == m_activeCheckpoints.end())
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::CheckpointNotActive,
+                "campaign has no active checkpoint");
+            return result;
+        }
+        result.Activity = active->second;
+        if (active->second.Checkpoint != acCommand.Checkpoint ||
+            active->second.NativeSaveIdentity != acCommand.NativeSaveIdentity ||
+            acCommand.Actor.Campaign != acCommand.Campaign)
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::CheckpointMismatch,
+                "checkpoint failure does not match the active operation");
+            return result;
+        }
+        auto checkpoint = m_store.LoadCheckpoint(
+            acCommand.Campaign, acCommand.Checkpoint);
+        if (!checkpoint)
+        {
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        const bool exactMember = std::any_of(
+            checkpoint.Value.Slots.begin(), checkpoint.Value.Slots.end(),
+            [&](const CheckpointSlotRecord& acSlot)
+            {
+                return IsExactCheckpointMember(acSlot, acCommand.Actor);
+            });
+        if (!exactMember)
+        {
+            result.Command = CheckpointFailure(
+                CampaignError::NotCampaignMember,
+                "admitted identity is not an exact checkpoint slot");
+            return result;
+        }
+        auto campaign = m_store.LoadCampaign(acCommand.Campaign);
+        if (!campaign)
+        {
+            result.Command = StoreFailure(campaign);
+            return result;
+        }
+        result.Command.Version = campaign.Value.CurrentRevision;
+        m_activeCheckpoints.erase(active);
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = CheckpointFailure(
+            CampaignError::PersistenceFailure,
+            "FailCheckpoint failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+void CampaignRuntimeService::AbandonCheckpoint(
+    const CampaignId& acCampaign) noexcept
+{
+    m_activeCheckpoints.erase(acCampaign.Value);
+}
+
+std::optional<CampaignCheckpointActivity>
+CampaignRuntimeService::GetActiveCheckpoint(
+    const CampaignId& acCampaign) const noexcept
+{
+    try
+    {
+        const auto active = m_activeCheckpoints.find(acCampaign.Value);
+        return active == m_activeCheckpoints.end()
+            ? std::nullopt
+            : std::optional<CampaignCheckpointActivity>(active->second);
+    }
+    catch (...)
+    {
+        return std::nullopt;
+    }
+}
+
 CampaignLoadResult CampaignRuntimeService::LoadCampaign(
     const CampaignId& acCampaign,
     const std::vector<CampaignMemberPresence>& acPresence) noexcept try
@@ -770,8 +1218,10 @@ CampaignLoadResult CampaignRuntimeService::LoadCampaign(
     result.Campaign = std::move(loaded.Campaign);
     if (result.Succeeded())
     {
-        result.RuntimeState = CampaignStateMachine::DetermineRuntimeState(
-            result.Campaign, acPresence);
+        result.RuntimeState = m_activeCheckpoints.contains(acCampaign.Value)
+            ? CampaignRuntimeState::CHECKPOINTING
+            : CampaignStateMachine::DetermineRuntimeState(
+                  result.Campaign, acPresence);
     }
     return result;
 }

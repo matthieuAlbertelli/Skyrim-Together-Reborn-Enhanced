@@ -4,6 +4,14 @@
 
 #include <Structs/Campaign.h>
 
+#include <cstdint>
+
+enum class CampaignCheckpointSaveResultCode : std::uint8_t
+{
+    Success = 0,
+    Failure = 1
+};
+
 struct CampaignCreateRequest final : ClientMessage
 {
     static constexpr ClientOpcode Opcode = kCampaignCreateRequest;
@@ -114,4 +122,29 @@ struct CampaignHelgenInvestigationReadyRequest final : ClientMessage
     }
     void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
     void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+};
+
+struct CampaignCheckpointSaveResult final : ClientMessage
+{
+    static constexpr ClientOpcode Opcode = kCampaignCheckpointSaveResult;
+    CampaignCheckpointSaveResult()
+        : ClientMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String CheckpointId;
+    TiltedPhoques::String NativeSaveIdentity;
+    CampaignCheckpointSaveResultCode Result{
+        CampaignCheckpointSaveResultCode::Failure};
+    TiltedPhoques::String FingerprintAlgorithm;
+    std::uint32_t FingerprintVersion{};
+    TiltedPhoques::Vector<std::uint8_t> Fingerprint;
+    std::uint32_t SaveMetadataCodecVersion{};
+    TiltedPhoques::Vector<std::uint8_t> SaveMetadata;
+    bool WireValid{true};
 };

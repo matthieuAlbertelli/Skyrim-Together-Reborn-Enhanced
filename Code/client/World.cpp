@@ -6,6 +6,7 @@
 #include <Services/InputService.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <Services/CampaignService.h>
+#include <Services/CampaignCheckpointService.h>
 #include <Services/CampaignBootstrapService.h>
 #include <Services/TransportService.h>
 #include <Services/RunnerService.h>
@@ -51,6 +52,10 @@ World::World()
         *this,
         ctx().at<UiSurfaceService>());
     ctx().emplace<CampaignService>(m_dispatcher, m_transport);
+    ctx().emplace<CampaignCheckpointService>(
+        m_dispatcher,
+        m_transport,
+        ctx().at<CampaignService>());
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<CampaignBootstrapService>(
         m_dispatcher,

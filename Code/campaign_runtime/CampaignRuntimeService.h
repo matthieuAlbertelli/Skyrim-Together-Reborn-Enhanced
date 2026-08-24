@@ -3,6 +3,11 @@
 #include <CampaignCoreCodec.h>
 #include <CampaignStore.h>
 
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace STRE::Campaign
 {
 struct CampaignCommandResult
@@ -112,6 +117,59 @@ struct SetCampaignReadyCommand
     bool Ready{};
 };
 
+struct CampaignCheckpointActivity
+{
+    CampaignId Campaign;
+    CheckpointId Checkpoint;
+    StateVersion SourceRevision{};
+    std::string NativeSaveIdentity;
+
+    bool operator==(const CampaignCheckpointActivity&) const noexcept = default;
+};
+
+struct BeginCampaignCheckpointCommand
+{
+    CampaignId Campaign;
+    CheckpointId Checkpoint;
+    std::string NativeSaveIdentity;
+    std::vector<CampaignMemberPresence> Presence;
+};
+
+struct RecordCampaignCheckpointSaveCommand
+{
+    CampaignId Campaign;
+    CheckpointId Checkpoint;
+    std::string NativeSaveIdentity;
+    CampaignMemberIdentity Actor;
+    std::string FingerprintAlgorithm;
+    std::uint32_t FingerprintVersion{};
+    Bytes Fingerprint;
+    std::uint32_t SaveMetadataCodecVersion{};
+    Bytes SaveMetadata;
+};
+
+struct FailCampaignCheckpointCommand
+{
+    CampaignId Campaign;
+    CheckpointId Checkpoint;
+    std::string NativeSaveIdentity;
+    CampaignMemberIdentity Actor;
+};
+
+struct CampaignCheckpointCommandResult
+{
+    CampaignCommandResult Command;
+    std::optional<CampaignCheckpointActivity> Activity;
+    bool Committed{};
+
+    [[nodiscard]] bool Succeeded() const noexcept
+    {
+        return Command.Succeeded();
+    }
+
+    explicit operator bool() const noexcept { return Succeeded(); }
+};
+
 class CampaignRuntimeService final
 {
 public:
@@ -132,6 +190,16 @@ public:
     CampaignCommandResult SetReady(
         const SetCampaignReadyCommand& acCommand) noexcept;
 
+    CampaignCheckpointCommandResult BeginCheckpoint(
+        const BeginCampaignCheckpointCommand& acCommand) noexcept;
+    CampaignCheckpointCommandResult RecordCheckpointSave(
+        const RecordCampaignCheckpointSaveCommand& acCommand) noexcept;
+    CampaignCheckpointCommandResult FailCheckpoint(
+        const FailCampaignCheckpointCommand& acCommand) noexcept;
+    void AbandonCheckpoint(const CampaignId& acCampaign) noexcept;
+    [[nodiscard]] std::optional<CampaignCheckpointActivity>
+    GetActiveCheckpoint(const CampaignId& acCampaign) const noexcept;
+
     CampaignLoadResult LoadCampaign(
         const CampaignId& acCampaign,
         const std::vector<CampaignMemberPresence>& acPresence = {}) noexcept;
@@ -140,6 +208,11 @@ public:
         const MutationId& acMutation) noexcept;
 
 private:
+    [[nodiscard]] std::optional<CampaignCommandResult> CheckMutationFence(
+        const CampaignId& acCampaign) const noexcept;
+
     ICampaignStore& m_store;
+    std::unordered_map<std::string, CampaignCheckpointActivity>
+        m_activeCheckpoints;
 };
 }

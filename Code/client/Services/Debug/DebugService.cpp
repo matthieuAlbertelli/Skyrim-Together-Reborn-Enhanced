@@ -13,6 +13,9 @@
 #include <Services/PapyrusService.h>
 #include <Services/QuestService.h>
 
+#include <CampaignNativeSave.h>
+#include <Structs/Campaign.h>
+
 #include <Events/UpdateEvent.h>
 #include <Events/DialogueEvent.h>
 #include <Events/SubtitleEvent.h>
@@ -233,6 +236,74 @@ static bool g_enableWeatherWindow{false};
 static bool g_enableCombatWindow{false};
 static bool g_enableCalendarWindow{false};
 static bool g_enableDragonSpawnerWindow{false};
+static bool g_enableCampaignNativeSaveProbe{false};
+
+void DebugService::DrawCampaignNativeSaveProbe()
+{
+    ImGui::SetNextWindowSize(ImVec2(520, 240), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Campaign native save probe");
+
+    static char s_checkpointId[kCampaignWireMaximumIdLength + 1] =
+        "native-save-spike-3";
+    ImGui::InputText(
+        "Checkpoint ID", s_checkpointId, std::size(s_checkpointId));
+    ImGui::TextWrapped(
+        "Completion requires a fresh target, no .ess.tmp, and simultaneous "
+        "read handles that deny write/delete sharing for .ess and .skse while "
+        "both members are hashed.");
+
+    const CampaignNativeSaveLifecycleSnapshot status =
+        CampaignNativeSave::GetStatus();
+    const char* pState = "Idle";
+    switch (status.State)
+    {
+    case CampaignNativeSaveLifecycleState::Requested:
+        pState = "Requested";
+        break;
+    case CampaignNativeSaveLifecycleState::Processing:
+        pState = "Processing";
+        break;
+    case CampaignNativeSaveLifecycleState::AwaitingCompletion:
+        pState = "AwaitingCompletion";
+        break;
+    case CampaignNativeSaveLifecycleState::Completed:
+        pState = "Completed";
+        break;
+    case CampaignNativeSaveLifecycleState::Failed:
+        pState = "Failed";
+        break;
+    case CampaignNativeSaveLifecycleState::Idle:
+        break;
+    }
+    ImGui::Text("Status: %s", pState);
+    if (!status.Identity.empty())
+        ImGui::Text("Identity: %s", status.Identity.c_str());
+    if (!status.FailureReason.empty())
+        ImGui::TextWrapped("Failure: %s", status.FailureReason.c_str());
+
+    if (ImGui::Button("Queue dedicated native save"))
+    {
+        TiltedPhoques::String checkpointId{s_checkpointId};
+        TiltedPhoques::String identity;
+        if (!BuildCampaignNativeSaveIdentity(checkpointId, identity))
+        {
+            spdlog::error(
+                "[STRE][CampaignNativeSave] probe rejected "
+                "reason=invalid-checkpoint-id");
+        }
+        else
+        {
+            std::string requestedIdentity(identity.data(), identity.size());
+            m_world.GetRunner().Queue(
+                [identity = std::move(requestedIdentity)]()
+                {
+                    (void)CampaignNativeSave::RequestOnGameThread(identity);
+                });
+        }
+    }
+
+    ImGui::End();
+}
 
 void DebugService::DrawServerView() noexcept
 {
@@ -350,6 +421,10 @@ void DebugService::OnDraw() noexcept
         ImGui::MenuItem("Weather", nullptr, &g_enableWeatherWindow);
         ImGui::MenuItem("Combat", nullptr, &g_enableCombatWindow);
         ImGui::MenuItem("Calendar", nullptr, &g_enableCalendarWindow);
+        ImGui::MenuItem(
+            "Campaign native save probe",
+            nullptr,
+            &g_enableCampaignNativeSaveProbe);
 #endif
 
         ImGui::EndMenu();
@@ -409,6 +484,8 @@ void DebugService::OnDraw() noexcept
         DrawCombatView();
     if (g_enableCalendarWindow)
         DrawCalendarView();
+    if (g_enableCampaignNativeSaveProbe)
+        DrawCampaignNativeSaveProbe();
 
     if (m_drawComponentsInWorldSpace)
         DrawComponentDebugView();

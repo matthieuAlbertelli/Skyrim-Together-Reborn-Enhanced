@@ -90,6 +90,10 @@ CampaignProtocolResult MapCommandResult(
     case CampaignError::SlotNotFound:
     case CampaignError::InvalidPhase:
     case CampaignError::InvalidSessionManager:
+    case CampaignError::CheckpointInProgress:
+    case CampaignError::CheckpointNotActive:
+    case CampaignError::CheckpointMismatch:
+    case CampaignError::InvalidCheckpointArtifact:
         return CampaignProtocolResult::InvalidRequest;
     default: return CampaignProtocolResult::PersistenceFailure;
     }
@@ -290,7 +294,10 @@ std::optional<CampaignSnapshotData> CampaignAdmissionService::Disconnect(
             return std::nullopt;
         std::optional<CampaignId> campaign;
         if (pRecord->AdmittedIdentity)
+        {
             campaign = pRecord->AdmittedIdentity->Campaign;
+            m_runtime.AbandonCheckpoint(*campaign);
+        }
         m_connections.erase(std::remove_if(
             m_connections.begin(), m_connections.end(),
             [aConnection](const CampaignAdmissionRecord& acRecord)
@@ -702,5 +709,105 @@ catch (...)
 {
     return Failure(CampaignProtocolOperation::Leave,
         CampaignProtocolResult::PersistenceFailure, acCampaignId);
+}
+
+CampaignCheckpointCommandResult CampaignAdmissionService::BeginCheckpoint(
+    const CampaignId& acCampaign) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        const CheckpointId checkpoint{GenerateId("checkpoint-")};
+        TiltedPhoques::String wireCheckpoint(checkpoint.Value.c_str());
+        TiltedPhoques::String nativeSaveIdentity;
+        if (!BuildCampaignNativeSaveIdentity(
+                wireCheckpoint, nativeSaveIdentity))
+        {
+            result.Command.Error = CampaignError::InvalidIdentity;
+            result.Command.Message =
+                "server generated an invalid checkpoint identity";
+            return result;
+        }
+        return m_runtime.BeginCheckpoint(
+            {acCampaign,
+             checkpoint,
+             nativeSaveIdentity.c_str(),
+             BuildPresence(acCampaign)});
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message = "checkpoint admission begin failed safely";
+        return result;
+    }
+}
+
+CampaignCheckpointCommandResult
+CampaignAdmissionService::HandleCheckpointSaveResult(
+    CampaignConnectionHandle aConnection,
+    const CampaignId& acCampaign,
+    const CheckpointId& acCheckpoint,
+    const std::string& acNativeSaveIdentity,
+    bool aSucceeded,
+    std::string aFingerprintAlgorithm,
+    std::uint32_t aFingerprintVersion,
+    Bytes aFingerprint,
+    std::uint32_t aSaveMetadataCodecVersion,
+    Bytes aSaveMetadata) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        const CampaignAdmissionRecord* const pRecord =
+            FindConnection(aConnection);
+        if (!pRecord || !pRecord->AdmittedIdentity)
+        {
+            result.Command.Error = CampaignError::NotCampaignMember;
+            result.Command.Message =
+                "checkpoint result requires canonical campaign admission";
+            return result;
+        }
+        if (pRecord->AdmittedIdentity->Campaign != acCampaign)
+        {
+            result.Command.Error = CampaignError::CheckpointMismatch;
+            result.Command.Message =
+                "checkpoint result campaign does not match admission";
+            return result;
+        }
+        if (!aSucceeded)
+        {
+            return m_runtime.FailCheckpoint(
+                {acCampaign,
+                 acCheckpoint,
+                 acNativeSaveIdentity,
+                 *pRecord->AdmittedIdentity});
+        }
+        return m_runtime.RecordCheckpointSave(
+            {acCampaign,
+             acCheckpoint,
+             acNativeSaveIdentity,
+             *pRecord->AdmittedIdentity,
+             std::move(aFingerprintAlgorithm),
+             aFingerprintVersion,
+             std::move(aFingerprint),
+             aSaveMetadataCodecVersion,
+             std::move(aSaveMetadata)});
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message =
+            "checkpoint admission result failed safely";
+        return result;
+    }
+}
+
+std::optional<CampaignCheckpointActivity>
+CampaignAdmissionService::GetActiveCheckpoint(
+    const CampaignId& acCampaign) const noexcept
+{
+    return m_runtime.GetActiveCheckpoint(acCampaign);
 }
 }

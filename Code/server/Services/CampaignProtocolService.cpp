@@ -8,6 +8,7 @@
 #include <Messages/CampaignRequests.h>
 #include <Components.h>
 #include <GroupSpatialCondition.h>
+#include <Structs/NativeSaveBundle.h>
 
 #include <algorithm>
 #include <array>
@@ -99,8 +100,131 @@ CampaignProtocolService::CampaignProtocolService(World& aWorld, entt::dispatcher
     , m_leaveConnection(aDispatcher.sink<PacketEvent<CampaignLeaveRequest>>().connect<&CampaignProtocolService::OnLeave>(this))
     , m_joinByCodeConnection(aDispatcher.sink<PacketEvent<CampaignJoinByCodeRequest>>().connect<&CampaignProtocolService::OnJoinByCode>(this))
     , m_helgenReadyConnection(aDispatcher.sink<PacketEvent<CampaignHelgenInvestigationReadyRequest>>().connect<&CampaignProtocolService::OnHelgenInvestigationReady>(this))
+    , m_checkpointResultConnection(aDispatcher.sink<PacketEvent<CampaignCheckpointSaveResult>>().connect<&CampaignProtocolService::OnCheckpointSaveResult>(this))
     , m_playerLeaveConnection(aDispatcher.sink<PlayerLeaveEvent>().connect<&CampaignProtocolService::OnPlayerLeave>(this))
 {
+}
+
+bool CampaignProtocolService::SendCheckpointRequest(
+    const CampaignCheckpointActivity& acActivity) noexcept
+{
+    try
+    {
+        CampaignCheckpointSaveRequest request;
+        request.CampaignId = acActivity.Campaign.Value.c_str();
+        request.CheckpointId = acActivity.Checkpoint.Value.c_str();
+        request.SourceRevision = acActivity.SourceRevision;
+        request.NativeSaveIdentity = acActivity.NativeSaveIdentity.c_str();
+        if (!request.IsValid())
+            return false;
+
+        const auto connections =
+            m_admission.GetAdmittedConnections(acActivity.Campaign);
+        const auto snapshot = m_admission.BuildSnapshot(acActivity.Campaign);
+        if (!snapshot || connections.size() != snapshot->Roster.size() ||
+            std::any_of(
+                snapshot->Roster.begin(), snapshot->Roster.end(),
+                [](const CampaignPublicSlotData& acSlot)
+                {
+                    return !acSlot.Present;
+                }))
+        {
+            return false;
+        }
+        std::vector<Player*> players;
+        players.reserve(connections.size());
+        for (CampaignConnectionHandle connection : connections)
+        {
+            Player* const pPlayer = m_world.GetPlayerManager().GetById(
+                static_cast<std::uint32_t>(connection));
+            if (!pPlayer)
+                return false;
+            players.push_back(pPlayer);
+        }
+        for (Player* const pPlayer : players)
+            pPlayer->Send(request);
+        spdlog::info(
+            "[STRE][CampaignCheckpoint] SAVE_REQUEST_SENT campaign={} checkpoint={} sourceRevision={} nativeSaveIdentity={} members={}",
+            acActivity.Campaign.Value,
+            acActivity.Checkpoint.Value,
+            acActivity.SourceRevision,
+            acActivity.NativeSaveIdentity,
+            connections.size());
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool CampaignProtocolService::BeginCheckpointDevelopment(
+    const std::string& acCampaignId) noexcept
+{
+    try
+    {
+        TiltedPhoques::String campaignId(acCampaignId.c_str());
+        if (!IsValidCampaignWireId(campaignId))
+            return false;
+        CampaignCheckpointCommandResult begun =
+            m_admission.BeginCheckpoint(CampaignId{acCampaignId});
+        if (!begun || !begun.Activity)
+        {
+            spdlog::warn(
+                "[STRE][CampaignCheckpoint] BEGIN_REJECTED campaign={} error={} persistenceError={} reason={}",
+                acCampaignId,
+                static_cast<unsigned>(begun.Command.Error),
+                static_cast<unsigned>(begun.Command.PersistenceError),
+                begun.Command.Message);
+            return false;
+        }
+        if (const auto snapshot =
+                m_admission.BuildSnapshot(begun.Activity->Campaign))
+        {
+            BroadcastSnapshot(*snapshot);
+        }
+        if (!SendCheckpointRequest(*begun.Activity))
+        {
+            GameServer::Get()->GetCampaignRuntime().AbandonCheckpoint(
+                begun.Activity->Campaign);
+            if (const auto snapshot =
+                    m_admission.BuildSnapshot(begun.Activity->Campaign))
+            {
+                BroadcastSnapshot(*snapshot);
+            }
+            spdlog::error(
+                "[STRE][CampaignCheckpoint] BEGIN_ABANDONED campaign={} checkpoint={} reason=dispatch-failed",
+                begun.Activity->Campaign.Value,
+                begun.Activity->Checkpoint.Value);
+            return false;
+        }
+        spdlog::info(
+            "[STRE][CampaignCheckpoint] CANDIDATE_CREATED campaign={} checkpoint={} sourceRevision={} candidateRevision={}",
+            begun.Activity->Campaign.Value,
+            begun.Activity->Checkpoint.Value,
+            begun.Activity->SourceRevision,
+            begun.Command.Version);
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool CampaignProtocolService::ResendCheckpointDevelopment(
+    const std::string& acCampaignId) noexcept
+{
+    try
+    {
+        const auto active = m_admission.GetActiveCheckpoint(
+            CampaignId{acCampaignId});
+        return active && SendCheckpointRequest(*active);
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
 void CampaignProtocolService::OnPlayerLocationChanged(const Player& acPlayer) noexcept
@@ -751,6 +875,88 @@ void CampaignProtocolService::OnHelgenInvestigationReady(const PacketEvent<Campa
     m_helgenStartedCampaigns.insert(campaign.Value);
     spdlog::info("[STRE][Helgen] collective investigation start authorized campaign={} roster={}", campaign.Value, connections.size());
     BroadcastHelgenState(campaign);
+}
+
+void CampaignProtocolService::OnCheckpointSaveResult(
+    const PacketEvent<CampaignCheckpointSaveResult>& acPacket) noexcept
+{
+    Player& player = *acPacket.pPlayer;
+    if (!acPacket.Packet.IsValid())
+    {
+        spdlog::warn(
+            "[STRE][CampaignCheckpoint] RESULT_REJECTED transientPlayer={} reason=malformed-packet",
+            player.GetId());
+        return;
+    }
+
+    const CampaignId campaign{acPacket.Packet.CampaignId.c_str()};
+    const bool succeeded = acPacket.Packet.Result ==
+        CampaignCheckpointSaveResultCode::Success;
+    Bytes fingerprint(
+        acPacket.Packet.Fingerprint.begin(),
+        acPacket.Packet.Fingerprint.end());
+    Bytes metadata(
+        acPacket.Packet.SaveMetadata.begin(),
+        acPacket.Packet.SaveMetadata.end());
+    CampaignCheckpointCommandResult handled =
+        m_admission.HandleCheckpointSaveResult(
+            ToHandle(player),
+            campaign,
+            CheckpointId{acPacket.Packet.CheckpointId.c_str()},
+            acPacket.Packet.NativeSaveIdentity.c_str(),
+            succeeded,
+            acPacket.Packet.FingerprintAlgorithm.c_str(),
+            acPacket.Packet.FingerprintVersion,
+            std::move(fingerprint),
+            acPacket.Packet.SaveMetadataCodecVersion,
+            std::move(metadata));
+    if (!handled)
+    {
+        spdlog::warn(
+            "[STRE][CampaignCheckpoint] RESULT_REJECTED transientPlayer={} campaign={} checkpoint={} error={} persistenceError={} reason={}",
+            player.GetId(),
+            campaign.Value,
+            acPacket.Packet.CheckpointId.c_str(),
+            static_cast<unsigned>(handled.Command.Error),
+            static_cast<unsigned>(handled.Command.PersistenceError),
+            handled.Command.Message);
+        return;
+    }
+
+    const CampaignAdmissionRecord* const pAdmission = GetAdmission(player);
+    std::string fingerprintHex;
+    if (succeeded)
+    {
+        NativeSaveSha256 digest{};
+        std::copy(
+            acPacket.Packet.Fingerprint.begin(),
+            acPacket.Packet.Fingerprint.end(),
+            digest.begin());
+        fingerprintHex = NativeSaveSha256ToHex(digest);
+    }
+    spdlog::info(
+        "[STRE][CampaignCheckpoint] RESULT_ACCEPTED campaign={} checkpoint={} slot={} player={} success={} fingerprint={} revision={} replay={} committed={}",
+        campaign.Value,
+        acPacket.Packet.CheckpointId.c_str(),
+        pAdmission && pAdmission->AdmittedIdentity
+            ? pAdmission->AdmittedIdentity->Slot.Value
+            : "unavailable",
+        pAdmission ? pAdmission->Player.Value : "unavailable",
+        succeeded,
+        succeeded ? fingerprintHex : "none",
+        handled.Command.Version,
+        handled.Command.IdempotentReplay,
+        handled.Committed);
+    if (handled.Committed)
+    {
+        spdlog::info(
+            "[STRE][CampaignCheckpoint] CHECKPOINT_COMMITTED campaign={} checkpoint={} revision={}",
+            campaign.Value,
+            acPacket.Packet.CheckpointId.c_str(),
+            handled.Command.Version);
+    }
+    if (const auto snapshot = m_admission.BuildSnapshot(campaign))
+        BroadcastSnapshot(*snapshot);
 }
 
 void CampaignProtocolService::BroadcastHelgenState(const CampaignId& acCampaign, Player* apOnlyPlayer) noexcept

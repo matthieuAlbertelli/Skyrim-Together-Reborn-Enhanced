@@ -97,6 +97,22 @@ public:
         const std::string& acMutationId,
         StateVersion aExpectedRevision) noexcept;
 
+    [[nodiscard]] CampaignCheckpointCommandResult BeginCheckpoint(
+        const CampaignId& acCampaign) noexcept;
+    [[nodiscard]] CampaignCheckpointCommandResult HandleCheckpointSaveResult(
+        CampaignConnectionHandle aConnection,
+        const CampaignId& acCampaign,
+        const CheckpointId& acCheckpoint,
+        const std::string& acNativeSaveIdentity,
+        bool aSucceeded,
+        std::string aFingerprintAlgorithm = {},
+        std::uint32_t aFingerprintVersion = 0,
+        Bytes aFingerprint = {},
+        std::uint32_t aSaveMetadataCodecVersion = 0,
+        Bytes aSaveMetadata = {}) noexcept;
+    [[nodiscard]] std::optional<CampaignCheckpointActivity>
+    GetActiveCheckpoint(const CampaignId& acCampaign) const noexcept;
+
     [[nodiscard]] std::optional<CampaignSnapshotData> BuildSnapshot(
         const CampaignId& acCampaign) noexcept;
     [[nodiscard]] const CampaignAdmissionRecord* FindConnection(

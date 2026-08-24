@@ -90,3 +90,22 @@ struct NotifyCampaignHelgenState final : ServerMessage
     CampaignHelgenSpatialStatus SpatialStatus{CampaignHelgenSpatialStatus::GateClosed};
     bool AllRequiredPlayersOutside{};
 };
+
+struct CampaignCheckpointSaveRequest final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode = kCampaignCheckpointSaveRequest;
+    CampaignCheckpointSaveRequest()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String CheckpointId;
+    std::uint64_t SourceRevision{};
+    TiltedPhoques::String NativeSaveIdentity;
+    bool WireValid{true};
+};
