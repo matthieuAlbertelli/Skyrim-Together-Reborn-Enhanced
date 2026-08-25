@@ -73,3 +73,21 @@ TEST_CASE("Presentation observations cannot release the campaign gate", "[campai
     REQUIRE_FALSE(gate.IsGuardMenuObserved());
     REQUIRE_FALSE(gate.IsCefPresentationObserved());
 }
+
+TEST_CASE("Campaign runtime gate can cancel only an armed managed load", "[campaign.gate]")
+{
+    CampaignRuntimeGate gate;
+
+    REQUIRE_FALSE(gate.CancelArmedLoad());
+    REQUIRE(gate.ArmNextLoad());
+    REQUIRE(gate.CancelArmedLoad());
+    REQUIRE_FALSE(gate.IsNextLoadArmed());
+    REQUIRE(gate.GetState() == CampaignRuntimeGateState::Open);
+    REQUIRE_FALSE(gate.OnNativeLoadEnter());
+
+    REQUIRE(gate.ArmNextLoad());
+    REQUIRE(gate.OnNativeLoadEnter());
+    REQUIRE(gate.CancelArmedLoad());
+    REQUIRE(gate.GetState() == CampaignRuntimeGateState::Open);
+    REQUIRE_FALSE(gate.OnPostLoad());
+}

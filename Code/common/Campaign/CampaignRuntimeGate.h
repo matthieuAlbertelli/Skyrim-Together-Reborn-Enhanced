@@ -17,6 +17,7 @@ class CampaignRuntimeGate
 {
 public:
     bool ArmNextLoad() noexcept;
+    bool CancelArmedLoad() noexcept;
     bool OnNativeLoadEnter() noexcept;
     void OnNativeLoadReturn(bool aSucceeded) noexcept;
     bool OnPostLoad() noexcept;

@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 24, 2026.
+> **Last updated:** August 25, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -429,6 +429,61 @@ exact replay resilience are tracked by
 [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
 Recovery, retention, cleanup, and upload are not implemented by these spikes. See
 [`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
+
+### Programmatic campaign native-load Slice 0
+
+The #56 Slice 0 native-load primitive is implemented, Windows build-tested,
+and human runtime-validated on 25 August 2026. It retains a production-capable
+client primitive from an exact cached `stre-<CheckpointId>` artifact through the
+existing `CampaignNativeSave` reopen/hash proof, `RunnerService` game-update
+execution, the existing `BGSSaveLoadManager::Load_Impl` hook,
+`TESLoadGameEvent`, the #60
+runtime gate/menu, and a connected transport update. Success requires every
+milestone independently; the native Boolean is not sufficient. One request is
+single-flight until explicit terminal release, and ordinary unarmed loads are
+not managed.
+
+TPTests pass 2277 assertions in 168 test cases; `TPProcess` and
+`SkyrimTogetherClient`, including the production Angular UI, build. After human
+validation, the temporary `/stre-campaign-resume`, `/stre-native-load`, and
+`/stre-native-load-release` commands and all corresponding Angular, CEF V8, and
+OverlayClient wiring were removed. They are not production-facing UX, and no
+replacement debug or console command was added. The retained native-load
+service has no player-accessible trigger until #56 supplies production recovery
+orchestration. No recovery authority, protocol, server behavior, SQLite state,
+or #56 recovery state machine is implemented.
+
+The validated cold-session run used campaign
+`campaign-367760f49cba23fd72a5ad5013a75e1b`, checkpoint
+`checkpoint-4a33f050b434778db8b09094658831d5`, and native identity
+`stre-checkpoint-4a33f050b434778db8b09094658831d5`. Before its removal, the
+temporary harness sent the existing Resume request and admission was accepted
+only by the authoritative server response at revision 7 (`operation=2`); no
+local admission was synthesized. The exact load then passed artifact
+validation, entered the existing `Load_Impl` hook, returned true, observed
+`TESLoadGameEvent`, locked
+the campaign gate, kept transport connected, displayed the guard menu with
+`UI::GameIsPaused() == true`, and reached `COMPLETED`. The expected checkpoint
+visibly loaded while gameplay froze and F2/CEF remained responsive.
+
+A duplicate request while terminal and locked was rejected as
+`request-not-idle` without another invocation. Explicit release destroyed the
+guard with `gateRemainsLocked=false` and immediately restored gameplay. Before
+and after evidence was identical: `.ess` length 2,600,863, timestamp
+`2026-08-24 18:01:39`, SHA-256
+`8AC74662C3AC18F599C36690253907465326AD721B5BCE5D357176F0F83E6123`;
+`.skse` length 2,789, the same timestamp, SHA-256
+`3FC8EA1291BE750871F23094E93723BC964EDF3E7C7CFE20B45D4D51033403CF`;
+no matching `.tmp` existed before or after. A subsequent vanilla/manual load
+remained unmanaged and acquired no STRE gate.
+
+This proves a production-capable deterministic local primitive, not issue #56.
+Still missing are `RecoveryService`/client recovery state, `RestoreAttemptId`
+protocol orchestration, full-roster rollback, `LoadedAndLocked` and
+`SnapshotApplied` acknowledgement barriers, canonical server snapshot restore,
+durable completion/restart reconstruction, no-checkpoint diagnostics, and live
+multi-client resilience validation. See
+[`CAMPAIGN_NATIVE_LOAD_SPIKE.md`](../development/CAMPAIGN_NATIVE_LOAD_SPIKE.md).
 
 ### Coordinated campaign checkpoints
 
