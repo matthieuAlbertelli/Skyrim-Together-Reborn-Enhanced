@@ -6,7 +6,7 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 _No unreleased STRE-specific changes documented yet._
 
-## [0.3.0-alpha.1] - 2026-08-27
+## [0.3.0-alpha.1] - 2026-08-28
 
 ### Added
 

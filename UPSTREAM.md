@@ -9,7 +9,7 @@ The current STRE history carries:
 - upstream repository: `tiltedphoques/TiltedEvolution`;
 - upstream branch: `dev`;
 - exact upstream base commit: `ca3f32348d3217e766b45afa9cce8a645f3a6444`;
-- latest published STRE player release: `v0.2.0-alpha.1`;
+- previous published STRE player release: `v0.2.0-alpha.1`;
 - exact release commit: `edbbc487fbed1f0fa61ef9c05dad664d2368920d`;
 - release candidate product version: `0.3.0-alpha.1`;
 - intended immutable tag: `stre-v0.3.0-alpha.1`;
