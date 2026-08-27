@@ -2,6 +2,7 @@
 
 #include <Services/TransportService.h>
 
+#include <Events/CampaignMainMenuEnteredEvent.h>
 #include <Events/ConnectedEvent.h>
 #include <Events/DisconnectedEvent.h>
 #include <Messages/CampaignMessages.h>
@@ -27,6 +28,9 @@ CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService
           .connect<&CampaignService::OnLobbyState>(this))
     , m_helgenStateConnection(aDispatcher.sink<NotifyCampaignHelgenState>()
           .connect<&CampaignService::OnHelgenState>(this))
+    , m_mainMenuEnteredConnection(
+          aDispatcher.sink<CampaignMainMenuEnteredEvent>()
+              .connect<&CampaignService::OnMainMenuEntered>(this))
     , m_connectedConnection(aDispatcher.sink<ConnectedEvent>()
           .connect<&CampaignService::OnConnected>(this))
     , m_disconnectedConnection(aDispatcher.sink<DisconnectedEvent>()
@@ -184,7 +188,8 @@ std::string CampaignService::JoinCampaignByCode(
 }
 
 bool CampaignService::ResumeCampaign(
-    const std::string& acCampaignId) noexcept
+    const std::string& acCampaignId,
+    bool aRestoreCommittedCheckpoint) noexcept
 {
     if (!m_store)
         return false;
@@ -206,7 +211,19 @@ bool CampaignService::ResumeCampaign(
     CampaignResumeRequest request;
     request.CampaignId = acCampaignId.c_str();
     request.CharacterBindingId = binding.Value->CharacterBindingId.c_str();
+    request.RestoreCommittedCheckpoint = aRestoreCommittedCheckpoint;
     return m_transport.Send(request);
+}
+
+bool CampaignService::RequestCheckpoint(
+    CampaignCheckpointRequestReason aReason) noexcept
+{
+    if (!m_admissionState.GetAdmission())
+        return false;
+
+    CampaignCheckpointRequest request;
+    request.Reason = aReason;
+    return request.IsValid() && m_transport.Send(request);
 }
 
 std::string CampaignService::StartCampaign(const std::string& acCampaignId, std::uint64_t aExpectedRevision, const std::string& acMutationId) noexcept
@@ -356,6 +373,7 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
         m_latestSnapshot.reset();
         m_lobbyState.reset();
         m_helgenState.Reset();
+        m_resumeRequiresCheckpointRestore = false;
     }
 }
 
@@ -366,33 +384,127 @@ void CampaignService::OnSnapshot(const NotifyCampaignSnapshot& acNotification) n
         spdlog::error("[STRE][CampaignProtocol] ignored malformed campaign snapshot");
         return;
     }
-    if (m_latestSnapshot && m_latestSnapshot->CampaignId == acNotification.Snapshot.CampaignId && m_latestSnapshot->StateVersion > acNotification.Snapshot.StateVersion)
+    (void)ApplySnapshot(acNotification.Snapshot);
+}
+
+STRE::Campaign::LocalStoreValueResult<
+    std::vector<STRE::Campaign::CampaignBindingCacheEntry>>
+CampaignService::ListCampaignBindings() noexcept
+{
+    STRE::Campaign::LocalStoreValueResult<
+        std::vector<STRE::Campaign::CampaignBindingCacheEntry>> result;
+    if (!m_store || !m_bindingCacheAvailable)
     {
-        return;
+        result.Error = STRE::Campaign::LocalIdentityError::PathUnavailable;
+        result.Message = m_storageError.empty()
+            ? "STRE campaign binding cache is unavailable"
+            : m_storageError;
+        return result;
     }
-    m_latestSnapshot = acNotification.Snapshot;
+
+    result = m_store->ListBindings();
+    if (!result)
+    {
+        m_storageError = result.Message;
+        m_bindingCacheAvailable = false;
+        spdlog::error("[STRE][CampaignIdentity] {}", result.Message);
+    }
+    return result;
+}
+
+STRE::Campaign::LocalStoreValueResult<
+    std::optional<STRE::Campaign::CampaignBindingCacheEntry>>
+CampaignService::LoadCampaignBinding(
+    const std::string& acCampaignId) noexcept
+{
+    STRE::Campaign::LocalStoreValueResult<
+        std::optional<STRE::Campaign::CampaignBindingCacheEntry>> result;
+    if (!m_store || !m_bindingCacheAvailable)
+    {
+        result.Error = STRE::Campaign::LocalIdentityError::PathUnavailable;
+        result.Message = m_storageError.empty()
+            ? "STRE campaign binding cache is unavailable"
+            : m_storageError;
+        return result;
+    }
+
+    result = m_store->LoadBinding(acCampaignId);
+    if (!result)
+    {
+        m_storageError = result.Message;
+        m_bindingCacheAvailable = false;
+        spdlog::error("[STRE][CampaignIdentity] {}", result.Message);
+    }
+    return result;
+}
+
+STRE::Campaign::LocalStoreValueResult<
+    std::optional<STRE::Campaign::CampaignSaveMarker>>
+CampaignService::LoadCampaignSaveMarker(
+    const std::string& acNativeSaveIdentity) noexcept
+{
+    STRE::Campaign::LocalStoreValueResult<
+        std::optional<STRE::Campaign::CampaignSaveMarker>> result;
+    if (!m_store || !m_bindingCacheAvailable)
+    {
+        result.Error = STRE::Campaign::LocalIdentityError::PathUnavailable;
+        result.Message = m_storageError.empty()
+            ? "STRE campaign save marker store is unavailable"
+            : m_storageError;
+        return result;
+    }
+    return m_store->LoadCampaignSaveMarker(acNativeSaveIdentity);
+}
+
+bool CampaignService::ApplyRecoverySnapshot(
+    const CampaignSnapshotData& acSnapshot) noexcept
+{
+    NotifyCampaignSnapshot notification;
+    notification.Snapshot = acSnapshot;
+    const auto admission = m_admissionState.GetAdmission();
+    if (!notification.IsValid() || !admission ||
+        admission->CampaignId != acSnapshot.CampaignId.c_str() ||
+        acSnapshot.RuntimeState != kCampaignWireRuntimeRestoringCheckpoint ||
+        !acSnapshot.RosterSealed)
+    {
+        return false;
+    }
+    return ApplySnapshot(acSnapshot);
+}
+
+bool CampaignService::ApplySnapshot(
+    const CampaignSnapshotData& acSnapshot) noexcept
+{
+    if (m_latestSnapshot &&
+        m_latestSnapshot->CampaignId == acSnapshot.CampaignId &&
+        m_latestSnapshot->StateVersion > acSnapshot.StateVersion)
+    {
+        return false;
+    }
+    m_latestSnapshot = acSnapshot;
     const std::size_t presentCount = static_cast<std::size_t>(std::count_if(
-        acNotification.Snapshot.Roster.begin(),
-        acNotification.Snapshot.Roster.end(),
+        acSnapshot.Roster.begin(),
+        acSnapshot.Roster.end(),
         [](const CampaignPublicSlotData& acSlot) { return acSlot.Present; }));
     m_admissionState.ObserveSnapshot(
-        acNotification.Snapshot.CampaignId.c_str(),
-        acNotification.Snapshot.RosterSealed,
-        acNotification.Snapshot.RuntimeState == kCampaignWireRuntimeActive,
-        acNotification.Snapshot.Roster.size(), presentCount);
+        acSnapshot.CampaignId.c_str(),
+        acSnapshot.RosterSealed,
+        acSnapshot.RuntimeState == kCampaignWireRuntimeActive,
+        acSnapshot.Roster.size(), presentCount);
     spdlog::log(
-        acNotification.Snapshot.RosterSealed &&
-                acNotification.Snapshot.RuntimeState == kCampaignWireRuntimeActive
+        acSnapshot.RosterSealed &&
+                acSnapshot.RuntimeState == kCampaignWireRuntimeActive
             ? spdlog::level::info
             : spdlog::level::debug,
         "[STRE][CampaignAdmission] canonical snapshot observed campaign={} revision={} sealed={} runtime={} present={}/{}",
-        acNotification.Snapshot.CampaignId.c_str(),
-        acNotification.Snapshot.StateVersion,
-        acNotification.Snapshot.RosterSealed,
-        static_cast<unsigned>(acNotification.Snapshot.RuntimeState),
-        presentCount, acNotification.Snapshot.Roster.size());
-    if (acNotification.Snapshot.RosterSealed)
+        acSnapshot.CampaignId.c_str(),
+        acSnapshot.StateVersion,
+        acSnapshot.RosterSealed,
+        static_cast<unsigned>(acSnapshot.RuntimeState),
+        presentCount, acSnapshot.Roster.size());
+    if (acSnapshot.RosterSealed)
         m_lobbyState.reset();
+    return true;
 }
 
 void CampaignService::OnLobbyState(
@@ -445,6 +557,7 @@ void CampaignService::OnHelgenState(const NotifyCampaignHelgenState& acNotificat
 
 void CampaignService::OnConnected(const ConnectedEvent&) noexcept
 {
+    m_mainMenuRuntimeDepartureDisconnectPending.store(false);
     const auto campaign = m_admissionState.BeginResume();
     if (!campaign)
     {
@@ -453,7 +566,8 @@ void CampaignService::OnConnected(const ConnectedEvent&) noexcept
         return;
     }
 
-    if (!ResumeCampaign(*campaign))
+    if (!ResumeCampaign(
+            *campaign, m_resumeRequiresCheckpointRestore))
     {
         m_admissionState.ResumeRejected();
         spdlog::warn(
@@ -466,14 +580,61 @@ void CampaignService::OnConnected(const ConnectedEvent&) noexcept
         *campaign);
 }
 
+void CampaignService::OnMainMenuEntered(
+    const CampaignMainMenuEnteredEvent&) noexcept
+{
+    const auto admission = m_admissionState.GetAdmission();
+    spdlog::info(
+        "[STRE][CampaignLifecycle] MAIN_MENU_ENTERED wasAdmitted={} campaign={}",
+        admission.has_value(),
+        admission ? admission->CampaignId : "none");
+    if (!admission)
+        return;
+
+    const bool transportOnline = m_transport.IsOnline();
+    spdlog::info(
+        "[STRE][CampaignAdmission] RUNTIME_DEPARTURE_REQUESTED campaign={} transportOnline={}",
+        admission->CampaignId,
+        transportOnline);
+
+    const auto departedCampaign = m_admissionState.EndRuntimeSession();
+    m_resumeRequiresCheckpointRestore = false;
+    ClearVolatileProjection();
+    spdlog::info(
+        "[STRE][CampaignAdmission] VOLATILE_ADMISSION_CLEARED reason=main-menu campaign={} bindingRetained=true",
+        departedCampaign ? *departedCampaign : "none");
+
+    // A real transport departure is the existing authoritative server seam:
+    // it removes transient presence and opens recovery when the canonical
+    // runtime requires it. No LeaveCampaign mutation is emitted.
+    if (transportOnline)
+    {
+        m_mainMenuRuntimeDepartureDisconnectPending.store(true);
+        spdlog::info(
+            "[STRE][CampaignAdmission] TRANSPORT_CLOSE_REQUESTED reason=main-menu campaign={}",
+            departedCampaign ? *departedCampaign : "none");
+        m_transport.Close();
+    }
+}
+
 void CampaignService::OnDisconnected(const DisconnectedEvent&) noexcept
 {
+    if (IsMainMenuRuntimeDepartureDisconnect())
+    {
+        spdlog::info(
+            "[STRE][CampaignAdmission] TRANSPORT_CLOSE_COMPLETED reason=main-menu");
+    }
     const auto resumeCandidate = m_admissionState.Disconnect();
-    m_helgenReadinessRejectionLogged.store(
-        false, std::memory_order_relaxed);
     spdlog::info(
         "[STRE][CampaignAdmission] transport disconnected; volatile admission cleared resumeCandidate={}",
         resumeCandidate ? *resumeCandidate : "none");
+    ClearVolatileProjection();
+}
+
+void CampaignService::ClearVolatileProjection() noexcept
+{
+    m_helgenReadinessRejectionLogged.store(
+        false, std::memory_order_relaxed);
     m_latestSnapshot.reset();
     m_lastCommandOutcome.reset();
     m_lobbyState.reset();

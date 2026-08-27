@@ -11,6 +11,32 @@
       </div>
     </section>
 
+    <section
+      *ngIf="(campaignSavePolicy$ | async)?.inCampaign"
+      class="campaign-save-policy"
+      data-testid="campaign-save-policy"
+    >
+      <h2>{{ 'COMPONENT.SETTINGS.CAMPAIGN_SAVE.HEADER' | transloco }}</h2>
+      <p>{{ 'COMPONENT.SETTINGS.CAMPAIGN_SAVE.EXPLANATION' | transloco }}</p>
+      <div
+        class="setting"
+        *ngFor="let option of ['REST', 'WAIT', 'TRAVEL', 'CHARACTER_MENU']"
+      >
+        <label [attr.for]="'campaign-autosave-' + option">{{
+          'COMPONENT.SETTINGS.CAMPAIGN_SAVE.' + option | transloco
+        }}</label>
+        <span class="campaign-save-disabled">
+          {{ 'COMPONENT.SETTINGS.CAMPAIGN_SAVE.DISABLED' | transloco }}
+          <input
+            type="checkbox"
+            [id]="'campaign-autosave-' + option"
+            [checked]="false"
+            disabled
+          />
+        </span>
+      </div>
+    </section>
+
     <section>
       <h2>{{ 'COMPONENT.SETTINGS.AUDIO' | transloco }}</h2>
       <div class="setting">

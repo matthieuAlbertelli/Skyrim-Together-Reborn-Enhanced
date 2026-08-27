@@ -14,8 +14,8 @@ struct CampaignRuntimeGateService;
 struct TransportService;
 struct UpdateEvent;
 
-// Validation-only Slice 0 coordinator. It proves one exact local native load
-// without owning campaign selection, server state, or recovery policy.
+// Proves one exact local native load. Collective recovery owns policy and
+// keeps the runtime gate locked until the server completes both barriers.
 class CampaignNativeLoadService final
 {
 public:
@@ -33,11 +33,26 @@ public:
     [[nodiscard]] bool RequestForValidation(
         std::string_view acNativeSaveIdentity) noexcept;
     [[nodiscard]] bool ReleaseForValidation() noexcept;
+    [[nodiscard]] bool RequestForRecovery(
+        std::string_view acNativeSaveIdentity,
+        const STRE::Campaign::NativeSaveBundleArtifact&
+            acExpectedArtifact) noexcept;
+    [[nodiscard]] bool ResetForRecoveryRetry() noexcept;
+    [[nodiscard]] bool ReleaseForRecovery() noexcept;
 
     [[nodiscard]] bool OnNativeLoadEnter(
         const char* apNativeSaveName) noexcept;
+    [[nodiscard]] bool HasAuthoritativeAdmission() const noexcept;
+    [[nodiscard]] bool IsCampaignRuntimeSensitive() const noexcept;
+    [[nodiscard]] bool IsManagedLoadActive() const noexcept
+    {
+        return m_request.IsActive();
+    }
     void OnNativeLoadReturn(bool aManaged, bool aSucceeded) noexcept;
     void OnPostLoad() noexcept;
+    void OnPostLoadSafetyObserved(
+        bool aGuardMenuOpen,
+        bool aGamePaused) noexcept;
     void OnGuardMenuPostDisplay(bool aGamePaused) noexcept;
     void OnTransportUpdate(bool aConnected) noexcept;
     void OnGateArmFailure() noexcept;

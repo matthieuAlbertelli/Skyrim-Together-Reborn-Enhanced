@@ -72,6 +72,21 @@
   }
 }
 
+.campaign-save-policy {
+  p {
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.35;
+  }
+
+  .campaign-save-disabled {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
+
 .actions {
   margin-top: 1rem;
   display: flex;

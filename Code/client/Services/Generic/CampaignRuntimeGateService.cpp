@@ -3,11 +3,13 @@
 #include <Services/CampaignRuntimeGateService.h>
 
 #include <DInputHook.hpp>
+#include <CampaignSaveTrace.h>
 #include <Games/Skyrim/Events/EventDispatcher.h>
 #include <Games/Skyrim/Interface/MenuControls.h>
 #include <Games/Skyrim/Interface/Menus/CampaignGateMenu.h>
 #include <Games/Skyrim/Interface/UI.h>
 #include <Services/CampaignNativeLoadService.h>
+#include <Services/CampaignResumeService.h>
 #include <Services/TransportService.h>
 #include <Services/UiSurfaceService.h>
 #include <World.h>
@@ -54,6 +56,40 @@ bool CampaignRuntimeGateService::ArmManagedLoad() noexcept
     return armed;
 }
 
+bool CampaignRuntimeGateService::ArmResumeRequiredLoad() noexcept
+{
+    const bool armed = m_gate.ArmResumeRequiredLoad();
+    Log(armed ? "LoadArmed" : "LoadArmRejected",
+        "owner=CampaignResumeService reason=resume-required");
+    return armed;
+}
+
+bool CampaignRuntimeGateService::CommitResumeRequiredTransition() noexcept
+{
+    const bool committed = m_gate.CommitResumeRequiredTransition();
+    Log(committed
+            ? "ResumeRequiredTransitionCommitted"
+            : "ResumeRequiredTransitionRejected",
+        "boundary=UI.MenuOpenCloseEvent.MainMenuClosed owner=CampaignResumeService");
+    if (!committed)
+        return false;
+
+    m_firstWorldUpdatePending = true;
+    ApplyInputLock();
+    RequestGuardMenu();
+    return true;
+}
+
+bool CampaignRuntimeGateService::LockForRecovery() noexcept
+{
+    if (!m_gate.LockForRecovery())
+        return false;
+    ApplyInputLock();
+    RequestGuardMenu();
+    Log("RecoveryLocked", "owner=CampaignRecoveryService");
+    return true;
+}
+
 bool CampaignRuntimeGateService::CancelManagedLoad() noexcept
 {
     const bool cancelled = m_gate.CancelArmedLoad();
@@ -70,6 +106,17 @@ bool CampaignRuntimeGateService::ReleaseManagedLoad() noexcept
     RestoreInputState();
     CampaignGateMenu::Hide();
     Log("Released", "owner=CampaignNativeLoadService");
+    return true;
+}
+
+bool CampaignRuntimeGateService::ReleaseForMainMenuRuntimeDeparture() noexcept
+{
+    if (!m_gate.Release())
+        return false;
+
+    RestoreInputState();
+    CampaignGateMenu::Hide();
+    Log("Released", "owner=CampaignRecoveryUi reason=main-menu-runtime-departure");
     return true;
 }
 
@@ -104,17 +151,39 @@ BSTEventResult CampaignRuntimeGateService::OnEvent(
     const TESLoadGameEvent*,
     const EventDispatcher<TESLoadGameEvent>*)
 {
+    CampaignNativeLoadService* const pLoad =
+        CampaignNativeLoadService::TryGet();
+    CampaignResumeService* const pResume =
+        CampaignResumeService::TryGet();
+    const bool internalRecovery = pLoad && pLoad->IsManagedLoadActive();
+    const bool resumeRequired =
+        !internalRecovery && pResume && pResume->IsManagedLoadActive();
     if (!m_gate.OnPostLoad())
         return BSTEventResult::kOk;
 
     m_firstWorldUpdatePending = true;
+    const CampaignSaveTrace::Context trace = CampaignSaveTrace::Capture();
+    spdlog::info(
+        "[STRE][CampaignLoadTrace] sequence={} "
+        "source=TESLoadGameEvent event=Dispatch frame={} thread={} "
+        "admission={} gateLocked=true internalRecovery={} owner={}",
+        trace.Sequence,
+        trace.Frame,
+        trace.Thread,
+        pLoad && pLoad->HasAuthoritativeAdmission(),
+        internalRecovery,
+        internalRecovery ? "InternalRecovery"
+                         : resumeRequired ? "ResumeRequired" : "Unknown");
     Log("PostLoad", "boundary=TESLoadGameEvent");
     ApplyInputLock();
     RequestGuardMenu();
-    if (CampaignNativeLoadService* const pLoad =
-            CampaignNativeLoadService::TryGet())
+    if (pLoad)
     {
         pLoad->OnPostLoad();
+    }
+    if (pResume)
+    {
+        pResume->OnPostLoad();
     }
     return BSTEventResult::kOk;
 }
@@ -139,8 +208,14 @@ void CampaignRuntimeGateService::BeforeWorldUpdate() noexcept
     {
         m_firstWorldUpdatePending = false;
         const bool paused = pUI && pUI->GameIsPaused();
+        m_gate.ObserveGuardMenu(menuOpen);
         Log("FirstWorldUpdateAfterLoad",
             paused ? "GameIsPaused=true" : "GameIsPaused=false");
+        if (CampaignNativeLoadService* const pLoad =
+                CampaignNativeLoadService::TryGet())
+        {
+            pLoad->OnPostLoadSafetyObserved(menuOpen, paused);
+        }
     }
 }
 

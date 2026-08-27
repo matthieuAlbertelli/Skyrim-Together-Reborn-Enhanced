@@ -1,0 +1,9 @@
+<div *ngIf="summary" class="roster-summary">{{ summary }}</div>
+<ul>
+  <li *ngFor="let member of members" [class.absent]="!member.present">
+    <i></i><span>{{ member.label }}</span>
+    <strong>{{
+      member.present ? presentLabel || '✓' : absentLabel || '…'
+    }}</strong>
+  </li>
+</ul>

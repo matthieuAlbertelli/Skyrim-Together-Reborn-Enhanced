@@ -10,13 +10,21 @@ import {
 } from '../../services/campaign-bootstrap-ui.service';
 import { StoreService } from '../../services/store.service';
 import { UiSurfaceService } from '../../services/ui-surface.service';
+import { CampaignRosterComponent } from '../campaign-roster/campaign-roster.component';
+import { CampaignShellComponent } from '../campaign-shell/campaign-shell.component';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 @Component({
   selector: 'app-campaign-bootstrap',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslocoModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslocoModule,
+    CampaignRosterComponent,
+    CampaignShellComponent,
+  ],
   templateUrl: './campaign-bootstrap.component.html',
   styleUrls: ['./campaign-bootstrap.component.scss'],
 })
@@ -73,6 +81,13 @@ export class CampaignBootstrapComponent implements OnInit, OnDestroy {
       [...pseudo].length <= 24 &&
       !/[\u0000-\u001f\u007f-\u009f]/u.test(pseudo)
     );
+  }
+
+  public get rosterMembers() {
+    return this.state.members.map(member => ({
+      label: member.name,
+      present: member.present,
+    }));
   }
 
   public normalizeCode(value: string): void {

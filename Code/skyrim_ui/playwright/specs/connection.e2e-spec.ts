@@ -1,5 +1,4 @@
 import { createTest, expect } from '@ngx-playwright/test';
-import { createClassXPathSelector } from '../helpers/selector.js';
 
 import { ApplicationScreen } from '../screens/main-screen.js';
 
@@ -13,7 +12,10 @@ test.describe('Connection', () => {
     await page.press('body', 'F2');
     await page.waitForSelector('.app-root-controls', { state: 'visible' });
 
-    await page.click(`//app-window${ createClassXPathSelector('app-root-menu') }/button[1]`);
+    await page
+      .locator('app-window.app-root-menu')
+      .getByRole('button', { name: /^(Connect|Connexion)$/ })
+      .click();
     await page.waitForSelector('//app-connect');
   });
 
@@ -72,7 +74,9 @@ test.describe('Connection', () => {
     const address = '192.168.178.' + Math.floor(Math.random() * 100);
     await page.locator('//app-connect/div[1]/input[1]').fill(address);
     await page.locator('//app-connect/div[1]/input[2]').fill(password);
-    await page.click('.save-password app-checkbox');
+    await page.getByRole('checkbox', {
+      name: /^(Save Password\?|Enregistrer le mot de passe \?)$/,
+    }).click();
     await page.click('//app-connect/div[1]/app-action-buttons[1]/button[1]');
 
     const storageState = await page.context().storageState();
@@ -85,7 +89,10 @@ test.describe('Connection', () => {
     await page.press('body', 'F2');
     await page.waitForSelector('.app-root-controls', { state: 'visible' });
 
-    await page.click(`//app-window${ createClassXPathSelector('app-root-menu') }/button[1]`);
+    await page
+      .locator('app-window.app-root-menu')
+      .getByRole('button', { name: /^(Connect|Connexion)$/ })
+      .click();
     await page.waitForSelector('//app-connect');
     await expect(page.locator('//app-connect/div[1]/input[1]')).toHaveValue(address);
     await expect(page.locator('//app-connect/div[1]/input[2]')).toHaveValue(password);
@@ -96,15 +103,29 @@ test.describe('Connection', () => {
       await page.locator('//app-connect/div[1]/input[1]').fill('t-password');
       await page.locator('//app-connect/div[1]/input[2]').fill('test');
       await page.click('//app-connect/div[1]/app-action-buttons[1]/button[1]');
-      await expect(page.locator(`//app-window${ createClassXPathSelector('app-root-menu') }/button[1]`)).toHaveText(/Disconnect/);
+      await expect(
+        page
+          .locator('app-window.app-root-menu')
+          .getByRole('button', { name: /^(Disconnect|Déconnexion)$/ }),
+      ).toBeVisible();
     });
 
     await expect(page.evaluate('skyrimtogether.connected')).resolves.toBeTruthy();
 
     await test.step('disconnect', async () => {
-      await page.click(`//app-window${ createClassXPathSelector('app-root-menu') }/button[1]`);
-      await page.click(`//app-disconnect[1]/app-action-buttons[1]/button[1]`);
-      await expect(page.locator(`//app-window${ createClassXPathSelector('app-root-menu') }/button[1]`)).toHaveText(/Connect/);
+      await page
+        .locator('app-window.app-root-menu')
+        .getByRole('button', { name: /^(Disconnect|Déconnexion)$/ })
+        .click();
+      await page
+        .locator('app-disconnect')
+        .getByRole('button', { name: /^(Proceed|Déconnexion)$/ })
+        .click();
+      await expect(
+        page
+          .locator('app-window.app-root-menu')
+          .getByRole('button', { name: /^(Connect|Connexion)$/ }),
+      ).toBeVisible();
     });
 
     await expect(page.evaluate('skyrimtogether.connected')).resolves.toBeFalsy();

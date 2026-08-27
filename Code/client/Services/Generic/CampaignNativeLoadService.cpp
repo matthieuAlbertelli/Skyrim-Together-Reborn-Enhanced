@@ -54,7 +54,7 @@ CampaignNativeLoadService::CampaignNativeLoadService(
     }
     m_store = std::make_unique<CampaignIdentityStore>(
         std::move(directory.Value));
-    Log("INITIALIZED", "trigger=cef-development-command");
+    Log("INITIALIZED", "trigger=campaign-recovery-protocol");
 }
 
 CampaignNativeLoadService::~CampaignNativeLoadService() noexcept
@@ -193,6 +193,73 @@ bool CampaignNativeLoadService::ReleaseForValidation() noexcept
     return true;
 }
 
+bool CampaignNativeLoadService::RequestForRecovery(
+    std::string_view acNativeSaveIdentity,
+    const NativeSaveBundleArtifact& acExpectedArtifact) noexcept
+{
+    try
+    {
+        const std::string identity(
+            acNativeSaveIdentity.data(), acNativeSaveIdentity.size());
+        const auto parsed = ParseNativeSaveBundleArtifact(
+            identity,
+            acExpectedArtifact.Fingerprint,
+            acExpectedArtifact.Metadata);
+        if (!parsed || parsed.Value != acExpectedArtifact ||
+            acExpectedArtifact.Bundle.LogicalIdentity != identity)
+        {
+            Log("RECOVERY_REQUEST_REJECTED",
+                "reason=invalid-server-artifact-proof");
+            return false;
+        }
+
+        const auto admission = m_campaignService.GetAdmission();
+        if (!admission || !m_store)
+            return false;
+        const std::string checkpointId = identity.substr(
+            kCampaignNativeSaveIdentityPrefix.size());
+        auto cached = m_store->LoadCheckpointArtifact(
+            admission->CampaignId, checkpointId);
+        if (!cached || !cached.Value ||
+            *cached.Value != acExpectedArtifact)
+        {
+            Log("RECOVERY_REQUEST_REJECTED",
+                "reason=local-artifact-differs-from-committed-proof");
+            return false;
+        }
+        return RequestForValidation(identity);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool CampaignNativeLoadService::ResetForRecoveryRetry() noexcept
+{
+    if (m_request.Snapshot().State != CampaignNativeLoadState::Failed)
+        return false;
+    (void)m_gate.CancelManagedLoad();
+    if (!m_request.Reset())
+        return false;
+    m_expectedArtifact.reset();
+    m_deadlineActive = false;
+    m_completedLogged = false;
+    Log("RECOVERY_RETRY_RESET");
+    return true;
+}
+
+bool CampaignNativeLoadService::ReleaseForRecovery() noexcept
+{
+    if (m_request.Snapshot().State != CampaignNativeLoadState::Completed)
+    {
+        Log("RECOVERY_RELEASE_REJECTED",
+            "reason=load-proof-not-complete");
+        return false;
+    }
+    return ReleaseForValidation();
+}
+
 bool CampaignNativeLoadService::OnNativeLoadEnter(
     const char* apNativeSaveName) noexcept
 {
@@ -216,6 +283,16 @@ bool CampaignNativeLoadService::OnNativeLoadEnter(
         (void)m_gate.CancelManagedLoad();
     }
     return managed;
+}
+
+bool CampaignNativeLoadService::HasAuthoritativeAdmission() const noexcept
+{
+    return m_campaignService.GetAdmission().has_value();
+}
+
+bool CampaignNativeLoadService::IsCampaignRuntimeSensitive() const noexcept
+{
+    return HasAuthoritativeAdmission() || m_gate.IsLocked();
 }
 
 void CampaignNativeLoadService::OnNativeLoadReturn(
@@ -244,13 +321,25 @@ void CampaignNativeLoadService::OnPostLoad() noexcept
 void CampaignNativeLoadService::OnGuardMenuPostDisplay(
     bool aGamePaused) noexcept
 {
-    if (!m_request.IsActive())
+    OnPostLoadSafetyObserved(true, aGamePaused);
+}
+
+void CampaignNativeLoadService::OnPostLoadSafetyObserved(
+    bool aGuardMenuOpen,
+    bool aGamePaused) noexcept
+{
+    if (!m_request.IsActive() ||
+        !m_request.Snapshot().GateLocked)
         return;
-    m_request.ObserveGuardMenu(aGamePaused);
-    Log("GUARD_MENU_ACTIVE", "menu=STRECampaignGateMenu");
+    const CampaignNativeLoadFailure failure =
+        m_request.ObservePostLoadGuardState(
+            aGuardMenuOpen, aGamePaused);
+    Log(
+        aGuardMenuOpen ? "GUARD_MENU_ACTIVE" : "GUARD_MENU_UNAVAILABLE",
+        "menu=STRECampaignGateMenu");
     Log("GAME_PAUSED", aGamePaused ? "value=true" : "value=false");
-    if (!aGamePaused)
-        Fail(CampaignNativeLoadFailure::GameNotPaused);
+    if (failure != CampaignNativeLoadFailure::None)
+        Fail(failure);
 }
 
 void CampaignNativeLoadService::OnTransportUpdate(bool aConnected) noexcept

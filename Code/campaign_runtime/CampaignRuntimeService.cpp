@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -98,6 +99,12 @@ void AppendField(Bytes& aPayload, std::string_view acValue)
     aPayload.insert(aPayload.end(), acValue.begin(), acValue.end());
 }
 
+void AppendBlob(Bytes& aPayload, const Bytes& acValue)
+{
+    AppendScalar(aPayload, static_cast<std::uint32_t>(acValue.size()));
+    aPayload.insert(aPayload.end(), acValue.begin(), acValue.end());
+}
+
 Bytes BeginCommandPayload(std::string_view acKind)
 {
     Bytes payload{'S', 'T', 'R', 'E', 'C', 'M', '0', '1'};
@@ -185,6 +192,75 @@ bool DecodeCreateCampaignPayload(
     return CampaignStateMachine::ValidateRoster(roster, true).Succeeded();
 }
 
+bool ProducesCoreState(const JournalRecord& acRecord) noexcept
+{
+    return acRecord.ResultingRevision > acRecord.ExpectedRevision &&
+        acRecord.Kind != "CreateCheckpointCandidate" &&
+        acRecord.Kind != "RecordCheckpointSlotSave" &&
+        acRecord.Kind != "CommitCheckpoint" &&
+        acRecord.Kind != "BeginRecovery" &&
+        acRecord.Kind != "CompleteRecovery";
+}
+
+StoreValueResult<CampaignAggregate> DecodeCanonicalCoreState(
+    const CampaignId& acCampaign,
+    bool aRosterSealed,
+    const std::vector<CampaignSlotRecord>& acRoster,
+    StateVersion aPreferredRevision,
+    const Bytes& acPayload,
+    const std::vector<JournalRecord>& acJournal,
+    std::optional<StateVersion> aAlternateRevision = std::nullopt) noexcept
+{
+    auto decode = [&](StateVersion aRevision)
+    {
+        return RuntimeCodec::DecodeCoreState(
+            acCampaign,
+            aRosterSealed,
+            acRoster,
+            aRevision,
+            acPayload);
+    };
+
+    auto decoded = decode(aPreferredRevision);
+    if (decoded)
+        return decoded;
+
+    StateVersion revision = aPreferredRevision;
+    if (aAlternateRevision && *aAlternateRevision != revision)
+    {
+        revision = *aAlternateRevision;
+        auto alternate = decode(revision);
+        if (alternate)
+            return alternate;
+    }
+
+    // Compatibility for snapshots written before restore revisions rebased the
+    // opaque runtime core payload. The journal provides an exact, bounded
+    // restore lineage; no unrelated revision or current-state fallback is used.
+    for (std::size_t depth = 0; depth < acJournal.size(); ++depth)
+    {
+        const auto restored = std::find_if(
+            acJournal.rbegin(),
+            acJournal.rend(),
+            [&](const JournalRecord& acRecord)
+            {
+                return acRecord.ResultingRevision == revision &&
+                    acRecord.Kind == "RestoreCheckpoint" &&
+                    acRecord.RestoredFromRevision.has_value();
+            });
+        if (restored == acJournal.rend() ||
+            *restored->RestoredFromRevision == revision)
+        {
+            break;
+        }
+        revision = *restored->RestoredFromRevision;
+        auto ancestor = decode(revision);
+        if (ancestor)
+            return ancestor;
+    }
+    return decoded;
+}
+
 LoadedCampaign LoadAggregate(
     ICampaignStore& aStore,
     const CampaignId& acCampaign) noexcept
@@ -219,17 +295,11 @@ LoadedCampaign LoadAggregate(
             loaded.Message = journal.Message;
             return loaded;
         }
-        const auto changesCoreState = [](std::string_view acKind) noexcept
-        {
-            return acKind != "CreateCheckpointCandidate" &&
-                acKind != "RecordCheckpointSlotSave" &&
-                acKind != "CommitCheckpoint";
-        };
         const auto coreMutation = std::find_if(
             journal.Value.rbegin(), journal.Value.rend(),
             [&](const JournalRecord& acRecord)
             {
-                return changesCoreState(acRecord.Kind);
+                return ProducesCoreState(acRecord);
             });
         if (coreMutation == journal.Value.rend())
         {
@@ -240,12 +310,13 @@ LoadedCampaign LoadAggregate(
             return loaded;
         }
         coreStateRevision = coreMutation->ResultingRevision;
-        auto decoded = RuntimeCodec::DecodeCoreState(
+        auto decoded = DecodeCanonicalCoreState(
             projection.Value.Campaign.Id,
             projection.Value.Campaign.RosterSealed,
             projection.Value.Slots,
             coreStateRevision,
-            projection.Value.Campaign.CoreStatePayload);
+            projection.Value.Campaign.CoreStatePayload,
+            journal.Value);
         if (!decoded)
         {
             loaded.Error = CampaignError::IntegrityFailure;
@@ -454,6 +525,148 @@ bool IsExactCheckpointMember(
     return acSlot.Slot == acActor.Slot && acSlot.Player == acActor.Player &&
         acSlot.CharacterBinding == acActor.CharacterBinding;
 }
+
+CampaignCommandResult RecoveryFailure(
+    CampaignError aError,
+    std::string aMessage,
+    StoreError aPersistenceError = StoreError::None)
+{
+    CampaignCommandResult result;
+    result.Error = aError;
+    result.PersistenceError = aPersistenceError;
+    result.Message = std::move(aMessage);
+    return result;
+}
+
+std::string StableIdHash(std::string_view acValue)
+{
+    std::uint64_t hash = 14695981039346656037ull;
+    for (const unsigned char value : acValue)
+    {
+        hash ^= value;
+        hash *= 1099511628211ull;
+    }
+    char encoded[17]{};
+    std::snprintf(
+        encoded,
+        sizeof(encoded),
+        "%016llx",
+        static_cast<unsigned long long>(hash));
+    return encoded;
+}
+
+std::string StableCampaignHash(const CampaignId& acCampaign)
+{
+    return StableIdHash(acCampaign.Value);
+}
+
+RestoreAttemptId MakeRestoreAttempt(
+    const CampaignId& acCampaign,
+    StateVersion aEntryRevision)
+{
+    return RestoreAttemptId{
+        "restore-" + StableCampaignHash(acCampaign) + "-r" +
+        std::to_string(aEntryRevision)};
+}
+
+MutationId RecoveryBeginMutationId(
+    const CampaignId& acCampaign,
+    StateVersion aExpectedRevision)
+{
+    return MutationId{
+        "recovery-begin-" + StableCampaignHash(acCampaign) + "-r" +
+        std::to_string(aExpectedRevision)};
+}
+
+MutationId RecoveryMutationId(
+    std::string_view acOperation,
+    const RestoreAttemptId& acAttempt)
+{
+    return MutationId{
+        "recovery-" + std::string(acOperation) + "-" + acAttempt.Value};
+}
+
+Bytes CompleteRecoveryPayload(
+    const RestoreAttemptId& acAttempt,
+    const CheckpointId& acCheckpoint,
+    StateVersion aRestoreRevision)
+{
+    Bytes payload = BeginCommandPayload("CompleteRecovery");
+    AppendField(payload, acAttempt.Value);
+    AppendField(payload, acCheckpoint.Value);
+    AppendField(payload, std::to_string(aRestoreRevision));
+    return payload;
+}
+
+Bytes RestoreRecoveryPayload(
+    const RestoreAttemptId& acAttempt,
+    const CheckpointId& acCheckpoint)
+{
+    Bytes payload = BeginCommandPayload("RestoreCheckpoint");
+    AppendField(payload, acAttempt.Value);
+    AppendField(payload, acCheckpoint.Value);
+    return payload;
+}
+
+MutationId RecoverySlotMutationId(
+    std::string_view acOperation,
+    const RestoreAttemptId& acAttempt,
+    const CampaignSlotId& acSlot)
+{
+    return RecoveryMutationId(
+        std::string(acOperation) + "-" + StableIdHash(acSlot.Value),
+        acAttempt);
+}
+
+Bytes RecoveryLoadedPayload(
+    const RestoreAttemptId& acAttempt,
+    const CheckpointRecord& acCheckpoint,
+    const CheckpointSlotRecord& acSlot)
+{
+    Bytes payload = BeginCommandPayload("RecoveryLoaded");
+    AppendField(payload, acAttempt.Value);
+    AppendField(payload, acCheckpoint.Id.Value);
+    AppendField(payload, acSlot.Slot.Value);
+    AppendField(payload, acSlot.Player.Value);
+    AppendField(payload, acSlot.CharacterBinding.Value);
+    AppendField(payload, acSlot.NativeSaveIdentity.value_or(std::string{}));
+    AppendField(payload, acSlot.FingerprintAlgorithm.value_or(std::string{}));
+    AppendScalar(payload, acSlot.FingerprintVersion.value_or(0));
+    AppendBlob(payload, acSlot.Fingerprint);
+    AppendScalar(payload, acSlot.SaveMetadataCodecVersion.value_or(0));
+    AppendBlob(payload, acSlot.SaveMetadata);
+    return payload;
+}
+
+Bytes RecoverySnapshotAppliedPayload(
+    const RestoreAttemptId& acAttempt,
+    const CheckpointRecord& acCheckpoint,
+    StateVersion aRestoreRevision,
+    const CheckpointSlotRecord& acSlot)
+{
+    Bytes payload = BeginCommandPayload("RecoverySnapshotApplied");
+    AppendField(payload, acAttempt.Value);
+    AppendField(payload, acCheckpoint.Id.Value);
+    AppendField(payload, std::to_string(aRestoreRevision));
+    AppendField(payload, acSlot.Slot.Value);
+    AppendField(payload, acSlot.Player.Value);
+    AppendField(payload, acSlot.CharacterBinding.Value);
+    return payload;
+}
+
+bool MatchesRecoveryProof(
+    const CheckpointSlotRecord& acSlot,
+    const RecordCampaignRecoveryLoadedCommand& acCommand) noexcept
+{
+    return acSlot.NativeSaveIdentity == acCommand.NativeSaveIdentity &&
+        acSlot.FingerprintAlgorithm == acCommand.FingerprintAlgorithm &&
+        acSlot.FingerprintVersion == acCommand.FingerprintVersion &&
+        acSlot.Fingerprint == acCommand.Fingerprint &&
+        acSlot.SaveMetadataCodecVersion ==
+            acCommand.SaveMetadataCodecVersion &&
+        acSlot.SaveMetadata == acCommand.SaveMetadata &&
+        IsExactCheckpointArtifact(acSlot, acCommand.NativeSaveIdentity);
+}
 }
 
 CampaignRuntimeService::CampaignRuntimeService(ICampaignStore& aStore) noexcept
@@ -462,14 +675,232 @@ CampaignRuntimeService::CampaignRuntimeService(ICampaignStore& aStore) noexcept
 }
 
 std::optional<CampaignCommandResult>
-CampaignRuntimeService::CheckMutationFence(
-    const CampaignId& acCampaign) const noexcept
+CampaignRuntimeService::ReconstructRecovery(
+    const CampaignId& acCampaign) noexcept
 {
-    if (!m_activeCheckpoints.contains(acCampaign.Value))
+    try
+    {
+        if (m_recoveries.contains(acCampaign.Value))
+            return std::nullopt;
+
+        auto journal = m_store.LoadJournal(acCampaign);
+        if (!journal)
+        {
+            if (journal.Error == StoreError::NotFound)
+                return std::nullopt;
+            return StoreFailure(journal);
+        }
+
+        std::optional<CampaignRecoveryActivity> open;
+        std::vector<JournalRecord> durableLoadedAcks;
+        std::vector<JournalRecord> durableAppliedAcks;
+        for (const JournalRecord& record : journal.Value)
+        {
+            if (record.Kind == "BeginRecovery")
+            {
+                if (open)
+                {
+                    return RecoveryFailure(
+                        CampaignError::IntegrityFailure,
+                        "campaign journal contains overlapping recovery attempts",
+                        StoreError::IntegrityFailure);
+                }
+                if (record.Mutation != RecoveryBeginMutationId(
+                        acCampaign, record.ExpectedRevision) ||
+                    record.ResultingRevision != record.ExpectedRevision + 1)
+                {
+                    return RecoveryFailure(
+                        CampaignError::IntegrityFailure,
+                        "recovery begin journal correlation is invalid",
+                        StoreError::IntegrityFailure);
+                }
+                CampaignRecoveryActivity activity;
+                activity.Campaign = acCampaign;
+                activity.EntryRevision = record.ResultingRevision;
+                activity.Attempt = MakeRestoreAttempt(
+                    acCampaign, record.ResultingRevision);
+                open = std::move(activity);
+                durableLoadedAcks.clear();
+                durableAppliedAcks.clear();
+                continue;
+            }
+            if (!open)
+                continue;
+
+            if (record.Kind == "RecoveryLoaded")
+            {
+                durableLoadedAcks.push_back(record);
+                continue;
+            }
+            if (record.Kind == "RecoverySnapshotApplied")
+            {
+                durableAppliedAcks.push_back(record);
+                continue;
+            }
+
+            if (record.Kind == "RestoreCheckpoint" &&
+                record.Mutation ==
+                    RecoveryMutationId("restore", open->Attempt))
+            {
+                if (!record.RestoredFromCheckpoint ||
+                    !record.RestoredFromRevision ||
+                    record.Payload != RestoreRecoveryPayload(
+                        open->Attempt, *record.RestoredFromCheckpoint) ||
+                    record.ResultingRevision != record.ExpectedRevision + 1)
+                {
+                    return RecoveryFailure(
+                        CampaignError::IntegrityFailure,
+                        "recovery restore journal provenance is incomplete",
+                        StoreError::IntegrityFailure);
+                }
+                open->Checkpoint = *record.RestoredFromCheckpoint;
+                open->SourceRevision = *record.RestoredFromRevision;
+                open->RestoreRevision = record.ResultingRevision;
+                // The current-session barrier counts are deliberately
+                // volatile. After a server restart every member must re-prove
+                // its native checkpoint load before the already-durable
+                // restored snapshot can be replayed. Durable slot receipts
+                // retain idempotency, and RecordRecoveryLoaded() reuses this
+                // RestoreCheckpoint mutation.
+                open->Stage = CampaignRecoveryStage::RecoveryLock;
+                open->Reason = CampaignRecoveryReason::None;
+                continue;
+            }
+            if (record.Kind == "CompleteRecovery" &&
+                record.Mutation ==
+                    RecoveryMutationId("complete", open->Attempt))
+            {
+                if (!open->Checkpoint || !open->RestoreRevision ||
+                    record.ResultingRevision != *open->RestoreRevision ||
+                    record.Payload != CompleteRecoveryPayload(
+                        open->Attempt,
+                        *open->Checkpoint,
+                        *open->RestoreRevision))
+                {
+                    return RecoveryFailure(
+                        CampaignError::IntegrityFailure,
+                        "recovery completion journal correlation is invalid",
+                        StoreError::IntegrityFailure);
+                }
+                open.reset();
+                durableLoadedAcks.clear();
+                durableAppliedAcks.clear();
+            }
+        }
+
+        if (open)
+        {
+            std::optional<CheckpointRecord> checkpoint;
+            if (!durableLoadedAcks.empty() || !durableAppliedAcks.empty())
+            {
+                auto loadedCheckpoint = open->Checkpoint
+                    ? m_store.LoadCheckpoint(acCampaign, *open->Checkpoint)
+                    : m_store.LoadLastCommittedCheckpoint(acCampaign);
+                if (!loadedCheckpoint)
+                    return StoreFailure(loadedCheckpoint);
+                checkpoint = std::move(loadedCheckpoint.Value);
+                if (!open->Checkpoint)
+                {
+                    open->Checkpoint = checkpoint->Id;
+                    open->SourceRevision = checkpoint->SourceRevision;
+                }
+            }
+
+            const auto recoverDurableSlots = [&]<typename TPayload>(
+                const std::vector<JournalRecord>& acRecords,
+                std::string_view acKind,
+                std::string_view acMutationOperation,
+                std::unordered_set<std::string>& aSlots,
+                TPayload&& aPayload) -> bool
+            {
+                if (acRecords.empty())
+                    return true;
+                if (!checkpoint)
+                    return false;
+                for (const JournalRecord& record : acRecords)
+                {
+                    const auto slot = std::find_if(
+                        checkpoint->Slots.begin(), checkpoint->Slots.end(),
+                        [&](const CheckpointSlotRecord& acSlot)
+                        {
+                            return record.Mutation == RecoverySlotMutationId(
+                                acMutationOperation,
+                                open->Attempt,
+                                acSlot.Slot);
+                        });
+                    if (slot == checkpoint->Slots.end() ||
+                        record.Kind != acKind ||
+                        record.ExpectedRevision != record.ResultingRevision ||
+                        record.Payload != aPayload(*slot) ||
+                        !aSlots.insert(slot->Slot.Value).second)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            if (!recoverDurableSlots(
+                    durableLoadedAcks,
+                    "RecoveryLoaded",
+                    "loaded",
+                    open->DurableLoadedSlots,
+                    [&](const CheckpointSlotRecord& acSlot)
+                    {
+                        return RecoveryLoadedPayload(
+                            open->Attempt, *checkpoint, acSlot);
+                    }) ||
+                (!durableAppliedAcks.empty() && !open->RestoreRevision) ||
+                !recoverDurableSlots(
+                    durableAppliedAcks,
+                    "RecoverySnapshotApplied",
+                    "applied",
+                    open->DurableSnapshotAppliedSlots,
+                    [&](const CheckpointSlotRecord& acSlot)
+                    {
+                        return RecoverySnapshotAppliedPayload(
+                            open->Attempt,
+                            *checkpoint,
+                            open->RestoreRevision.value_or(0),
+                            acSlot);
+                    }))
+            {
+                return RecoveryFailure(
+                    CampaignError::IntegrityFailure,
+                    "recovery acknowledgement journal correlation is invalid",
+                    StoreError::IntegrityFailure);
+            }
+            m_recoveries.emplace(acCampaign.Value, std::move(*open));
+        }
         return std::nullopt;
-    return CheckpointFailure(
-        CampaignError::CheckpointInProgress,
-        "persistent campaign mutation rejected while checkpoint is active");
+    }
+    catch (...)
+    {
+        return RecoveryFailure(
+            CampaignError::PersistenceFailure,
+            "recovery journal reconstruction failed safely",
+            StoreError::DatabaseFailure);
+    }
+}
+
+std::optional<CampaignCommandResult>
+CampaignRuntimeService::CheckMutationFence(
+    const CampaignId& acCampaign) noexcept
+{
+    if (m_activeCheckpoints.contains(acCampaign.Value))
+    {
+        return CheckpointFailure(
+            CampaignError::CheckpointInProgress,
+            "persistent campaign mutation rejected while checkpoint is active");
+    }
+    if (auto failure = ReconstructRecovery(acCampaign))
+        return failure;
+    if (m_recoveries.contains(acCampaign.Value))
+    {
+        return RecoveryFailure(
+            CampaignError::RecoveryInProgress,
+            "persistent campaign mutation rejected while recovery is active");
+    }
+    return std::nullopt;
 }
 
 CampaignCommandResult CampaignRuntimeService::CreateLobbyCampaign(
@@ -888,6 +1319,11 @@ CampaignCheckpointCommandResult CampaignRuntimeService::BeginCheckpoint(
             result.Activity = m_activeCheckpoints.at(acCommand.Campaign.Value);
             return result;
         }
+        if (auto fenced = CheckMutationFence(acCommand.Campaign))
+        {
+            result.Command = *fenced;
+            return result;
+        }
         if (acCommand.Checkpoint.Value.empty() ||
             acCommand.NativeSaveIdentity !=
                 "stre-" + acCommand.Checkpoint.Value)
@@ -925,6 +1361,15 @@ CampaignCheckpointCommandResult CampaignRuntimeService::BeginCheckpoint(
             "create", acCommand.Checkpoint)};
         request.Checkpoint = acCommand.Checkpoint;
         request.Snapshot = SnapshotId{"snapshot-" + acCommand.Checkpoint.Value};
+        request.SnapshotCoreStateCodecVersion =
+            RuntimeCodec::kCampaignCoreCodecVersion;
+        StoreResult encodedCheckpointCore = RuntimeCodec::EncodeCoreState(
+            loaded.Campaign, request.SnapshotCoreStatePayload);
+        if (!encodedCheckpointCore)
+        {
+            result.Command = StoreFailure(encodedCheckpointCore);
+            return result;
+        }
         request.MutationPayload = BeginCommandPayload(
             "CreateCheckpointCandidate");
         AppendField(request.MutationPayload, acCommand.Checkpoint.Value);
@@ -963,6 +1408,18 @@ CampaignRuntimeService::RecordCheckpointSave(
     CampaignCheckpointCommandResult result;
     try
     {
+        if (auto recovery = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *recovery;
+            return result;
+        }
+        if (m_recoveries.contains(acCommand.Campaign.Value))
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryInProgress,
+                "checkpoint acknowledgement rejected while recovery is active");
+            return result;
+        }
         const auto active = m_activeCheckpoints.find(acCommand.Campaign.Value);
         if (active == m_activeCheckpoints.end())
         {
@@ -1125,6 +1582,18 @@ CampaignCheckpointCommandResult CampaignRuntimeService::FailCheckpoint(
     CampaignCheckpointCommandResult result;
     try
     {
+        if (auto recovery = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *recovery;
+            return result;
+        }
+        if (m_recoveries.contains(acCommand.Campaign.Value))
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryInProgress,
+                "checkpoint failure rejected while recovery is active");
+            return result;
+        }
         const auto active = m_activeCheckpoints.find(acCommand.Campaign.Value);
         if (active == m_activeCheckpoints.end())
         {
@@ -1206,6 +1675,764 @@ CampaignRuntimeService::GetActiveCheckpoint(
     }
 }
 
+CampaignRecoveryCommandResult CampaignRuntimeService::BeginRecovery(
+    const BeginCampaignRecoveryCommand& acCommand) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        if (acCommand.DisconnectedMember.Campaign != acCommand.Campaign)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryMismatch,
+                "disconnected member does not belong to the recovery campaign");
+            return result;
+        }
+        if (auto failure = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *failure;
+            return result;
+        }
+
+        auto existing = m_recoveries.find(acCommand.Campaign.Value);
+        if (existing != m_recoveries.end())
+        {
+            if (existing->second.Stage !=
+                CampaignRecoveryStage::RecoveryLock)
+            {
+                existing->second.Stage = CampaignRecoveryStage::RecoveryLock;
+                existing->second.LoadedSlots.clear();
+                existing->second.SnapshotAppliedSlots.clear();
+            }
+            existing->second.Reason = acCommand.CampaignLoadRequested
+                ? CampaignRecoveryReason::CampaignLoadRequested
+                : CampaignRecoveryReason::RosterIncomplete;
+            auto campaign = m_store.LoadCampaign(acCommand.Campaign);
+            if (!campaign)
+            {
+                result.Command = StoreFailure(campaign);
+                return result;
+            }
+            result.Command.Version = campaign.Value.CurrentRevision;
+            result.Command.IdempotentReplay = true;
+            result.Activity = existing->second;
+            return result;
+        }
+
+        if (acCommand.RuntimeStateBeforeDisconnect !=
+                CampaignRuntimeState::ACTIVE &&
+            acCommand.RuntimeStateBeforeDisconnect !=
+                CampaignRuntimeState::CHECKPOINTING)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryNotActive,
+                "a new recovery can begin only from ACTIVE or CHECKPOINTING");
+            return result;
+        }
+
+        LoadedCampaign loaded = LoadAggregate(m_store, acCommand.Campaign);
+        if (loaded.Error != CampaignError::None)
+        {
+            result.Command = {
+                loaded.Error, loaded.PersistenceError, loaded.Message};
+            return result;
+        }
+        if (!loaded.Campaign.RosterSealed)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RosterNotSealed,
+                "unsealed campaign disconnect does not enter collective recovery");
+            return result;
+        }
+        const auto member = std::find_if(
+            loaded.Campaign.Roster.begin(),
+            loaded.Campaign.Roster.end(),
+            [&](const CampaignSlotState& acSlot)
+            {
+                return acSlot.Slot == acCommand.DisconnectedMember.Slot &&
+                    acSlot.Player == acCommand.DisconnectedMember.Player &&
+                    acSlot.CharacterBinding ==
+                        acCommand.DisconnectedMember.CharacterBinding;
+            });
+        if (member == loaded.Campaign.Roster.end())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::NotCampaignMember,
+                "disconnect is not an exact sealed-roster member");
+            return result;
+        }
+        const bool fullRoster = CampaignStateMachine::EvaluateFullRoster(
+            loaded.Campaign, acCommand.Presence).Eligible();
+        if (!acCommand.CampaignLoadRequested && fullRoster)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::InvalidRoster,
+                "collective recovery requires an observed roster loss");
+            return result;
+        }
+        if (acCommand.CampaignLoadRequested && !fullRoster)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RosterIncomplete,
+                "campaign load recovery waits for the exact full roster");
+            return result;
+        }
+
+        m_activeCheckpoints.erase(acCommand.Campaign.Value);
+        CampaignMutationRequest request;
+        request.Campaign = acCommand.Campaign;
+        request.ExpectedRevision = loaded.Campaign.Version;
+        request.Mutation = RecoveryBeginMutationId(
+            acCommand.Campaign, loaded.Campaign.Version);
+        request.Kind = "BeginRecovery";
+        request.MutationPayload = BeginCommandPayload("BeginRecovery");
+        AppendField(
+            request.MutationPayload,
+            acCommand.DisconnectedMember.Slot.Value);
+        AppendField(
+            request.MutationPayload,
+            acCommand.DisconnectedMember.Player.Value);
+        AppendField(
+            request.MutationPayload,
+            acCommand.DisconnectedMember.CharacterBinding.Value);
+        AppendField(
+            request.MutationPayload,
+            acCommand.CampaignLoadRequested
+                ? "campaign-load" : "roster-loss");
+
+        const MutationResult persisted = m_store.ApplyMutation(request);
+        result.Command = FromMutationResult(persisted);
+        if (!result.Command)
+            return result;
+
+        CampaignRecoveryActivity activity;
+        activity.Campaign = acCommand.Campaign;
+        activity.EntryRevision = persisted.Revision;
+        activity.Attempt = MakeRestoreAttempt(
+            acCommand.Campaign, persisted.Revision);
+        activity.Reason = acCommand.CampaignLoadRequested
+            ? CampaignRecoveryReason::CampaignLoadRequested
+            : CampaignRecoveryReason::RosterIncomplete;
+        const auto [inserted, wasInserted] = m_recoveries.emplace(
+            acCommand.Campaign.Value, std::move(activity));
+        (void)wasInserted;
+        result.Activity = inserted->second;
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = RecoveryFailure(
+            CampaignError::PersistenceFailure,
+            "BeginRecovery failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+CampaignRecoveryCommandResult CampaignRuntimeService::PrepareRecovery(
+    const PrepareCampaignRecoveryCommand& acCommand) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        if (auto failure = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *failure;
+            return result;
+        }
+        auto active = m_recoveries.find(acCommand.Campaign.Value);
+        if (active == m_recoveries.end())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryNotActive,
+                "campaign has no open recovery attempt");
+            return result;
+        }
+
+        LoadedCampaign loaded = LoadAggregate(m_store, acCommand.Campaign);
+        if (loaded.Error != CampaignError::None)
+        {
+            result.Command = {
+                loaded.Error, loaded.PersistenceError, loaded.Message};
+            return result;
+        }
+        result.Command.Version = loaded.Campaign.Version;
+        const FullRosterEvaluation fullRoster =
+            CampaignStateMachine::EvaluateFullRoster(
+                loaded.Campaign, acCommand.Presence);
+        if (!fullRoster.Eligible())
+        {
+            active->second.Reason = CampaignRecoveryReason::RosterIncomplete;
+            result.Command = RecoveryFailure(
+                CampaignError::RosterIncomplete, fullRoster.Message);
+            result.Command.Version = loaded.Campaign.Version;
+            result.Activity = active->second;
+            return result;
+        }
+
+        if (active->second.Stage ==
+            CampaignRecoveryStage::ApplyingSnapshot)
+        {
+            if (!active->second.Checkpoint ||
+                !active->second.RestoreRevision)
+            {
+                result.Command = RecoveryFailure(
+                    CampaignError::IntegrityFailure,
+                    "durable recovery restore provenance is incomplete",
+                    StoreError::IntegrityFailure);
+                return result;
+            }
+            auto checkpoint = m_store.LoadCheckpoint(
+                acCommand.Campaign, *active->second.Checkpoint);
+            if (!checkpoint)
+            {
+                result.Command = StoreFailure(checkpoint);
+                return result;
+            }
+            active->second.Reason = CampaignRecoveryReason::None;
+            result.Activity = active->second;
+            result.Checkpoint = std::move(checkpoint.Value);
+            result.Dispatch = CampaignRecoveryDispatch::RestoredSnapshot;
+            return result;
+        }
+
+        auto checkpoint = active->second.Checkpoint
+            ? m_store.LoadCheckpoint(
+                  acCommand.Campaign, *active->second.Checkpoint)
+            : m_store.LoadLastCommittedCheckpoint(acCommand.Campaign);
+        if (!checkpoint)
+        {
+            if (checkpoint.Error == StoreError::NotFound)
+            {
+                active->second.Reason =
+                    CampaignRecoveryReason::NoCommittedCheckpoint;
+                result.Command = RecoveryFailure(
+                    CampaignError::NoCommittedCheckpoint,
+                    "campaign recovery is locked because no committed checkpoint exists");
+                result.Command.Version = loaded.Campaign.Version;
+                result.Activity = active->second;
+                return result;
+            }
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        if (checkpoint.Value.State != CheckpointState::Committed ||
+            checkpoint.Value.Slots.size() != loaded.Campaign.Roster.size() ||
+            std::any_of(
+                checkpoint.Value.Slots.begin(),
+                checkpoint.Value.Slots.end(),
+                [](const CheckpointSlotRecord& acSlot)
+                {
+                    return !acSlot.NativeSaveIdentity ||
+                        !IsExactCheckpointArtifact(
+                            acSlot, *acSlot.NativeSaveIdentity);
+                }))
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::IntegrityFailure,
+                "last committed checkpoint is not a complete recoverable bundle",
+                StoreError::IntegrityFailure);
+            return result;
+        }
+
+        if (active->second.Stage == CampaignRecoveryStage::RecoveryLock)
+        {
+            active->second.LoadedSlots.clear();
+            active->second.SnapshotAppliedSlots.clear();
+        }
+        active->second.Stage = CampaignRecoveryStage::LoadingNativeSaves;
+        active->second.Reason = CampaignRecoveryReason::None;
+        active->second.Checkpoint = checkpoint.Value.Id;
+        active->second.SourceRevision = checkpoint.Value.SourceRevision;
+        result.Activity = active->second;
+        result.Checkpoint = std::move(checkpoint.Value);
+        result.Dispatch = CampaignRecoveryDispatch::NativeLoad;
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = RecoveryFailure(
+            CampaignError::PersistenceFailure,
+            "PrepareRecovery failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+CampaignRecoveryCommandResult CampaignRuntimeService::RecordRecoveryLoaded(
+    const RecordCampaignRecoveryLoadedCommand& acCommand) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        if (auto failure = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *failure;
+            return result;
+        }
+        auto active = m_recoveries.find(acCommand.Campaign.Value);
+        if (active == m_recoveries.end())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryNotActive,
+                "campaign has no open recovery attempt");
+            return result;
+        }
+        if (active->second.Attempt != acCommand.Attempt ||
+            active->second.Checkpoint != acCommand.Checkpoint ||
+            acCommand.Actor.Campaign != acCommand.Campaign)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryMismatch,
+                "native-load acknowledgement does not match the open recovery attempt");
+            return result;
+        }
+
+        LoadedCampaign loaded = LoadAggregate(m_store, acCommand.Campaign);
+        if (loaded.Error != CampaignError::None)
+        {
+            result.Command = {
+                loaded.Error, loaded.PersistenceError, loaded.Message};
+            return result;
+        }
+        result.Command.Version = loaded.Campaign.Version;
+        const FullRosterEvaluation fullRoster =
+            CampaignStateMachine::EvaluateFullRoster(
+                loaded.Campaign, acCommand.Presence);
+        if (!fullRoster.Eligible())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RosterIncomplete, fullRoster.Message);
+            result.Command.Version = loaded.Campaign.Version;
+            return result;
+        }
+
+        auto checkpoint = m_store.LoadCheckpoint(
+            acCommand.Campaign, acCommand.Checkpoint);
+        if (!checkpoint)
+        {
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        const auto slot = std::find_if(
+            checkpoint.Value.Slots.begin(),
+            checkpoint.Value.Slots.end(),
+            [&](const CheckpointSlotRecord& acSlot)
+            {
+                return IsExactCheckpointMember(acSlot, acCommand.Actor);
+            });
+        if (slot == checkpoint.Value.Slots.end())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::NotCampaignMember,
+                "native-load acknowledgement is not an exact checkpoint slot");
+            return result;
+        }
+        if (!acCommand.Succeeded)
+        {
+            active->second.Reason = CampaignRecoveryReason::ClientLoadFailed;
+            result.Command = RecoveryFailure(
+                CampaignError::InvalidCheckpointArtifact,
+                "client native checkpoint load failed; recovery remains locked");
+            result.Command.Version = loaded.Campaign.Version;
+            result.Activity = active->second;
+            return result;
+        }
+        if (!MatchesRecoveryProof(*slot, acCommand))
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::InvalidCheckpointArtifact,
+                "native-load acknowledgement proof differs from the committed checkpoint slot");
+            result.Command.Version = loaded.Campaign.Version;
+            return result;
+        }
+        if (active->second.Stage !=
+                CampaignRecoveryStage::LoadingNativeSaves &&
+            active->second.Stage !=
+                CampaignRecoveryStage::ApplyingSnapshot)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryMismatch,
+                "native-load acknowledgement arrived outside the load barrier");
+            result.Command.Version = loaded.Campaign.Version;
+            return result;
+        }
+
+        const bool durableReplay =
+            active->second.DurableLoadedSlots.contains(slot->Slot.Value);
+        if (!durableReplay)
+        {
+            CampaignMutationRequest acknowledgement;
+            acknowledgement.Campaign = acCommand.Campaign;
+            acknowledgement.ExpectedRevision = loaded.Campaign.Version;
+            acknowledgement.Mutation = RecoverySlotMutationId(
+                "loaded", active->second.Attempt, slot->Slot);
+            acknowledgement.Kind = "RecoveryLoaded";
+            acknowledgement.AdvancesStateVersion = false;
+            acknowledgement.MutationPayload = RecoveryLoadedPayload(
+                active->second.Attempt, checkpoint.Value, *slot);
+            const MutationResult persisted =
+                m_store.ApplyMutation(acknowledgement);
+            result.Command = FromMutationResult(persisted);
+            if (!result.Command)
+                return result;
+            active->second.DurableLoadedSlots.insert(slot->Slot.Value);
+        }
+
+        if (active->second.Stage ==
+            CampaignRecoveryStage::ApplyingSnapshot)
+        {
+            result.Command.IdempotentReplay = true;
+            result.Activity = active->second;
+            result.Checkpoint = std::move(checkpoint.Value);
+            result.Dispatch = CampaignRecoveryDispatch::RestoredSnapshot;
+            result.FirstBarrierCompleted = true;
+            return result;
+        }
+        const auto [ack, inserted] = active->second.LoadedSlots.insert(
+            slot->Slot.Value);
+        (void)ack;
+        result.Command.IdempotentReplay = durableReplay || !inserted;
+        result.Activity = active->second;
+        result.Checkpoint = checkpoint.Value;
+        if (active->second.LoadedSlots.size() !=
+            checkpoint.Value.Slots.size())
+        {
+            return result;
+        }
+
+        const MutationId restoreMutation = RecoveryMutationId(
+            "restore", active->second.Attempt);
+        auto journal = m_store.LoadJournal(acCommand.Campaign);
+        if (!journal)
+        {
+            result.Command = StoreFailure(journal);
+            return result;
+        }
+        const auto existingRestore = std::find_if(
+            journal.Value.begin(), journal.Value.end(),
+            [&](const JournalRecord& acRecord)
+            {
+                return acRecord.Mutation == restoreMutation;
+            });
+        if (existingRestore != journal.Value.end())
+        {
+            if (existingRestore->Kind != "RestoreCheckpoint" ||
+                existingRestore->RestoredFromCheckpoint !=
+                    acCommand.Checkpoint ||
+                existingRestore->RestoredFromRevision !=
+                    checkpoint.Value.SourceRevision)
+            {
+                result.Command = RecoveryFailure(
+                    CampaignError::IntegrityFailure,
+                    "recovery restore replay provenance conflicts with the open attempt",
+                    StoreError::IntegrityFailure);
+                return result;
+            }
+            result.Command.Version = existingRestore->ResultingRevision;
+            result.Command.IdempotentReplay = true;
+        }
+        else
+        {
+            auto campaign = m_store.LoadCampaign(acCommand.Campaign);
+            if (!campaign)
+            {
+                result.Command = StoreFailure(campaign);
+                return result;
+            }
+            std::vector<CampaignSlotRecord> checkpointRoster;
+            checkpointRoster.reserve(checkpoint.Value.Slots.size());
+            for (const CheckpointSlotRecord& checkpointSlot :
+                 checkpoint.Value.Slots)
+            {
+                checkpointRoster.push_back(
+                    {checkpointSlot.Slot,
+                     checkpointSlot.Player,
+                     checkpointSlot.CharacterBinding});
+            }
+            const auto coreMutation = std::find_if(
+                journal.Value.rbegin(),
+                journal.Value.rend(),
+                [&](const JournalRecord& acRecord)
+                {
+                    return acRecord.ResultingRevision <=
+                            checkpoint.Value.SourceRevision &&
+                        ProducesCoreState(acRecord);
+                });
+            const std::optional<StateVersion> historicalCoreRevision =
+                coreMutation == journal.Value.rend()
+                ? std::nullopt
+                : std::optional<StateVersion>(
+                      coreMutation->ResultingRevision);
+            auto checkpointCore = DecodeCanonicalCoreState(
+                acCommand.Campaign,
+                true,
+                checkpointRoster,
+                checkpoint.Value.SourceRevision,
+                checkpoint.Value.SnapshotCoreStatePayload,
+                journal.Value,
+                historicalCoreRevision);
+            if (!checkpointCore)
+            {
+                result.Command = RecoveryFailure(
+                    CampaignError::IntegrityFailure,
+                    "checkpoint canonical core state is unavailable",
+                    checkpointCore.Error);
+                return result;
+            }
+            checkpointCore.Value.Version =
+                campaign.Value.CurrentRevision + 1;
+            RestoreCheckpointRequest restore;
+            restore.Campaign = acCommand.Campaign;
+            restore.ExpectedRevision = campaign.Value.CurrentRevision;
+            restore.Mutation = restoreMutation;
+            restore.Checkpoint = acCommand.Checkpoint;
+            restore.RestoredCoreStateCodecVersion =
+                RuntimeCodec::kCampaignCoreCodecVersion;
+            const StoreResult encodedRestoredCore =
+                RuntimeCodec::EncodeCoreState(
+                    checkpointCore.Value,
+                    restore.RestoredCoreStatePayload);
+            if (!encodedRestoredCore)
+            {
+                result.Command = StoreFailure(encodedRestoredCore);
+                return result;
+            }
+            restore.MutationPayload = RestoreRecoveryPayload(
+                active->second.Attempt, acCommand.Checkpoint);
+            const MutationResult restored =
+                m_store.RestoreCheckpointSnapshot(restore);
+            result.Command = FromMutationResult(restored);
+            if (!result.Command)
+                return result;
+        }
+
+        active->second.Stage = CampaignRecoveryStage::ApplyingSnapshot;
+        active->second.Reason = CampaignRecoveryReason::None;
+        active->second.RestoreRevision = result.Command.Version;
+        active->second.SnapshotAppliedSlots.clear();
+        result.Activity = active->second;
+        result.Checkpoint = std::move(checkpoint.Value);
+        result.Dispatch = CampaignRecoveryDispatch::RestoredSnapshot;
+        result.FirstBarrierCompleted = true;
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = RecoveryFailure(
+            CampaignError::PersistenceFailure,
+            "RecordRecoveryLoaded failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+CampaignRecoveryCommandResult
+CampaignRuntimeService::RecordRecoverySnapshotApplied(
+    const RecordCampaignRecoverySnapshotAppliedCommand& acCommand) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        if (auto failure = ReconstructRecovery(acCommand.Campaign))
+        {
+            result.Command = *failure;
+            return result;
+        }
+        auto active = m_recoveries.find(acCommand.Campaign.Value);
+        if (active == m_recoveries.end())
+        {
+            auto checkpoint = m_store.LoadCheckpoint(
+                acCommand.Campaign, acCommand.Checkpoint);
+            if (!checkpoint)
+            {
+                result.Command = StoreFailure(checkpoint);
+                return result;
+            }
+            const bool exactMember = std::any_of(
+                checkpoint.Value.Slots.begin(),
+                checkpoint.Value.Slots.end(),
+                [&](const CheckpointSlotRecord& acSlot)
+                {
+                    return IsExactCheckpointMember(acSlot, acCommand.Actor);
+                });
+            if (!exactMember)
+            {
+                result.Command = RecoveryFailure(
+                    CampaignError::NotCampaignMember,
+                    "snapshot acknowledgement is not an exact checkpoint slot");
+                return result;
+            }
+            const Bytes payload = CompleteRecoveryPayload(
+                acCommand.Attempt,
+                acCommand.Checkpoint,
+                acCommand.RestoreRevision);
+            auto journal = m_store.LoadJournal(acCommand.Campaign);
+            if (!journal)
+            {
+                result.Command = StoreFailure(journal);
+                return result;
+            }
+            const auto completed = std::find_if(
+                journal.Value.begin(), journal.Value.end(),
+                [&](const JournalRecord& acRecord)
+                {
+                    return acRecord.Mutation == RecoveryMutationId(
+                               "complete", acCommand.Attempt) &&
+                        acRecord.Kind == "CompleteRecovery" &&
+                        acRecord.ResultingRevision ==
+                            acCommand.RestoreRevision &&
+                        acRecord.Payload == payload;
+                });
+            if (completed == journal.Value.end())
+            {
+                result.Command = RecoveryFailure(
+                    CampaignError::RecoveryNotActive,
+                    "campaign has no matching open or completed recovery attempt");
+                return result;
+            }
+            result.Command.Version = completed->ResultingRevision;
+            result.Command.IdempotentReplay = true;
+            result.RecoveryCompleted = true;
+            return result;
+        }
+
+        if (active->second.Stage !=
+                CampaignRecoveryStage::ApplyingSnapshot ||
+            active->second.Attempt != acCommand.Attempt ||
+            active->second.Checkpoint != acCommand.Checkpoint ||
+            active->second.RestoreRevision != acCommand.RestoreRevision ||
+            acCommand.Actor.Campaign != acCommand.Campaign)
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RecoveryMismatch,
+                "snapshot acknowledgement does not match the restored recovery attempt");
+            return result;
+        }
+
+        LoadedCampaign loaded = LoadAggregate(m_store, acCommand.Campaign);
+        if (loaded.Error != CampaignError::None)
+        {
+            result.Command = {
+                loaded.Error, loaded.PersistenceError, loaded.Message};
+            return result;
+        }
+        result.Command.Version = loaded.Campaign.Version;
+        const FullRosterEvaluation fullRoster =
+            CampaignStateMachine::EvaluateFullRoster(
+                loaded.Campaign, acCommand.Presence);
+        if (!fullRoster.Eligible())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::RosterIncomplete, fullRoster.Message);
+            result.Command.Version = loaded.Campaign.Version;
+            return result;
+        }
+        auto checkpoint = m_store.LoadCheckpoint(
+            acCommand.Campaign, acCommand.Checkpoint);
+        if (!checkpoint)
+        {
+            result.Command = StoreFailure(checkpoint);
+            return result;
+        }
+        const auto slot = std::find_if(
+            checkpoint.Value.Slots.begin(),
+            checkpoint.Value.Slots.end(),
+            [&](const CheckpointSlotRecord& acSlot)
+            {
+                return IsExactCheckpointMember(acSlot, acCommand.Actor);
+            });
+        if (slot == checkpoint.Value.Slots.end())
+        {
+            result.Command = RecoveryFailure(
+                CampaignError::NotCampaignMember,
+                "snapshot acknowledgement is not an exact checkpoint slot");
+            return result;
+        }
+
+        const bool durableReplay =
+            active->second.DurableSnapshotAppliedSlots.contains(
+                slot->Slot.Value);
+        if (!durableReplay)
+        {
+            CampaignMutationRequest acknowledgement;
+            acknowledgement.Campaign = acCommand.Campaign;
+            acknowledgement.ExpectedRevision = loaded.Campaign.Version;
+            acknowledgement.Mutation = RecoverySlotMutationId(
+                "applied", active->second.Attempt, slot->Slot);
+            acknowledgement.Kind = "RecoverySnapshotApplied";
+            acknowledgement.AdvancesStateVersion = false;
+            acknowledgement.MutationPayload =
+                RecoverySnapshotAppliedPayload(
+                    active->second.Attempt,
+                    checkpoint.Value,
+                    acCommand.RestoreRevision,
+                    *slot);
+            const MutationResult persisted =
+                m_store.ApplyMutation(acknowledgement);
+            result.Command = FromMutationResult(persisted);
+            if (!result.Command)
+                return result;
+            active->second.DurableSnapshotAppliedSlots.insert(
+                slot->Slot.Value);
+        }
+
+        const auto [ack, inserted] =
+            active->second.SnapshotAppliedSlots.insert(slot->Slot.Value);
+        (void)ack;
+        result.Command.IdempotentReplay = durableReplay || !inserted;
+        result.Activity = active->second;
+        result.Checkpoint = checkpoint.Value;
+        if (active->second.SnapshotAppliedSlots.size() !=
+            checkpoint.Value.Slots.size())
+        {
+            return result;
+        }
+
+        CampaignMutationRequest complete;
+        complete.Campaign = acCommand.Campaign;
+        complete.ExpectedRevision = acCommand.RestoreRevision;
+        complete.Mutation = RecoveryMutationId(
+            "complete", acCommand.Attempt);
+        complete.Kind = "CompleteRecovery";
+        complete.AdvancesStateVersion = false;
+        complete.MutationPayload = CompleteRecoveryPayload(
+            acCommand.Attempt,
+            acCommand.Checkpoint,
+            acCommand.RestoreRevision);
+        const MutationResult completed = m_store.ApplyMutation(complete);
+        result.Command = FromMutationResult(completed);
+        if (!result.Command)
+            return result;
+
+        result.Activity = active->second;
+        result.Checkpoint = std::move(checkpoint.Value);
+        result.RecoveryCompleted = true;
+        m_recoveries.erase(active);
+        return result;
+    }
+    catch (...)
+    {
+        result.Command = RecoveryFailure(
+            CampaignError::PersistenceFailure,
+            "RecordRecoverySnapshotApplied failed safely",
+            StoreError::DatabaseFailure);
+        return result;
+    }
+}
+
+std::optional<CampaignRecoveryActivity>
+CampaignRuntimeService::GetRecoveryActivity(
+    const CampaignId& acCampaign) noexcept
+{
+    if (ReconstructRecovery(acCampaign))
+        return std::nullopt;
+    const auto active = m_recoveries.find(acCampaign.Value);
+    return active == m_recoveries.end()
+        ? std::nullopt
+        : std::optional<CampaignRecoveryActivity>(active->second);
+}
+
 CampaignLoadResult CampaignRuntimeService::LoadCampaign(
     const CampaignId& acCampaign,
     const std::vector<CampaignMemberPresence>& acPresence) noexcept try
@@ -1218,10 +2445,27 @@ CampaignLoadResult CampaignRuntimeService::LoadCampaign(
     result.Campaign = std::move(loaded.Campaign);
     if (result.Succeeded())
     {
-        result.RuntimeState = m_activeCheckpoints.contains(acCampaign.Value)
-            ? CampaignRuntimeState::CHECKPOINTING
-            : CampaignStateMachine::DetermineRuntimeState(
-                  result.Campaign, acPresence);
+        if (auto recoveryFailure = ReconstructRecovery(acCampaign))
+        {
+            result.Error = recoveryFailure->Error;
+            result.PersistenceError = recoveryFailure->PersistenceError;
+            result.Message = recoveryFailure->Message;
+        }
+        else if (const auto recovery = m_recoveries.find(acCampaign.Value);
+                 recovery != m_recoveries.end())
+        {
+            result.RuntimeState = recovery->second.Stage ==
+                    CampaignRecoveryStage::RecoveryLock
+                ? CampaignRuntimeState::RECOVERY_LOCK
+                : CampaignRuntimeState::RESTORING_CHECKPOINT;
+        }
+        else
+        {
+            result.RuntimeState = m_activeCheckpoints.contains(acCampaign.Value)
+                ? CampaignRuntimeState::CHECKPOINTING
+                : CampaignStateMachine::DetermineRuntimeState(
+                      result.Campaign, acPresence);
+        }
     }
     return result;
 }

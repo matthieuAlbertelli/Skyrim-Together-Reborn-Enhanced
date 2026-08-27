@@ -84,6 +84,7 @@
       "REVEAL_PLAYERS": "Reveal Players",
       "RECONNECT": "Reconnect",
       "PLAYER_MANAGER": "Player Manager",
+      "RESUME_CAMPAIGN": "Resume campaign",
       "SETTINGS": "Settings",
       "CONNECTION_IN_PROGRESS": "Connection in progress..."
     },
@@ -140,7 +141,25 @@
         "L": "Large",
         "XL": "Extra Large"
       },
+      "CAMPAIGN_SAVE": {
+        "HEADER": "Skyrim autosaves",
+        "REST": "Save on rest",
+        "WAIT": "Save on wait",
+        "TRAVEL": "Save on travel",
+        "CHARACTER_MENU": "Save on character menu",
+        "DISABLED": "Disabled in multiplayer",
+        "EXPLANATION": "Automatic saves are disabled during an STRE multiplayer campaign. Use Quick Save or Manual Save to request a collective checkpoint. Your Skyrim preferences are not changed."
+      },
       "BACK": "Back"
+    },
+    "CAMPAIGN_SAVE": {
+      "CHECKPOINT_REQUESTED": "Creating the collective checkpoint...",
+      "CHECKPOINT_COMMITTED": "Collective checkpoint created.",
+      "CHECKPOINT_FAILED": "Unable to create the collective checkpoint.",
+      "AUTOSAVE_BLOCKED": "Automatic saves are disabled during an STRE multiplayer campaign.",
+      "UNAVAILABLE": "Saving is temporarily unavailable for this campaign.",
+      "UNKNOWN_BLOCKED": "An unrecognized local save was blocked to protect the campaign.",
+      "LOAD_BLOCKED": "STRE: Local loading is disabled during a campaign."
     }
   },
   "SERVICE": {
@@ -213,6 +232,78 @@
       "state_changed": "Campaign state changed. Try again.",
       "request_rejected": "Request rejected.",
       "UNKNOWN": "Request failed."
+    }
+  },
+  "CAMPAIGN_RESUME": {
+    "RECOVERY_SHELL_TITLE": "CAMPAIGN SYNCHRONIZATION",
+    "INCIDENT": {
+      "remotePlayerMissing": "A PLAYER LEFT THE GAME",
+      "multiplePlayersMissing": "SEVERAL PLAYERS LEFT THE GAME",
+      "localTransportLost": "CONNECTION TO THE GAME LOST",
+      "rosterRestored": "ROSTER RESTORED — RECOVERY PENDING",
+      "BODY": "The campaign cannot continue until every required player is present.",
+      "STAY_AND_RECOVER": "LOAD THE LAST CHECKPOINT"
+    },
+    "SAVE_TITLE": "MULTIPLAYER CAMPAIGN",
+    "ERROR_TITLE": "UNABLE TO RESUME CAMPAIGN",
+    "SAVE_BELONGS_TO_CAMPAIGN": "This save belongs to an STRE campaign.",
+    "SAVE_REQUIRES_RESUME": "To continue, resume the associated campaign. The game will remain suspended until all required members have reconnected.",
+    "SAVE_INVALID": "This STRE campaign save has missing or invalid local metadata. Gameplay stays locked and no solo fallback is allowed.",
+    "PROGRESS_LOCAL_VERIFIED": "Local save verified",
+    "PROGRESS_SERVER_CONNECTION": "Connect to the server",
+    "PROGRESS_CAMPAIGN_VERIFICATION": "Verify the campaign",
+    "PROGRESS_ROSTER": "Wait for the roster",
+    "PROGRESS_RESTORE": "Restore the collective checkpoint",
+    "PROGRESS_SYNC": "Synchronize the campaign",
+    "TITLE": "RESUME A CAMPAIGN",
+    "ZERO_CANDIDATE": "No local campaign binding is available for this character.",
+    "SELECT_PROMPT": "Select the campaign to resume. Admission remains subject to server validation.",
+    "CANDIDATE": "Campaign {{number}}",
+    "RESUME_ASSOCIATED": "RESUME CAMPAIGN",
+    "CONNECTING_TITLE": "RESUMING CAMPAIGN",
+    "SUBMITTING": "Requesting authoritative admission...",
+    "ADMITTED": "Admission accepted. Waiting for the campaign state...",
+    "WAITING_TITLE": "CAMPAIGN WAITING",
+    "ROSTER_SUMMARY": "Players present: {{present}} / {{total}}",
+    "YOU": "You",
+    "PLAYER": "Player {{number}}",
+    "PRESENT": "Present",
+    "WAITING": "Waiting",
+    "WAITING_FOR_ROSTER": "The campaign will resume when every required member has reconnected.",
+    "RECOVERY_TITLE": "RESTORING CAMPAIGN",
+    "RECOVERY": "Loading the last collective checkpoint...",
+    "SYNCHRONIZING_TITLE": "SYNCHRONIZING CAMPAIGN",
+    "SYNCHRONIZING": "Applying the authoritative campaign state...",
+    "ACTIVE": "Campaign resumed. The complete roster is present.",
+    "REFRESH": "REFRESH",
+    "RETRY": "TRY AGAIN",
+    "ERROR_SUMMARY": "The campaign could not be restored.",
+    "RETURN_MAIN_MENU": "RETURN TO MAIN MENU",
+    "MAIN_MENU_UNAVAILABLE": "Safe return to Skyrim's main menu is not available in this client yet. Gameplay remains suspended.",
+    "CLOSE": "CLOSE",
+    "ERROR": {
+      "cache_invalid": "The local campaign cache is invalid or unavailable.",
+      "candidate_unavailable": "This local campaign candidate is no longer available.",
+      "save_marker_missing": "The loaded STRE save has no local campaign marker.",
+      "save_marker_invalid": "The loaded STRE save marker is invalid or unsupported.",
+      "save_marker_unavailable": "The local STRE save marker store is unavailable.",
+      "save_binding_unavailable": "No cached campaign binding matches this exact save and character.",
+      "not_connected": "Connect to the campaign server first.",
+      "already_admitted": "A campaign is already admitted.",
+      "send_failed": "The resume request could not be sent.",
+      "binding_mismatch": "The server rejected this character binding.",
+      "identity_mismatch": "The server rejected this player identity.",
+      "campaign_unavailable": "This campaign no longer exists on the server.",
+      "session_unavailable": "The campaign session is unavailable.",
+      "server_error": "The server could not persist the admission.",
+      "resume_rejected": "The server rejected the resume request.",
+      "admission_failed": "The authoritative response could not establish admission safely.",
+      "connection_lost": "Connection lost during campaign resume.",
+      "checkpoint_unavailable": "The committed campaign checkpoint is unavailable.",
+      "save_bundle_missing": "The required local campaign save bundle is missing.",
+      "save_bundle_invalid": "The required local campaign save bundle is invalid.",
+      "recovery_failed": "Campaign recovery failed and gameplay remains suspended.",
+      "UNKNOWN": "Campaign resume failed."
     }
   }
 }

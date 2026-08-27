@@ -2,9 +2,80 @@
 
 #include <TiltedCore/Serialization.hpp>
 
+#include <Structs/NativeSaveBundle.h>
+
 #include <algorithm>
+#include <array>
+#include <limits>
 
 using TiltedPhoques::Serialization;
+
+namespace
+{
+template <std::size_t Maximum>
+bool ReadBoundedBytes(
+    TiltedPhoques::Buffer::Reader& aReader,
+    TiltedPhoques::Vector<std::uint8_t>& aValue) noexcept
+{
+    aValue.clear();
+    const std::uint64_t size = Serialization::ReadVarInt(aReader);
+    if (size > Maximum)
+        return false;
+    std::array<std::uint8_t, Maximum> buffer{};
+    if (size != 0 &&
+        !aReader.ReadBytes(buffer.data(), static_cast<std::size_t>(size)))
+    {
+        return false;
+    }
+    aValue.assign(
+        buffer.begin(),
+        buffer.begin() + static_cast<std::ptrdiff_t>(size));
+    return true;
+}
+
+template <std::size_t Maximum>
+bool WriteBoundedBytes(
+    TiltedPhoques::Buffer::Writer& aWriter,
+    const TiltedPhoques::Vector<std::uint8_t>& acValue) noexcept
+{
+    if (acValue.size() > Maximum)
+    {
+        Serialization::WriteVarInt(aWriter, Maximum + 1);
+        return false;
+    }
+    Serialization::WriteVarInt(aWriter, acValue.size());
+    return acValue.empty() ||
+        aWriter.WriteBytes(acValue.data(), acValue.size());
+}
+
+bool IsExactRecoveryArtifact(
+    const TiltedPhoques::String& acIdentity,
+    const TiltedPhoques::String& acAlgorithm,
+    std::uint32_t aFingerprintVersion,
+    const TiltedPhoques::Vector<std::uint8_t>& acFingerprint,
+    std::uint32_t aMetadataCodecVersion,
+    const TiltedPhoques::Vector<std::uint8_t>& acMetadata) noexcept
+{
+    if (acAlgorithm != STRE::Campaign::kNativeSaveFingerprintAlgorithm ||
+        aFingerprintVersion !=
+            STRE::Campaign::kNativeSaveFingerprintVersion ||
+        acFingerprint.size() != STRE::Campaign::kNativeSaveSha256Size ||
+        aMetadataCodecVersion !=
+            STRE::Campaign::kNativeSaveMetadataCodecVersion ||
+        acMetadata.empty() ||
+        acMetadata.size() > STRE::Campaign::kMaximumNativeSaveMetadataSize)
+    {
+        return false;
+    }
+    return STRE::Campaign::ParseNativeSaveBundleArtifact(
+        acIdentity.c_str(),
+        std::span<const std::uint8_t>(
+            acFingerprint.data(), acFingerprint.size()),
+        std::span<const std::uint8_t>(
+            acMetadata.data(), acMetadata.size()))
+        .Succeeded();
+}
+}
 
 void CampaignCommandResponse::SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept
 {
@@ -170,4 +241,169 @@ bool CampaignCheckpointSaveRequest::IsValid() const noexcept
     TiltedPhoques::String expectedIdentity;
     return BuildCampaignNativeSaveIdentity(CheckpointId, expectedIdentity) &&
         expectedIdentity == NativeSaveIdentity;
+}
+
+void NotifyCampaignCheckpointState::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    (void)WriteCampaignWireId(aWriter, CheckpointId);
+    Serialization::WriteVarInt(
+        aWriter, static_cast<std::uint8_t>(State));
+}
+
+void NotifyCampaignCheckpointState::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignId);
+    WireValid = ReadCampaignWireId(aReader, CheckpointId) && WireValid;
+    const std::uint64_t rawState = Serialization::ReadVarInt(aReader);
+    WireValid = rawState <= static_cast<std::uint8_t>(
+        CampaignCheckpointPublicState::Failed) && WireValid;
+    State = static_cast<CampaignCheckpointPublicState>(
+        static_cast<std::uint8_t>(rawState));
+}
+
+bool NotifyCampaignCheckpointState::IsValid() const noexcept
+{
+    const bool failed = State == CampaignCheckpointPublicState::Failed;
+    return WireValid && IsValidCampaignWireId(CampaignId) &&
+        IsValidCampaignWireId(CheckpointId, failed) &&
+        static_cast<std::uint8_t>(State) <=
+            static_cast<std::uint8_t>(
+                CampaignCheckpointPublicState::Failed);
+}
+
+void CampaignRecoveryLoadRequest::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    (void)WriteCampaignWireId(aWriter, RestoreAttemptId);
+    (void)WriteCampaignWireId(aWriter, CheckpointId);
+    Serialization::WriteVarInt(aWriter, SourceRevision);
+    (void)WriteCampaignWireId(aWriter, CampaignSlotId);
+    (void)WriteCampaignWireId(aWriter, CharacterBindingId);
+    (void)WriteCampaignWireId(aWriter, NativeSaveIdentity);
+    (void)WriteCampaignWireId(aWriter, FingerprintAlgorithm);
+    Serialization::WriteVarInt(aWriter, FingerprintVersion);
+    (void)WriteBoundedBytes<STRE::Campaign::kNativeSaveSha256Size>(
+        aWriter, Fingerprint);
+    Serialization::WriteVarInt(aWriter, SaveMetadataCodecVersion);
+    (void)WriteBoundedBytes<STRE::Campaign::kMaximumNativeSaveMetadataSize>(
+        aWriter, SaveMetadata);
+}
+
+void CampaignRecoveryLoadRequest::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignId);
+    WireValid = ReadCampaignWireId(aReader, RestoreAttemptId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, CheckpointId) && WireValid;
+    SourceRevision = Serialization::ReadVarInt(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignSlotId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, CharacterBindingId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, NativeSaveIdentity) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, FingerprintAlgorithm) && WireValid;
+    const std::uint64_t rawFingerprintVersion =
+        Serialization::ReadVarInt(aReader);
+    if (rawFingerprintVersion > std::numeric_limits<std::uint32_t>::max())
+        WireValid = false;
+    FingerprintVersion = static_cast<std::uint32_t>(rawFingerprintVersion);
+    WireValid = ReadBoundedBytes<STRE::Campaign::kNativeSaveSha256Size>(
+        aReader, Fingerprint) && WireValid;
+    const std::uint64_t rawMetadataCodecVersion =
+        Serialization::ReadVarInt(aReader);
+    if (rawMetadataCodecVersion > std::numeric_limits<std::uint32_t>::max())
+        WireValid = false;
+    SaveMetadataCodecVersion =
+        static_cast<std::uint32_t>(rawMetadataCodecVersion);
+    WireValid =
+        ReadBoundedBytes<STRE::Campaign::kMaximumNativeSaveMetadataSize>(
+            aReader, SaveMetadata) && WireValid;
+}
+
+bool CampaignRecoveryLoadRequest::IsValid() const noexcept
+{
+    if (!WireValid || SourceRevision == 0 ||
+        !IsValidCampaignWireId(CampaignId) ||
+        !IsValidCampaignWireId(RestoreAttemptId) ||
+        !IsValidCampaignWireId(CheckpointId) ||
+        !IsValidCampaignWireId(CampaignSlotId) ||
+        !IsValidCampaignWireId(CharacterBindingId) ||
+        !IsValidCampaignNativeSaveIdentity(NativeSaveIdentity))
+    {
+        return false;
+    }
+    TiltedPhoques::String expectedIdentity;
+    return BuildCampaignNativeSaveIdentity(CheckpointId, expectedIdentity) &&
+        expectedIdentity == NativeSaveIdentity &&
+        IsExactRecoveryArtifact(
+            NativeSaveIdentity,
+            FingerprintAlgorithm,
+            FingerprintVersion,
+            Fingerprint,
+            SaveMetadataCodecVersion,
+            SaveMetadata);
+}
+
+void CampaignRecoverySnapshot::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    (void)WriteCampaignWireId(aWriter, RestoreAttemptId);
+    (void)WriteCampaignWireId(aWriter, CheckpointId);
+    Serialization::WriteVarInt(aWriter, RestoreRevision);
+    Snapshot.Serialize(aWriter);
+}
+
+void CampaignRecoverySnapshot::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignId);
+    WireValid = ReadCampaignWireId(aReader, RestoreAttemptId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, CheckpointId) && WireValid;
+    RestoreRevision = Serialization::ReadVarInt(aReader);
+    Snapshot.Deserialize(aReader);
+}
+
+bool CampaignRecoverySnapshot::IsValid() const noexcept
+{
+    return WireValid && RestoreRevision != 0 &&
+        IsValidCampaignWireId(CampaignId) &&
+        IsValidCampaignWireId(RestoreAttemptId) &&
+        IsValidCampaignWireId(CheckpointId) && Snapshot.IsValid() &&
+        Snapshot.CampaignId == CampaignId &&
+        Snapshot.StateVersion == RestoreRevision &&
+        Snapshot.RuntimeState ==
+            kCampaignWireRuntimeRestoringCheckpoint;
+}
+
+void CampaignRecoveryComplete::SerializeRaw(
+    TiltedPhoques::Buffer::Writer& aWriter) const noexcept
+{
+    (void)WriteCampaignWireId(aWriter, CampaignId);
+    (void)WriteCampaignWireId(aWriter, RestoreAttemptId);
+    (void)WriteCampaignWireId(aWriter, CheckpointId);
+    Serialization::WriteVarInt(aWriter, RestoreRevision);
+}
+
+void CampaignRecoveryComplete::DeserializeRaw(
+    TiltedPhoques::Buffer::Reader& aReader) noexcept
+{
+    ServerMessage::DeserializeRaw(aReader);
+    WireValid = ReadCampaignWireId(aReader, CampaignId);
+    WireValid = ReadCampaignWireId(aReader, RestoreAttemptId) && WireValid;
+    WireValid = ReadCampaignWireId(aReader, CheckpointId) && WireValid;
+    RestoreRevision = Serialization::ReadVarInt(aReader);
+}
+
+bool CampaignRecoveryComplete::IsValid() const noexcept
+{
+    return WireValid && RestoreRevision != 0 &&
+        IsValidCampaignWireId(CampaignId) &&
+        IsValidCampaignWireId(RestoreAttemptId) &&
+        IsValidCampaignWireId(CheckpointId);
 }

@@ -1,0 +1,17 @@
+<section class="campaign-shell" aria-modal="true" role="dialog">
+  <div class="campaign-veil"></div>
+  <div class="campaign-table-glow"></div>
+
+  <main class="campaign-frame" [attr.data-screen]="screen">
+    <span class="campaign-corner campaign-corner-tl"></span>
+    <span class="campaign-corner campaign-corner-tr"></span>
+    <span class="campaign-corner campaign-corner-bl"></span>
+    <span class="campaign-corner campaign-corner-br"></span>
+
+    <div class="campaign-ornament"><span></span><i></i><span></span></div>
+    <ng-content></ng-content>
+    <div class="campaign-ornament campaign-ornament-bottom">
+      <span></span><i></i><span></span>
+    </div>
+  </main>
+</section>

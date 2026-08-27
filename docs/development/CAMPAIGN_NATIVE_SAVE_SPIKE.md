@@ -37,6 +37,139 @@ then consumes it after Skyrim's original save/load process function at Address
 Library ID `35772`. It calls `Save_Impl` at ID `35727` only from that process
 boundary.
 
+The production multiplayer save policy also hooks `Save_Impl` at ID `35727`.
+Its audited CommonLibSSE-NG signature and every local wrapper use `(self, int32
+deviceId, uint32 outputStats, const char* fileName)`; `Load_Impl`'s different
+filename-first order is not reused. The policy classifies safely readable
+case-insensitive Skyrim name families `Save*`, `QuickSave*`, and `AutoSave*`,
+and treats every null, unreadable, empty, unterminated, or different family as
+unknown. The deferred managed call passes through the same hook under a scoped
+thread-local provenance guard. The guard, never the `stre-` filename, prevents
+recursive policy entry.
+
+The first live CampaignSavePolicy run on AE 1.6.1170 observed `fileName ==
+nullptr` for both Manual Save and QuickSave despite that correct ABI. This
+means the native UI request supplied no filename at this boundary; it was not a
+misread `deviceId` or `outputStats` caused by a copied `Load_Impl` signature.
+Those attempts correctly remained Unknown and were blocked fail-closed. The
+hook now logs both scalar parameters, pointer present/null, a bounded name only
+when safely readable, and the resulting classification so a subsequent live
+run can establish the remaining native request behavior without inventing a
+fallback. The apparently blocked autosave is not yet classification evidence.
+
+### Upstream save-origin observation — live evidence and native-chain audit
+
+The initial observation surface did not change `CampaignSavePolicy` or transmit
+an origin to it. Every trace line carries one process-wide monotonic `sequence`,
+the current STRE `frame`, and the Windows `thread`. `Save_Impl` additionally
+records the audited scalar arguments, safe filename observation, current
+classification, internal #55 provenance, and diagnostic
+`processBoundaryDepth`. The depth remains only a call-stack marker around the
+already-hooked ID `35772` boundary; it is not a save-intent store and is never
+consulted by policy.
+
+The first ordered AE 1.6.1170 run proved that one F5 produced multiple
+`MenuControls::ProcessEvent(Quicksave)` observations on several threads over
+frames 6760 through 6766, followed by
+`Save_Impl(4, 0, nullptr)` on thread 32044 at frame 6766 with
+`processBoundaryDepth=1`. Static audit of the exact installed executable and
+Address Library closes the intermediate chain:
+
+1. `QuickSaveLoadHandler::ProcessButton`, Address Library ID `52251`, is the
+   exact `MenuEventHandler::ProcessButton(ButtonEvent*)` override. It accepts
+   only a non-zero button value with `heldDownSecs == 0`, checks that no UI is
+   pausing the game, and applies the native Quick-save eligibility check at ID
+   `35734`. Repeated/held/released input dispatches therefore explain the
+   multiple broad `Quicksave` observations; only the first actionable press
+   can continue.
+2. The accepted Quick path calls ID `35769` with native operation code
+   `0xF0000200`. That function allocates a 24-byte
+   `bgs::saveload::Request`, whose only correlatable fields are its intrusive
+   refcount, operation code at offset `0xC`, and request state at offset
+   `0x10`. There is no native operation identifier. Because this code is signed
+   negative, the request is pushed into the manager's
+   `BSTCommonStaticMessageQueue<...Request..., 8>` consumed by ID `35772`;
+   it is not sent to the manager's asynchronous save/load thread queue.
+3. ID `35772` pops the same request, decrements its initial state, coalesces
+   duplicate low-24-bit operation kinds, and performs the native screenshot/UI
+   readiness steps. Its `0xF0000200` branch then calls exactly
+   `Save_Impl(4, 0, nullptr)`. The observed `deviceId=4` is an output of this
+   proven semantic branch, not a general-purpose origin mapping.
+
+An ineligible or non-actionable F5 creates no request. A queue-full push can
+fail. Once queued, the process loop can requeue while native readiness is not
+satisfied, or consume/coalesce an operation without reaching `Save_Impl`.
+Consequently request creation alone is not treated as execution. The request
+pointer is useful only as a bounded live-trace correlation while that native
+object exists; it is neither stable nor persisted.
+
+The same live run proved that a real new-slot Manual Save emitted
+`JournalOpened`, then `Save_Impl(2, 0, nullptr)` 293 frames later on thread
+32044 with `processBoundaryDepth=0`, then `JournalClosed`. No
+`MenuControls::NewSave` occurred, invalidating that candidate. The exact
+manual chain is:
+
+1. `UI::MenuOpenCloseEvent` remains context only. The save/load panel registers
+   its Scaleform callbacks in ID `52902`; its `SAVE` callback selects the panel
+   mode but does not write a save.
+2. The public `FxDelegateHandler::CallbackFn(const FxDelegateArgs&)` callback
+   named `SaveGame`, adapter ID `52915` and body ID `52923`, is the actual
+   confirmed operation seam. Its numeric selection argument is `0` for a new
+   slot and non-zero for an existing slot.
+3. New-slot selection calls `Save_Impl(2, 0, nullptr)` directly and
+   synchronously on the callback thread. Existing-slot selection resolves the
+   selected `BGSSaveLoadFileEntry` and tail-calls ID `35533`, which then invokes
+   `Save_Impl`. The new-slot path has no intermediate native request object or
+   request queue. Cancellation before confirmation never invokes `SaveGame`;
+   failure inside `Save_Impl` remains an executed but failed operation.
+
+The follow-up client instrumentation is bounded to these proven seams:
+
+- the exact Quick `ProcessButton` logs entry/exit and whether the event is the
+  first actionable press;
+- ID `35769` logs the native operation code at request creation;
+- the exact public static-request-queue `PushInternal` and `PopInternal`
+  virtual slots log only real operations, including queue, request pointer,
+  operation code, state, frame, and thread. Failed pops are intentionally not
+  logged. This supplies causal pointer correlation without a time window;
+- the exact `SaveGame` callback logs entry/exit, argument count, and
+  new/existing selection before the synchronous native path.
+
+ID `35772` is called from the regular update path even when its queue is empty,
+so unconditional entry/exit logging there would be unbounded. A successful
+process-queue pop plus the existing `processBoundaryDepth=1` at `Save_Impl`
+provides the narrower causal proof.
+
+A second ordered live run closed the transport question for Quick and Manual
+NewSlot. The one actionable Quick handler call created operation `0xF0000200`;
+the exact same request address traversed its pushes/requeues and final pop
+immediately before `Save_Impl`. Production now tags only that exact pointer
+while the actionable handler is synchronously creating it. A successful pop of
+the correlated object arms one thread-local, one-shot Quick proof. A requeue
+returns the same object to `Queued`; a failed push, mismatched operation, later
+pop, process-boundary exit without `Save_Impl`, or successful consumption drops
+the proof. There is no device-ID mapping, elapsed-time window, persisted token,
+or inference from the broad repeated input events.
+
+The same run proved that `SaveGame(NewSlot)` enters, invokes `Save_Impl`, and
+exits in the same frame on the same thread. Production therefore scopes one
+thread-local Manual proof around that callback only. The proof is one-shot and
+is cleared on callback exit. `ExistingSlot` remains observation-only because
+its distinct resolved-entry path has not been validated live.
+
+Auto remains unclassified. Static audit identifies several native producers of
+operation `0xF0000040`, whose ID `35772` branch calls
+`Save_Impl(3, 0, nullptr)`, but neither that operation code nor `deviceId=3` is
+accepted as Auto provenance without a deterministic live trigger. The next run
+must use a vanilla Save-on-Wait action and correlate its exact upstream source,
+queue operation, and `Save_Impl`. Auto and all otherwise unproven operations
+remain Unknown/fail-closed. `CampaignSavePolicy` consumes the proven Quick or
+Manual transport when present and otherwise retains filename classification;
+the separate scoped #55 internal provenance retains priority and an
+`stre-*` filename alone grants nothing. The transports are automated-tested,
+client-build-tested, and live validated end-to-end for Quick and Manual NewSlot.
+Manual ExistingSlot and Auto remain explicitly unproved and fail-closed.
+
 Human validation on AE 1.6.1170 with SKSE 2.2.6 proved:
 
 - the request and save-processing callbacks ran on different threads;
@@ -279,4 +412,14 @@ for the production integration contract and nominal two-PC evidence.
 - [SKSE v2.2.6 `PluginAPI.h`](https://github.com/ianpatt/skse64/blob/v2.2.6/skse64/PluginAPI.h)
 - [CommonLibSSE-NG `BGSSaveLoadManager`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BGSSaveLoadManager.h)
 - [CommonLibSSE-NG `BSSaveDataSystemUtility`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BSSaveDataSystemUtility.h)
+- [CommonLibSSE-NG `BSInputDeviceManager`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BSInputDeviceManager.h)
+- [CommonLibSSE-NG `InputEvent`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/I/InputEvent.h)
+- [CommonLibSSE-NG `UserEvents`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/U/UserEvents.h)
+- [CommonLibSSE-NG `MenuControls`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/M/MenuControls.h)
+- [CommonLibSSE-NG `MenuEventHandler`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/M/MenuEventHandler.h)
+- [CommonLibSSE-NG `BSTMessageQueue`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BSTMessageQueue.h)
+- [CommonLibSSE-NG `bgs::saveload::Request`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/R/Request.h)
+- [CommonLibSSE-NG `FxDelegateArgs`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/F/FxDelegateArgs.h)
+- [CommonLibSSE-NG `Journal_SystemTab`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/J/Journal_SystemTab.h)
+- [CommonLibSSE-NG `UISaveLoadManager`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/U/UISaveLoadManager.h)
 - [CommonLibSSE-NG Address Library IDs](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/Offsets.h)

@@ -28,9 +28,9 @@ transactional migration needed to represent this.
 Transport connectivity and campaign admission are now wired as transient inputs
 rather than durable socket state. They derive `WAITING_FOR_ROSTER` or `ACTIVE`
 through one exact-roster predicate. Issue #55 also activates `CHECKPOINTING`
-while one server-owned Candidate is in flight. `RECOVERY_LOCK` and
-`RESTORING_CHECKPOINT` remain represented target states owned by #56 and are not
-activated by the current implementation.
+while one server-owned Candidate is in flight. Issue #56 activates
+`RECOVERY_LOCK` on sealed-roster loss and `RESTORING_CHECKPOINT` while the exact
+committed checkpoint passes its two collective restore barriers.
 
 The implemented narrative mutation is the atomic
 `Lobby -> CharacterCreation` campaign start/seal. It is server-authoritative at
@@ -102,10 +102,14 @@ The live protocol implements:
 - public snapshots containing ordered slots, readiness, and transient presence,
   without other members' character bindings or secret narrative state.
 
-Disconnect removes transient admission only. A sealed incomplete roster projects
-`WAITING_FOR_ROSTER`; the exact admitted roster projects `ACTIVE`. This increment
-does not turn disconnect into `RECOVERY_LOCK`; that remains #56. The local binding
-cache is reconnect metadata only and never overrides the SQLite authority.
+Disconnect removes transient admission only; it never changes the durable
+roster. An incomplete roster projects `WAITING_FOR_ROSTER`; disconnecting again
+from that state never creates `BeginRecovery`. A required-member disconnect
+opens #56 `RECOVERY_LOCK` only from `ACTIVE` or `CHECKPOINTING`, while a
+disconnect during an already-open recovery replays its current barrier. Exact
+resume restores the same canonical slot before collective recovery advances.
+The local binding cache is reconnect metadata only and never overrides the
+SQLite authority.
 
 ## Goals
 
@@ -307,16 +311,37 @@ acknowledgement. An exact retransmission reopens and re-hashes both existing
 files against the cached artifact; it never calls Skyrim Save again or
 overwrites the bundle. A mismatch fails closed.
 
-The server exposes only explicit `stre_checkpoint <CampaignId>` and
-`stre_checkpoint_resend <CampaignId>` development/validation triggers.
-Production cadence, safe points, autosave/manual-save interaction, and
-combat/dialogue/cell-transition policy remain deliberately undecided.
+The server keeps `stre_checkpoint <CampaignId>` and
+`stre_checkpoint_resend <CampaignId>` as development/validation triggers. The
+production client intercepts Skyrim `Save*` and `QuickSave*` native-save
+families during an admitted `ACTIVE` campaign and sends only a Manual/Quick
+intent. Server admission derives the campaign and exact member, validates the
+full sealed roster, allocates the checkpoint identity/revision, and dispatches
+the existing all-slot barrier. Concurrent requests during `CHECKPOINTING`
+coalesce with that same Candidate. Autosaves, unknown native-save families, and
+Manual/Quick attempts while waiting, recovering, restoring, resume-required,
+or otherwise fenced are blocked fail-closed. Outside campaigns, Skyrim save
+behavior remains vanilla.
 
-On client failure or required-member disconnect during the currently
-implemented #55 flow, transient `CHECKPOINTING` is abandoned, the durable row
-remains `Candidate`, and `LastCommittedCheckpoint` is unchanged. The ordinary
-full-roster predicate then derives `ACTIVE` or `WAITING_FOR_ROSTER`; #55 does
-not enter `RECOVERY_LOCK`. Old and failed native saves and Candidate rows are
+The internally dispatched `stre-<CheckpointId>` save crosses the same native
+hook using scoped internal provenance; a filename is never authorization. The
+runtime hook remains authoritative independently of UI. STR Settings only
+projects the four Skyrim autosave preference families (rest, wait, travel, and
+character menu) as localized informational disabled controls while in campaign
+and never changes the player's stored preferences. The real `Journal Menu` /
+`quest_journal.swf` Gameplay rows remain vanilla: the audited movie has no
+per-row disabled/help contract, and STRE has no typed GFx seam for its private
+ActionScript controls. A safe implementation would require owning a replacement
+SWF or similarly fragile movie/native hooks, so this remains an explicit UX
+limitation while the native save-policy continues to fail closed. Scheduler
+cadence and combat/dialogue/cell-transition safe-point policy remain
+deliberately undecided.
+
+On client failure during checkpoint creation, transient `CHECKPOINTING` is
+abandoned, the durable row remains `Candidate`, and
+`LastCommittedCheckpoint` is unchanged. With issue #56 integrated, a required
+member disconnect additionally opens collective `RECOVERY_LOCK` after
+abandoning that Candidate. Old and failed native saves and Candidate rows are
 not deleted. A server restart does not resume an unfinished Candidate.
 
 ## Snapshots and audience
@@ -332,9 +357,9 @@ because such progression is forbidden.
 
 ## Disconnect, crash, and restore
 
-The recovery sequence below is the accepted #56 target contract, not behavior
-implemented by #55. Until #56 lands, the #55 disconnect behavior is the
-Candidate-abandonment and `WAITING_FOR_ROSTER` projection described above.
+The recovery sequence below is implemented for issue #56, automated/build
+tested, and live validated for nominal N=1/N=2, successive recovery, and durable
+incomplete-attempt rehydration without a second restore revision.
 
 On a required-member disconnect during `ACTIVE` or `CHECKPOINTING`, the server
 enters `RECOVERY_LOCK`, fences persistent campaign mutations, and refuses new
@@ -345,12 +370,16 @@ Recovery proceeds as follows:
 1. authenticate the returning client;
 2. verify its expected `PlayerId`, slot, and `CharacterBinding`;
 3. wait until the full-roster predicate holds;
-4. enter `RESTORING_CHECKPOINT`;
-5. select the exact `LastCommittedCheckpoint`;
-6. restore the matching server snapshot/revision;
-7. instruct every slot to load its own save recorded for that checkpoint;
-8. verify every slot's checkpoint, binding, and save acknowledgement;
-9. enter `ACTIVE` only after the server and all clients agree.
+4. select the exact `LastCommittedCheckpoint` and enter
+   `RESTORING_CHECKPOINT`;
+5. instruct every slot to load its own save recorded for that checkpoint;
+6. verify the first full-roster barrier of exact checkpoint, binding, artifact,
+   and successful native-load acknowledgements;
+7. restore the matching server snapshot as one new monotonic revision;
+8. publish that exact correlated snapshot and verify every slot's
+   `SnapshotApplied` acknowledgement;
+9. durably complete the attempt and enter `ACTIVE` only after the server and all
+   clients agree.
 
 All players roll back collectively, including those that remained connected. A
 wrong or unavailable save, wrong binding, incomplete roster, failed load, stale
@@ -359,8 +388,48 @@ produces an actionable rejection. Retry is idempotent. If a member never returns
 the campaign remains suspended or the session ends.
 
 A client or server restart follows the same committed-checkpoint selection rule;
-no participant chooses the latest local save independently. The exact engine-safe
-local freeze/pause presentation is delegated to implementation audit.
+no participant chooses the latest local save independently. The durable journal
+reconstructs the exact attempt, checkpoint, restore revision, and stable
+per-slot `Loaded`/`SnapshotApplied` receipts. Those receipts are accepted no-op
+journal mutations: they never advance canonical state, but make partial barrier
+evidence and duplicate replay durable without another schema or protocol.
+
+After server restart, even an attempt with a durable `RestoreCheckpoint` first
+replays its exact native-load request. A fresh client process thereby acquires
+the authoritative correlation and re-proves its local checkpoint; a survivor
+responds idempotently. The current admitted roster must cross a new volatile
+full-roster barrier before the server reuses the existing restore revision and
+replays the snapshot. The second volatile barrier follows the same rule, while
+the durable Applied receipts retain exact idempotency evidence. A client
+disconnect during snapshot application uses this same replay path. If completion
+was durable before a server crash, replaying an exact `SnapshotApplied` ACK
+resends the completion message. The client runtime gate freezes Skyrim before
+load and releases only on that exact message. Separately, a transport-only
+provisional lock created by a hard server crash while `ACTIVE` may be released
+by the same campaign's authoritative `ACTIVE` snapshot only while no recovery
+attempt is correlated.
+
+Cold-session **Load Campaign** uses the same rule and recovery machine. A
+#55-managed native checkpoint carries only a versioned local sidecar hint for
+its exact campaign/binding/native identity. Loading that marked save arms a
+distinct resume-required client lock before Skyrim's native load. The client
+looks up only the marker's campaign binding and requires exact campaign, slot
+hint, and character-binding equality, yielding zero or one opaque target; it
+does not enumerate unrelated cached campaigns. Ordinary F2 Resume retains its
+explicit multi-candidate selection. The existing Resume
+request carries a restore-intent bit, but the server still validates the exact
+durable identity and chooses `LastCommittedCheckpoint`. While the roster is
+incomplete the intent is transient and the public state remains
+`WAITING_FOR_ROSTER`. Once exact admission makes the canonical state `ACTIVE`,
+the server opens the existing durable recovery and runs both barriers. Thus a
+new `BeginRecovery` is still never created from `WAITING_FOR_ROSTER`, and an
+uncorrelated `ACTIVE` projection cannot release the resume-required lock. See
+[`CAMPAIGN_LOAD_CAMPAIGN.md`](../development/CAMPAIGN_LOAD_CAMPAIGN.md).
+
+After the matching recovery completion releases that lock, ResumeRequired is
+terminal: its exact local target is cleared, its UI state returns to idle, and
+the STR surface closes. It never falls through into the ordinary Resume
+candidate model; that model is populated only by a later explicit player action.
 
 ## Persistence
 
@@ -383,14 +452,21 @@ current state, records the source checkpoint/revision and new restore revision i
 the journal, supersedes obsolete pending outbox work, and emits a canonical full
 snapshot at the new revision. Clients then consume only events newer than that
 restore revision, preserving [ADR-0004](ADRs/ADR-0004-snapshot-plus-events.md).
+The opaque runtime core is encoded at the checkpoint's exact source revision
+when the immutable snapshot is created, then re-encoded at the new restore
+revision during materialization. A restored revision is consequently a normal
+canonical base for later mutation and checkpoint creation; revision integers
+never stand in for missing payload ownership.
 
 The server-owned campaign runtime and live protocol implemented in the #28
 workstream call this persistence substrate for Lobby roster configuration, the
 campaign start/seal, Session Manager transfer, readiness, journal entries, and
 outbox snapshot intents. The focused native/CEF New Game lobby projection is
 implemented, automated-tested, and manually validated for Solo plus a two-PC
-Create/Join, Character Creation, and inn-arrival happy path. Negative and
-recovery runtime scenarios remain pending. Durable Character Build binding,
+Create/Join, Character Creation, and inn-arrival happy path. Negative narrative
+runtime scenarios remain pending; #56 recovery is live validated for N=1/N=2,
+successive recovery, and restart rehydration. Durable
+Character Build binding,
 CK/Valen projection,
 feature-owned later narrative phase execution, and Departure validation remain
 incomplete. Issue #28 remains open and its tracking state does not supersede
@@ -400,8 +476,12 @@ are implemented, automated/build-tested, and nominally validated with two real
 Skyrim clients. Failure/disconnect, exact ACK replay, no-overwrite replay, and
 commit-boundary interruption remain tracked by
 [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
-Issue #56 owns
-disconnect recovery lock and collective checkpoint restore/reload gameplay.
+Issue #56 disconnect recovery lock and collective checkpoint restore/reload,
+including the reviewed crash/reconnect blockers, are implemented,
+automated/build-tested, and live validated for nominal N=1/N=2, successive
+checkpoint/recovery, restart rehydration, and both disconnect incident UX
+branches. See
+[`CAMPAIGN_COLLECTIVE_RECOVERY.md`](../development/CAMPAIGN_COLLECTIVE_RECOVERY.md).
 Durable WorldEntity persistence remains separate future work rather than part
 of #55.
 

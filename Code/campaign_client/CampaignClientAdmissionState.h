@@ -40,11 +40,18 @@ public:
     GetHelgenReadinessView() const noexcept;
 
     [[nodiscard]] std::optional<std::string> Disconnect() noexcept;
+    // An intentional end of the loaded-game runtime is not a reconnect. Drop
+    // all volatile admission/reconnect state while durable bindings remain in
+    // CampaignIdentityStore.
+    [[nodiscard]] std::optional<std::string> EndRuntimeSession() noexcept;
     [[nodiscard]] std::optional<std::string> BeginResume() noexcept;
     void ResumeRejected() noexcept;
     void Leave(std::string_view acCampaignId) noexcept;
 
 private:
+    [[nodiscard]] std::optional<std::string>
+    ClearRuntimeSession(bool aKeepReconnectCandidate) noexcept;
+
     struct RuntimeProjection
     {
         std::string CampaignId;

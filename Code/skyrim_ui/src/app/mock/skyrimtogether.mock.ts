@@ -209,6 +209,15 @@ export class SkyrimtogetherMock extends EventEmitter implements SkyrimTogether {
     );
   }
 
+  campaignResumeAction(action: string, token = ''): void {
+    console.log(
+      `%cCAMPAIGN RESUME`,
+      'background: #4b3522; color: #fff; padding: 3px; font-size: 9px;',
+      action,
+      token,
+    );
+  }
+
   changePartyLeader(playerId: number): void {
     playerStore.update(updateEntities(playerId, { hasOwnParty: true }));
     this.emit(

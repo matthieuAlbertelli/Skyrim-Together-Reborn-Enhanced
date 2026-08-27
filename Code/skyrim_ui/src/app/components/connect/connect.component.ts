@@ -4,6 +4,7 @@ import {
   ElementRef,
   EventEmitter,
   HostListener,
+  Input,
   OnDestroy,
   Output,
   ViewChild,
@@ -28,6 +29,10 @@ export class ConnectComponent implements OnDestroy, AfterViewInit {
   public savePassword = false;
 
   public connecting = false;
+
+  @Input() public allowCancel = true;
+  @Input() public showInfo = true;
+  @Input() public showServerList = true;
 
   @Output() public done = new EventEmitter<void>();
 
@@ -141,7 +146,7 @@ export class ConnectComponent implements OnDestroy, AfterViewInit {
   private activate(event: KeyboardEvent): void {
     if (this.errorService.getError()) {
       this.errorService.removeError();
-    } else {
+    } else if (this.allowCancel) {
       this.done.next();
     }
 

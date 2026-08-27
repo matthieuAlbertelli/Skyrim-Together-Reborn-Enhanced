@@ -30,6 +30,7 @@ struct CharacterBindingIdTag;
 struct CheckpointIdTag;
 struct SnapshotIdTag;
 struct MutationIdTag;
+struct RestoreAttemptIdTag;
 
 using CampaignId = DurableId<CampaignIdTag>;
 using CampaignSlotId = DurableId<CampaignSlotIdTag>;
@@ -38,6 +39,7 @@ using CharacterBindingId = DurableId<CharacterBindingIdTag>;
 using CheckpointId = DurableId<CheckpointIdTag>;
 using SnapshotId = DurableId<SnapshotIdTag>;
 using MutationId = DurableId<MutationIdTag>;
+using RestoreAttemptId = DurableId<RestoreAttemptIdTag>;
 
 enum class StoreError
 {
@@ -290,6 +292,8 @@ struct CheckpointRecord
     SnapshotId Snapshot;
     std::uint32_t SnapshotCodecVersion{};
     std::string SnapshotChecksum;
+    std::uint32_t SnapshotCoreStateCodecVersion{};
+    Bytes SnapshotCoreStatePayload;
     StateVersion CreatedRevision{};
     std::optional<StateVersion> CommittedRevision;
     std::int64_t CreatedAtUnixMs{};
@@ -304,6 +308,8 @@ struct CreateCheckpointCandidateRequest
     MutationId Mutation;
     CheckpointId Checkpoint;
     SnapshotId Snapshot;
+    std::uint32_t SnapshotCoreStateCodecVersion{};
+    Bytes SnapshotCoreStatePayload;
     std::uint32_t MutationCodecVersion{1};
     Bytes MutationPayload;
     std::vector<OutboxIntent> Outbox;
@@ -338,6 +344,8 @@ struct RestoreCheckpointRequest
     StateVersion ExpectedRevision{};
     MutationId Mutation;
     CheckpointId Checkpoint;
+    std::uint32_t RestoredCoreStateCodecVersion{};
+    Bytes RestoredCoreStatePayload;
     std::uint32_t MutationCodecVersion{1};
     Bytes MutationPayload;
 };

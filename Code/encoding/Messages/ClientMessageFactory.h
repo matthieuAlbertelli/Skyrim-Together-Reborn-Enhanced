@@ -85,7 +85,8 @@ struct ClientMessageFactory
             RequestRemoveWaypoint, RemoveSpellRequest, SetTimeCommandRequest, TradeInviteRequest, TradeInviteResponseRequest, TradeOfferUpdateRequest, TradeConfirmRequest, TradeCancelRequest, TradeApplyResultRequest, TradeReconcileResultRequest, CharacterBuildRequest, CharacterBuildAppliedRequest, RequestWorldEntityManipulation,
             CampaignCreateRequest, CampaignJoinRequest, CampaignResumeRequest, CampaignStartRequest, CampaignSetReadyRequest, CampaignLeaveRequest,
             CampaignJoinByCodeRequest, CampaignHelgenInvestigationReadyRequest,
-            CampaignCheckpointSaveResult>;
+            CampaignCheckpointSaveResult, CampaignRecoveryLoadedResult,
+            CampaignRecoverySnapshotApplied, CampaignCheckpointRequest>;
 
         return s_visitor(std::forward<T>(func));
     }

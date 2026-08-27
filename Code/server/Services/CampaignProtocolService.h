@@ -18,10 +18,14 @@ struct CampaignSetReadyRequest;
 struct CampaignLeaveRequest;
 struct CampaignJoinByCodeRequest;
 struct CampaignHelgenInvestigationReadyRequest;
+struct CampaignCheckpointRequest;
 struct CampaignCheckpointSaveResult;
+struct CampaignRecoveryLoadedResult;
+struct CampaignRecoverySnapshotApplied;
 struct Player;
 struct PlayerLeaveEvent;
 struct World;
+enum class CampaignCheckpointPublicState : std::uint8_t;
 
 class CampaignProtocolService final
 {
@@ -69,12 +73,31 @@ private:
     void OnJoinByCode(
         const PacketEvent<CampaignJoinByCodeRequest>& acPacket) noexcept;
     void OnHelgenInvestigationReady(const PacketEvent<CampaignHelgenInvestigationReadyRequest>& acPacket) noexcept;
+    void OnCheckpointRequest(
+        const PacketEvent<CampaignCheckpointRequest>& acPacket) noexcept;
     void OnCheckpointSaveResult(
         const PacketEvent<CampaignCheckpointSaveResult>& acPacket) noexcept;
     void OnPlayerLeave(const PlayerLeaveEvent& acEvent) noexcept;
 
     [[nodiscard]] bool SendCheckpointRequest(
         const STRE::Campaign::CampaignCheckpointActivity& acActivity) noexcept;
+    void SendCheckpointState(
+        const STRE::Campaign::CampaignId& acCampaign,
+        std::string_view acCheckpointId,
+        CampaignCheckpointPublicState aState,
+        Player* apOnlyPlayer = nullptr) noexcept;
+    [[nodiscard]] bool AdvanceRecovery(
+        const STRE::Campaign::CampaignId& acCampaign) noexcept;
+    [[nodiscard]] bool SendRecoveryLoadRequests(
+        const STRE::Campaign::CampaignRecoveryActivity& acActivity,
+        const STRE::Campaign::CheckpointRecord& acCheckpoint) noexcept;
+    [[nodiscard]] bool SendRecoverySnapshot(
+        const STRE::Campaign::CampaignRecoveryActivity& acActivity,
+        const STRE::Campaign::CheckpointRecord& acCheckpoint) noexcept;
+    void OnRecoveryLoadedResult(
+        const PacketEvent<CampaignRecoveryLoadedResult>& acPacket) noexcept;
+    void OnRecoverySnapshotApplied(
+        const PacketEvent<CampaignRecoverySnapshotApplied>& acPacket) noexcept;
 
     void BroadcastHelgenState(const STRE::Campaign::CampaignId& acCampaign, Player* apOnlyPlayer = nullptr) noexcept;
 
@@ -91,6 +114,7 @@ private:
     std::unordered_map<
         STRE::Campaign::CampaignConnectionHandle,
         PendingResumeAlignment> m_pendingResumeAlignments;
+    std::unordered_set<std::string> m_pendingCampaignLoads;
     std::unordered_map<std::string, std::unordered_set<STRE::Campaign::CampaignConnectionHandle>> m_helgenReadyConnections;
     std::unordered_set<std::string> m_helgenStartedCampaigns;
 
@@ -102,6 +126,9 @@ private:
     entt::scoped_connection m_leaveConnection;
     entt::scoped_connection m_joinByCodeConnection;
     entt::scoped_connection m_helgenReadyConnection;
+    entt::scoped_connection m_checkpointRequestConnection;
     entt::scoped_connection m_checkpointResultConnection;
+    entt::scoped_connection m_recoveryLoadedConnection;
+    entt::scoped_connection m_recoverySnapshotAppliedConnection;
     entt::scoped_connection m_playerLeaveConnection;
 };

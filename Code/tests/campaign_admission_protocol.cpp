@@ -4,6 +4,7 @@
 
 #include <catch2/catch.hpp>
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
@@ -170,10 +171,52 @@ TEST_CASE(
     REQUIRE(snapshot);
     REQUIRE(snapshot->RuntimeState ==
         static_cast<std::uint8_t>(
-            CampaignRuntimeState::WAITING_FOR_ROSTER));
+            CampaignRuntimeState::RECOVERY_LOCK));
     REQUIRE(fixture.Store->LoadCheckpoint(
         campaign, next.Activity->Checkpoint).Value.State ==
         CheckpointState::Candidate);
+}
+
+TEST_CASE(
+    "Player checkpoint intent requires admitted ACTIVE campaign and coalesces concurrent requests",
+    "[campaign.admission][checkpoint][intent][authority]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+
+    const auto unknownConnection = fixture.Admission.BeginCheckpoint(99);
+    REQUIRE(unknownConnection.Command.Error ==
+        CampaignError::NotCampaignMember);
+
+    const auto lobbyRequest = fixture.Admission.BeginCheckpoint(1);
+    REQUIRE(lobbyRequest.Command.Error == CampaignError::RosterNotSealed);
+
+    REQUIRE(fixture.Admission.StartCampaign(
+        1, created.CampaignId, "mutation-start-intent", 1, true, true)
+                .Succeeded());
+    const CampaignId campaign{created.CampaignId};
+    const auto first = fixture.Admission.BeginCheckpoint(1);
+    REQUIRE(first.Succeeded());
+    REQUIRE(first.Activity);
+    REQUIRE(first.Activity->Campaign == campaign);
+    REQUIRE(first.Activity->Checkpoint.Value.starts_with("checkpoint-"));
+    REQUIRE(first.Activity->NativeSaveIdentity ==
+        "stre-" + first.Activity->Checkpoint.Value);
+
+    const auto duplicate = fixture.Admission.BeginCheckpoint(1);
+    REQUIRE(duplicate.Command.Error ==
+        CampaignError::CheckpointInProgress);
+    REQUIRE(duplicate.Activity);
+    REQUIRE(duplicate.Activity->Checkpoint == first.Activity->Checkpoint);
+    REQUIRE(duplicate.Activity->SourceRevision ==
+        first.Activity->SourceRevision);
+
+    const auto candidate = fixture.Store->LoadCheckpoint(
+        campaign, first.Activity->Checkpoint);
+    REQUIRE(candidate.Succeeded());
+    REQUIRE(candidate.Value.State == CheckpointState::Candidate);
+    REQUIRE(candidate.Value.SourceRevision == first.Activity->SourceRevision);
 }
 
 TEST_CASE("Live campaign creation join and pre-seal leave use canonical assignments", "[campaign.admission]")
@@ -697,9 +740,14 @@ TEST_CASE("Sealed reconnect admission preserves roster and derives runtime prese
     const auto disconnected = fixture.Admission.Disconnect(2);
     REQUIRE(disconnected);
     REQUIRE(disconnected->RuntimeState ==
-        static_cast<std::uint8_t>(CampaignRuntimeState::WAITING_FOR_ROSTER));
+        static_cast<std::uint8_t>(CampaignRuntimeState::RECOVERY_LOCK));
     REQUIRE(disconnected->Roster.size() == 2);
     REQUIRE_FALSE(disconnected->Roster[1].Present);
+    const auto recoveryBeforeResume = fixture.Runtime.GetRecoveryActivity(
+        CampaignId{created.CampaignId});
+    REQUIRE(recoveryBeforeResume);
+    const RestoreAttemptId restoreAttempt =
+        recoveryBeforeResume->Attempt;
 
     const auto durable = fixture.Runtime.LoadCampaign(
         CampaignId{created.CampaignId});
@@ -715,10 +763,23 @@ TEST_CASE("Sealed reconnect admission preserves roster and derives runtime prese
     const auto resumed = fixture.Admission.ResumeCampaign(
         22, created.CampaignId, memberBinding);
     REQUIRE(resumed.Result == CampaignProtocolResult::Applied);
-    REQUIRE(resumed.Version == 3);
+    REQUIRE(resumed.Version == 4);
     REQUIRE(resumed.CampaignSlotId == memberSlot);
     REQUIRE(resumed.Snapshot->RuntimeState ==
-        static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE));
+        static_cast<std::uint8_t>(CampaignRuntimeState::RECOVERY_LOCK));
+    const auto recoveryAfterResume = fixture.Runtime.GetRecoveryActivity(
+        CampaignId{created.CampaignId});
+    REQUIRE(recoveryAfterResume);
+    REQUIRE(recoveryAfterResume->Attempt == restoreAttempt);
+    const auto recoveryJournal = fixture.Store->LoadJournal(
+        CampaignId{created.CampaignId});
+    REQUIRE(recoveryJournal.Succeeded());
+    REQUIRE(std::count_if(
+        recoveryJournal.Value.begin(), recoveryJournal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "BeginRecovery";
+        }) == 1);
 
     const auto unknownPlayer = fixture.Admission.ResumeCampaign(
         3, created.CampaignId, memberBinding);
@@ -727,8 +788,681 @@ TEST_CASE("Sealed reconnect admission preserves roster and derives runtime prese
     const auto unchanged = fixture.Runtime.LoadCampaign(
         CampaignId{created.CampaignId});
     REQUIRE(unchanged.Succeeded());
-    REQUIRE(unchanged.Campaign.Version == 3);
+    REQUIRE(unchanged.Campaign.Version == 4);
     REQUIRE(unchanged.Campaign.Roster.size() == 2);
+}
+
+TEST_CASE(
+    "Single-member ACTIVE transport departure uses generic absence and recovery",
+    "[campaign.admission][disconnect][main-menu][recovery]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    const auto started = fixture.Admission.StartCampaign(
+        1,
+        created.CampaignId,
+        "mutation-start-runtime-departure",
+        1,
+        true,
+        true);
+    REQUIRE(started.Succeeded());
+    REQUIRE(started.Snapshot->Roster.size() == 1);
+    REQUIRE(started.Snapshot->Roster.front().Present);
+    REQUIRE(started.Snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE));
+
+    const auto departed = fixture.Admission.Disconnect(1);
+    REQUIRE(departed);
+    REQUIRE(departed->Roster.size() == 1);
+    REQUIRE_FALSE(departed->Roster.front().Present);
+    REQUIRE(departed->RuntimeState ==
+        static_cast<std::uint8_t>(CampaignRuntimeState::RECOVERY_LOCK));
+
+    const auto durable = fixture.Runtime.LoadCampaign(
+        CampaignId{created.CampaignId});
+    REQUIRE(durable.Succeeded());
+    REQUIRE(durable.Campaign.RosterSealed);
+    REQUIRE(durable.Campaign.Roster.size() == 1);
+    REQUIRE(durable.Campaign.Roster.front().Slot.Value ==
+        created.CampaignSlotId);
+    REQUIRE(durable.Campaign.Roster.front().CharacterBinding.Value ==
+        created.CharacterBindingId);
+    REQUIRE(fixture.Runtime.GetRecoveryActivity(
+        CampaignId{created.CampaignId}));
+
+    const auto journal = fixture.Store->LoadJournal(
+        CampaignId{created.CampaignId});
+    REQUIRE(journal.Succeeded());
+    REQUIRE(std::count_if(
+        journal.Value.begin(),
+        journal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "BeginRecovery";
+        }) == 1);
+}
+
+TEST_CASE(
+    "Sole sealed member reconnect completes the generic recovery protocol",
+    "[campaign.admission][campaign.recovery][reconnect][roster-one]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.StartCampaign(
+        1,
+        created.CampaignId,
+        "mutation-start-one-member",
+        created.Version,
+        true,
+        true).Succeeded());
+
+    const CampaignId campaign{created.CampaignId};
+    const auto checkpoint = fixture.Admission.BeginCheckpoint(campaign);
+    REQUIRE(checkpoint.Succeeded());
+    REQUIRE(checkpoint.Activity);
+    const auto artifact = CheckpointArtifact(
+        checkpoint.Activity->NativeSaveIdentity, 1);
+    const auto committed = fixture.Admission.HandleCheckpointSaveResult(
+        1,
+        campaign,
+        checkpoint.Activity->Checkpoint,
+        checkpoint.Activity->NativeSaveIdentity,
+        true,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(artifact.Fingerprint.begin(), artifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        artifact.Metadata);
+    REQUIRE(committed.Succeeded());
+    REQUIRE(committed.Committed);
+
+    const auto disconnected = fixture.Admission.Disconnect(1);
+    REQUIRE(disconnected);
+    REQUIRE(disconnected->RuntimeState ==
+        kCampaignWireRuntimeRecoveryLock);
+    const auto opened = fixture.Runtime.GetRecoveryActivity(campaign);
+    REQUIRE(opened);
+    const RestoreAttemptId attempt = opened->Attempt;
+
+    REQUIRE(fixture.Admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto resumed = fixture.Admission.ResumeCampaign(
+        11, created.CampaignId, created.CharacterBindingId);
+    REQUIRE(resumed.Succeeded());
+    REQUIRE(resumed.Snapshot);
+    REQUIRE(resumed.Snapshot->RuntimeState ==
+        kCampaignWireRuntimeRecoveryLock);
+
+    const auto prepared = fixture.Admission.PrepareRecovery(campaign);
+    REQUIRE(prepared.Succeeded());
+    REQUIRE(prepared.Activity);
+    REQUIRE(prepared.Activity->Attempt == attempt);
+    REQUIRE(prepared.Dispatch == CampaignRecoveryDispatch::NativeLoad);
+
+    const auto restored = fixture.Admission.HandleRecoveryLoaded(
+        11,
+        campaign,
+        attempt,
+        checkpoint.Activity->Checkpoint,
+        true,
+        checkpoint.Activity->NativeSaveIdentity,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(artifact.Fingerprint.begin(), artifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        artifact.Metadata);
+    REQUIRE(restored.Succeeded());
+    REQUIRE(restored.FirstBarrierCompleted);
+    REQUIRE(restored.Dispatch ==
+        CampaignRecoveryDispatch::RestoredSnapshot);
+    REQUIRE(restored.Activity);
+    REQUIRE(restored.Activity->RestoreRevision);
+
+    const auto durableCheckpoint = fixture.Store->LoadCheckpoint(
+        campaign, checkpoint.Activity->Checkpoint);
+    REQUIRE(durableCheckpoint.Succeeded());
+    const auto dispatch = fixture.Admission.PrepareRecoveryRecipients(
+        durableCheckpoint.Value);
+    REQUIRE(dispatch.Succeeded());
+    REQUIRE(dispatch.RequiredMemberCount == 1);
+    REQUIRE(dispatch.Recipients.size() == 1);
+    REQUIRE(dispatch.Recipients.front().Connection == 11);
+
+    const auto completed =
+        fixture.Admission.HandleRecoverySnapshotApplied(
+            11,
+            campaign,
+            attempt,
+            checkpoint.Activity->Checkpoint,
+            *restored.Activity->RestoreRevision);
+    REQUIRE(completed.Succeeded());
+    REQUIRE(completed.RecoveryCompleted);
+    REQUIRE_FALSE(fixture.Runtime.GetRecoveryActivity(campaign));
+    const auto active = fixture.Admission.BuildSnapshot(campaign);
+    REQUIRE(active);
+    REQUIRE(active->RuntimeState == kCampaignWireRuntimeActive);
+}
+
+TEST_CASE(
+    "Two-member recovery prepares the complete canonical snapshot dispatch after reconnect",
+    "[campaign.admission][campaign.recovery][dispatch][reconnect]")
+{
+    ProtocolFixture fixture;
+    const auto created = fixture.CreateHost();
+    REQUIRE(created.Succeeded());
+    REQUIRE(fixture.Admission.RegisterConnection(2, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto joined = fixture.Admission.JoinCampaign(
+        2, created.CampaignId, "mutation-join-recovery-dispatch",
+        created.Version, true);
+    REQUIRE(joined.Succeeded());
+    REQUIRE(fixture.Admission.StartCampaign(
+        1,
+        created.CampaignId,
+        "mutation-start-recovery-dispatch",
+        joined.Version,
+        true,
+        true).Succeeded());
+
+    const CampaignId campaign{created.CampaignId};
+    const auto checkpoint = fixture.Admission.BeginCheckpoint(campaign);
+    REQUIRE(checkpoint.Succeeded());
+    REQUIRE(checkpoint.Activity);
+    const auto firstArtifact = CheckpointArtifact(
+        checkpoint.Activity->NativeSaveIdentity, 1);
+    const auto secondArtifact = CheckpointArtifact(
+        checkpoint.Activity->NativeSaveIdentity, 2);
+    const auto acknowledgeCheckpoint = [&](
+        CampaignConnectionHandle aConnection,
+        const NativeSaveBundleArtifact& acArtifact)
+    {
+        return fixture.Admission.HandleCheckpointSaveResult(
+            aConnection,
+            campaign,
+            checkpoint.Activity->Checkpoint,
+            checkpoint.Activity->NativeSaveIdentity,
+            true,
+            std::string(kNativeSaveFingerprintAlgorithm),
+            kNativeSaveFingerprintVersion,
+            Bytes(acArtifact.Fingerprint.begin(),
+                acArtifact.Fingerprint.end()),
+            kNativeSaveMetadataCodecVersion,
+            acArtifact.Metadata);
+    };
+    REQUIRE_FALSE(acknowledgeCheckpoint(1, firstArtifact).Committed);
+    REQUIRE(acknowledgeCheckpoint(2, secondArtifact).Committed);
+
+    REQUIRE(fixture.Admission.Disconnect(1));
+    REQUIRE(fixture.Admission.Disconnect(2));
+    const auto opened = fixture.Runtime.GetRecoveryActivity(campaign);
+    REQUIRE(opened);
+    const RestoreAttemptId attempt = opened->Attempt;
+
+    REQUIRE(fixture.Admission.RegisterConnection(101, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(fixture.Admission.ResumeCampaign(
+        101, created.CampaignId, created.CharacterBindingId).Succeeded());
+    REQUIRE(fixture.Admission.RegisterConnection(202, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(fixture.Admission.ResumeCampaign(
+        202, created.CampaignId, joined.CharacterBindingId).Succeeded());
+
+    const auto prepared = fixture.Admission.PrepareRecovery(campaign);
+    REQUIRE(prepared.Succeeded());
+    REQUIRE(prepared.Dispatch == CampaignRecoveryDispatch::NativeLoad);
+    REQUIRE(prepared.Activity);
+    const auto acknowledgeLoaded = [&](
+        CampaignConnectionHandle aConnection,
+        const NativeSaveBundleArtifact& acArtifact)
+    {
+        return fixture.Admission.HandleRecoveryLoaded(
+            aConnection,
+            campaign,
+            attempt,
+            checkpoint.Activity->Checkpoint,
+            true,
+            checkpoint.Activity->NativeSaveIdentity,
+            std::string(kNativeSaveFingerprintAlgorithm),
+            kNativeSaveFingerprintVersion,
+            Bytes(acArtifact.Fingerprint.begin(),
+                acArtifact.Fingerprint.end()),
+            kNativeSaveMetadataCodecVersion,
+            acArtifact.Metadata);
+    };
+
+    const auto firstLoaded = acknowledgeLoaded(101, firstArtifact);
+    REQUIRE(firstLoaded.Succeeded());
+    REQUIRE_FALSE(firstLoaded.FirstBarrierCompleted);
+    const auto restored = acknowledgeLoaded(202, secondArtifact);
+    REQUIRE(restored.Succeeded());
+    REQUIRE(restored.FirstBarrierCompleted);
+    REQUIRE(restored.Dispatch ==
+        CampaignRecoveryDispatch::RestoredSnapshot);
+    REQUIRE(restored.Activity);
+    REQUIRE(restored.Activity->RestoreRevision);
+
+    const auto durableCheckpoint = fixture.Store->LoadCheckpoint(
+        campaign, checkpoint.Activity->Checkpoint);
+    REQUIRE(durableCheckpoint.Succeeded());
+    const auto dispatch = fixture.Admission.PrepareRecoveryRecipients(
+        durableCheckpoint.Value);
+    REQUIRE(dispatch.Succeeded());
+    REQUIRE(dispatch.RequiredMemberCount == 2);
+    REQUIRE(dispatch.Recipients.size() == 2);
+    REQUIRE(dispatch.Recipients[0].Connection == 101);
+    REQUIRE(dispatch.Recipients[1].Connection == 202);
+    REQUIRE(dispatch.Recipients[0].Identity.Slot.Value == "slot-01");
+    REQUIRE(dispatch.Recipients[1].Identity.Slot.Value == "slot-02");
+
+    const auto loadedReplay = acknowledgeLoaded(202, secondArtifact);
+    REQUIRE(loadedReplay.Succeeded());
+    REQUIRE(loadedReplay.Command.IdempotentReplay);
+    REQUIRE(loadedReplay.Dispatch ==
+        CampaignRecoveryDispatch::RestoredSnapshot);
+    auto journal = fixture.Store->LoadJournal(campaign);
+    REQUIRE(journal.Succeeded());
+    REQUIRE(std::count_if(
+        journal.Value.begin(), journal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "RestoreCheckpoint";
+        }) == 1);
+
+    // Losing one current recipient after the durable restore prepares no
+    // partial dispatch and reopens the existing attempt for native-load replay.
+    REQUIRE(fixture.Admission.Disconnect(202));
+    const auto missing = fixture.Admission.PrepareRecoveryRecipients(
+        durableCheckpoint.Value);
+    REQUIRE_FALSE(missing.Succeeded());
+    REQUIRE(missing.Error ==
+        CampaignRecoveryRecipientError::MissingCurrentAdmission);
+    REQUIRE(missing.RequiredMemberCount == 2);
+    REQUIRE(missing.Recipients.size() == 1);
+    REQUIRE(missing.FailedIdentity);
+    REQUIRE(missing.FailedIdentity->Slot.Value == "slot-02");
+    const auto locked = fixture.Runtime.GetRecoveryActivity(campaign);
+    REQUIRE(locked);
+    REQUIRE(locked->Attempt == attempt);
+    REQUIRE(locked->Stage == CampaignRecoveryStage::RecoveryLock);
+
+    REQUIRE(fixture.Admission.RegisterConnection(222, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(fixture.Admission.ResumeCampaign(
+        222, created.CampaignId, joined.CharacterBindingId).Succeeded());
+    const auto replayPrepared = fixture.Admission.PrepareRecovery(campaign);
+    REQUIRE(replayPrepared.Succeeded());
+    REQUIRE(replayPrepared.Dispatch == CampaignRecoveryDispatch::NativeLoad);
+    REQUIRE(acknowledgeLoaded(101, firstArtifact).Succeeded());
+    const auto restoreReplay = acknowledgeLoaded(222, secondArtifact);
+    REQUIRE(restoreReplay.Succeeded());
+    REQUIRE(restoreReplay.Command.IdempotentReplay);
+    REQUIRE(restoreReplay.Activity->RestoreRevision ==
+        restored.Activity->RestoreRevision);
+
+    const auto replayDispatch = fixture.Admission.PrepareRecoveryRecipients(
+        durableCheckpoint.Value);
+    REQUIRE(replayDispatch.Succeeded());
+    REQUIRE(replayDispatch.Recipients.size() == 2);
+    REQUIRE(replayDispatch.Recipients[0].Connection == 101);
+    REQUIRE(replayDispatch.Recipients[1].Connection == 222);
+
+    const StateVersion restoreRevision =
+        *restoreReplay.Activity->RestoreRevision;
+    const auto firstApplied =
+        fixture.Admission.HandleRecoverySnapshotApplied(
+            101,
+            campaign,
+            attempt,
+            checkpoint.Activity->Checkpoint,
+            restoreRevision);
+    REQUIRE(firstApplied.Succeeded());
+    REQUIRE_FALSE(firstApplied.RecoveryCompleted);
+    const auto completed =
+        fixture.Admission.HandleRecoverySnapshotApplied(
+            222,
+            campaign,
+            attempt,
+            checkpoint.Activity->Checkpoint,
+            restoreRevision);
+    REQUIRE(completed.Succeeded());
+    REQUIRE(completed.RecoveryCompleted);
+
+    const auto secondCheckpoint =
+        fixture.Admission.BeginCheckpoint(campaign);
+    REQUIRE(secondCheckpoint.Succeeded());
+    REQUIRE(secondCheckpoint.Activity);
+    REQUIRE(secondCheckpoint.Activity->SourceRevision == restoreRevision);
+    const auto thirdArtifact = CheckpointArtifact(
+        secondCheckpoint.Activity->NativeSaveIdentity, 3);
+    const auto fourthArtifact = CheckpointArtifact(
+        secondCheckpoint.Activity->NativeSaveIdentity, 4);
+    REQUIRE_FALSE(fixture.Admission.HandleCheckpointSaveResult(
+        101,
+        campaign,
+        secondCheckpoint.Activity->Checkpoint,
+        secondCheckpoint.Activity->NativeSaveIdentity,
+        true,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(thirdArtifact.Fingerprint.begin(),
+            thirdArtifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        thirdArtifact.Metadata).Committed);
+    REQUIRE(fixture.Admission.HandleCheckpointSaveResult(
+        222,
+        campaign,
+        secondCheckpoint.Activity->Checkpoint,
+        secondCheckpoint.Activity->NativeSaveIdentity,
+        true,
+        std::string(kNativeSaveFingerprintAlgorithm),
+        kNativeSaveFingerprintVersion,
+        Bytes(fourthArtifact.Fingerprint.begin(),
+            fourthArtifact.Fingerprint.end()),
+        kNativeSaveMetadataCodecVersion,
+        fourthArtifact.Metadata).Committed);
+
+    REQUIRE(fixture.Admission.Disconnect(101));
+    REQUIRE(fixture.Admission.Disconnect(222));
+    const auto secondOpened = fixture.Runtime.GetRecoveryActivity(campaign);
+    REQUIRE(secondOpened);
+    const RestoreAttemptId secondAttempt = secondOpened->Attempt;
+    REQUIRE(secondAttempt != attempt);
+    REQUIRE(fixture.Admission.RegisterConnection(303, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(fixture.Admission.ResumeCampaign(
+        303, created.CampaignId, created.CharacterBindingId).Succeeded());
+    REQUIRE(fixture.Admission.RegisterConnection(404, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(fixture.Admission.ResumeCampaign(
+        404, created.CampaignId, joined.CharacterBindingId).Succeeded());
+
+    const auto secondPrepared =
+        fixture.Admission.PrepareRecovery(campaign);
+    REQUIRE(secondPrepared.Succeeded());
+    REQUIRE(secondPrepared.Dispatch ==
+        CampaignRecoveryDispatch::NativeLoad);
+    const auto secondLoaded = [&] (
+        CampaignConnectionHandle aConnection,
+        const NativeSaveBundleArtifact& acArtifact)
+    {
+        return fixture.Admission.HandleRecoveryLoaded(
+            aConnection,
+            campaign,
+            secondAttempt,
+            secondCheckpoint.Activity->Checkpoint,
+            true,
+            secondCheckpoint.Activity->NativeSaveIdentity,
+            std::string(kNativeSaveFingerprintAlgorithm),
+            kNativeSaveFingerprintVersion,
+            Bytes(acArtifact.Fingerprint.begin(),
+                acArtifact.Fingerprint.end()),
+            kNativeSaveMetadataCodecVersion,
+            acArtifact.Metadata);
+    };
+    REQUIRE_FALSE(secondLoaded(303, thirdArtifact).FirstBarrierCompleted);
+    const auto secondRestored = secondLoaded(404, fourthArtifact);
+    REQUIRE(secondRestored.Succeeded());
+    REQUIRE(secondRestored.FirstBarrierCompleted);
+    REQUIRE(secondRestored.Activity);
+    REQUIRE(secondRestored.Activity->RestoreRevision);
+    REQUIRE(*secondRestored.Activity->RestoreRevision > restoreRevision);
+
+    const auto secondCanonical = fixture.Admission.BuildSnapshot(campaign);
+    REQUIRE(secondCanonical);
+    REQUIRE(secondCanonical->StateVersion ==
+        *secondRestored.Activity->RestoreRevision);
+    const auto secondDurableCheckpoint = fixture.Store->LoadCheckpoint(
+        campaign, secondCheckpoint.Activity->Checkpoint);
+    REQUIRE(secondDurableCheckpoint.Succeeded());
+    REQUIRE(secondDurableCheckpoint.Value.SourceRevision == restoreRevision);
+    const auto secondDispatch =
+        fixture.Admission.PrepareRecoveryRecipients(
+            secondDurableCheckpoint.Value);
+    REQUIRE(secondDispatch.Succeeded());
+    REQUIRE(secondDispatch.RequiredMemberCount == 2);
+    REQUIRE(secondDispatch.Recipients.size() == 2);
+    REQUIRE(secondDispatch.Recipients[0].Connection == 303);
+    REQUIRE(secondDispatch.Recipients[1].Connection == 404);
+
+    const StateVersion secondRestoreRevision =
+        *secondRestored.Activity->RestoreRevision;
+    REQUIRE_FALSE(fixture.Admission.HandleRecoverySnapshotApplied(
+        303,
+        campaign,
+        secondAttempt,
+        secondCheckpoint.Activity->Checkpoint,
+        secondRestoreRevision).RecoveryCompleted);
+    REQUIRE(fixture.Admission.HandleRecoverySnapshotApplied(
+        404,
+        campaign,
+        secondAttempt,
+        secondCheckpoint.Activity->Checkpoint,
+        secondRestoreRevision).RecoveryCompleted);
+
+    journal = fixture.Store->LoadJournal(campaign);
+    REQUIRE(journal.Succeeded());
+    REQUIRE(std::count_if(
+        journal.Value.begin(), journal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "RestoreCheckpoint";
+        }) == 2);
+}
+
+TEST_CASE(
+    "Disconnect while waiting for the sealed roster does not begin recovery",
+    "[campaign.admission][campaign.recovery][waiting]")
+{
+    TemporaryDatabase database;
+    std::string campaignId;
+    std::string hostBinding;
+    {
+        auto store = OpenStore(database);
+        CampaignRuntimeService runtime(*store);
+        std::size_t generatedIds{};
+        CampaignAdmissionService admission(
+            runtime, [&generatedIds](std::string_view acPrefix)
+            {
+                return std::string(acPrefix) + "waiting-" +
+                    std::to_string(++generatedIds);
+            });
+        REQUIRE(admission.RegisterConnection(1, TestPlayerId(1)) ==
+            CampaignConnectionRegistration::Accepted);
+        const auto created = admission.CreateCampaign(
+            1, "mutation-create-waiting", true);
+        REQUIRE(created.Succeeded());
+        campaignId = created.CampaignId;
+        hostBinding = created.CharacterBindingId;
+        REQUIRE(admission.RegisterConnection(2, TestPlayerId(2)) ==
+            CampaignConnectionRegistration::Accepted);
+        REQUIRE(admission.JoinCampaign(
+            2, campaignId, "mutation-join-waiting", 1, true).Succeeded());
+        REQUIRE(admission.StartCampaign(
+            1, campaignId, "mutation-start-waiting", 2, true, true)
+                    .Succeeded());
+    }
+
+    auto store = OpenStore(database);
+    CampaignRuntimeService runtime(*store);
+    CampaignAdmissionService admission(runtime);
+    REQUIRE(admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto resumed = admission.ResumeCampaign(
+        11, campaignId, hostBinding);
+    REQUIRE(resumed.Succeeded());
+    REQUIRE(resumed.Snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(
+            CampaignRuntimeState::WAITING_FOR_ROSTER));
+
+    const auto disconnected = admission.Disconnect(11);
+    REQUIRE(disconnected);
+    REQUIRE(disconnected->RuntimeState ==
+        static_cast<std::uint8_t>(
+            CampaignRuntimeState::WAITING_FOR_ROSTER));
+    REQUIRE_FALSE(runtime.GetRecoveryActivity(CampaignId{campaignId}));
+    const auto journal = store->LoadJournal(CampaignId{campaignId});
+    REQUIRE(journal.Succeeded());
+    REQUIRE(std::none_of(
+        journal.Value.begin(), journal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "BeginRecovery";
+        }));
+}
+
+TEST_CASE(
+    "Cold-session sealed roster resumes through waiting to full without opening recovery",
+    "[campaign.admission][campaign.resume][reconnect]")
+{
+    TemporaryDatabase database;
+    std::string campaignId;
+    std::string hostBinding;
+    std::string memberBinding;
+    {
+        auto store = OpenStore(database);
+        CampaignRuntimeService runtime(*store);
+        CampaignAdmissionService admission(runtime);
+        REQUIRE(admission.RegisterConnection(1, TestPlayerId(1)) ==
+            CampaignConnectionRegistration::Accepted);
+        const auto created = admission.CreateCampaign(
+            1, "mutation-create-cold-resume", true);
+        REQUIRE(created.Succeeded());
+        campaignId = created.CampaignId;
+        hostBinding = created.CharacterBindingId;
+
+        REQUIRE(admission.RegisterConnection(2, TestPlayerId(2)) ==
+            CampaignConnectionRegistration::Accepted);
+        const auto joined = admission.JoinCampaign(
+            2, campaignId, "mutation-join-cold-resume", 1, true);
+        REQUIRE(joined.Succeeded());
+        memberBinding = joined.CharacterBindingId;
+        REQUIRE(admission.StartCampaign(
+            1, campaignId, "mutation-start-cold-resume", 2, true, true)
+                    .Succeeded());
+    }
+
+    auto store = OpenStore(database);
+    CampaignRuntimeService runtime(*store);
+    CampaignAdmissionService admission(runtime);
+    REQUIRE(admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto host = admission.ResumeCampaign(
+        11, campaignId, hostBinding);
+    REQUIRE(host.Succeeded());
+    REQUIRE(host.Snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(
+            CampaignRuntimeState::WAITING_FOR_ROSTER));
+    REQUIRE(std::count_if(
+        host.Snapshot->Roster.begin(), host.Snapshot->Roster.end(),
+        [](const CampaignPublicSlotData& acSlot)
+        {
+            return acSlot.Present;
+        }) == 1);
+
+    REQUIRE(admission.RegisterConnection(22, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto member = admission.ResumeCampaign(
+        22, campaignId, memberBinding);
+    REQUIRE(member.Succeeded());
+    REQUIRE(member.Snapshot->RuntimeState ==
+        static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE));
+    REQUIRE(std::all_of(
+        member.Snapshot->Roster.begin(), member.Snapshot->Roster.end(),
+        [](const CampaignPublicSlotData& acSlot)
+        {
+            return acSlot.Present;
+        }));
+    REQUIRE_FALSE(runtime.GetRecoveryActivity(CampaignId{campaignId}));
+
+    const auto journal = store->LoadJournal(CampaignId{campaignId});
+    REQUIRE(journal.Succeeded());
+    REQUIRE(std::none_of(
+        journal.Value.begin(), journal.Value.end(),
+        [](const JournalRecord& acRecord)
+        {
+            return acRecord.Kind == "BeginRecovery";
+        }));
+}
+
+TEST_CASE(
+    "Cold Load Campaign waits for second resume then opens existing recovery from ACTIVE",
+    "[campaign.admission][campaign.resume][campaign.load][campaign.recovery]")
+{
+    TemporaryDatabase database;
+    std::string campaignId;
+    std::string hostBinding;
+    std::string memberBinding;
+    {
+        auto store = OpenStore(database);
+        CampaignRuntimeService runtime(*store);
+        CampaignAdmissionService admission(runtime);
+        REQUIRE(admission.RegisterConnection(1, TestPlayerId(1)) ==
+            CampaignConnectionRegistration::Accepted);
+        const auto created = admission.CreateCampaign(
+            1, "mutation-create-cold-load", true);
+        REQUIRE(created.Succeeded());
+        campaignId = created.CampaignId;
+        hostBinding = created.CharacterBindingId;
+        REQUIRE(admission.RegisterConnection(2, TestPlayerId(2)) ==
+            CampaignConnectionRegistration::Accepted);
+        const auto joined = admission.JoinCampaign(
+            2, campaignId, "mutation-join-cold-load", 1, true);
+        REQUIRE(joined.Succeeded());
+        memberBinding = joined.CharacterBindingId;
+        REQUIRE(admission.StartCampaign(
+            1, campaignId, "mutation-start-cold-load", 2, true, true)
+                    .Succeeded());
+
+        const CampaignId campaign{campaignId};
+        const auto checkpoint = admission.BeginCheckpoint(campaign);
+        REQUIRE(checkpoint.Succeeded());
+        const auto first = CheckpointArtifact(
+            checkpoint.Activity->NativeSaveIdentity, 1);
+        const auto second = CheckpointArtifact(
+            checkpoint.Activity->NativeSaveIdentity, 2);
+        REQUIRE(admission.HandleCheckpointSaveResult(
+            1, campaign, checkpoint.Activity->Checkpoint,
+            checkpoint.Activity->NativeSaveIdentity, true,
+            std::string(kNativeSaveFingerprintAlgorithm),
+            kNativeSaveFingerprintVersion,
+            Bytes(first.Fingerprint.begin(), first.Fingerprint.end()),
+            kNativeSaveMetadataCodecVersion, first.Metadata).Succeeded());
+        REQUIRE(admission.HandleCheckpointSaveResult(
+            2, campaign, checkpoint.Activity->Checkpoint,
+            checkpoint.Activity->NativeSaveIdentity, true,
+            std::string(kNativeSaveFingerprintAlgorithm),
+            kNativeSaveFingerprintVersion,
+            Bytes(second.Fingerprint.begin(), second.Fingerprint.end()),
+            kNativeSaveMetadataCodecVersion, second.Metadata).Committed);
+    }
+
+    auto store = OpenStore(database);
+    CampaignRuntimeService runtime(*store);
+    CampaignAdmissionService admission(runtime);
+    const CampaignId campaign{campaignId};
+    REQUIRE(admission.RegisterConnection(11, TestPlayerId(1)) ==
+        CampaignConnectionRegistration::Accepted);
+    REQUIRE(admission.ResumeCampaign(
+        11, campaignId, hostBinding).Succeeded());
+    REQUIRE(admission.BeginCampaignLoadRecovery(
+        11, campaign).Command.Error == CampaignError::RecoveryNotActive);
+    REQUIRE_FALSE(runtime.GetRecoveryActivity(campaign));
+
+    REQUIRE(admission.RegisterConnection(22, TestPlayerId(2)) ==
+        CampaignConnectionRegistration::Accepted);
+    const auto member = admission.ResumeCampaign(
+        22, campaignId, memberBinding);
+    REQUIRE(member.Succeeded());
+    REQUIRE(member.Snapshot->RuntimeState == kCampaignWireRuntimeActive);
+
+    const auto begun = admission.BeginCampaignLoadRecovery(22, campaign);
+    REQUIRE(begun.Succeeded());
+    REQUIRE(begun.Activity);
+    const auto prepared = admission.PrepareRecovery(campaign);
+    REQUIRE(prepared.Succeeded());
+    REQUIRE(prepared.Dispatch == CampaignRecoveryDispatch::NativeLoad);
 }
 
 TEST_CASE("Normal campaign protocol scales to two four and ten slots", "[campaign.admission][scale]")

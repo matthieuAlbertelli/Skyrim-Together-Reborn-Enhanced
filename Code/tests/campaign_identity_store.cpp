@@ -1,4 +1,5 @@
 #include <CampaignIdentityStore.h>
+#include <CampaignClientAdmissionState.h>
 
 #include <catch2/catch.hpp>
 
@@ -108,6 +109,84 @@ TEST_CASE("Campaign binding cache persists canonical assignments only", "[campai
     REQUIRE_FALSE(removed.Value.has_value());
 }
 
+TEST_CASE(
+    "Cold-session campaign binding enumeration is deterministic and removable",
+    "[campaign.identity][campaign.resume][reconnect]")
+{
+    TemporaryIdentityDirectory directory;
+    CampaignIdentityStore empty(directory.Path);
+    const auto zero = empty.ListBindings();
+    REQUIRE(zero.Succeeded());
+    REQUIRE(zero.Value.empty());
+
+    REQUIRE(empty.SaveBinding(
+        {"campaign-z", "slot-z", "binding-z"}).Succeeded());
+    REQUIRE(empty.SaveBinding(
+        {"campaign-a", "slot-a", "binding-a"}).Succeeded());
+
+    CampaignIdentityStore restarted(directory.Path);
+    const auto visible = restarted.ListBindings();
+    REQUIRE(visible.Succeeded());
+    REQUIRE(visible.Value.size() == 2);
+    REQUIRE(visible.Value[0] == CampaignBindingCacheEntry{
+        "campaign-a", "slot-a", "binding-a"});
+    REQUIRE(visible.Value[1] == CampaignBindingCacheEntry{
+        "campaign-z", "slot-z", "binding-z"});
+
+    REQUIRE(restarted.RemoveBinding("campaign-a").Succeeded());
+    const auto afterLeave = restarted.ListBindings();
+    REQUIRE(afterLeave.Succeeded());
+    REQUIRE(afterLeave.Value == std::vector<CampaignBindingCacheEntry>{
+        {"campaign-z", "slot-z", "binding-z"}});
+}
+
+TEST_CASE(
+    "Ending a loaded runtime keeps the durable campaign binding candidate",
+    "[campaign.identity][campaign.resume][main-menu][lifecycle]")
+{
+    TemporaryIdentityDirectory directory;
+    const CampaignBindingCacheEntry binding{
+        "campaign-active", "slot-active", "binding-active"};
+    CampaignIdentityStore store(directory.Path);
+    REQUIRE(store.SaveBinding(binding).Succeeded());
+
+    CampaignClientAdmissionState admission;
+    admission.Accept({
+        binding.CampaignId,
+        binding.CampaignSlotId,
+        binding.CharacterBindingId});
+    REQUIRE(admission.EndRuntimeSession() == binding.CampaignId);
+    REQUIRE_FALSE(admission.GetAdmission());
+    REQUIRE_FALSE(admission.BeginResume());
+
+    CampaignIdentityStore restarted(directory.Path);
+    const auto candidates = restarted.ListBindings();
+    REQUIRE(candidates.Succeeded());
+    REQUIRE(candidates.Value ==
+        std::vector<CampaignBindingCacheEntry>{binding});
+}
+
+TEST_CASE(
+    "Corrupted local binding cache cannot yield resume candidates",
+    "[campaign.identity][campaign.resume][robustness]")
+{
+    TemporaryIdentityDirectory directory;
+    std::filesystem::create_directories(directory.Path);
+    {
+        std::ofstream stream(
+            directory.Path / "stre-campaign-bindings-v1.txt",
+            std::ios::binary);
+        stream << "stre-campaign-bindings-v1\n"
+               << "campaign-a\tslot-a\tbinding-a\textra\n";
+    }
+
+    CampaignIdentityStore restarted(directory.Path);
+    const auto candidates = restarted.ListBindings();
+    REQUIRE_FALSE(candidates.Succeeded());
+    REQUIRE(candidates.Error == LocalIdentityError::Malformed);
+    REQUIRE(candidates.Value.empty());
+}
+
 TEST_CASE("Malformed campaign binding cache is not overwritten", "[campaign.identity][robustness]")
 {
     TemporaryIdentityDirectory directory;
@@ -122,4 +201,88 @@ TEST_CASE("Malformed campaign binding cache is not overwritten", "[campaign.iden
         {"campaign-2", "slot-02", "binding-2"});
     REQUIRE_FALSE(result.Succeeded());
     REQUIRE(result.Error == LocalIdentityError::Malformed);
+}
+
+TEST_CASE(
+    "Versioned campaign save marker survives restart and validates exact identity",
+    "[campaign.identity][campaign.load][metadata]")
+{
+    TemporaryIdentityDirectory directory;
+    const CampaignSaveMarker expected{
+        "campaign-a", "slot-a", "binding-a", "checkpoint-a",
+        "stre-checkpoint-a"};
+    CampaignIdentityStore first(directory.Path);
+    REQUIRE(first.SaveCampaignSaveMarker(expected).Succeeded());
+
+    CampaignIdentityStore restarted(directory.Path);
+    const auto loaded = restarted.LoadCampaignSaveMarker(
+        "stre-checkpoint-a");
+    REQUIRE(loaded.Succeeded());
+    REQUIRE(loaded.Value == expected);
+    const auto unrelated = restarted.LoadCampaignSaveMarker(
+        "stre-checkpoint-b");
+    REQUIRE(unrelated.Succeeded());
+    REQUIRE_FALSE(unrelated.Value);
+}
+
+TEST_CASE(
+    "Marked save lookup resolves zero or one exact local binding",
+    "[campaign.identity][campaign.load][campaign.resume][security]")
+{
+    TemporaryIdentityDirectory directory;
+    CampaignIdentityStore store(directory.Path);
+    REQUIRE(store.SaveBinding(
+        {"campaign-a", "slot-a", "binding-a"}).Succeeded());
+    REQUIRE(store.SaveBinding(
+        {"campaign-b", "slot-b", "binding-b"}).Succeeded());
+
+    const CampaignSaveMarker marker{
+        "campaign-a", "slot-a", "binding-a", "checkpoint-a",
+        "stre-checkpoint-a"};
+    const auto exact = store.LoadBinding(marker.CampaignId);
+    REQUIRE(exact.Succeeded());
+    REQUIRE(exact.Value == CampaignBindingCacheEntry{
+        marker.CampaignId,
+        marker.CampaignSlotId,
+        marker.CharacterBindingId});
+
+    const auto missing = store.LoadBinding("campaign-missing");
+    REQUIRE(missing.Succeeded());
+    REQUIRE_FALSE(missing.Value);
+
+    CampaignSaveMarker mismatched = marker;
+    mismatched.CharacterBindingId = "binding-other";
+    REQUIRE(exact.Value->CharacterBindingId !=
+        mismatched.CharacterBindingId);
+}
+
+TEST_CASE(
+    "Corrupted or mismatched campaign save markers fail closed",
+    "[campaign.identity][campaign.load][metadata][robustness]")
+{
+    TemporaryIdentityDirectory directory;
+    CampaignIdentityStore store(directory.Path);
+    REQUIRE(store.SaveCampaignSaveMarker({
+        "campaign-a", "slot-a", "binding-a", "checkpoint-a",
+        "stre-checkpoint-a"}).Succeeded());
+
+    std::filesystem::path markerPath;
+    for (const auto& entry : std::filesystem::directory_iterator(directory.Path))
+    {
+        if (entry.path().filename().string().starts_with("stre-save-"))
+            markerPath = entry.path();
+    }
+    REQUIRE_FALSE(markerPath.empty());
+    {
+        std::ofstream stream(markerPath, std::ios::binary | std::ios::trunc);
+        stream << "stre-campaign-save-v99\ncampaign-a\n";
+    }
+    const auto corrupted = store.LoadCampaignSaveMarker(
+        "stre-checkpoint-a");
+    REQUIRE_FALSE(corrupted.Succeeded());
+    REQUIRE(corrupted.Error == LocalIdentityError::Malformed);
+
+    REQUIRE_FALSE(store.SaveCampaignSaveMarker({
+        "campaign-a", "slot-a", "binding-a", "checkpoint-a",
+        "stre-checkpoint-other"}).Succeeded());
 }

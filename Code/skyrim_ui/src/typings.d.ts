@@ -101,6 +101,7 @@ declare const skyrimtogether: SkyrimTogether;
 
 /** Global Skyrim: Together object type. */
 interface SkyrimTogether {
+  campaignResumeAction(action: string, token?: string): void;
   campaignBootstrapAction(
     action: string,
     address?: string,

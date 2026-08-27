@@ -13,6 +13,8 @@ import {
 } from '../../services/setting.service';
 import { Sound, SoundService } from '../../services/sound.service';
 import { UiSurfaceService } from '../../services/ui-surface.service';
+import { CampaignResumeUiService } from '../../services/campaign-resume-ui.service';
+import { CampaignSavePolicyUiService } from '../../services/campaign-save-policy-ui.service';
 import { UiRepository } from '../../store/ui.repository';
 import { ChatComponent } from '../chat/chat.component';
 import { GroupComponent } from '../group/group.component';
@@ -45,8 +47,10 @@ export class RootComponent implements OnInit {
   inGame$ = this.client.inGameStateChange.asObservable();
   active$ = this.client.activationStateChange.asObservable();
   surface$ = this.uiSurface.surfaceChange.asObservable();
-  connectionInProgress$ = this.client.isConnectionInProgressChange.asObservable();
+  connectionInProgress$ =
+    this.client.isConnectionInProgressChange.asObservable();
   revealingInProgress$ = false;
+  private mandatoryCampaignViewOpen = false;
 
   @ViewChild('chat') private chatComp!: ChatComponent;
   @ViewChild(GroupComponent) private groupComponent: GroupComponent;
@@ -59,6 +63,8 @@ export class RootComponent implements OnInit {
     private readonly translocoService: TranslocoService,
     private readonly settingService: SettingService,
     private readonly uiSurface: UiSurfaceService,
+    private readonly campaignResume: CampaignResumeUiService,
+    public readonly campaignSavePolicy: CampaignSavePolicyUiService,
     public readonly overlay: Overlay, // used for mockup
   ) {
     this.translocoService.setActiveLang(
@@ -70,13 +76,30 @@ export class RootComponent implements OnInit {
     this.onInGameStateSubscription();
     this.onActivationStateSubscription();
     this.onFontSizeSubscription();
+    this.campaignResume.stateChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(state => {
+        const mandatory =
+          state.resumeRequired ||
+          state.disconnectIncident ||
+          state.disconnectRecovery;
+        if (mandatory) {
+          this.mandatoryCampaignViewOpen = true;
+          this.uiRepository.openView(View.CAMPAIGN_RESUME);
+        } else if (this.mandatoryCampaignViewOpen) {
+          this.mandatoryCampaignViewOpen = false;
+          if (this.uiRepository.getView() === View.CAMPAIGN_RESUME) {
+            this.closeView();
+          }
+        }
+      });
   }
 
   public onInGameStateSubscription() {
     this.client.inGameStateChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(state => {
-        if (!state) {
+        if (!state && !this.isMandatoryCampaignView()) {
           this.closeView();
         }
       });
@@ -94,7 +117,7 @@ export class RootComponent implements OnInit {
         ) {
           setTimeout(() => this.chatComp?.focus(), 100);
         }
-        if (!state) {
+        if (!state && !this.isMandatoryCampaignView()) {
           this.closeView();
         }
       });
@@ -109,6 +132,15 @@ export class RootComponent implements OnInit {
       .subscribe(size => {
         document.documentElement.setAttribute('style', `font-size: ${size}px;`);
       });
+  }
+
+  private isMandatoryCampaignView(): boolean {
+    const state = this.campaignResume.stateChange.getValue();
+    return (
+      state.resumeRequired ||
+      state.disconnectIncident ||
+      state.disconnectRecovery
+    );
   }
 
   public setView(view: View | null) {

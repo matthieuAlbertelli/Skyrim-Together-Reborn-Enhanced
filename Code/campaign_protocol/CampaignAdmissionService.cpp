@@ -94,6 +94,10 @@ CampaignProtocolResult MapCommandResult(
     case CampaignError::CheckpointNotActive:
     case CampaignError::CheckpointMismatch:
     case CampaignError::InvalidCheckpointArtifact:
+    case CampaignError::RecoveryInProgress:
+    case CampaignError::RecoveryNotActive:
+    case CampaignError::RecoveryMismatch:
+    case CampaignError::NoCommittedCheckpoint:
         return CampaignProtocolResult::InvalidRequest;
     default: return CampaignProtocolResult::PersistenceFailure;
     }
@@ -237,6 +241,87 @@ CampaignAdmissionService::GetAdmittedConnections(
     return result;
 }
 
+CampaignRecoveryRecipientPlan
+CampaignAdmissionService::PrepareRecoveryRecipients(
+    const CheckpointRecord& acCheckpoint) const noexcept
+{
+    CampaignRecoveryRecipientPlan result;
+    try
+    {
+        result.RequiredMemberCount = acCheckpoint.Slots.size();
+        if (acCheckpoint.Campaign.Value.empty() ||
+            acCheckpoint.Slots.empty() ||
+            acCheckpoint.Slots.size() > kMaximumCampaignRosterSize)
+        {
+            result.Error =
+                CampaignRecoveryRecipientError::InvalidCheckpointRoster;
+            return result;
+        }
+
+        std::size_t currentAdmissions{};
+        for (const CampaignAdmissionRecord& admission : m_connections)
+        {
+            if (admission.AdmittedIdentity &&
+                admission.AdmittedIdentity->Campaign ==
+                    acCheckpoint.Campaign)
+            {
+                ++currentAdmissions;
+            }
+        }
+
+        result.Recipients.reserve(acCheckpoint.Slots.size());
+        for (const CheckpointSlotRecord& slot : acCheckpoint.Slots)
+        {
+            const CampaignMemberIdentity expected{
+                acCheckpoint.Campaign,
+                slot.Slot,
+                slot.Player,
+                slot.CharacterBinding};
+            const CampaignAdmissionRecord* pMatch{};
+            for (const CampaignAdmissionRecord& admission : m_connections)
+            {
+                if (!admission.AdmittedIdentity ||
+                    *admission.AdmittedIdentity != expected)
+                {
+                    continue;
+                }
+                if (pMatch)
+                {
+                    result.Error = CampaignRecoveryRecipientError::
+                        DuplicateCurrentAdmission;
+                    result.FailedIdentity = expected;
+                    return result;
+                }
+                pMatch = &admission;
+            }
+            if (!pMatch)
+            {
+                result.Error = CampaignRecoveryRecipientError::
+                    MissingCurrentAdmission;
+                result.FailedIdentity = expected;
+                return result;
+            }
+            result.Recipients.push_back(
+                {pMatch->Connection, expected});
+        }
+
+        if (currentAdmissions != acCheckpoint.Slots.size())
+        {
+            result.Error = CampaignRecoveryRecipientError::
+                UnexpectedCurrentAdmission;
+            return result;
+        }
+        return result;
+    }
+    catch (...)
+    {
+        result.Error =
+            CampaignRecoveryRecipientError::InvalidCheckpointRoster;
+        result.Recipients.clear();
+        return result;
+    }
+}
+
 std::optional<CampaignSnapshotData> CampaignAdmissionService::BuildSnapshot(
     const CampaignId& acCampaign) noexcept try
 {
@@ -292,11 +377,20 @@ std::optional<CampaignSnapshotData> CampaignAdmissionService::Disconnect(
         CampaignAdmissionRecord* const pRecord = FindConnection(aConnection);
         if (!pRecord)
             return std::nullopt;
-        std::optional<CampaignId> campaign;
+        std::optional<CampaignMemberIdentity> disconnectedMember;
         if (pRecord->AdmittedIdentity)
         {
-            campaign = pRecord->AdmittedIdentity->Campaign;
-            m_runtime.AbandonCheckpoint(*campaign);
+            disconnectedMember = *pRecord->AdmittedIdentity;
+        }
+        CampaignRuntimeState runtimeStateBeforeDisconnect =
+            CampaignRuntimeState::WAITING_FOR_ROSTER;
+        if (disconnectedMember)
+        {
+            const CampaignLoadResult loaded = m_runtime.LoadCampaign(
+                disconnectedMember->Campaign,
+                BuildPresence(disconnectedMember->Campaign));
+            if (loaded.Succeeded())
+                runtimeStateBeforeDisconnect = loaded.RuntimeState;
         }
         m_connections.erase(std::remove_if(
             m_connections.begin(), m_connections.end(),
@@ -304,7 +398,20 @@ std::optional<CampaignSnapshotData> CampaignAdmissionService::Disconnect(
             {
                 return acRecord.Connection == aConnection;
             }), m_connections.end());
-        return campaign ? BuildSnapshot(*campaign) : std::nullopt;
+        if (!disconnectedMember)
+            return std::nullopt;
+
+        const CampaignId campaign = disconnectedMember->Campaign;
+        const CampaignRecoveryCommandResult begun = m_runtime.BeginRecovery(
+            {campaign,
+             *disconnectedMember,
+             BuildPresence(campaign),
+             runtimeStateBeforeDisconnect});
+        if (!begun && begun.Command.Error != CampaignError::RosterNotSealed)
+        {
+            return BuildSnapshot(campaign);
+        }
+        return BuildSnapshot(campaign);
     }
     catch (...)
     {
@@ -712,6 +819,33 @@ catch (...)
 }
 
 CampaignCheckpointCommandResult CampaignAdmissionService::BeginCheckpoint(
+    CampaignConnectionHandle aConnection) noexcept
+{
+    CampaignCheckpointCommandResult result;
+    try
+    {
+        const CampaignAdmissionRecord* const pRecord =
+            FindConnection(aConnection);
+        if (!pRecord || !pRecord->AdmittedIdentity)
+        {
+            result.Command.Error = CampaignError::NotCampaignMember;
+            result.Command.Message =
+                "checkpoint request requires exact campaign admission";
+            return result;
+        }
+        return BeginCheckpoint(pRecord->AdmittedIdentity->Campaign);
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message =
+            "checkpoint admission request failed safely";
+        return result;
+    }
+}
+
+CampaignCheckpointCommandResult CampaignAdmissionService::BeginCheckpoint(
     const CampaignId& acCampaign) noexcept
 {
     CampaignCheckpointCommandResult result;
@@ -809,5 +943,163 @@ CampaignAdmissionService::GetActiveCheckpoint(
     const CampaignId& acCampaign) const noexcept
 {
     return m_runtime.GetActiveCheckpoint(acCampaign);
+}
+
+CampaignRecoveryCommandResult
+CampaignAdmissionService::BeginCampaignLoadRecovery(
+    CampaignConnectionHandle aConnection,
+    const CampaignId& acCampaign) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        CampaignAdmissionRecord* const pRecord = FindConnection(aConnection);
+        if (!pRecord || !pRecord->AdmittedIdentity ||
+            pRecord->AdmittedIdentity->Campaign != acCampaign)
+        {
+            result.Command.Error = CampaignError::NotCampaignMember;
+            result.Command.Message =
+                "campaign load recovery requires exact admission";
+            return result;
+        }
+        const auto presence = BuildPresence(acCampaign);
+        CampaignLoadResult loaded = m_runtime.LoadCampaign(
+            acCampaign, presence);
+        if (!loaded)
+        {
+            result.Command.Error = loaded.Error;
+            result.Command.PersistenceError = loaded.PersistenceError;
+            result.Command.Message = loaded.Message;
+            return result;
+        }
+        return m_runtime.BeginRecovery({
+            acCampaign,
+            *pRecord->AdmittedIdentity,
+            presence,
+            loaded.RuntimeState,
+            true});
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message =
+            "campaign load recovery failed safely";
+        return result;
+    }
+}
+
+CampaignRecoveryCommandResult CampaignAdmissionService::PrepareRecovery(
+    const CampaignId& acCampaign) noexcept
+{
+    return m_runtime.PrepareRecovery(
+        {acCampaign, BuildPresence(acCampaign)});
+}
+
+CampaignRecoveryCommandResult CampaignAdmissionService::HandleRecoveryLoaded(
+    CampaignConnectionHandle aConnection,
+    const CampaignId& acCampaign,
+    const RestoreAttemptId& acAttempt,
+    const CheckpointId& acCheckpoint,
+    bool aSucceeded,
+    std::string aNativeSaveIdentity,
+    std::string aFingerprintAlgorithm,
+    std::uint32_t aFingerprintVersion,
+    Bytes aFingerprint,
+    std::uint32_t aSaveMetadataCodecVersion,
+    Bytes aSaveMetadata) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        const CampaignAdmissionRecord* const pRecord =
+            FindConnection(aConnection);
+        if (!pRecord || !pRecord->AdmittedIdentity)
+        {
+            result.Command.Error = CampaignError::NotCampaignMember;
+            result.Command.Message =
+                "recovery load result requires canonical campaign admission";
+            return result;
+        }
+        if (pRecord->AdmittedIdentity->Campaign != acCampaign)
+        {
+            result.Command.Error = CampaignError::RecoveryMismatch;
+            result.Command.Message =
+                "recovery load result campaign does not match admission";
+            return result;
+        }
+        return m_runtime.RecordRecoveryLoaded(
+            {acCampaign,
+             acAttempt,
+             acCheckpoint,
+             *pRecord->AdmittedIdentity,
+             aSucceeded,
+             std::move(aNativeSaveIdentity),
+             std::move(aFingerprintAlgorithm),
+             aFingerprintVersion,
+             std::move(aFingerprint),
+             aSaveMetadataCodecVersion,
+             std::move(aSaveMetadata),
+             BuildPresence(acCampaign)});
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message = "recovery load admission failed safely";
+        return result;
+    }
+}
+
+CampaignRecoveryCommandResult
+CampaignAdmissionService::HandleRecoverySnapshotApplied(
+    CampaignConnectionHandle aConnection,
+    const CampaignId& acCampaign,
+    const RestoreAttemptId& acAttempt,
+    const CheckpointId& acCheckpoint,
+    StateVersion aRestoreRevision) noexcept
+{
+    CampaignRecoveryCommandResult result;
+    try
+    {
+        const CampaignAdmissionRecord* const pRecord =
+            FindConnection(aConnection);
+        if (!pRecord || !pRecord->AdmittedIdentity)
+        {
+            result.Command.Error = CampaignError::NotCampaignMember;
+            result.Command.Message =
+                "recovery snapshot result requires canonical campaign admission";
+            return result;
+        }
+        if (pRecord->AdmittedIdentity->Campaign != acCampaign)
+        {
+            result.Command.Error = CampaignError::RecoveryMismatch;
+            result.Command.Message =
+                "recovery snapshot campaign does not match admission";
+            return result;
+        }
+        return m_runtime.RecordRecoverySnapshotApplied(
+            {acCampaign,
+             acAttempt,
+             acCheckpoint,
+             aRestoreRevision,
+             *pRecord->AdmittedIdentity,
+             BuildPresence(acCampaign)});
+    }
+    catch (...)
+    {
+        result.Command.Error = CampaignError::PersistenceFailure;
+        result.Command.PersistenceError = StoreError::DatabaseFailure;
+        result.Command.Message =
+            "recovery snapshot admission failed safely";
+        return result;
+    }
+}
+
+std::optional<CampaignRecoveryActivity>
+CampaignAdmissionService::GetRecoveryActivity(
+    const CampaignId& acCampaign) noexcept
+{
+    return m_runtime.GetRecoveryActivity(acCampaign);
 }
 }

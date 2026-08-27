@@ -161,7 +161,13 @@ TEST_CASE(
     REQUIRE(candidate.Value.State == CheckpointState::Candidate);
     REQUIRE(candidate.Value.SourceRevision == 2);
     REQUIRE(candidate.Value.Slots.size() == 2);
-    REQUIRE_FALSE(fixture.Begin("cp-2").Succeeded());
+    const auto coalesced = fixture.Begin("cp-2");
+    REQUIRE(coalesced.Command.Error == CampaignError::CheckpointInProgress);
+    REQUIRE(coalesced.Activity);
+    REQUIRE(coalesced.Activity->Checkpoint == CheckpointId{"cp-1"});
+    REQUIRE(fixture.Store->LoadCheckpoint(
+        fixture.Campaign, CheckpointId{"cp-2"}).Error ==
+        StoreError::NotFound);
 }
 
 TEST_CASE(

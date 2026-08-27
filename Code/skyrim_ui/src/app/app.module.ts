@@ -33,6 +33,9 @@ import { ToggleComponent } from './components/toggle/toggle.component';
 import { TradeMenuComponent } from './components/trade-menu/trade-menu.component';
 import { CharacterCreationComponent } from './components/character-creation/character-creation.component';
 import { CampaignBootstrapComponent } from './components/campaign-bootstrap/campaign-bootstrap.component';
+import { CampaignResumeComponent } from './components/campaign-resume/campaign-resume.component';
+import { CampaignRosterComponent } from './components/campaign-roster/campaign-roster.component';
+import { CampaignShellComponent } from './components/campaign-shell/campaign-shell.component';
 import { WindowComponent } from './components/window/window.component';
 import { HealthDirective } from './directives/health.directive';
 import { RadioDirective } from './directives/radio.directive';
@@ -75,6 +78,7 @@ import { TranslocoRootModule } from './transloco-root.module';
     SettingsComponent,
     ToggleComponent,
     WindowComponent,
+    CampaignResumeComponent,
 
     CheckboxDirective,
     HealthDirective,
@@ -94,6 +98,8 @@ import { TranslocoRootModule } from './transloco-root.module';
     TradeMenuComponent,
     CharacterCreationComponent,
     CampaignBootstrapComponent,
+    CampaignRosterComponent,
+    CampaignShellComponent,
   ],
   providers: [
     ClientService,

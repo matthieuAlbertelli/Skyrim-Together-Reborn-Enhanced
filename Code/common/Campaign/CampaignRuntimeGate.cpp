@@ -2,13 +2,70 @@
 
 namespace STRE::Campaign
 {
+bool CampaignRuntimeGate::LockForRecovery() noexcept
+{
+    m_recoveryOwned = true;
+    m_guardMenuObserved = false;
+    m_cefPresentationObserved = false;
+
+    CampaignRuntimeGateState state = m_state.load();
+    while (state == CampaignRuntimeGateState::Open ||
+           state == CampaignRuntimeGateState::Released)
+    {
+        if (m_state.compare_exchange_weak(
+                state, CampaignRuntimeGateState::RecoveryLocked))
+        {
+            return true;
+        }
+    }
+    return state == CampaignRuntimeGateState::RecoveryLocked ||
+        state == CampaignRuntimeGateState::ArmedDuringLoad ||
+        state == CampaignRuntimeGateState::LockedAfterLoad;
+}
+
 bool CampaignRuntimeGate::ArmNextLoad() noexcept
 {
-    if (IsLocked() || GetState() == CampaignRuntimeGateState::ArmedDuringLoad)
+    const CampaignRuntimeGateState state = GetState();
+    if (state == CampaignRuntimeGateState::ArmedDuringLoad ||
+        (state == CampaignRuntimeGateState::LockedAfterLoad &&
+         !m_recoveryOwned.load()))
         return false;
 
     bool expected = false;
     return m_nextLoadManaged.compare_exchange_strong(expected, true);
+}
+
+bool CampaignRuntimeGate::ArmResumeRequiredLoad() noexcept
+{
+    if (!ArmNextLoad())
+        return false;
+    m_resumeRequiredOwned = true;
+    return true;
+}
+
+bool CampaignRuntimeGate::CommitResumeRequiredTransition() noexcept
+{
+    if (!m_resumeRequiredOwned.load() ||
+        !m_nextLoadManaged.exchange(false))
+    {
+        return false;
+    }
+
+    CampaignRuntimeGateState state = GetState();
+    while (state == CampaignRuntimeGateState::Open ||
+           state == CampaignRuntimeGateState::Released)
+    {
+        if (m_state.compare_exchange_weak(
+                state, CampaignRuntimeGateState::LockedAfterLoad))
+        {
+            m_guardMenuObserved = false;
+            m_cefPresentationObserved = false;
+            return true;
+        }
+    }
+
+    m_nextLoadManaged = true;
+    return false;
 }
 
 bool CampaignRuntimeGate::CancelArmedLoad() noexcept
@@ -18,7 +75,13 @@ bool CampaignRuntimeGate::CancelArmedLoad() noexcept
         CampaignRuntimeGateState::ArmedDuringLoad;
     const bool wasEntered = m_state.compare_exchange_strong(
         expected,
-        CampaignRuntimeGateState::Open);
+        m_recoveryOwned ? CampaignRuntimeGateState::RecoveryLocked
+                        : CampaignRuntimeGateState::Open);
+    if (!m_recoveryOwned.load() &&
+        m_state.load() == CampaignRuntimeGateState::Open)
+    {
+        m_resumeRequiredOwned = false;
+    }
     return wasPending || wasEntered;
 }
 
@@ -42,7 +105,10 @@ void CampaignRuntimeGate::OnNativeLoadReturn(bool aSucceeded) noexcept
         CampaignRuntimeGateState::ArmedDuringLoad;
     m_state.compare_exchange_strong(
         expected,
-        CampaignRuntimeGateState::Open);
+        m_recoveryOwned ? CampaignRuntimeGateState::RecoveryLocked
+                        : CampaignRuntimeGateState::Open);
+    if (!m_recoveryOwned.load())
+        m_resumeRequiredOwned = false;
 }
 
 bool CampaignRuntimeGate::OnPostLoad() noexcept
@@ -56,11 +122,20 @@ bool CampaignRuntimeGate::OnPostLoad() noexcept
 
 bool CampaignRuntimeGate::Release() noexcept
 {
-    CampaignRuntimeGateState expected =
-        CampaignRuntimeGateState::LockedAfterLoad;
-    return m_state.compare_exchange_strong(
-        expected,
-        CampaignRuntimeGateState::Released);
+    CampaignRuntimeGateState state = m_state.load();
+    while (state == CampaignRuntimeGateState::RecoveryLocked ||
+           state == CampaignRuntimeGateState::LockedAfterLoad)
+    {
+        if (m_state.compare_exchange_weak(
+                state, CampaignRuntimeGateState::Released))
+        {
+            m_nextLoadManaged = false;
+            m_recoveryOwned = false;
+            m_resumeRequiredOwned = false;
+            return true;
+        }
+    }
+    return false;
 }
 
 void CampaignRuntimeGate::ObserveGuardMenu(bool aActive) noexcept
@@ -85,7 +160,11 @@ bool CampaignRuntimeGate::IsNextLoadArmed() const noexcept
 
 bool CampaignRuntimeGate::IsLocked() const noexcept
 {
-    return GetState() == CampaignRuntimeGateState::LockedAfterLoad;
+    const CampaignRuntimeGateState state = GetState();
+    return state == CampaignRuntimeGateState::RecoveryLocked ||
+        state == CampaignRuntimeGateState::LockedAfterLoad ||
+        (state == CampaignRuntimeGateState::ArmedDuringLoad &&
+         (m_recoveryOwned.load() || m_resumeRequiredOwned.load()));
 }
 
 bool CampaignRuntimeGate::IsGuardMenuObserved() const noexcept
