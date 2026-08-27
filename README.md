@@ -8,7 +8,7 @@
 
 <p align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.0--alpha.1-orange)
+![Version](https://img.shields.io/badge/version-0.3.0--alpha.1-orange)
 ![Status](https://img.shields.io/badge/status-Alpha-red)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 
@@ -20,7 +20,7 @@
 
 ## Install and play
 
-The current public build is **STRE `v0.2.0-alpha.1`**.
+The current public build is **STRE `0.3.0-alpha.1`**.
 
 - [Download STRE releases](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases)
 - [Player installation guide](docs/user/INSTALLATION.md)
@@ -31,11 +31,12 @@ The current alpha installation target is Steam Skyrim Special Edition runtime `1
 
 ## Current capabilities
 
-STRE currently has three substantial first-party verticals:
+STRE currently has four substantial first-party verticals:
 
 - **World Sync** — dropped objects use stable `WorldEntityId` identities, local Havok and server-authoritative settlement; movable placed references are lazily adopted; Better Grabbing integration supports multiplayer object manipulation; ownership/stolen provenance is preserved through the supported world/inventory flow.
 - **Player-to-player Trading** — authoritative trade sessions, deterministic mutation plans, idempotent client application, reconciliation and native 3D item preview.
 - **Alternate Start / Character Build** — custom inn bootstrap, RaceMenu + Angular character creation, shared class/loadout catalog, canonical inventory/spells and a solo fallback.
+- **Campaign Continuity** — durable campaign identity, sealed fixed rosters, coordinated native checkpoints, cold-session Resume, and full-roster collective recovery from the exact last committed checkpoint.
 
 See [Current project status](docs/project/STATUS.md) for the maintained implementation/validation snapshot.
 

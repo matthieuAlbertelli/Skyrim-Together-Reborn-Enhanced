@@ -103,8 +103,11 @@ Before tagging:
 5. `COMPATIBILITY_MATRIX.md`, installation instructions and support limitations
    match the candidate.
 6. `VERSION`, `CHANGELOG.md`, release notes and package naming agree.
-7. `UPSTREAM.md` records the exact full upstream base SHA, STRE release SHA, tag
-   and validation date.
+7. `UPSTREAM.md` records the exact full upstream base SHA, target product/tag and
+   validation date. Because a tracked candidate file cannot contain the SHA of
+   its own future merged commit, the final accepted release SHA is verified and
+   recorded non-self-referentially by the immutable annotated tag and GitHub
+   Release metadata before publication.
 8. Licences, provenance, required external dependencies and package contents are
    reviewed.
 9. Checksums are produced for distributed artifacts and a clean install is smoke

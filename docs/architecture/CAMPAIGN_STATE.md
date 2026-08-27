@@ -3,9 +3,10 @@
 > **Status:** fixed-roster/runtime core, live admission protocol, focused New
 > Game lobby projection, and coordinated checkpoint implementation are
 > automated-tested. The lobby happy path is manually validated on Solo/two PCs;
-> the nominal coordinated checkpoint path is manually validated on two PCs,
-> while its remaining resilience matrix is tracked by
-> [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+> the nominal coordinated checkpoint path is manually validated on two PCs.
+> Issue #72 resilience validation is complete through deterministic
+> failure/replay/ordering evidence and a live abrupt post-commit server restart;
+> the narrow mid-ACK packet/timing races remain explicitly non-live.
 
 This document applies [ADR-0018](ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The server is the persistent authority for shared STRE campaign state. A Session
@@ -473,9 +474,11 @@ incomplete. Issue #28 remains open and its tracking state does not supersede
 those implementation gaps. Issue #55 coordinated native-save creation,
 identity/fingerprinting, acknowledgement, and `CampaignCheckpoint` coordination
 are implemented, automated/build-tested, and nominally validated with two real
-Skyrim clients. Failure/disconnect, exact ACK replay, no-overwrite replay, and
-commit-boundary interruption remain tracked by
-[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+Skyrim clients. Issue #72 completed resilience validation with deterministic
+failure/disconnect, exact ACK replay/no-overwrite, restart, and commit-order
+coverage plus a live abrupt interruption after commit. The millisecond mid-ACK
+disconnect, first-ACK loss, and pre-commit force-kill races were not manually
+reproduced.
 Issue #56 disconnect recovery lock and collective checkpoint restore/reload,
 including the reviewed crash/reconnect blockers, are implemented,
 automated/build-tested, and live validated for nominal N=1/N=2, successive

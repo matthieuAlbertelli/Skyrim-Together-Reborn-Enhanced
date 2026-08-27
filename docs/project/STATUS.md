@@ -185,8 +185,12 @@ The current catalog uses `BuildVersion = 5`.
   narrative trigger;
 - coordinated checkpoint creation is implemented and automated/build-tested;
   its nominal sealed-roster Candidate/ACK/commit path is runtime-validated with
-  two real Skyrim clients. Failure, disconnect, ACK-replay, and commit-boundary
-  resilience remain tracked by [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+  two real Skyrim clients. Issue #72 is complete: deterministic ordering,
+  replay, persistence, and transactional evidence covers the narrow partial-ACK
+  races, and a real abrupt server interruption after a fresh committed
+  checkpoint preserved the exact `LastCommittedCheckpoint` across restart.
+  The millisecond mid-ACK disconnect, first-ACK packet-loss, and pre-commit
+  force-kill races were not manually reproduced and are not claimed as live;
   `RECOVERY_LOCK` restore is implemented, automated/build-tested, and live
   validated by #56 with two clients across nominal, successive, and
   restart-rehydrated recovery. Helgen
@@ -239,8 +243,10 @@ incomplete-attempt rehydration after restart without a second restore.
 `CharacterBuildService`
 continues to use session state; durable binding to the admitted campaign slot
 and character identity remains unimplemented. The nominal #55 two-PC checkpoint
-path is runtime-validated; its remaining live resilience matrix is tracked by
-[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+path and the meaningful post-commit server-restart boundary are live validated.
+Issue #72 is complete through that live evidence plus deterministic
+partial-Candidate, exact replay/no-overwrite, restart, and commit-order coverage;
+the narrow non-deterministic packet/timing races remain explicitly non-live.
 Disconnect recovery lock plus collective restore/reload is implemented by #56.
 Native `.ess` payloads remain local and are not uploaded to server persistence;
 durable WorldEntity persistence remains separate future work rather than part of
@@ -698,9 +704,11 @@ levels:
 The production run kept Skyrim responsive, produced both required files, matched
 STRE's per-member hashes against independent PowerShell `Get-FileHash` results,
 and successfully loaded the generated save in Skyrim. `SAVE_CALL_RETURN` itself
-remains explicitly untrusted as completion proof. Live failure, disconnect, and
-exact replay resilience are tracked by
-[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+remains explicitly untrusted as completion proof. Issue #72 completed the
+resilience evidence with deterministic failure/disconnect, exact no-overwrite
+replay, persistence, and ordering coverage plus a live abrupt post-commit server
+restart. The exact lost-first-ACK and millisecond pre-commit races were not
+manually reproduced.
 Recovery is implemented separately by #56; retention, cleanup, and upload remain
 unimplemented. See
 [`CAMPAIGN_NATIVE_SAVE_SPIKE.md`](../development/CAMPAIGN_NATIVE_SAVE_SPIKE.md).
@@ -1038,10 +1046,13 @@ the nominal full-roster commit barrier in live multiplayer without granting host
 save authority. The two fingerprints differ by design because the native
 payloads are per-player.
 
-Live client failure/disconnect, lost-ACK exact replay and no-overwrite behavior,
-and server interruption around the commit boundary remain tracked by
-[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72);
-they are not claimed as completed runtime validation here. See
+Issue #72 is complete. Automated evidence proves a failed/disconnected partial
+Candidate cannot replace the previous commit, exact replay selects and hashes
+the existing artifact without a new native save or overwrite, and both
+checkpoint/disconnect orderings preserve the correct rollback point. A real
+force-kill after a new commit preserved that exact checkpoint and both slot
+artifacts across server restart. The mid-ACK disconnect, first-ACK packet-loss,
+and pre-commit force-kill races were not manually reproduced live. See
 [`CAMPAIGN_COORDINATED_CHECKPOINTS.md`](../development/CAMPAIGN_COORDINATED_CHECKPOINTS.md).
 
 See [`docs/features/alternate-start/`](../features/alternate-start/).
