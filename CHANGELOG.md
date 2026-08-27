@@ -6,6 +6,101 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 _No unreleased STRE-specific changes documented yet._
 
+## [0.3.0-alpha.1] - 2026-08-27
+
+### Added
+
+- Durable, server-authoritative campaign identities, character bindings,
+  immutable sealed rosters, canonical snapshots, journal/outbox evidence, and
+  SQLite persistence with explicit schema migration and fail-closed startup.
+- Campaign Create/Join/Resume admission and full-roster
+  `WAITING_FOR_ROSTER`/`ACTIVE` behavior without host persistence authority,
+  late campaign join, player replacement, or partial-roster progression.
+- Coordinated `CampaignCheckpoint` creation: one server-owned Candidate binds
+  an immutable canonical revision to one exact local `.ess + .skse` bundle per
+  sealed-roster slot and commits only after every required acknowledgement.
+- Collective disconnect recovery from the exact `LastCommittedCheckpoint`,
+  including native-load and restored-snapshot full-roster barriers, strict
+  attempt/checkpoint/revision correlation, idempotent replay, and persistent
+  recovery rehydration after restart.
+- Cold-session campaign Resume from bounded local binding/marker candidates,
+  Manual Load and Main Menu Continue routing for marked campaign saves, and an
+  interrupted-campaign surface with Stay and recover or Return to Main Menu.
+- Gameplay-facing campaign bootstrap plus the post-Helgen investigation,
+  survivor, rubble, bridge, and delayed bandit-occupation projections delivered
+  since the previous alpha.
+
+### Changed
+
+- Manual NewSlot and QuickSave/F5 during an active campaign now request the
+  shared checkpoint flow instead of creating an uncoordinated local rollback
+  point. Auto, unknown, and unproved overwrite provenance remain fail-closed.
+- Player-initiated local load/rollback is blocked while admitted to a campaign;
+  the exact correlated collective restore remains the only load bypass.
+- Returning to Main Menu clears volatile admission and transport state but
+  retains the durable campaign binding for a later Continue/Resume.
+- Campaign persistence schema v1 migrates transactionally to schema v2 so
+  accepted idempotent no-op mutations can be journaled without advancing the
+  canonical campaign revision.
+- Papyrus packaging now enforces one canonical source/compiled-artifact
+  boundary for the STRE Alternate Start plugin.
+
+### Fixed
+
+- Recovery replay no longer creates a second durable restore revision, skips a
+  crashed client's required native load, loses already accepted barrier ACKs,
+  or leaves completion/gate state stuck across the covered crash windows.
+- A disconnect in `WAITING_FOR_ROSTER` no longer creates a recovery attempt;
+  disconnects during an existing attempt still retain and replay that attempt.
+- Manual Load is consumed before Skyrim enters its fade/loading transition, and
+  blocked Journal loads close through the normal UI path instead of leaving a
+  non-interactive menu.
+- Main Menu departure no longer projects a gameplay recovery gate over the Main
+  Menu, and Return to Main Menu no longer leaves a zombie input lock.
+- ResumeRequired now closes after authoritative recovery completion instead of
+  falling through to the ordinary campaign selector.
+- The Linux build again resolves the pinned TiltedCore dependency.
+
+### Validated
+
+- Nominal two-player coordinated checkpoint creation, exact per-player bundle
+  hashing, and Candidate -> Committed only after both roster acknowledgements.
+- One- and two-player collective restore, successive checkpoint/recovery,
+  persisted recovery rehydration, and exact native/snapshot barrier replay.
+- Two-player Stay and recover and Return to Main Menu -> Continue/Resume flows.
+- Abrupt server termination after a fresh committed checkpoint preserved the
+  exact committed identity, revision, snapshot and both slot artifacts across
+  restart and readmission.
+- Deterministic 2/4/10-slot checkpoint barriers, partial-Candidate preservation,
+  duplicate/conflicting ACK behavior, exact no-overwrite replay, and both
+  checkpoint/disconnect orderings.
+- Alternate Start New Game bootstrap, two-PC Create/Join through Character
+  Creation and inn arrival, plus the implemented multiplayer Helgen occupation
+  vertical slice.
+
+### Known limitations
+
+- This is a campaign-continuity vertical slice, not v1 feature completion.
+  Valen, final Departure, durable Character Build restore, all classes/personal
+  quests, headquarters housing, and the complete Alternate Start narrative
+  remain unfinished.
+- Issue #57 remains open for terminal recovery failure presentation, complete
+  keyboard/controller and supported-resolution validation, and the broader
+  negative UX/diagnostic matrix.
+- Live recovery/checkpoint validation is primarily two-player. Three- and
+  four-player live matrices remain incomplete; the narrow mid-ACK disconnect,
+  first-ACK packet-loss, and pre-commit force-kill races are covered by
+  deterministic ordering/transaction evidence but were not manually reproduced.
+- Manual ExistingSlot save overwrite and AutoSave provenance remain unproved
+  and fail-closed during campaigns. Skyrim's native Gameplay settings rows are
+  not visually disabled; the STR Settings projection is informational.
+- Mixed release builds are rejected by exact client/server build negotiation.
+  Campaign database downgrade from schema v2 is unsupported.
+- Older SkyUI Journal movies are not in the supported campaign-load matrix and
+  can be incompatible with Skyrim AE `1.6.1170` callbacks.
+- Durable WorldEntity persistence, arbitrary Trading instance metadata, and the
+  broader existing-system stabilization matrix remain future work.
+
 ## [0.2.0-alpha.1] - 2026-08-10
 
 ### Added

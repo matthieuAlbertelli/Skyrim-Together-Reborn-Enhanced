@@ -3,9 +3,10 @@
 > **Status:** the deferred v2 save-request path and bounded v3 completion proof
 > are human-validated in Skyrim. V3 was exercised through the production #55
 > two-PC checkpoint flow on 24 August 2026, including native path resolution,
-> two-member hashing, and successful load of the generated save. Remaining live
-> resilience validation is tracked by
-> [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72);
+> two-member hashing, and successful load of the generated save. Issue #72
+> resilience validation is complete through deterministic exact replay,
+> no-overwrite, failure, ordering, and restart evidence plus a live abrupt
+> post-commit server restart; narrow packet/timing races remain non-live.
 > recovery, retention, and cleanup remain out of scope.
 
 ## Question
@@ -388,17 +389,21 @@ STRE per-member hash exactly. The distinct global fingerprints are expected:
 each roster member owns a different native Skyrim bundle even though both share
 the coordinated checkpoint identity and server commit boundary.
 
-## Remaining unproved work
+## Resilience evidence and remaining boundaries
 
-- live local-artifact persistence and exact no-overwrite replay after an
-  acknowledgement loss;
-- live client failure or disconnect while checkpointing;
-- live server interruption before and after the commit boundary;
+- exact replay selects and revalidates the existing cached artifact without
+  invoking Skyrim Save or modifying the bundle; this is deterministic/audited
+  evidence rather than a live suppressed-first-ACK run;
+- partial-Candidate failure/disconnect and both commit/disconnect orderings are
+  deterministic-tested; the millisecond mid-ACK race was not manually forced;
+- a live abrupt server interruption after commit preserved the exact committed
+  checkpoint; the pre-commit force-kill race remains deterministic/transactional
+  evidence rather than a manual live reproduction;
 - collective recovery and restore, owned by #56;
 - retention, pruning, cleanup, and save upload, all outside this spike.
 
-The three #55 resilience scenarios are tracked by
-[#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
+Issue [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72)
+records the completed combined evidence and its explicit non-live distinctions.
 
 See
 [`CAMPAIGN_COORDINATED_CHECKPOINTS.md`](CAMPAIGN_COORDINATED_CHECKPOINTS.md)

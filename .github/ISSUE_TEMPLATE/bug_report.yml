@@ -27,7 +27,7 @@ body:
     attributes:
       label: STRE version or build
       description: Use the release version, commit, or Actions build identifier when available.
-      placeholder: v0.2.0-alpha.1
+      placeholder: 0.3.0-alpha.1
     validations:
       required: true
 

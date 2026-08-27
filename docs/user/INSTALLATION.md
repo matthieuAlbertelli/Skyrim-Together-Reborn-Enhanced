@@ -11,7 +11,7 @@ The current STRE alpha is validated primarily on:
 - Windows x64;
 - Steam `The Elder Scrolls V: Skyrim Special Edition`;
 - Skyrim runtime `1.6.1170`;
-- STRE `v0.2.0-alpha.1`;
+- STRE `0.3.0-alpha.1`;
 - Address Library for SKSE Plugins;
 - SKSE64 matching Skyrim `1.6.1170`;
 - Better Grabbing installed separately.
@@ -63,7 +63,7 @@ For an STRE session, **launch `SkyrimTogether.exe`, not `skse64_loader.exe`**. S
 
 STRE does not redistribute Better Grabbing.
 
-Install Better Grabbing separately through your mod manager or manually. For `v0.2.0-alpha.1`, this guide targets Better Grabbing `1.17`.
+Install Better Grabbing separately through your mod manager or manually. For `0.3.0-alpha.1`, this guide targets Better Grabbing `1.17`.
 
 Better Grabbing:
 https://www.nexusmods.com/skyrimspecialedition/mods/134769
@@ -91,7 +91,7 @@ STRE-v<version>-windows-x64.zip
 For this release:
 
 ```text
-STRE-v0.2.0-alpha.1-windows-x64.zip
+STRE-v0.3.0-alpha.1-windows-x64.zip
 ```
 
 Do **not** download GitHub's automatically generated:
@@ -111,7 +111,7 @@ Those are source archives, not playable builds.
 2. Select Skyrim Special Edition.
 3. Open **Mods**.
 4. Choose **Install From File**.
-5. Select `STRE-v0.2.0-alpha.1-windows-x64.zip`.
+5. Select `STRE-v0.3.0-alpha.1-windows-x64.zip`.
 6. Enable the mod.
 7. Deploy your mods.
 8. Open the **Plugins** section and make sure these plugins are enabled:
@@ -263,14 +263,26 @@ Do not add a large mod list until this baseline works.
 For an alpha update:
 
 1. close Skyrim and `SkyrimTogetherServer.exe`;
-2. download the new `STRE-v<version>-windows-x64.zip`;
-3. remove the previous STRE mod/version from your mod manager;
-4. install the new archive;
-5. deploy;
-6. verify `SkyrimTogether.esp` and `STRE_AlternateStart.esp` are enabled;
-7. update external dependencies if the new release notes require it.
+2. back up `state\stre-server.sqlite3` and every roster member's Skyrim save
+   profile before upgrading a campaign;
+3. download the new `STRE-v<version>-windows-x64.zip`;
+4. remove the previous STRE mod/version from your mod manager;
+5. install the new archive;
+6. deploy;
+7. verify `SkyrimTogether.esp` and `STRE_AlternateStart.esp` are enabled;
+8. update external dependencies if the new release notes require it.
 
 Avoid mixing files from two STRE releases.
+
+All clients and the server must use the exact same release build. Mixed
+`0.2.0-alpha.1` / `0.3.0-alpha.1` sessions fail the exact-build handshake.
+Campaign database downgrade is not supported: keep the matching executable and
+database backup together if you need to return to an earlier installation.
+
+`Alternate Start - Live Another Life` must not be active with
+`STRE_AlternateStart.esp`. SkyUI is not in the validated campaign Journal/load
+matrix for this alpha; if a save browser or Journal crash occurs, reproduce with
+the vanilla Journal UI before reporting it as an STRE campaign-load failure.
 
 ## Uninstalling STRE
 

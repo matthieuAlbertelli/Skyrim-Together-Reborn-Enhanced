@@ -3,8 +3,9 @@
 > **Status:** issue #55 implementation, automated validation, and Windows
 > client/launcher/server builds are complete. The nominal coordinated checkpoint
 > path was validated end-to-end with two real Skyrim clients on 24 August 2026.
-> Remaining live resilience validation is tracked by
-> [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72);
+> Issue #72 resilience validation is complete through deterministic
+> failure/replay/ordering evidence and a live abrupt post-commit server restart;
+> the narrow mid-ACK packet/timing races remain explicitly non-live.
 > recovery and restore are implemented separately by issue #56. The production
 > multiplayer save-policy surface is implemented and automated-tested; Manual
 > NewSlot and Quick are live validated, while Manual ExistingSlot overwrite and
@@ -339,7 +340,7 @@ hashes are retained in
 
 No host save authority was involved; each exact canonical slot was required.
 
-## Deferred resilience validation
+## Resilience validation
 
 Automated coverage exercises begin eligibility, runtime state/fence behavior,
 canonical connection authority, malformed/conflicting/duplicate/out-of-order
@@ -360,10 +361,15 @@ request-pointer Quick provenance and scoped Manual NewSlot provenance. Both
 player-facing paths are now live validated; Manual ExistingSlot and Auto remain
 unproved and fail closed.
 
-Live client failure/disconnect during `CHECKPOINTING`, lost-ACK exact replay and
-no-overwrite proof, and server interruption before/after commit remain tracked
-by [#72](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/72).
-They are not claimed as completed runtime validation. Collective recovery is a
+Issue #72 completed the checkpoint resilience gate using proportionate evidence.
+Deterministic tests cover partial-Candidate disconnect, both
+checkpoint/disconnect orderings, exact ACK replay/conflict behavior,
+no-overwrite artifact revalidation, restart, and the atomic Candidate ->
+Committed boundary. A live two-player force-kill after a fresh commit preserved
+the exact `LastCommittedCheckpoint`, revision, snapshot, and both slot artifacts
+after restart and readmission. The millisecond mid-ACK disconnect,
+first-ACK packet loss, and pre-commit force-kill races were not manually
+reproduced and are not claimed as live validation. Collective recovery is a
 separate #56 implementation and is live validated for nominal N=1/N=2,
 successive recovery, durable restart rehydration, and both disconnect incident
 UX branches.
