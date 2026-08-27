@@ -49,12 +49,29 @@ CampaignClientAdmissionState::GetHelgenReadinessView() const noexcept
 std::optional<std::string> CampaignClientAdmissionState::Disconnect() noexcept
 {
     std::scoped_lock lock(m_mutex);
+    return ClearRuntimeSession(true);
+}
+
+std::optional<std::string>
+CampaignClientAdmissionState::EndRuntimeSession() noexcept
+{
+    std::scoped_lock lock(m_mutex);
+    return ClearRuntimeSession(false);
+}
+
+std::optional<std::string>
+CampaignClientAdmissionState::ClearRuntimeSession(
+    bool aKeepReconnectCandidate) noexcept
+{
     if (m_admission)
         m_resumeCandidate = m_admission->CampaignId;
+    const std::optional<std::string> campaign = m_resumeCandidate;
+    if (!aKeepReconnectCandidate)
+        m_resumeCandidate.reset();
     m_admission.reset();
     m_runtimeProjection.reset();
     m_resumeInFlight = false;
-    return m_resumeCandidate;
+    return campaign;
 }
 
 std::optional<std::string> CampaignClientAdmissionState::BeginResume() noexcept

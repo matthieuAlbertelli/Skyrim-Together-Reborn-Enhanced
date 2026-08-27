@@ -1,5 +1,6 @@
 #include <CampaignClientAdmissionState.h>
 #include <CampaignBootstrapState.h>
+#include <CampaignLoadPolicy.h>
 
 #include <catch2/catch.hpp>
 
@@ -75,6 +76,29 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Main Menu runtime departure clears admission without becoming a reconnect",
+    "[campaign.client][campaign.admission][main-menu][lifecycle]")
+{
+    CampaignClientAdmissionState state;
+    state.Accept(Admission());
+    state.ObserveSnapshot("campaign-a", true, true, 1, 1);
+
+    REQUIRE(state.EndRuntimeSession() == "campaign-a");
+    REQUIRE_FALSE(state.GetAdmission());
+    REQUIRE_FALSE(state.GetHelgenReadinessView().CanSignal);
+    REQUIRE_FALSE(state.BeginResume());
+    REQUIRE_FALSE(state.EndRuntimeSession());
+    REQUIRE_FALSE(state.Disconnect());
+
+    CampaignLoadPolicyContext markedMainMenuLoad;
+    markedMainMenuLoad.Target = CampaignLoadTarget::Campaign;
+    markedMainMenuLoad.CampaignRuntimeSensitive =
+        state.GetAdmission().has_value();
+    REQUIRE(EvaluateCampaignLoadPolicy(markedMainMenuLoad) ==
+        CampaignLoadDecision::BeginResumeRequired);
+}
+
+TEST_CASE(
     "Rejected resume never fabricates a local campaign admission",
     "[campaign.client][campaign.admission][reconnect][security]")
 {
@@ -133,4 +157,20 @@ TEST_CASE(
 
     REQUIRE_FALSE(state.GetAdmission());
     REQUIRE_FALSE(state.BeginResume());
+}
+
+TEST_CASE(
+    "Explicit Leave remains distinct from a Main Menu runtime departure",
+    "[campaign.client][campaign.admission][main-menu][lifecycle]")
+{
+    CampaignClientAdmissionState departure;
+    departure.Accept(Admission());
+    REQUIRE(departure.EndRuntimeSession() == "campaign-a");
+    REQUIRE_FALSE(departure.BeginResume());
+
+    CampaignClientAdmissionState leave;
+    leave.Accept(Admission());
+    leave.Leave("campaign-a");
+    REQUIRE_FALSE(leave.GetAdmission());
+    REQUIRE_FALSE(leave.BeginResume());
 }

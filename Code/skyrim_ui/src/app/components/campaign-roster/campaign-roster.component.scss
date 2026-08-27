@@ -1,0 +1,54 @@
+:host {
+  width: min(410px, 100%);
+  display: grid;
+  gap: 12px;
+}
+
+.roster-summary {
+  color: #c8a76e;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+ul {
+  width: 100%;
+  min-height: 90px;
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 18px 30px;
+  list-style: none;
+  border-top: 1px solid rgba(188, 145, 76, 0.22);
+  border-bottom: 1px solid rgba(188, 145, 76, 0.22);
+}
+
+li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 15px;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  transition: opacity 150ms ease;
+}
+
+li i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #caa05e;
+  box-shadow: 0 0 8px rgba(202, 160, 94, 0.42);
+}
+
+li strong {
+  color: #d9bb7d;
+  font-weight: 400;
+}
+
+li.absent {
+  opacity: 0.48;
+}
+li.absent i {
+  background: #766a5b;
+  box-shadow: none;
+}

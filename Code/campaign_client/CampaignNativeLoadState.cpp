@@ -121,11 +121,24 @@ void CampaignNativeLoadRequest::ObserveGateLocked() noexcept
 void CampaignNativeLoadRequest::ObserveGuardMenu(
     bool aGamePaused) noexcept
 {
+    (void)ObservePostLoadGuardState(true, aGamePaused);
+}
+
+CampaignNativeLoadFailure
+CampaignNativeLoadRequest::ObservePostLoadGuardState(
+    bool aGuardMenuOpen,
+    bool aGamePaused) noexcept
+{
     if (!IsActive() || !m_snapshot.GateLocked)
-        return;
+        return CampaignNativeLoadFailure::None;
+    if (!aGuardMenuOpen)
+        return CampaignNativeLoadFailure::GuardMenuUnavailable;
     m_snapshot.GuardMenuObserved = true;
     m_snapshot.GamePaused = aGamePaused;
     CompleteIfProven();
+    return aGamePaused
+        ? CampaignNativeLoadFailure::None
+        : CampaignNativeLoadFailure::GameNotPaused;
 }
 
 void CampaignNativeLoadRequest::ObserveTransportAlive() noexcept

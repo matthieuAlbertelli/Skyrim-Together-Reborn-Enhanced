@@ -68,6 +68,9 @@ public:
     void OnNativeLoadReturn(bool aManaged, bool aSucceeded) noexcept;
     [[nodiscard]] bool OnPostLoad() noexcept;
     void ObserveGateLocked() noexcept;
+    [[nodiscard]] CampaignNativeLoadFailure ObservePostLoadGuardState(
+        bool aGuardMenuOpen,
+        bool aGamePaused) noexcept;
     void ObserveGuardMenu(bool aGamePaused) noexcept;
     void ObserveTransportAlive() noexcept;
     [[nodiscard]] bool Fail(CampaignNativeLoadFailure aFailure) noexcept;

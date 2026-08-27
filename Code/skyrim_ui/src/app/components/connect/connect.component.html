@@ -1,5 +1,5 @@
 <div class="container">
-  <div class="instructions">
+  <div *ngIf="showInfo" class="instructions">
     <p [innerHtml]="'COMPONENT.CONNECT.INFO.SERVER_ADDRESS' | transloco"></p>
     <p class="warning">
       {{ 'COMPONENT.CONNECT.INFO.HELGEN' | transloco }}
@@ -37,6 +37,7 @@
       {{ 'COMPONENT.CONNECT.CONNECT' | transloco }}
     </button>
     <button
+      *ngIf="allowCancel"
       [disabled]="connecting"
       (click)="cancel()"
       data-style-ornament="simple"
@@ -44,8 +45,10 @@
       {{ 'COMPONENT.CONNECT.CANCEL' | transloco }}
     </button>
   </app-action-buttons>
-  <hr />
-  <button (click)="openServerList()" data-style-ornament="simple">
-    {{ 'COMPONENT.CONNECT.PUBLIC_SERVERS' | transloco }}
-  </button>
+  <ng-container *ngIf="showServerList">
+    <hr />
+    <button (click)="openServerList()" data-style-ornament="simple">
+      {{ 'COMPONENT.CONNECT.PUBLIC_SERVERS' | transloco }}
+    </button>
+  </ng-container>
 </div>

@@ -83,6 +83,7 @@
       "REVEAL_PLAYERS": "Révéler les joueurs",
       "RECONNECT": "Reconnexion",
       "PLAYER_MANAGER": "Gestion des joueurs",
+      "RESUME_CAMPAIGN": "Reprendre une campagne",
       "SETTINGS": "Paramètres",
       "CONNECTION_IN_PROGRESS": "Connexion en cours"
     },
@@ -133,7 +134,25 @@
         "L": "Grande",
         "XL": "Très grande"
       },
+      "CAMPAIGN_SAVE": {
+        "HEADER": "Sauvegardes automatiques Skyrim",
+        "REST": "Sauvegarder après le repos",
+        "WAIT": "Sauvegarder après l'attente",
+        "TRAVEL": "Sauvegarder après un voyage",
+        "CHARACTER_MENU": "Sauvegarder dans le menu personnage",
+        "DISABLED": "Désactivé en multijoueur",
+        "EXPLANATION": "Les sauvegardes automatiques sont désactivées pendant une campagne multijoueur STRE. Utilisez une sauvegarde rapide ou manuelle pour demander un checkpoint collectif. Vos préférences Skyrim ne sont pas modifiées."
+      },
       "BACK": "Retour"
+    },
+    "CAMPAIGN_SAVE": {
+      "CHECKPOINT_REQUESTED": "Création du checkpoint collectif...",
+      "CHECKPOINT_COMMITTED": "Checkpoint collectif créé.",
+      "CHECKPOINT_FAILED": "Impossible de créer le checkpoint collectif.",
+      "AUTOSAVE_BLOCKED": "Les sauvegardes automatiques sont désactivées pendant une campagne multijoueur STRE.",
+      "UNAVAILABLE": "La sauvegarde est momentanément indisponible pour cette campagne.",
+      "UNKNOWN_BLOCKED": "Une sauvegarde locale non reconnue a été bloquée pour protéger la campagne.",
+      "LOAD_BLOCKED": "STRE : le chargement local est désactivé pendant une campagne."
     }
   },
   "SERVICE": {
@@ -203,6 +222,78 @@
       "state_changed": "La campagne a changé. Réessayez.",
       "request_rejected": "Demande refusée.",
       "UNKNOWN": "Échec de la demande."
+    }
+  },
+  "CAMPAIGN_RESUME": {
+    "RECOVERY_SHELL_TITLE": "SYNCHRONISATION DE LA CAMPAGNE",
+    "INCIDENT": {
+      "remotePlayerMissing": "UN JOUEUR A QUITTÉ LA PARTIE",
+      "multiplePlayersMissing": "PLUSIEURS JOUEURS ONT QUITTÉ LA PARTIE",
+      "localTransportLost": "CONNEXION À LA PARTIE PERDUE",
+      "rosterRestored": "ROSTER COMPLET — RECOVERY EN ATTENTE",
+      "BODY": "La campagne ne peut pas continuer tant que tous les joueurs requis ne sont pas présents.",
+      "STAY_AND_RECOVER": "CHARGER LE DERNIER CHECKPOINT"
+    },
+    "SAVE_TITLE": "CAMPAGNE MULTIJOUEUR",
+    "ERROR_TITLE": "IMPOSSIBLE DE REPRENDRE LA CAMPAGNE",
+    "SAVE_BELONGS_TO_CAMPAIGN": "Cette sauvegarde appartient à une campagne STRE.",
+    "SAVE_REQUIRES_RESUME": "Pour continuer, reprenez la campagne associée. La partie restera suspendue jusqu’à ce que les membres requis soient reconnectés.",
+    "SAVE_INVALID": "Les métadonnées locales de cette sauvegarde STRE sont absentes ou invalides. Le gameplay reste verrouillé et aucun fallback solo n’est autorisé.",
+    "PROGRESS_LOCAL_VERIFIED": "Sauvegarde locale vérifiée",
+    "PROGRESS_SERVER_CONNECTION": "Connexion au serveur",
+    "PROGRESS_CAMPAIGN_VERIFICATION": "Vérification de la campagne",
+    "PROGRESS_ROSTER": "En attente du roster",
+    "PROGRESS_RESTORE": "Restauration du checkpoint collectif",
+    "PROGRESS_SYNC": "Synchronisation de la campagne",
+    "TITLE": "REPRENDRE UNE CAMPAGNE",
+    "ZERO_CANDIDATE": "Aucun binding de campagne local n’est disponible pour ce personnage.",
+    "SELECT_PROMPT": "Sélectionnez la campagne à reprendre. L’admission reste soumise à la validation du serveur.",
+    "CANDIDATE": "Campagne {{number}}",
+    "RESUME_ASSOCIATED": "REPRENDRE LA CAMPAGNE",
+    "CONNECTING_TITLE": "REPRISE DE LA CAMPAGNE",
+    "SUBMITTING": "Demande d’admission autoritative en cours...",
+    "ADMITTED": "Admission acceptée. En attente de l’état de campagne...",
+    "WAITING_TITLE": "CAMPAGNE EN ATTENTE",
+    "ROSTER_SUMMARY": "Joueurs présents : {{present}} / {{total}}",
+    "YOU": "Vous",
+    "PLAYER": "Joueur {{number}}",
+    "PRESENT": "Présent",
+    "WAITING": "En attente",
+    "WAITING_FOR_ROSTER": "La campagne reprendra lorsque tous les membres requis seront reconnectés.",
+    "RECOVERY_TITLE": "RESTAURATION DE LA CAMPAGNE",
+    "RECOVERY": "Chargement du dernier checkpoint collectif...",
+    "SYNCHRONIZING_TITLE": "SYNCHRONISATION DE LA CAMPAGNE",
+    "SYNCHRONIZING": "Application de l’état autoritatif de la campagne...",
+    "ACTIVE": "Campagne reprise. Le roster complet est présent.",
+    "REFRESH": "ACTUALISER",
+    "RETRY": "RÉESSAYER",
+    "ERROR_SUMMARY": "La campagne n’a pas pu être restaurée.",
+    "RETURN_MAIN_MENU": "RETOUR AU MENU PRINCIPAL",
+    "MAIN_MENU_UNAVAILABLE": "Le retour sûr au menu principal Skyrim n’est pas encore disponible dans ce client. La partie reste suspendue.",
+    "CLOSE": "FERMER",
+    "ERROR": {
+      "cache_invalid": "Le cache local de campagne est invalide ou indisponible.",
+      "candidate_unavailable": "Ce candidat local n’est plus disponible.",
+      "save_marker_missing": "La sauvegarde STRE chargée ne possède aucun marqueur local de campagne.",
+      "save_marker_invalid": "Le marqueur de la sauvegarde STRE chargée est invalide ou non supporté.",
+      "save_marker_unavailable": "Le stockage local des marqueurs de sauvegarde STRE est indisponible.",
+      "save_binding_unavailable": "Aucun binding de campagne en cache ne correspond exactement à cette sauvegarde et à ce personnage.",
+      "not_connected": "Connectez-vous d’abord au serveur de campagne.",
+      "already_admitted": "Une campagne est déjà admise.",
+      "send_failed": "La demande de reprise n’a pas pu être envoyée.",
+      "binding_mismatch": "Le serveur a refusé le binding de ce personnage.",
+      "identity_mismatch": "Le serveur a refusé cette identité de joueur.",
+      "campaign_unavailable": "Cette campagne n’existe plus sur le serveur.",
+      "session_unavailable": "La session de campagne est indisponible.",
+      "server_error": "Le serveur n’a pas pu persister l’admission.",
+      "resume_rejected": "Le serveur a refusé la reprise.",
+      "admission_failed": "La réponse autoritative n’a pas pu établir l’admission de manière sûre.",
+      "connection_lost": "Connexion perdue pendant la reprise.",
+      "checkpoint_unavailable": "Le checkpoint de campagne committed est indisponible.",
+      "save_bundle_missing": "Le bundle de sauvegarde de campagne local requis est absent.",
+      "save_bundle_invalid": "Le bundle de sauvegarde de campagne local requis est invalide.",
+      "recovery_failed": "La recovery de campagne a échoué et la partie reste suspendue.",
+      "UNKNOWN": "Échec de la reprise de campagne."
     }
   }
 }

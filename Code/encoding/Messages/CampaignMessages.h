@@ -109,3 +109,98 @@ struct CampaignCheckpointSaveRequest final : ServerMessage
     TiltedPhoques::String NativeSaveIdentity;
     bool WireValid{true};
 };
+
+enum class CampaignCheckpointPublicState : std::uint8_t
+{
+    Started = 0,
+    Committed = 1,
+    Failed = 2
+};
+
+struct NotifyCampaignCheckpointState final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode =
+        kNotifyCampaignCheckpointState;
+    NotifyCampaignCheckpointState()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(
+        TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(
+        TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String CheckpointId;
+    CampaignCheckpointPublicState State{
+        CampaignCheckpointPublicState::Failed};
+    bool WireValid{true};
+};
+
+struct CampaignRecoveryLoadRequest final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode = kCampaignRecoveryLoadRequest;
+    CampaignRecoveryLoadRequest()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String RestoreAttemptId;
+    TiltedPhoques::String CheckpointId;
+    std::uint64_t SourceRevision{};
+    TiltedPhoques::String CampaignSlotId;
+    TiltedPhoques::String CharacterBindingId;
+    TiltedPhoques::String NativeSaveIdentity;
+    TiltedPhoques::String FingerprintAlgorithm;
+    std::uint32_t FingerprintVersion{};
+    TiltedPhoques::Vector<std::uint8_t> Fingerprint;
+    std::uint32_t SaveMetadataCodecVersion{};
+    TiltedPhoques::Vector<std::uint8_t> SaveMetadata;
+    bool WireValid{true};
+};
+
+struct CampaignRecoverySnapshot final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode = kCampaignRecoverySnapshot;
+    CampaignRecoverySnapshot()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String RestoreAttemptId;
+    TiltedPhoques::String CheckpointId;
+    std::uint64_t RestoreRevision{};
+    CampaignSnapshotData Snapshot;
+    bool WireValid{true};
+};
+
+struct CampaignRecoveryComplete final : ServerMessage
+{
+    static constexpr ServerOpcode Opcode = kCampaignRecoveryComplete;
+    CampaignRecoveryComplete()
+        : ServerMessage(Opcode)
+    {
+    }
+
+    void SerializeRaw(TiltedPhoques::Buffer::Writer& aWriter) const noexcept override;
+    void DeserializeRaw(TiltedPhoques::Buffer::Reader& aReader) noexcept override;
+    [[nodiscard]] bool IsValid() const noexcept;
+
+    TiltedPhoques::String CampaignId;
+    TiltedPhoques::String RestoreAttemptId;
+    TiltedPhoques::String CheckpointId;
+    std::uint64_t RestoreRevision{};
+    bool WireValid{true};
+};

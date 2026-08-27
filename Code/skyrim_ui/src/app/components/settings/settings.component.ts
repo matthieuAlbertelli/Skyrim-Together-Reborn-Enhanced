@@ -12,6 +12,7 @@ import { Sound, SoundService } from '../../services/sound.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { ClientService } from 'src/app/services/client.service';
+import { CampaignSavePolicyUiService } from 'src/app/services/campaign-save-policy-ui.service';
 
 @Component({
   selector: 'app-settings',
@@ -55,6 +56,8 @@ export class SettingsComponent {
   public fontSize: FontSize;
   public maxFontSize = Object.values(FontSize).length - 1;
   public minFontSize = 0;
+  public readonly campaignSavePolicy$ =
+    this.campaignSavePolicy.stateChange;
 
   clientVersion$: Observable<string>;
   isVersionOutdated: Promise<boolean>;
@@ -68,6 +71,7 @@ export class SettingsComponent {
     private readonly translocoService: TranslocoService,
     private readonly http: HttpClient,
     private readonly client: ClientService,
+    private readonly campaignSavePolicy: CampaignSavePolicyUiService,
   ) {
     this.clientVersion$ = this.client.versionSet.pipe(map(version => version.split('-')[0]));
   }

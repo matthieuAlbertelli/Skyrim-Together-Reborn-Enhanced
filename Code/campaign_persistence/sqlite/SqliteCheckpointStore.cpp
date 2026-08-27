@@ -36,8 +36,20 @@ MutationResult SqliteCampaignStore::CreateCheckpointCandidate(
                 StoreError::InvalidArgument,
                 "checkpoint or snapshot identity is invalid");
         }
+        if (acRequest.SnapshotCoreStateCodecVersion == 0 ||
+            acRequest.SnapshotCoreStatePayload.empty() ||
+            !IsValidPayload(acRequest.SnapshotCoreStatePayload))
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "checkpoint canonical core state is missing");
+        }
         Bytes digestPayload = acRequest.MutationPayload;
         AppendDigestText(digestPayload, acRequest.Snapshot.Value);
+        AppendDigestScalar(
+            digestPayload, acRequest.SnapshotCoreStateCodecVersion);
+        AppendDigestBlob(
+            digestPayload, acRequest.SnapshotCoreStatePayload);
         AppendDigestOutbox(digestPayload, acRequest.Outbox);
         const std::string digest = Codec::MutationDigest(
             "CreateCheckpointCandidate",
@@ -76,10 +88,19 @@ MutationResult SqliteCampaignStore::CreateCheckpointCandidate(
                 "campaign=" + acRequest.Campaign.Value +
                     " requires a non-empty sealed roster before checkpointing");
         }
+        if (projection.Value.Campaign.CoreStateCodecVersion !=
+            acRequest.SnapshotCoreStateCodecVersion)
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "checkpoint canonical core-state codec differs from current campaign state");
+        }
         if (acRequest.ExpectedRevision >= kMaximumRevision)
             return MutationFailure(StoreError::InvalidArgument, "campaign revision exhausted");
         const StateVersion newRevision = acRequest.ExpectedRevision + 1;
 
+        projection.Value.Campaign.CoreStatePayload =
+            acRequest.SnapshotCoreStatePayload;
         Bytes snapshotPayload;
         StoreResult encoded = Codec::EncodeSnapshot(
             projection.Value, snapshotPayload);
@@ -309,6 +330,10 @@ StoreValueResult<CheckpointRecord> SqliteCampaignStore::LoadCheckpoint(
         result.Value.SnapshotCodecVersion =
             static_cast<std::uint32_t>(checkpoint.Int64(3));
         result.Value.SnapshotChecksum = checksum;
+        result.Value.SnapshotCoreStateCodecVersion =
+            decoded.Value.Campaign.CoreStateCodecVersion;
+        result.Value.SnapshotCoreStatePayload =
+            std::move(decoded.Value.Campaign.CoreStatePayload);
         result.Value.CreatedRevision =
             static_cast<StateVersion>(checkpoint.Int64(6));
         if (!checkpoint.IsNull(7))
@@ -872,11 +897,24 @@ MutationResult SqliteCampaignStore::RestoreCheckpointSnapshot(
             return MutationFailure(common.Error, common.Message);
         if (!IsValidId(acRequest.Checkpoint))
             return MutationFailure(StoreError::InvalidArgument, "invalid CheckpointId");
+        if (acRequest.RestoredCoreStateCodecVersion == 0 ||
+            acRequest.RestoredCoreStatePayload.empty() ||
+            !IsValidPayload(acRequest.RestoredCoreStatePayload))
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "restored canonical core state is missing");
+        }
+        Bytes digestPayload = acRequest.MutationPayload;
+        AppendDigestScalar(
+            digestPayload, acRequest.RestoredCoreStateCodecVersion);
+        AppendDigestBlob(
+            digestPayload, acRequest.RestoredCoreStatePayload);
         const std::string digest = Codec::MutationDigest(
             "RestoreCheckpoint",
             acRequest.ExpectedRevision,
             acRequest.MutationCodecVersion,
-            acRequest.MutationPayload,
+            digestPayload,
             acRequest.Checkpoint.Value);
         if (digest.empty())
             return MutationFailure(StoreError::DatabaseFailure, "failed to compute checkpoint restore digest");
@@ -955,6 +993,13 @@ MutationResult SqliteCampaignStore::RestoreCheckpointSnapshot(
                 StoreError::IntegrityFailure,
                 "checkpoint snapshot cannot materialize the exact sealed campaign state");
         }
+        if (restoredProjection.Value.Campaign.CoreStateCodecVersion !=
+            acRequest.RestoredCoreStateCodecVersion)
+        {
+            return MutationFailure(
+                StoreError::InvalidArgument,
+                "restored canonical core-state codec differs from checkpoint state");
+        }
         if (restoredProjection.Value.Slots != currentProjection.Value.Slots ||
             checkpoint.Value.Slots.size() != currentProjection.Value.Slots.size())
         {
@@ -986,7 +1031,7 @@ MutationResult SqliteCampaignStore::RestoreCheckpointSnapshot(
         if (!updateCore.Valid() ||
             !updateCore.BindInt(1, static_cast<int>(
                 restoredProjection.Value.Campaign.CoreStateCodecVersion)) ||
-            !updateCore.BindBlob(2, restoredProjection.Value.Campaign.CoreStatePayload) ||
+            !updateCore.BindBlob(2, acRequest.RestoredCoreStatePayload) ||
             !updateCore.BindInt64(3, static_cast<std::int64_t>(newRevision)) ||
             !updateCore.BindInt64(4, now) ||
             !updateCore.BindText(5, acRequest.Campaign.Value) ||
@@ -1076,6 +1121,8 @@ MutationResult SqliteCampaignStore::RestoreCheckpointSnapshot(
             return MutationFailure(StoreError::FaultInjected, "fault injected after restore journal");
 
         restoredProjection.Value.Campaign.CurrentRevision = newRevision;
+        restoredProjection.Value.Campaign.CoreStatePayload =
+            acRequest.RestoredCoreStatePayload;
         restoredProjection.Value.Campaign.LastCommittedCheckpoint =
             currentProjection.Value.Campaign.LastCommittedCheckpoint;
         restoredProjection.Value.Campaign.UpdatedAtUnixMs = now;

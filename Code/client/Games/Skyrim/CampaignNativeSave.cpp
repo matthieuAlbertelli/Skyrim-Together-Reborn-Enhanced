@@ -1,21 +1,25 @@
 #include <TiltedOnlinePCH.h>
 
 #include <CampaignNativeSave.h>
+#include <CampaignNativeSaveBoundary.h>
 #include <CampaignNativeSaveCompletion.h>
+#include <CampaignSaveTrace.h>
+#include <CampaignSavePolicy.h>
+
+#include <Services/CampaignCheckpointService.h>
 
 #include <Structs/Campaign.h>
 
+#include <array>
 #include <optional>
+#include <type_traits>
 
 struct BGSSaveLoadManager;
 
-TP_THIS_FUNCTION(
-    TCampaignNativeSave,
-    bool,
-    BGSSaveLoadManager,
-    std::int32_t,
-    std::uint32_t,
-    const char*);
+using namespace STRE::Campaign;
+
+using TCampaignNativeSave =
+    CampaignNativeSaveFunction<BGSSaveLoadManager>;
 TP_THIS_FUNCTION(
     TCampaignNativeSaveProcessBoundary,
     void,
@@ -27,6 +31,177 @@ TCampaignNativeSave* s_nativeSave{};
 TCampaignNativeSaveProcessBoundary* s_realProcessBoundary{};
 CampaignNativeSaveDetail::RequestSlot s_requestSlot;
 bool s_boundaryAvailable{};
+// Diagnostic call depth only. It never stores or transmits a save intent.
+thread_local std::uint32_t s_processBoundaryDepth{};
+
+constexpr std::size_t kMaximumObservedNativeSaveNameLength = 260;
+
+struct ObservedNativeSaveName
+{
+    std::array<char, kMaximumObservedNativeSaveNameLength + 1> Buffer{};
+    std::size_t Length{};
+    bool PointerPresent{};
+    bool Readable{};
+
+    [[nodiscard]] std::string_view View() const noexcept
+    {
+        return Readable
+            ? std::string_view(Buffer.data(), Length)
+            : std::string_view{};
+    }
+};
+
+// Save_Impl is an engine boundary. A non-null register value is not sufficient
+// evidence that dereferencing it is safe, especially while diagnosing an ABI
+// mismatch. Copy a bounded, terminated value under SEH before classification or
+// logging; unreadable and unterminated inputs remain Unknown.
+ObservedNativeSaveName ObserveNativeSaveName(const char* apSaveName) noexcept
+{
+    ObservedNativeSaveName observed;
+    observed.PointerPresent = apSaveName != nullptr;
+    if (!apSaveName)
+        return observed;
+
+    __try
+    {
+        for (std::size_t i = 0;
+             i <= kMaximumObservedNativeSaveNameLength;
+             ++i)
+        {
+            const char value = apSaveName[i];
+            if (value == '\0')
+            {
+                observed.Length = i;
+                observed.Readable = true;
+                return observed;
+            }
+            if (i == kMaximumObservedNativeSaveNameLength)
+                return observed;
+            observed.Buffer[i] = value;
+        }
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        observed.Length = 0;
+        observed.Readable = false;
+    }
+    return observed;
+}
+
+const char* GetCampaignSaveOriginName(CampaignSaveOrigin aOrigin) noexcept
+{
+    switch (aOrigin)
+    {
+    case CampaignSaveOrigin::Manual:
+        return "Manual";
+    case CampaignSaveOrigin::Quick:
+        return "Quick";
+    case CampaignSaveOrigin::Auto:
+        return "Auto";
+    case CampaignSaveOrigin::Unknown:
+        return "Unknown";
+    }
+    return "Invalid";
+}
+
+void LogNativeSaveAttempt(
+    const CampaignNativeSaveArguments& acArguments,
+    const ObservedNativeSaveName& acName,
+    CampaignSaveOrigin aOrigin,
+    CampaignSaveDecision aDecision,
+    bool aInternal) noexcept
+{
+    const bool allowed =
+        aDecision == CampaignSaveDecision::AllowVanilla ||
+        aDecision == CampaignSaveDecision::AllowInternalCheckpoint;
+    if (acName.Readable)
+    {
+        spdlog::info(
+            "[STRE][CampaignSavePolicy] NATIVE_SAVE_{} deviceId={} "
+            "outputStats=0x{:08X} fileNamePointer=present "
+            "fileName=\"{}\" classification={} decision={} internal={}",
+            allowed ? "ALLOWED" : "BLOCKED",
+            acArguments.DeviceId,
+            acArguments.OutputStats,
+            acName.View(),
+            GetCampaignSaveOriginName(aOrigin),
+            static_cast<unsigned>(aDecision),
+            aInternal);
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CampaignSavePolicy] NATIVE_SAVE_{} deviceId={} "
+        "outputStats=0x{:08X} fileNamePointer={} fileNameReadable=false "
+        "classification={} decision={} internal={}",
+        allowed ? "ALLOWED" : "BLOCKED",
+        acArguments.DeviceId,
+        acArguments.OutputStats,
+        acName.PointerPresent ? "present" : "null",
+        GetCampaignSaveOriginName(aOrigin),
+        static_cast<unsigned>(aDecision),
+        aInternal);
+}
+
+void TraceNativeSaveAttempt(
+    const CampaignNativeSaveArguments& acArguments,
+    const ObservedNativeSaveName& acName,
+    CampaignSaveOrigin aOrigin,
+    bool aInternal) noexcept
+{
+    const CampaignSaveTrace::Context context = CampaignSaveTrace::Capture();
+    if (acName.Readable)
+    {
+        spdlog::info(
+            "[STRE][CampaignSaveTrace] sequence={} "
+            "source=BGSSaveLoadManager.Save_Impl event=Enter frame={} "
+            "thread={} deviceId={} outputStats=0x{:08X} "
+            "fileNamePointer=present fileName=\"{}\" classification={} "
+            "internal={} processBoundaryDepth={}",
+            context.Sequence,
+            context.Frame,
+            context.Thread,
+            acArguments.DeviceId,
+            acArguments.OutputStats,
+            acName.View(),
+            GetCampaignSaveOriginName(aOrigin),
+            aInternal,
+            s_processBoundaryDepth);
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CampaignSaveTrace] sequence={} "
+        "source=BGSSaveLoadManager.Save_Impl event=Enter frame={} thread={} "
+        "deviceId={} outputStats=0x{:08X} fileNamePointer={} "
+        "fileNameReadable=false classification={} internal={} "
+        "processBoundaryDepth={}",
+        context.Sequence,
+        context.Frame,
+        context.Thread,
+        acArguments.DeviceId,
+        acArguments.OutputStats,
+        acName.PointerPresent ? "present" : "null",
+        GetCampaignSaveOriginName(aOrigin),
+        aInternal,
+        s_processBoundaryDepth);
+}
+
+class ScopedProcessBoundaryTrace final
+{
+public:
+    ScopedProcessBoundaryTrace() noexcept
+    {
+        ++s_processBoundaryDepth;
+    }
+
+    ~ScopedProcessBoundaryTrace() noexcept
+    {
+        --s_processBoundaryDepth;
+    }
+
+    TP_NOCOPYMOVE(ScopedProcessBoundaryTrace);
+};
 
 void LogProcessBoundaryExit(const std::string& acIdentity) noexcept
 {
@@ -55,12 +230,65 @@ void MarkFailed(
         acReason,
         GetCurrentThreadId());
 }
+
+void InvokeOriginalProcessBoundary(BGSSaveLoadManager* apManager)
+{
+    const ScopedCampaignQuickSaveProcessBoundary quickSaveBoundary;
+    TiltedPhoques::ThisCall(s_realProcessBoundary, apManager);
 }
+}
+
+bool __fastcall HookCampaignNativeSave(
+    BGSSaveLoadManager* apThis,
+    std::int32_t aDeviceId,
+    std::uint32_t aOutputStats,
+    const char* apSaveName)
+{
+    const CampaignNativeSaveArguments arguments{
+        aDeviceId, aOutputStats, apSaveName};
+    const ObservedNativeSaveName observedName =
+        ObserveNativeSaveName(arguments.FileName);
+    const bool internal =
+        ScopedCampaignCheckpointNativeSave::IsActive();
+    CampaignSaveDecision decision = internal
+        ? CampaignSaveDecision::AllowInternalCheckpoint
+        : CampaignSaveDecision::AllowVanilla;
+    CampaignSaveOrigin origin =
+        ClassifyCampaignNativeSaveName(observedName.View());
+    if (!internal)
+    {
+        if (const auto explicitOrigin = CampaignSaveProvenance::Consume())
+            origin = *explicitOrigin;
+        if (CampaignCheckpointService* const pCheckpoint =
+                CampaignCheckpointService::TryGet())
+        {
+            decision = pCheckpoint->HandleNativeSaveAttempt(origin);
+        }
+    }
+
+    TraceNativeSaveAttempt(arguments, observedName, origin, internal);
+    LogNativeSaveAttempt(
+        arguments, observedName, origin, decision, internal);
+
+    if (decision == CampaignSaveDecision::AllowVanilla ||
+        decision == CampaignSaveDecision::AllowInternalCheckpoint)
+    {
+        return InvokeCampaignNativeSave(
+            s_nativeSave, apThis, arguments);
+    }
+
+    return false;
+}
+
+static_assert(std::is_same_v<
+    decltype(&HookCampaignNativeSave),
+    TCampaignNativeSave*>);
 
 void TP_MAKE_THISCALL(
     HookCampaignNativeSaveProcessBoundary,
     BGSSaveLoadManager)
 {
+    const ScopedProcessBoundaryTrace processBoundaryTrace;
     std::optional<std::string> requestedIdentity;
     try
     {
@@ -75,7 +303,7 @@ void TP_MAKE_THISCALL(
     }
     if (!requestedIdentity)
     {
-        TiltedPhoques::ThisCall(s_realProcessBoundary, apThis);
+        InvokeOriginalProcessBoundary(apThis);
         return;
     }
 
@@ -85,7 +313,7 @@ void TP_MAKE_THISCALL(
         *requestedIdentity,
         GetCurrentThreadId());
 
-    TiltedPhoques::ThisCall(s_realProcessBoundary, apThis);
+    InvokeOriginalProcessBoundary(apThis);
 
     std::optional<std::string> processingIdentity;
     try
@@ -128,12 +356,15 @@ void TP_MAKE_THISCALL(
         "nativeSaveIdentity={} thread_id={}",
         *processingIdentity,
         GetCurrentThreadId());
-    const bool nativeResult = TiltedPhoques::ThisCall(
-        s_nativeSave,
-        apThis,
-        std::int32_t{2},
-        std::uint32_t{0},
-        processingIdentity->c_str());
+    bool nativeResult{};
+    {
+        const ScopedCampaignCheckpointNativeSave internalCheckpoint;
+        nativeResult = HookCampaignNativeSave(
+            apThis,
+            std::int32_t{2},
+            std::uint32_t{0},
+            processingIdentity->c_str());
+    }
     spdlog::info(
         "[STRE][CampaignNativeSave] SAVE_CALL_RETURN "
         "nativeSaveIdentity={} native_return={} completion=unproven "
@@ -355,9 +586,8 @@ static TiltedPhoques::Initializer s_campaignNativeSaveHook(
             return;
         }
 
-        TP_HOOK(
-            &s_realProcessBoundary,
-            HookCampaignNativeSaveProcessBoundary);
+        TP_HOOK(&s_nativeSave, HookCampaignNativeSave);
+        TP_HOOK(&s_realProcessBoundary, HookCampaignNativeSaveProcessBoundary);
         s_boundaryAvailable = true;
         spdlog::info(
             "[STRE][CampaignNativeSave] BOUNDARY_CONFIGURED "

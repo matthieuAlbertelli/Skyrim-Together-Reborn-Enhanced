@@ -14,7 +14,10 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <string>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 using namespace STRE::Campaign;
 
@@ -87,6 +90,40 @@ CampaignHelgenSpatialStatus ToWireStatus(STRE::Spatial::EvaluationStatus aStatus
     }
     return CampaignHelgenSpatialStatus::GateClosed;
 }
+
+const char* RecoveryRecipientErrorName(
+    CampaignRecoveryRecipientError aError) noexcept
+{
+    switch (aError)
+    {
+    case CampaignRecoveryRecipientError::None: return "none";
+    case CampaignRecoveryRecipientError::InvalidCheckpointRoster:
+        return "invalid-checkpoint-roster";
+    case CampaignRecoveryRecipientError::MissingCurrentAdmission:
+        return "missing-current-admission";
+    case CampaignRecoveryRecipientError::DuplicateCurrentAdmission:
+        return "duplicate-current-admission";
+    case CampaignRecoveryRecipientError::UnexpectedCurrentAdmission:
+        return "unexpected-current-admission";
+    }
+    return "unknown";
+}
+
+std::string RecoverySlotSet(
+    const std::unordered_set<std::string>& acSlots)
+{
+    std::vector<std::string> slots(acSlots.begin(), acSlots.end());
+    std::sort(slots.begin(), slots.end());
+    std::string result = "[";
+    for (std::size_t index = 0; index < slots.size(); ++index)
+    {
+        if (index != 0)
+            result += ',';
+        result += slots[index];
+    }
+    result += ']';
+    return result;
+}
 } // namespace
 
 CampaignProtocolService::CampaignProtocolService(World& aWorld, entt::dispatcher& aDispatcher) noexcept
@@ -100,9 +137,279 @@ CampaignProtocolService::CampaignProtocolService(World& aWorld, entt::dispatcher
     , m_leaveConnection(aDispatcher.sink<PacketEvent<CampaignLeaveRequest>>().connect<&CampaignProtocolService::OnLeave>(this))
     , m_joinByCodeConnection(aDispatcher.sink<PacketEvent<CampaignJoinByCodeRequest>>().connect<&CampaignProtocolService::OnJoinByCode>(this))
     , m_helgenReadyConnection(aDispatcher.sink<PacketEvent<CampaignHelgenInvestigationReadyRequest>>().connect<&CampaignProtocolService::OnHelgenInvestigationReady>(this))
+    , m_checkpointRequestConnection(aDispatcher.sink<PacketEvent<CampaignCheckpointRequest>>().connect<&CampaignProtocolService::OnCheckpointRequest>(this))
     , m_checkpointResultConnection(aDispatcher.sink<PacketEvent<CampaignCheckpointSaveResult>>().connect<&CampaignProtocolService::OnCheckpointSaveResult>(this))
+    , m_recoveryLoadedConnection(aDispatcher.sink<PacketEvent<CampaignRecoveryLoadedResult>>().connect<&CampaignProtocolService::OnRecoveryLoadedResult>(this))
+    , m_recoverySnapshotAppliedConnection(aDispatcher.sink<PacketEvent<CampaignRecoverySnapshotApplied>>().connect<&CampaignProtocolService::OnRecoverySnapshotApplied>(this))
     , m_playerLeaveConnection(aDispatcher.sink<PlayerLeaveEvent>().connect<&CampaignProtocolService::OnPlayerLeave>(this))
 {
+}
+
+bool CampaignProtocolService::SendRecoveryLoadRequests(
+    const CampaignRecoveryActivity& acActivity,
+    const CheckpointRecord& acCheckpoint) noexcept
+{
+    try
+    {
+        const auto connections =
+            m_admission.GetAdmittedConnections(acActivity.Campaign);
+        if (connections.size() != acCheckpoint.Slots.size())
+            return false;
+
+        std::vector<std::pair<Player*, CampaignRecoveryLoadRequest>> requests;
+        requests.reserve(connections.size());
+        for (const CampaignConnectionHandle connection : connections)
+        {
+            Player* const pPlayer = m_world.GetPlayerManager().GetById(
+                static_cast<std::uint32_t>(connection));
+            const CampaignAdmissionRecord* const pAdmission =
+                std::as_const(m_admission).FindConnection(connection);
+            if (!pPlayer || !pAdmission || !pAdmission->AdmittedIdentity)
+                return false;
+
+            const CampaignMemberIdentity& identity =
+                *pAdmission->AdmittedIdentity;
+            const auto slot = std::find_if(
+                acCheckpoint.Slots.begin(), acCheckpoint.Slots.end(),
+                [&](const CheckpointSlotRecord& acSlot)
+                {
+                    return acSlot.Slot == identity.Slot &&
+                        acSlot.Player == identity.Player &&
+                        acSlot.CharacterBinding == identity.CharacterBinding;
+                });
+            if (slot == acCheckpoint.Slots.end() ||
+                !slot->NativeSaveIdentity || !slot->FingerprintAlgorithm ||
+                !slot->FingerprintVersion ||
+                !slot->SaveMetadataCodecVersion)
+            {
+                return false;
+            }
+
+            CampaignRecoveryLoadRequest request;
+            request.CampaignId = acActivity.Campaign.Value.c_str();
+            request.RestoreAttemptId = acActivity.Attempt.Value.c_str();
+            request.CheckpointId = acCheckpoint.Id.Value.c_str();
+            request.SourceRevision = acCheckpoint.SourceRevision;
+            request.CampaignSlotId = slot->Slot.Value.c_str();
+            request.CharacterBindingId =
+                slot->CharacterBinding.Value.c_str();
+            request.NativeSaveIdentity = slot->NativeSaveIdentity->c_str();
+            request.FingerprintAlgorithm =
+                slot->FingerprintAlgorithm->c_str();
+            request.FingerprintVersion = *slot->FingerprintVersion;
+            request.Fingerprint.assign(
+                slot->Fingerprint.begin(), slot->Fingerprint.end());
+            request.SaveMetadataCodecVersion =
+                *slot->SaveMetadataCodecVersion;
+            request.SaveMetadata.assign(
+                slot->SaveMetadata.begin(), slot->SaveMetadata.end());
+            if (!request.IsValid())
+                return false;
+            requests.emplace_back(pPlayer, std::move(request));
+        }
+
+        for (const auto& [pPlayer, request] : requests)
+            pPlayer->Send(request);
+        spdlog::info(
+            "[STRE][CampaignRecovery] LOAD_BARRIER_DISPATCHED campaign={} attempt={} checkpoint={} sourceRevision={} restoreRevision={} members={} action={}",
+            acActivity.Campaign.Value,
+            acActivity.Attempt.Value,
+            acCheckpoint.Id.Value,
+            acCheckpoint.SourceRevision,
+            acActivity.RestoreRevision.value_or(0),
+            requests.size(),
+            acActivity.RestoreRevision
+                ? "replay-before-restored-snapshot"
+                : "start-native-load-barrier");
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+bool CampaignProtocolService::SendRecoverySnapshot(
+    const CampaignRecoveryActivity& acActivity,
+    const CheckpointRecord& acCheckpoint) noexcept
+{
+    try
+    {
+        if (!acActivity.Checkpoint || !acActivity.RestoreRevision ||
+            *acActivity.Checkpoint != acCheckpoint.Id ||
+            acActivity.Campaign != acCheckpoint.Campaign)
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} restoreRevision={} requiredMembers={} resolvedRecipients=0 reason=activity-checkpoint-mismatch",
+                acActivity.Campaign.Value,
+                acActivity.Attempt.Value,
+                acActivity.Checkpoint
+                    ? acActivity.Checkpoint->Value : "unknown",
+                acActivity.RestoreRevision.value_or(0),
+                acCheckpoint.Slots.size());
+            return false;
+        }
+
+        const CampaignRecoveryRecipientPlan plan =
+            m_admission.PrepareRecoveryRecipients(acCheckpoint);
+        if (!plan.Succeeded())
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} restoreRevision={} requiredMembers={} resolvedRecipients={} reason={} slot={} durablePlayer={}",
+                acActivity.Campaign.Value,
+                acActivity.Attempt.Value,
+                acActivity.Checkpoint->Value,
+                *acActivity.RestoreRevision,
+                plan.RequiredMemberCount,
+                plan.Recipients.size(),
+                RecoveryRecipientErrorName(plan.Error),
+                plan.FailedIdentity
+                    ? plan.FailedIdentity->Slot.Value : "unknown",
+                plan.FailedIdentity
+                    ? plan.FailedIdentity->Player.Value : "unknown");
+            return false;
+        }
+
+        const auto snapshot = m_admission.BuildSnapshot(acActivity.Campaign);
+        if (!snapshot)
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} sourceRevision={} restoreRevision={} requiredMembers={} resolvedRecipients={} reason=snapshot-unavailable snapshotLookup=runtime-canonical checkpointSnapshotPresent={} runtimeCanonicalSnapshotPresent=false",
+                acActivity.Campaign.Value,
+                acActivity.Attempt.Value,
+                acActivity.Checkpoint->Value,
+                acCheckpoint.SourceRevision,
+                *acActivity.RestoreRevision,
+                plan.RequiredMemberCount,
+                plan.Recipients.size(),
+                acCheckpoint.SnapshotCoreStateCodecVersion != 0 &&
+                    !acCheckpoint.SnapshotCoreStatePayload.empty());
+            return false;
+        }
+
+        CampaignRecoverySnapshot message;
+        message.CampaignId = acActivity.Campaign.Value.c_str();
+        message.RestoreAttemptId = acActivity.Attempt.Value.c_str();
+        message.CheckpointId = acActivity.Checkpoint->Value.c_str();
+        message.RestoreRevision = *acActivity.RestoreRevision;
+        message.Snapshot = *snapshot;
+        if (!message.IsValid())
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} restoreRevision={} requiredMembers={} resolvedRecipients={} reason=invalid-message snapshotRevision={} runtimeState={}",
+                acActivity.Campaign.Value,
+                acActivity.Attempt.Value,
+                acActivity.Checkpoint->Value,
+                *acActivity.RestoreRevision,
+                plan.RequiredMemberCount,
+                plan.Recipients.size(),
+                snapshot->StateVersion,
+                static_cast<unsigned>(snapshot->RuntimeState));
+            return false;
+        }
+
+        std::vector<Player*> recipients;
+        recipients.reserve(plan.Recipients.size());
+        for (const CampaignRecoveryRecipient& recipient : plan.Recipients)
+        {
+            Player* const pPlayer = m_world.GetPlayerManager().GetById(
+                static_cast<std::uint32_t>(recipient.Connection));
+            if (!pPlayer)
+            {
+                spdlog::error(
+                    "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} restoreRevision={} requiredMembers={} resolvedRecipients={} reason=transient-player-unavailable slot={} durablePlayer={} transientPlayer={}",
+                    acActivity.Campaign.Value,
+                    acActivity.Attempt.Value,
+                    acActivity.Checkpoint->Value,
+                    *acActivity.RestoreRevision,
+                    plan.RequiredMemberCount,
+                    recipients.size(),
+                    recipient.Identity.Slot.Value,
+                    recipient.Identity.Player.Value,
+                    recipient.Connection);
+                return false;
+            }
+            recipients.push_back(pPlayer);
+        }
+
+        spdlog::info(
+            "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_PREPARED campaign={} attempt={} checkpoint={} sourceRevision={} restoreRevision={} requiredMembers={} resolvedRecipients={} snapshotLookup=runtime-canonical checkpointSnapshotPresent=true runtimeCanonicalSnapshotPresent=true",
+            acActivity.Campaign.Value,
+            acActivity.Attempt.Value,
+            acActivity.Checkpoint->Value,
+            acCheckpoint.SourceRevision,
+            *acActivity.RestoreRevision,
+            plan.RequiredMemberCount,
+            recipients.size());
+        for (Player* const pPlayer : recipients)
+            pPlayer->Send(message);
+        spdlog::info(
+            "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_SENT campaign={} attempt={} checkpoint={} restoreRevision={} members={}",
+            acActivity.Campaign.Value,
+            acActivity.Attempt.Value,
+            acActivity.Checkpoint->Value,
+            *acActivity.RestoreRevision,
+            recipients.size());
+        return true;
+    }
+    catch (...)
+    {
+        spdlog::error(
+            "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint={} restoreRevision={} requiredMembers={} resolvedRecipients=0 reason=exception",
+            acActivity.Campaign.Value,
+            acActivity.Attempt.Value,
+            acActivity.Checkpoint
+                ? acActivity.Checkpoint->Value : "unknown",
+            acActivity.RestoreRevision.value_or(0),
+            acCheckpoint.Slots.size());
+        return false;
+    }
+}
+
+bool CampaignProtocolService::AdvanceRecovery(
+    const CampaignId& acCampaign) noexcept
+{
+    CampaignRecoveryCommandResult prepared =
+        m_admission.PrepareRecovery(acCampaign);
+    if (!prepared || !prepared.Activity)
+    {
+        const bool noCheckpoint =
+            prepared.Command.Error == CampaignError::NoCommittedCheckpoint;
+        spdlog::log(
+            noCheckpoint ? spdlog::level::err : spdlog::level::debug,
+            "[STRE][CampaignRecovery] PREPARE_BLOCKED campaign={} error={} reason={} state={}",
+            acCampaign.Value,
+            static_cast<unsigned>(prepared.Command.Error),
+            prepared.Command.Message,
+            noCheckpoint ? "NO_COMMITTED_CHECKPOINT" : "LOCKED");
+        if (const auto snapshot = m_admission.BuildSnapshot(acCampaign))
+            BroadcastSnapshot(*snapshot);
+        return false;
+    }
+
+    if (const auto snapshot = m_admission.BuildSnapshot(acCampaign))
+        BroadcastSnapshot(*snapshot);
+    if (prepared.Dispatch == CampaignRecoveryDispatch::NativeLoad &&
+        prepared.Checkpoint)
+    {
+        return SendRecoveryLoadRequests(
+            *prepared.Activity, *prepared.Checkpoint);
+    }
+    if (prepared.Dispatch == CampaignRecoveryDispatch::RestoredSnapshot)
+    {
+        if (!prepared.Checkpoint)
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint=unknown restoreRevision={} requiredMembers=0 resolvedRecipients=0 reason=checkpoint-unavailable",
+                acCampaign.Value,
+                prepared.Activity->Attempt.Value,
+                prepared.Activity->RestoreRevision.value_or(0));
+            return false;
+        }
+        return SendRecoverySnapshot(
+            *prepared.Activity, *prepared.Checkpoint);
+    }
+    return false;
 }
 
 bool CampaignProtocolService::SendCheckpointRequest(
@@ -156,6 +463,119 @@ bool CampaignProtocolService::SendCheckpointRequest(
     {
         return false;
     }
+}
+
+void CampaignProtocolService::SendCheckpointState(
+    const CampaignId& acCampaign,
+    std::string_view acCheckpointId,
+    CampaignCheckpointPublicState aState,
+    Player* apOnlyPlayer) noexcept
+{
+    try
+    {
+        NotifyCampaignCheckpointState message;
+        message.CampaignId = acCampaign.Value.c_str();
+        message.CheckpointId.assign(
+            acCheckpointId.data(), acCheckpointId.size());
+        message.State = aState;
+        if (!message.IsValid())
+            return;
+
+        if (apOnlyPlayer)
+        {
+            apOnlyPlayer->Send(message);
+            return;
+        }
+        for (const CampaignConnectionHandle connection :
+             m_admission.GetAdmittedConnections(acCampaign))
+        {
+            if (Player* const pPlayer =
+                    m_world.GetPlayerManager().GetById(
+                        static_cast<std::uint32_t>(connection)))
+            {
+                pPlayer->Send(message);
+            }
+        }
+    }
+    catch (...)
+    {
+    }
+}
+
+void CampaignProtocolService::OnCheckpointRequest(
+    const PacketEvent<CampaignCheckpointRequest>& acPacket) noexcept
+{
+    Player& player = *acPacket.pPlayer;
+    const CampaignAdmissionRecord* const pAdmission = GetAdmission(player);
+    if (!acPacket.Packet.IsValid() || !pAdmission ||
+        !pAdmission->AdmittedIdentity)
+    {
+        spdlog::warn(
+            "[STRE][CampaignCheckpoint] INTENT_REJECTED transientPlayer={} reason=invalid-or-not-admitted",
+            player.GetId());
+        return;
+    }
+
+    const CampaignId campaign =
+        pAdmission->AdmittedIdentity->Campaign;
+    const auto snapshot = m_admission.BuildSnapshot(campaign);
+    if (!snapshot ||
+        (snapshot->RuntimeState != kCampaignWireRuntimeActive &&
+         snapshot->RuntimeState != kCampaignWireRuntimeCheckpointing))
+    {
+        SendCheckpointState(
+            campaign, {}, CampaignCheckpointPublicState::Failed, &player);
+        spdlog::warn(
+            "[STRE][CampaignCheckpoint] INTENT_REJECTED campaign={} transientPlayer={} reason=runtime-not-active runtime={}",
+            campaign.Value, player.GetId(),
+            snapshot ? static_cast<unsigned>(snapshot->RuntimeState) : 0u);
+        return;
+    }
+
+    CampaignCheckpointCommandResult begun =
+        m_admission.BeginCheckpoint(ToHandle(player));
+    if (begun.Command.Error == CampaignError::CheckpointInProgress &&
+        begun.Activity)
+    {
+        SendCheckpointState(
+            campaign, begun.Activity->Checkpoint.Value,
+            CampaignCheckpointPublicState::Started, &player);
+        return;
+    }
+    if (!begun || !begun.Activity)
+    {
+        SendCheckpointState(
+            campaign, {}, CampaignCheckpointPublicState::Failed, &player);
+        spdlog::warn(
+            "[STRE][CampaignCheckpoint] INTENT_REJECTED campaign={} transientPlayer={} reasonCode={} reason={}",
+            campaign.Value, player.GetId(),
+            static_cast<unsigned>(begun.Command.Error),
+            begun.Command.Message);
+        return;
+    }
+
+    if (const auto current = m_admission.BuildSnapshot(campaign))
+        BroadcastSnapshot(*current);
+    if (!SendCheckpointRequest(*begun.Activity))
+    {
+        GameServer::Get()->GetCampaignRuntime().AbandonCheckpoint(campaign);
+        if (const auto current = m_admission.BuildSnapshot(campaign))
+            BroadcastSnapshot(*current);
+        SendCheckpointState(
+            campaign, begun.Activity->Checkpoint.Value,
+            CampaignCheckpointPublicState::Failed);
+        return;
+    }
+
+    SendCheckpointState(
+        campaign, begun.Activity->Checkpoint.Value,
+        CampaignCheckpointPublicState::Started);
+    spdlog::info(
+        "[STRE][CampaignCheckpoint] INTENT_ACCEPTED campaign={} checkpoint={} source={} transientPlayer={}",
+        campaign.Value, begun.Activity->Checkpoint.Value,
+        acPacket.Packet.Reason == CampaignCheckpointRequestReason::Manual
+            ? "manual" : "quick",
+        player.GetId());
 }
 
 bool CampaignProtocolService::BeginCheckpointDevelopment(
@@ -758,7 +1178,81 @@ void CampaignProtocolService::OnResume(
             }
         }
     }
+    if (result.Succeeded() &&
+        acPacket.Packet.RestoreCommittedCheckpoint &&
+        result.Result == CampaignProtocolResult::Applied &&
+        result.Snapshot && result.Snapshot->RosterSealed)
+    {
+        m_pendingCampaignLoads.insert(result.CampaignId);
+    }
+    if (result.Succeeded() && result.Snapshot &&
+        (result.Snapshot->RuntimeState ==
+             kCampaignWireRuntimeRecoveryLock ||
+         result.Snapshot->RuntimeState ==
+             kCampaignWireRuntimeRestoringCheckpoint))
+    {
+        m_pendingCampaignLoads.erase(result.CampaignId);
+    }
+    const bool resumed = result.Succeeded();
+    const CampaignId resumedCampaign{result.CampaignId};
+    if (resumed)
+    {
+        if (const auto recovery =
+                m_admission.GetRecoveryActivity(resumedCampaign))
+        {
+            spdlog::info(
+                "[STRE][CampaignRecovery] RECOVERY_REHYDRATION_STATE campaign={} attempt={} checkpoint={} sourceRevision={} restoreRevision={} persistedPhase={} replayAction={} durableLoadedSlots={} durableAppliedSlots={} volatileLoadedSlots={} volatileAppliedSlots={} durableRestoreApplied={}",
+                resumedCampaign.Value,
+                recovery->Attempt.Value,
+                recovery->Checkpoint
+                    ? recovery->Checkpoint->Value : "pending",
+                recovery->SourceRevision,
+                recovery->RestoreRevision.value_or(0),
+                recovery->RestoreRevision
+                    ? "restore-applied"
+                    : "waiting-loaded",
+                recovery->RestoreRevision
+                    ? "replay-native-load-before-snapshot"
+                    : "resume-native-load-barrier",
+                RecoverySlotSet(recovery->DurableLoadedSlots),
+                RecoverySlotSet(
+                    recovery->DurableSnapshotAppliedSlots),
+                recovery->LoadedSlots.size(),
+                recovery->SnapshotAppliedSlots.size(),
+                recovery->RestoreRevision.has_value());
+        }
+    }
+    bool loadRecoveryBegun = false;
+    if (resumed && result.Snapshot &&
+        result.Snapshot->RuntimeState == kCampaignWireRuntimeActive &&
+        m_pendingCampaignLoads.contains(result.CampaignId))
+    {
+        CampaignRecoveryCommandResult begun =
+            m_admission.BeginCampaignLoadRecovery(
+                ToHandle(player), resumedCampaign);
+        if (begun)
+        {
+            loadRecoveryBegun = true;
+            m_pendingCampaignLoads.erase(result.CampaignId);
+            result.Version = begun.Command.Version;
+            result.Snapshot = m_admission.BuildSnapshot(resumedCampaign);
+            spdlog::info(
+                "[STRE][CampaignRecovery] CAMPAIGN_LOAD_RECOVERY_OPENED campaign={} attempt={} source=ACTIVE",
+                resumedCampaign.Value,
+                begun.Activity ? begun.Activity->Attempt.Value : "unknown");
+        }
+        else
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] CAMPAIGN_LOAD_RECOVERY_BLOCKED campaign={} error={} reason={}",
+                resumedCampaign.Value,
+                static_cast<unsigned>(begun.Command.Error),
+                begun.Command.Message);
+        }
+    }
     Finish(player, std::move(result));
+    if (resumed || loadRecoveryBegun)
+        (void)AdvanceRecovery(resumedCampaign);
 }
 
 void CampaignProtocolService::OnStart(const PacketEvent<CampaignStartRequest>& acPacket) noexcept
@@ -954,9 +1448,211 @@ void CampaignProtocolService::OnCheckpointSaveResult(
             campaign.Value,
             acPacket.Packet.CheckpointId.c_str(),
             handled.Command.Version);
+        SendCheckpointState(
+            campaign, acPacket.Packet.CheckpointId.c_str(),
+            CampaignCheckpointPublicState::Committed);
+    }
+    else if (!succeeded)
+    {
+        SendCheckpointState(
+            campaign, acPacket.Packet.CheckpointId.c_str(),
+            CampaignCheckpointPublicState::Failed);
     }
     if (const auto snapshot = m_admission.BuildSnapshot(campaign))
         BroadcastSnapshot(*snapshot);
+}
+
+void CampaignProtocolService::OnRecoveryLoadedResult(
+    const PacketEvent<CampaignRecoveryLoadedResult>& acPacket) noexcept
+{
+    Player& player = *acPacket.pPlayer;
+    if (!acPacket.Packet.IsValid())
+    {
+        spdlog::warn(
+            "[STRE][CampaignRecovery] LOAD_RESULT_REJECTED transientPlayer={} reason=malformed-packet",
+            player.GetId());
+        return;
+    }
+
+    const CampaignId campaign{acPacket.Packet.CampaignId.c_str()};
+    spdlog::info(
+        "[STRE][CampaignRecovery] LOAD_RESULT_RECEIVED campaign={} attempt={} checkpoint={} transientPlayer={} success={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        player.GetId(),
+        acPacket.Packet.Result ==
+            CampaignRecoveryLoadedResultCode::Success);
+    CampaignRecoveryCommandResult handled =
+        m_admission.HandleRecoveryLoaded(
+            ToHandle(player),
+            campaign,
+            RestoreAttemptId{
+                acPacket.Packet.RestoreAttemptId.c_str()},
+            CheckpointId{acPacket.Packet.CheckpointId.c_str()},
+            acPacket.Packet.Result ==
+                CampaignRecoveryLoadedResultCode::Success,
+            acPacket.Packet.NativeSaveIdentity.c_str(),
+            acPacket.Packet.FingerprintAlgorithm.c_str(),
+            acPacket.Packet.FingerprintVersion,
+            Bytes(acPacket.Packet.Fingerprint.begin(),
+                acPacket.Packet.Fingerprint.end()),
+            acPacket.Packet.SaveMetadataCodecVersion,
+            Bytes(acPacket.Packet.SaveMetadata.begin(),
+                acPacket.Packet.SaveMetadata.end()));
+    if (!handled)
+    {
+        spdlog::warn(
+            "[STRE][CampaignRecovery] LOAD_RESULT_REJECTED campaign={} attempt={} checkpoint={} transientPlayer={} error={} reason={}",
+            campaign.Value,
+            acPacket.Packet.RestoreAttemptId.c_str(),
+            acPacket.Packet.CheckpointId.c_str(),
+            player.GetId(),
+            static_cast<unsigned>(handled.Command.Error),
+            handled.Command.Message);
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CampaignRecovery] LOAD_ACK campaign={} attempt={} checkpoint={} transientPlayer={} firstBarrier={} replay={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        player.GetId(),
+        handled.FirstBarrierCompleted,
+        handled.Command.IdempotentReplay);
+    if (handled.Dispatch == CampaignRecoveryDispatch::RestoredSnapshot &&
+        handled.Activity)
+    {
+        spdlog::info(
+            "[STRE][CampaignRecovery] LOADED_BARRIER_COMPLETE campaign={} attempt={} checkpoint={} restoreRevision={} members={} replay={}",
+            campaign.Value,
+            handled.Activity->Attempt.Value,
+            handled.Activity->Checkpoint
+                ? handled.Activity->Checkpoint->Value : "unknown",
+            handled.Activity->RestoreRevision.value_or(0),
+            handled.Activity->LoadedSlots.size(),
+            handled.Command.IdempotentReplay);
+        if (!handled.Command.IdempotentReplay)
+        {
+            spdlog::info(
+                "[STRE][CampaignRecovery] RESTORE_APPLIED campaign={} attempt={} checkpoint={} restoreRevision={}",
+                campaign.Value,
+                handled.Activity->Attempt.Value,
+                handled.Activity->Checkpoint
+                    ? handled.Activity->Checkpoint->Value : "unknown",
+                handled.Activity->RestoreRevision.value_or(0));
+        }
+        if (const auto snapshot = m_admission.BuildSnapshot(campaign))
+            BroadcastSnapshot(*snapshot);
+        if (handled.Checkpoint)
+        {
+            (void)SendRecoverySnapshot(
+                *handled.Activity, *handled.Checkpoint);
+        }
+        else
+        {
+            spdlog::error(
+                "[STRE][CampaignRecovery] RESTORE_SNAPSHOT_DISPATCH_FAILED campaign={} attempt={} checkpoint=unknown restoreRevision={} requiredMembers=0 resolvedRecipients=0 reason=checkpoint-unavailable",
+                campaign.Value,
+                handled.Activity->Attempt.Value,
+                handled.Activity->RestoreRevision.value_or(0));
+        }
+    }
+}
+
+void CampaignProtocolService::OnRecoverySnapshotApplied(
+    const PacketEvent<CampaignRecoverySnapshotApplied>& acPacket) noexcept
+{
+    Player& player = *acPacket.pPlayer;
+    if (!acPacket.Packet.IsValid())
+    {
+        spdlog::warn(
+            "[STRE][CampaignRecovery] SNAPSHOT_ACK_REJECTED transientPlayer={} reason=malformed-packet",
+            player.GetId());
+        return;
+    }
+
+    const CampaignId campaign{acPacket.Packet.CampaignId.c_str()};
+    spdlog::info(
+        "[STRE][CampaignRecovery] APPLIED_RESULT_RECEIVED campaign={} attempt={} checkpoint={} restoreRevision={} transientPlayer={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        acPacket.Packet.RestoreRevision,
+        player.GetId());
+    CampaignRecoveryCommandResult handled =
+        m_admission.HandleRecoverySnapshotApplied(
+            ToHandle(player),
+            campaign,
+            RestoreAttemptId{
+                acPacket.Packet.RestoreAttemptId.c_str()},
+            CheckpointId{acPacket.Packet.CheckpointId.c_str()},
+            acPacket.Packet.RestoreRevision);
+    if (!handled)
+    {
+        spdlog::warn(
+            "[STRE][CampaignRecovery] SNAPSHOT_ACK_REJECTED campaign={} attempt={} checkpoint={} transientPlayer={} error={} reason={}",
+            campaign.Value,
+            acPacket.Packet.RestoreAttemptId.c_str(),
+            acPacket.Packet.CheckpointId.c_str(),
+            player.GetId(),
+            static_cast<unsigned>(handled.Command.Error),
+            handled.Command.Message);
+        return;
+    }
+
+    spdlog::info(
+        "[STRE][CampaignRecovery] APPLIED_ACK campaign={} attempt={} checkpoint={} restoreRevision={} transientPlayer={} secondBarrier={} replay={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        acPacket.Packet.RestoreRevision,
+        player.GetId(),
+        handled.RecoveryCompleted,
+        handled.Command.IdempotentReplay);
+    if (!handled.RecoveryCompleted)
+        return;
+
+    spdlog::info(
+        "[STRE][CampaignRecovery] APPLIED_BARRIER_COMPLETE campaign={} attempt={} checkpoint={} restoreRevision={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        acPacket.Packet.RestoreRevision);
+
+    CampaignRecoveryComplete complete;
+    complete.CampaignId = acPacket.Packet.CampaignId;
+    complete.RestoreAttemptId = acPacket.Packet.RestoreAttemptId;
+    complete.CheckpointId = acPacket.Packet.CheckpointId;
+    complete.RestoreRevision = acPacket.Packet.RestoreRevision;
+    if (!complete.IsValid())
+        return;
+
+    if (handled.Activity)
+    {
+        for (const CampaignConnectionHandle connection :
+             m_admission.GetAdmittedConnections(campaign))
+        {
+            Player* const pMember = m_world.GetPlayerManager().GetById(
+                static_cast<std::uint32_t>(connection));
+            if (pMember)
+                pMember->Send(complete);
+        }
+    }
+    else
+    {
+        player.Send(complete);
+    }
+    if (const auto snapshot = m_admission.BuildSnapshot(campaign))
+        BroadcastSnapshot(*snapshot);
+    spdlog::info(
+        "[STRE][CampaignRecovery] RECOVERY_COMPLETED campaign={} attempt={} checkpoint={} restoreRevision={} replay={}",
+        campaign.Value,
+        acPacket.Packet.RestoreAttemptId.c_str(),
+        acPacket.Packet.CheckpointId.c_str(),
+        acPacket.Packet.RestoreRevision,
+        handled.Command.IdempotentReplay);
 }
 
 void CampaignProtocolService::BroadcastHelgenState(const CampaignId& acCampaign, Player* apOnlyPlayer) noexcept

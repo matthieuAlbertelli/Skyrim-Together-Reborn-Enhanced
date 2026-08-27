@@ -8,6 +8,7 @@ namespace STRE::Campaign
 enum class CampaignRuntimeGateState : std::uint8_t
 {
     Open,
+    RecoveryLocked,
     ArmedDuringLoad,
     LockedAfterLoad,
     Released
@@ -16,7 +17,10 @@ enum class CampaignRuntimeGateState : std::uint8_t
 class CampaignRuntimeGate
 {
 public:
+    bool LockForRecovery() noexcept;
     bool ArmNextLoad() noexcept;
+    bool ArmResumeRequiredLoad() noexcept;
+    bool CommitResumeRequiredTransition() noexcept;
     bool CancelArmedLoad() noexcept;
     bool OnNativeLoadEnter() noexcept;
     void OnNativeLoadReturn(bool aSucceeded) noexcept;
@@ -36,6 +40,8 @@ private:
     std::atomic<CampaignRuntimeGateState> m_state{
         CampaignRuntimeGateState::Open};
     std::atomic_bool m_nextLoadManaged{false};
+    std::atomic_bool m_recoveryOwned{false};
+    std::atomic_bool m_resumeRequiredOwned{false};
     std::atomic_bool m_guardMenuObserved{false};
     std::atomic_bool m_cefPresentationObserved{false};
 };

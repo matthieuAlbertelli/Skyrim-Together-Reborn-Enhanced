@@ -1,0 +1,132 @@
+.resume-panel,
+.resume-state,
+.candidate-list,
+.status-state,
+.secondary-actions {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+
+.incident-actions {
+  display: grid;
+  width: min(430px, 100%);
+  gap: 14px;
+}
+
+.incident-actions button {
+  width: 100%;
+}
+
+.resume-panel h1,
+.resume-panel h2,
+.resume-panel p {
+  margin: 0;
+  text-align: center;
+}
+
+.resume-progress {
+  display: grid;
+  width: min(480px, 100%);
+  margin: 24px 0 0;
+  padding: 0;
+  gap: 9px;
+  list-style: none;
+}
+
+.resume-progress li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  color: #8f887d;
+  letter-spacing: 0.025em;
+}
+
+.resume-progress li[data-state='complete'] {
+  color: #c8bea9;
+}
+
+.resume-progress li[data-state='current'] {
+  color: #f0ce87;
+}
+
+.resume-panel h1 {
+  color: #f0ce87;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.resume-panel h2 {
+  color: #e5c78d;
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.resume-panel p {
+  max-width: 560px;
+  line-height: 1.4;
+  letter-spacing: 0.025em;
+}
+
+.resume-state {
+  margin-top: 28px;
+}
+
+.lead {
+  color: #f1e8d7;
+  font-size: 20px;
+}
+
+.candidate-list {
+  width: min(430px, 100%);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.candidate-list button,
+.main-action {
+  width: min(430px, 100%);
+}
+
+.secondary-actions {
+  margin-top: 24px;
+}
+
+.secondary-actions button {
+  min-width: 280px;
+}
+
+.error-line {
+  color: #d7a69d;
+}
+
+.main-menu-limit {
+  margin-top: 10px !important;
+  color: #aa9d8a;
+  font-size: 14px;
+}
+
+.status-pulse {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #e1bd79;
+  transform: rotate(45deg);
+  animation: campaign-status-pulse 1.4s ease-in-out infinite;
+}
+
+app-campaign-resume app-connect {
+  width: min(500px, 100%);
+  margin-top: 8px;
+}
+
+@keyframes campaign-status-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    box-shadow: 0 0 0 rgba(225, 189, 121, 0);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 18px rgba(225, 189, 121, 0.35);
+  }
+}

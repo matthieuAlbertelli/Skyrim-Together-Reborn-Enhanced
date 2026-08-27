@@ -45,7 +45,7 @@ test.describe('Campaign bootstrap', () => {
       };
     });
     await project(page, entryState);
-    await page.waitForSelector('.bootstrap-shell');
+    await page.waitForSelector('app-campaign-bootstrap .campaign-shell');
   });
 
   test('entry emits only the selected Solo/Create/Join intent', async ({
@@ -189,6 +189,12 @@ test.describe('Campaign bootstrap', () => {
       ],
     };
     await project(page, lobby);
+    await expect(
+      page.locator('app-campaign-bootstrap app-campaign-shell'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('app-campaign-bootstrap app-campaign-roster'),
+    ).toHaveCount(1);
     await expect(page.locator('.join-code')).toHaveText('R5WT');
     await expect(page.locator('.lobby li')).toHaveCount(2);
     await expect(page.locator('.lobby li').nth(1)).toHaveClass(/absent/);

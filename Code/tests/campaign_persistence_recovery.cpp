@@ -32,6 +32,8 @@ TEST_CASE("Restore materializes exact snapshot at a new monotonic revision", "[c
     restore.ExpectedRevision = 6;
     restore.Mutation = MutationId{"mutation-restore-1"};
     restore.Checkpoint = CheckpointId{"checkpoint-1"};
+    restore.RestoredCoreStateCodecVersion = 3;
+    restore.RestoredCoreStatePayload = {0x94};
     restore.MutationPayload = {0x93};
     MutationResult restored = store->RestoreCheckpointSnapshot(restore);
     INFO(restored.Message);
@@ -42,7 +44,7 @@ TEST_CASE("Restore materializes exact snapshot at a new monotonic revision", "[c
         CampaignId{"campaign-1"}, ProjectionAudience::Server());
     REQUIRE(campaign.Succeeded());
     REQUIRE(campaign.Value.Campaign.CurrentRevision == 7);
-    REQUIRE(campaign.Value.Campaign.CoreStatePayload == Bytes{0x10, 0x20, 0x30});
+    REQUIRE(campaign.Value.Campaign.CoreStatePayload == Bytes{0x94});
     REQUIRE(campaign.Value.Campaign.LastCommittedCheckpoint == CheckpointId{"checkpoint-1"});
     REQUIRE(campaign.Value.CharacterBuilds.front().ClassId == "class.mage");
     REQUIRE(campaign.Value.CharacterBuilds.front().InventoryHash ==
@@ -72,4 +74,9 @@ TEST_CASE("Restore materializes exact snapshot at a new monotonic revision", "[c
     REQUIRE(replay.Succeeded());
     REQUIRE(replay.IdempotentReplay);
     REQUIRE(replay.Revision == 7);
+
+    RestoreCheckpointRequest conflicting = restore;
+    conflicting.RestoredCoreStatePayload = {0x95};
+    REQUIRE(store->RestoreCheckpointSnapshot(conflicting).Error ==
+        StoreError::IdempotencyConflict);
 }

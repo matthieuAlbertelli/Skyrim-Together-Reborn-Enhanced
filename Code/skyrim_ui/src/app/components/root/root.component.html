@@ -41,6 +41,15 @@
         <ng-container *ngIf="connected$ | async">
           <button
             data-style-ornament="inverted"
+            [attr.data-style-active]="
+              (view$ | async) === RootView.CAMPAIGN_RESUME
+            "
+            (click)="setView(RootView.CAMPAIGN_RESUME)"
+          >
+            {{ 'COMPONENT.ROOT.RESUME_CAMPAIGN' | transloco }}
+          </button>
+          <button
+            data-style-ornament="inverted"
             [attr.data-style-active]="(view$ | async) === RootView.DISCONNECT"
             (click)="setView(RootView.DISCONNECT)"
           >
@@ -57,25 +66,31 @@
           -->
           <button
             data-style-ornament="inverted"
-            [attr.data-style-active]="(view$ | async) === RootView.PLAYER_MANAGER"
+            [attr.data-style-active]="
+              (view$ | async) === RootView.PLAYER_MANAGER
+            "
             (click)="setView(RootView.PLAYER_MANAGER)"
           >
             {{ 'COMPONENT.ROOT.PLAYER_MANAGER' | transloco }}
           </button>
           <button data-style-ornament="inverted" (click)="revealPlayers()">
             <!-- See note in 'root.component.scss' for explanation -->
-            <div style="position: relative;">
+            <div style="position: relative">
               <span
                 class="cooldown-supporting-text-normal"
-                [class.cooldown-supporting-text-animating]="revealingInProgress$"
+                [class.cooldown-supporting-text-animating]="
+                  revealingInProgress$
+                "
               >
                 {{ 'COMPONENT.ROOT.REVEAL_PLAYERS' | transloco }}
               </span>
               <span
-                style="position: absolute; left: 0; top: 0;"
+                style="position: absolute; left: 0; top: 0"
                 class="text-cooldown-effect"
                 [class.cooldown-active]="revealingInProgress$"
-                [style.--cooldown-duration]="revealingInProgress$ ? '10s' : '0.3s'"
+                [style.--cooldown-duration]="
+                  revealingInProgress$ ? '10s' : '0.3s'
+                "
               >
                 {{ 'COMPONENT.ROOT.REVEAL_PLAYERS' | transloco }}
               </span>
@@ -131,6 +146,10 @@
         >
           <app-player-manager (done)="closeView()"></app-player-manager>
         </app-popup>
+        <app-campaign-resume
+          *ngSwitchCase="RootView.CAMPAIGN_RESUME"
+          (done)="closeView()"
+        ></app-campaign-resume>
       </ng-container>
 
       <app-error></app-error>

@@ -88,7 +88,9 @@ struct ServerMessageFactory
             NotifySubtitle, NotifyPlayerDialogue, NotifyActorTeleport, NotifyRelinquishControl, NotifyPlayerLeft, NotifyPlayerJoined, NotifyDialogue, NotifySubtitle, NotifyPlayerDialogue, NotifyPlayerLevel, NotifyPlayerCellChanged, NotifyTeleport, NotifyPlayerHealthUpdate, NotifySettingsChange,
             NotifyWeatherChange, NotifySetWaypoint, NotifyRemoveWaypoint, NotifySetTimeResult, NotifyRemoveSpell, NotifyTradeInvite, NotifyTradeStarted, NotifyTradeCancelled, NotifyTradeState, NotifyTradeApply, NotifyTradeReconcile, CharacterBuildResponse, NotifyCharacterBuildState, NotifyWorldEntityManipulation,
             CampaignCommandResponse, NotifyCampaignSnapshot, NotifyCampaignLobbyState, NotifyCampaignHelgenState,
-            CampaignCheckpointSaveRequest>;
+            CampaignCheckpointSaveRequest, CampaignRecoveryLoadRequest,
+            CampaignRecoverySnapshot, CampaignRecoveryComplete,
+            NotifyCampaignCheckpointState>;
 
         return s_visitor(std::forward<T>(func));
     }

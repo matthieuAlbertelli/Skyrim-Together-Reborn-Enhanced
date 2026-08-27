@@ -175,6 +175,13 @@ inline MutationResult CreateCandidate(
     request.Mutation = MutationId{std::move(aMutation)};
     request.Checkpoint = CheckpointId{std::move(aCheckpoint)};
     request.Snapshot = SnapshotId{std::move(aSnapshot)};
+    const auto current = aStore.LoadCampaignProjection(
+        request.Campaign, ProjectionAudience::Server());
+    REQUIRE(current.Succeeded());
+    request.SnapshotCoreStateCodecVersion =
+        current.Value.Campaign.CoreStateCodecVersion;
+    request.SnapshotCoreStatePayload =
+        current.Value.Campaign.CoreStatePayload;
     request.MutationPayload = {0x21};
     request.Outbox = {{1, {0x22}}};
     return aStore.CreateCheckpointCandidate(request);

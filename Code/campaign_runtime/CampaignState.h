@@ -57,6 +57,10 @@ enum class CampaignError
     CheckpointNotActive,
     CheckpointMismatch,
     InvalidCheckpointArtifact,
+    RecoveryInProgress,
+    RecoveryNotActive,
+    RecoveryMismatch,
+    NoCommittedCheckpoint,
     StaleRevision,
     PersistenceFailure,
     IntegrityFailure

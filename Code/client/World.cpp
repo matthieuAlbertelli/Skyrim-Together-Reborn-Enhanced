@@ -4,9 +4,12 @@
 
 #include <Services/DiscoveryService.h>
 #include <Services/InputService.h>
+#include <Services/CampaignSaveTraceService.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <Services/CampaignNativeLoadService.h>
+#include <Services/CampaignRecoveryService.h>
 #include <Services/CampaignService.h>
+#include <Services/CampaignResumeService.h>
 #include <Services/CampaignCheckpointService.h>
 #include <Services/CampaignBootstrapService.h>
 #include <Services/TransportService.h>
@@ -49,6 +52,7 @@ World::World()
     ctx().emplace<OverlayService>(*this, m_transport, m_dispatcher);
     ctx().emplace<UiSurfaceService>(ctx().at<OverlayService>());
     ctx().emplace<InputService>(ctx().at<UiSurfaceService>());
+    ctx().emplace<CampaignSaveTraceService>(m_dispatcher);
     ctx().emplace<CampaignRuntimeGateService>(
         *this,
         ctx().at<UiSurfaceService>());
@@ -58,10 +62,24 @@ World::World()
         ctx().at<CampaignService>(),
         ctx().at<CampaignRuntimeGateService>(),
         m_transport);
+    ctx().emplace<CampaignRecoveryService>(
+        m_dispatcher,
+        m_transport,
+        ctx().at<CampaignService>(),
+        ctx().at<CampaignRuntimeGateService>(),
+        ctx().at<CampaignNativeLoadService>());
+    ctx().emplace<CampaignResumeService>(
+        m_dispatcher,
+        m_transport,
+        ctx().at<CampaignService>(),
+        ctx().at<UiSurfaceService>(),
+        ctx().at<CampaignRecoveryService>());
     ctx().emplace<CampaignCheckpointService>(
         m_dispatcher,
         m_transport,
-        ctx().at<CampaignService>());
+        ctx().at<CampaignService>(),
+        ctx().at<CampaignRuntimeGateService>(),
+        ctx().at<OverlayService>());
     ctx().emplace<PartyService>(*this, m_dispatcher, m_transport);
     ctx().emplace<CampaignBootstrapService>(
         m_dispatcher,

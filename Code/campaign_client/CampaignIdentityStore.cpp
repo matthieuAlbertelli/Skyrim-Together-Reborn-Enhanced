@@ -24,9 +24,11 @@ constexpr char kPlayerIdentityFilename[] = "stre-player-id-v1.txt";
 constexpr char kBindingCacheFilename[] = "stre-campaign-bindings-v1.txt";
 constexpr char kCheckpointArtifactHeader[] =
     "stre-campaign-checkpoint-artifact-v1";
+constexpr char kCampaignSaveMarkerHeader[] = "stre-campaign-save-v1";
 constexpr std::uintmax_t kMaximumPlayerIdentityFileSize = 256;
 constexpr std::uintmax_t kMaximumBindingCacheFileSize = 64 * 1024;
 constexpr std::uintmax_t kMaximumCheckpointArtifactFileSize = 2048;
+constexpr std::uintmax_t kMaximumCampaignSaveMarkerFileSize = 1024;
 constexpr std::size_t kMaximumBindingCacheEntries = 256;
 
 LocalStoreResult Failure(LocalIdentityError aError, std::string aMessage)
@@ -481,6 +483,37 @@ CampaignIdentityStore::LoadBinding(const std::string& acCampaignId) noexcept
     }
 }
 
+LocalStoreValueResult<std::vector<CampaignBindingCacheEntry>>
+CampaignIdentityStore::ListBindings() noexcept
+{
+    LocalStoreValueResult<std::vector<CampaignBindingCacheEntry>> result;
+    try
+    {
+        auto bindings = LoadBindings();
+        result.Error = bindings.Error;
+        result.Message = std::move(bindings.Message);
+        if (!bindings)
+            return result;
+
+        result.Value.reserve(bindings.Value.size());
+        for (auto& binding : bindings.Value)
+            result.Value.push_back(std::move(binding.second));
+        std::sort(
+            result.Value.begin(), result.Value.end(),
+            [](const CampaignBindingCacheEntry& acLeft,
+               const CampaignBindingCacheEntry& acRight)
+            {
+                return acLeft.CampaignId < acRight.CampaignId;
+            });
+    }
+    catch (...)
+    {
+        result.Error = LocalIdentityError::IoFailure;
+        result.Message = "STRE campaign binding enumeration failed safely";
+    }
+    return result;
+}
+
 LocalStoreResult CampaignIdentityStore::SaveBinding(
     const CampaignBindingCacheEntry& acBinding) noexcept
 {
@@ -698,6 +731,145 @@ LocalStoreResult CampaignIdentityStore::SaveCheckpointArtifact(
         return Failure(
             LocalIdentityError::IoFailure,
             "local checkpoint artifact persistence failed safely");
+    }
+}
+
+LocalStoreValueResult<std::filesystem::path>
+CampaignIdentityStore::CampaignSaveMarkerPath(
+    const std::string& acNativeSaveIdentity) const noexcept
+{
+    LocalStoreValueResult<std::filesystem::path> result;
+    try
+    {
+        if (!IsValidCacheId(acNativeSaveIdentity))
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message = "invalid native save identity for an STRE marker";
+            return result;
+        }
+        NativeSaveSha256 identityHash{};
+        if (!ComputeNativeSaveSha256(
+                std::span<const std::uint8_t>(
+                    reinterpret_cast<const std::uint8_t*>(
+                        acNativeSaveIdentity.data()),
+                    acNativeSaveIdentity.size()),
+                identityHash))
+        {
+            result.Error = LocalIdentityError::IoFailure;
+            result.Message = "failed to derive the STRE save marker key";
+            return result;
+        }
+        result.Value = m_directory /
+            ("stre-save-" + NativeSaveSha256ToHex(identityHash) + ".txt");
+    }
+    catch (...)
+    {
+        result.Error = LocalIdentityError::IoFailure;
+        result.Message = "STRE save marker path derivation failed safely";
+    }
+    return result;
+}
+
+LocalStoreValueResult<std::optional<CampaignSaveMarker>>
+CampaignIdentityStore::LoadCampaignSaveMarker(
+    const std::string& acNativeSaveIdentity) noexcept
+{
+    LocalStoreValueResult<std::optional<CampaignSaveMarker>> result;
+    try
+    {
+        auto markerPath = CampaignSaveMarkerPath(acNativeSaveIdentity);
+        if (!markerPath)
+        {
+            result.Error = markerPath.Error;
+            result.Message = std::move(markerPath.Message);
+            return result;
+        }
+        std::error_code error;
+        if (!std::filesystem::exists(markerPath.Value, error))
+        {
+            if (error)
+            {
+                result.Error = LocalIdentityError::IoFailure;
+                result.Message = "failed to inspect the STRE save marker";
+            }
+            return result;
+        }
+        const auto size = std::filesystem::file_size(markerPath.Value, error);
+        if (error || size > kMaximumCampaignSaveMarkerFileSize)
+        {
+            result.Error = error ? LocalIdentityError::IoFailure
+                                 : LocalIdentityError::Malformed;
+            result.Message = error
+                ? "failed to inspect the STRE save marker size"
+                : "the STRE save marker is oversized";
+            return result;
+        }
+
+        std::ifstream stream(markerPath.Value, std::ios::binary);
+        std::string header;
+        CampaignSaveMarker marker;
+        std::string trailing;
+        if (!stream || !std::getline(stream, header) ||
+            !std::getline(stream, marker.CampaignId) ||
+            !std::getline(stream, marker.CampaignSlotId) ||
+            !std::getline(stream, marker.CharacterBindingId) ||
+            !std::getline(stream, marker.CheckpointId) ||
+            !std::getline(stream, marker.NativeSaveIdentity) ||
+            std::getline(stream, trailing) || stream.bad() ||
+            header != kCampaignSaveMarkerHeader ||
+            marker.NativeSaveIdentity != acNativeSaveIdentity ||
+            marker.NativeSaveIdentity != "stre-" + marker.CheckpointId ||
+            !IsValidCacheId(marker.CampaignId) ||
+            !IsValidCacheId(marker.CampaignSlotId) ||
+            !IsValidCacheId(marker.CharacterBindingId) ||
+            !IsValidCacheId(marker.CheckpointId))
+        {
+            result.Error = LocalIdentityError::Malformed;
+            result.Message =
+                "the STRE save marker is malformed, unsupported, or mismatched";
+            return result;
+        }
+        result.Value = std::move(marker);
+    }
+    catch (...)
+    {
+        result.Error = LocalIdentityError::IoFailure;
+        result.Message = "STRE save marker load failed safely";
+    }
+    return result;
+}
+
+LocalStoreResult CampaignIdentityStore::SaveCampaignSaveMarker(
+    const CampaignSaveMarker& acMarker) noexcept
+{
+    try
+    {
+        if (!IsValidCacheId(acMarker.CampaignId) ||
+            !IsValidCacheId(acMarker.CampaignSlotId) ||
+            !IsValidCacheId(acMarker.CharacterBindingId) ||
+            !IsValidCacheId(acMarker.CheckpointId) ||
+            !IsValidCacheId(acMarker.NativeSaveIdentity) ||
+            acMarker.NativeSaveIdentity != "stre-" + acMarker.CheckpointId)
+        {
+            return Failure(LocalIdentityError::Malformed,
+                "refused to persist an invalid STRE save marker");
+        }
+        auto markerPath = CampaignSaveMarkerPath(acMarker.NativeSaveIdentity);
+        if (!markerPath)
+            return {markerPath.Error, std::move(markerPath.Message)};
+        std::ostringstream contents;
+        contents << kCampaignSaveMarkerHeader << '\n'
+                 << acMarker.CampaignId << '\n'
+                 << acMarker.CampaignSlotId << '\n'
+                 << acMarker.CharacterBindingId << '\n'
+                 << acMarker.CheckpointId << '\n'
+                 << acMarker.NativeSaveIdentity << '\n';
+        return WriteAtomically(markerPath.Value, contents.str());
+    }
+    catch (...)
+    {
+        return Failure(LocalIdentityError::IoFailure,
+            "STRE save marker serialization failed safely");
     }
 }
 }

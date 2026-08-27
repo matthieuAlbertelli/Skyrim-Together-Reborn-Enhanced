@@ -8,6 +8,7 @@
 #include <Services/TradeItemPreviewService.h>
 #include <Services/CharacterCreationService.h>
 #include <Services/CampaignBootstrapService.h>
+#include <Services/CampaignResumeService.h>
 #include <Services/UiSurfaceService.h>
 
 #include <Messages/SendChatMessageRequest.h>
@@ -16,6 +17,7 @@
 #include <Events/SetTimeCommandEvent.h>
 
 #include <CampaignBootstrapBridge.h>
+#include <CampaignResumeBridge.h>
 #include <Structs/Campaign.h>
 
 #include <World.h>
@@ -249,6 +251,97 @@ bool OverlayClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefR
                         "[STRE][CampaignBootstrapBridge] processed action={} phaseBefore={} phaseAfter={}",
                         action, static_cast<unsigned>(before),
                         static_cast<unsigned>(service.GetPhase()));
+                });
+        }
+        else if (eventName ==
+            STRE::Campaign::kCampaignResumeActionFunction)
+        {
+            if (!eventArgs || eventArgs->GetSize() < 1 ||
+                eventArgs->GetSize() >
+                    STRE::Campaign::kCampaignResumeMaximumArgumentCount)
+            {
+                spdlog::warn(
+                    "[STRE][CampaignResumeBridge] rejected invalid argument count={}",
+                    eventArgs ? eventArgs->GetSize() : 0);
+                return true;
+            }
+            for (std::size_t index = 0;
+                 index < eventArgs->GetSize(); ++index)
+            {
+                if (eventArgs->GetType(index) != VTYPE_STRING)
+                {
+                    spdlog::warn(
+                        "[STRE][CampaignResumeBridge] rejected non-string argument index={}",
+                        index);
+                    return true;
+                }
+            }
+
+            const std::string action =
+                eventArgs->GetString(0).ToString();
+            const std::string token = eventArgs->GetSize() == 2
+                ? eventArgs->GetString(1).ToString()
+                : std::string{};
+            const auto parsedAction =
+                STRE::Campaign::ParseCampaignResumeAction(action);
+            const bool valid =
+                (parsedAction == STRE::Campaign::CampaignResumeAction::Refresh &&
+                 eventArgs->GetSize() == 1) ||
+                (parsedAction == STRE::Campaign::CampaignResumeAction::Retry &&
+                 eventArgs->GetSize() == 1) ||
+                (parsedAction ==
+                     STRE::Campaign::CampaignResumeAction::StayAndRecover &&
+                 eventArgs->GetSize() == 1) ||
+                (parsedAction ==
+                     STRE::Campaign::CampaignResumeAction::ReturnToMainMenu &&
+                 eventArgs->GetSize() == 1) ||
+                (parsedAction == STRE::Campaign::CampaignResumeAction::Select &&
+                 eventArgs->GetSize() == 2 && token.size() == 32);
+            if (!valid)
+            {
+                spdlog::warn(
+                    "[STRE][CampaignResumeBridge] rejected invalid action={}",
+                    action);
+                return true;
+            }
+
+            if (parsedAction ==
+                STRE::Campaign::CampaignResumeAction::ReturnToMainMenu)
+            {
+                spdlog::info(
+                    "[STRE][CampaignRecoveryUi] RETURN_TO_MAIN_MENU_NATIVE_RECEIVED");
+            }
+
+            World::Get().GetRunner().Queue(
+                [parsedAction, token]()
+                {
+                    auto& service = World::Get()
+                        .ctx()
+                        .at<CampaignResumeService>();
+                    if (parsedAction ==
+                        STRE::Campaign::CampaignResumeAction::Refresh)
+                    {
+                        service.Refresh();
+                    }
+                    else if (parsedAction ==
+                        STRE::Campaign::CampaignResumeAction::Retry)
+                    {
+                        service.Retry();
+                    }
+                    else if (parsedAction ==
+                        STRE::Campaign::CampaignResumeAction::StayAndRecover)
+                    {
+                        service.StayAndRecover();
+                    }
+                    else if (parsedAction ==
+                        STRE::Campaign::CampaignResumeAction::ReturnToMainMenu)
+                    {
+                        service.ReturnToMainMenu();
+                    }
+                    else
+                    {
+                        service.Select(token);
+                    }
                 });
         }
         else if (eventName == "toggleDebugUI")

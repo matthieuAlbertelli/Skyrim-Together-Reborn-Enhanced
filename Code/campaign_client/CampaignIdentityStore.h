@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace STRE::Campaign
 {
@@ -44,6 +45,17 @@ struct CampaignBindingCacheEntry
     bool operator==(const CampaignBindingCacheEntry&) const noexcept = default;
 };
 
+struct CampaignSaveMarker
+{
+    std::string CampaignId;
+    std::string CampaignSlotId;
+    std::string CharacterBindingId;
+    std::string CheckpointId;
+    std::string NativeSaveIdentity;
+
+    bool operator==(const CampaignSaveMarker&) const noexcept = default;
+};
+
 class CampaignIdentityStore final
 {
 public:
@@ -52,6 +64,8 @@ public:
     [[nodiscard]] LocalStoreValueResult<std::string> LoadOrCreatePlayerId() noexcept;
     [[nodiscard]] LocalStoreValueResult<std::optional<CampaignBindingCacheEntry>>
     LoadBinding(const std::string& acCampaignId) noexcept;
+    [[nodiscard]] LocalStoreValueResult<std::vector<CampaignBindingCacheEntry>>
+    ListBindings() noexcept;
     [[nodiscard]] LocalStoreResult SaveBinding(
         const CampaignBindingCacheEntry& acBinding) noexcept;
     [[nodiscard]] LocalStoreResult RemoveBinding(
@@ -65,6 +79,11 @@ public:
         const std::string& acCampaignId,
         const std::string& acCheckpointId,
         const NativeSaveBundleArtifact& acArtifact) noexcept;
+    [[nodiscard]] LocalStoreValueResult<std::optional<CampaignSaveMarker>>
+    LoadCampaignSaveMarker(
+        const std::string& acNativeSaveIdentity) noexcept;
+    [[nodiscard]] LocalStoreResult SaveCampaignSaveMarker(
+        const CampaignSaveMarker& acMarker) noexcept;
 
     [[nodiscard]] static LocalStoreValueResult<std::filesystem::path>
     ResolveDefaultDirectory() noexcept;
@@ -80,6 +99,9 @@ private:
     [[nodiscard]] LocalStoreResult WriteAtomically(
         const std::filesystem::path& acTarget,
         const std::string& acContents) noexcept;
+    [[nodiscard]] LocalStoreValueResult<std::filesystem::path>
+    CampaignSaveMarkerPath(
+        const std::string& acNativeSaveIdentity) const noexcept;
 
     std::filesystem::path m_directory;
 };

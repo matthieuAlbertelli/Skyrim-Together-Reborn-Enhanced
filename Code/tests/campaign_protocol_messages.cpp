@@ -29,6 +29,9 @@ static_assert(kCampaignLeaveRequest == 67);
 static_assert(kCampaignJoinByCodeRequest == 68);
 static_assert(kCampaignHelgenInvestigationReadyRequest == 69);
 static_assert(kCampaignCheckpointSaveResult == 70);
+static_assert(kCampaignRecoveryLoadedResult == 71);
+static_assert(kCampaignRecoverySnapshotApplied == 72);
+static_assert(kCampaignCheckpointRequest == 73);
 static_assert(kNotifyCharacterBuildState == 63);
 static_assert(kNotifyWorldEntityManipulation == 64);
 static_assert(kCampaignCommandResponse == 65);
@@ -36,6 +39,10 @@ static_assert(kNotifyCampaignSnapshot == 66);
 static_assert(kNotifyCampaignLobbyState == 67);
 static_assert(kNotifyCampaignHelgenState == 68);
 static_assert(kCampaignCheckpointSaveRequest == 69);
+static_assert(kCampaignRecoveryLoadRequest == 70);
+static_assert(kCampaignRecoverySnapshot == 71);
+static_assert(kCampaignRecoveryComplete == 72);
+static_assert(kNotifyCampaignCheckpointState == 73);
 
 namespace
 {
@@ -94,9 +101,11 @@ TEST_CASE("Every campaign client command round-trips through the factory", "[cam
     CampaignResumeRequest resume;
     resume.CampaignId = "campaign-1";
     resume.CharacterBindingId = "binding-2";
+    resume.RestoreCommittedCheckpoint = true;
     const auto resumed = RoundTripClient(resume);
     REQUIRE(resumed->CampaignId == resume.CampaignId);
     REQUIRE(resumed->CharacterBindingId == resume.CharacterBindingId);
+    REQUIRE(resumed->RestoreCommittedCheckpoint);
 
     CampaignStartRequest start;
     start.CampaignId = "campaign-1";
@@ -218,6 +227,12 @@ TEST_CASE(
     "Campaign checkpoint request and result round-trip through their factories",
     "[campaign.protocol][checkpoint]")
 {
+    CampaignCheckpointRequest intent;
+    intent.Reason = CampaignCheckpointRequestReason::Quick;
+    const auto decodedIntent = RoundTripClient(intent);
+    REQUIRE(decodedIntent->IsValid());
+    REQUIRE(decodedIntent->Reason == CampaignCheckpointRequestReason::Quick);
+
     CampaignCheckpointSaveRequest request;
     request.CampaignId = "campaign-1";
     request.CheckpointId = "cp-42";
@@ -271,12 +286,38 @@ TEST_CASE(
     REQUIRE(decodedFailure->IsValid());
     REQUIRE(decodedFailure->Result ==
         CampaignCheckpointSaveResultCode::Failure);
+
+    NotifyCampaignCheckpointState state;
+    state.CampaignId = "campaign-1";
+    state.CheckpointId = "cp-42";
+    state.State = CampaignCheckpointPublicState::Committed;
+    const auto decodedState = RoundTripServer(state);
+    REQUIRE(decodedState->IsValid());
+    REQUIRE(decodedState->State ==
+        CampaignCheckpointPublicState::Committed);
 }
 
 TEST_CASE(
     "Malformed campaign checkpoint packets fail strict validation",
     "[campaign.protocol][checkpoint][robustness]")
 {
+    CampaignCheckpointRequest invalidIntent;
+    invalidIntent.Reason =
+        static_cast<CampaignCheckpointRequestReason>(2);
+    REQUIRE_FALSE(RoundTripClient(invalidIntent)->IsValid());
+
+    NotifyCampaignCheckpointState invalidState;
+    invalidState.CampaignId = "campaign-1";
+    invalidState.CheckpointId = "cp-42";
+    invalidState.State =
+        static_cast<CampaignCheckpointPublicState>(3);
+    REQUIRE_FALSE(RoundTripServer(invalidState)->IsValid());
+    invalidState.State = CampaignCheckpointPublicState::Failed;
+    invalidState.CheckpointId.clear();
+    REQUIRE(RoundTripServer(invalidState)->IsValid());
+    invalidState.State = CampaignCheckpointPublicState::Started;
+    REQUIRE_FALSE(RoundTripServer(invalidState)->IsValid());
+
     CampaignCheckpointSaveRequest invalidRequest;
     invalidRequest.CampaignId = "campaign-1";
     invalidRequest.CheckpointId = "cp-42";
@@ -336,6 +377,131 @@ TEST_CASE(
     invalid.CampaignId = String(kCampaignWireMaximumIdLength + 1, 'x');
     invalid.SaveMetadata.assign(1, 1);
     REQUIRE_FALSE(RoundTripClient(invalid)->IsValid());
+}
+
+TEST_CASE(
+    "Campaign recovery barriers round-trip with exact correlation and proof",
+    "[campaign.protocol][campaign.recovery]")
+{
+    std::vector<STRE::Campaign::NativeSaveBundleMember> members(2);
+    members[0].Role = STRE::Campaign::NativeSaveMemberRole::Ess;
+    members[0].Size = 100;
+    members[0].Sha256.fill(3);
+    members[1].Role = STRE::Campaign::NativeSaveMemberRole::Skse;
+    members[1].Size = 20;
+    members[1].Sha256.fill(4);
+    const auto artifact = STRE::Campaign::BuildNativeSaveBundleArtifact(
+        "stre-checkpoint-42", std::move(members));
+    REQUIRE(artifact);
+
+    CampaignRecoveryLoadRequest load;
+    load.CampaignId = "campaign-1";
+    load.RestoreAttemptId = "restore-attempt-1";
+    load.CheckpointId = "checkpoint-42";
+    load.SourceRevision = 9;
+    load.CampaignSlotId = "slot-01";
+    load.CharacterBindingId = "binding-1";
+    load.NativeSaveIdentity = "stre-checkpoint-42";
+    load.FingerprintAlgorithm = "SHA-256";
+    load.FingerprintVersion = 1;
+    load.Fingerprint.assign(
+        artifact.Value.Fingerprint.begin(),
+        artifact.Value.Fingerprint.end());
+    load.SaveMetadataCodecVersion = 1;
+    load.SaveMetadata.assign(
+        artifact.Value.Metadata.begin(), artifact.Value.Metadata.end());
+    const auto decodedLoad = RoundTripServer(load);
+    REQUIRE(decodedLoad->IsValid());
+    REQUIRE(decodedLoad->RestoreAttemptId == load.RestoreAttemptId);
+    REQUIRE(decodedLoad->CampaignSlotId == load.CampaignSlotId);
+    REQUIRE(decodedLoad->SaveMetadata == load.SaveMetadata);
+
+    CampaignRecoveryLoadedResult loaded;
+    loaded.CampaignId = load.CampaignId;
+    loaded.RestoreAttemptId = load.RestoreAttemptId;
+    loaded.CheckpointId = load.CheckpointId;
+    loaded.NativeSaveIdentity = load.NativeSaveIdentity;
+    loaded.Result = CampaignRecoveryLoadedResultCode::Success;
+    loaded.FingerprintAlgorithm = load.FingerprintAlgorithm;
+    loaded.FingerprintVersion = load.FingerprintVersion;
+    loaded.Fingerprint = load.Fingerprint;
+    loaded.SaveMetadataCodecVersion = load.SaveMetadataCodecVersion;
+    loaded.SaveMetadata = load.SaveMetadata;
+    REQUIRE(RoundTripClient(loaded)->IsValid());
+
+    CampaignRecoverySnapshot snapshot;
+    snapshot.CampaignId = load.CampaignId;
+    snapshot.RestoreAttemptId = load.RestoreAttemptId;
+    snapshot.CheckpointId = load.CheckpointId;
+    snapshot.RestoreRevision = 11;
+    snapshot.Snapshot.CampaignId = load.CampaignId;
+    snapshot.Snapshot.StateVersion = 11;
+    snapshot.Snapshot.Phase = 2;
+    snapshot.Snapshot.RuntimeState =
+        kCampaignWireRuntimeRestoringCheckpoint;
+    snapshot.Snapshot.RosterSealed = true;
+    snapshot.Snapshot.SessionManagerPlayerId = "player-1";
+    snapshot.Snapshot.Roster.push_back(
+        {"slot-01", "player-1", true, true});
+    snapshot.Snapshot.Roster.push_back(
+        {"slot-02", "player-2", true, true});
+    const auto decodedSnapshot = RoundTripServer(snapshot);
+    REQUIRE(decodedSnapshot->IsValid());
+    REQUIRE(decodedSnapshot->Snapshot == snapshot.Snapshot);
+    REQUIRE(decodedSnapshot->Snapshot.Roster.size() == 2);
+
+    CampaignRecoverySnapshotApplied applied;
+    applied.CampaignId = load.CampaignId;
+    applied.RestoreAttemptId = load.RestoreAttemptId;
+    applied.CheckpointId = load.CheckpointId;
+    applied.RestoreRevision = 11;
+    REQUIRE(RoundTripClient(applied)->IsValid());
+
+    CampaignRecoveryComplete complete;
+    complete.CampaignId = load.CampaignId;
+    complete.RestoreAttemptId = load.RestoreAttemptId;
+    complete.CheckpointId = load.CheckpointId;
+    complete.RestoreRevision = 11;
+    REQUIRE(RoundTripServer(complete)->IsValid());
+}
+
+TEST_CASE(
+    "Malformed recovery barrier packets are rejected safely",
+    "[campaign.protocol][campaign.recovery][robustness]")
+{
+    CampaignRecoveryLoadedResult failure;
+    failure.CampaignId = "campaign-1";
+    failure.RestoreAttemptId = "restore-attempt-1";
+    failure.CheckpointId = "checkpoint-42";
+    failure.NativeSaveIdentity = "stre-checkpoint-42";
+    failure.Result = CampaignRecoveryLoadedResultCode::Failure;
+    REQUIRE(RoundTripClient(failure)->IsValid());
+    failure.FingerprintAlgorithm = "SHA-256";
+    REQUIRE_FALSE(RoundTripClient(failure)->IsValid());
+
+    CampaignRecoverySnapshotApplied applied;
+    applied.CampaignId = "campaign-1";
+    applied.RestoreAttemptId = "restore-attempt-1";
+    applied.CheckpointId = "checkpoint-42";
+    REQUIRE_FALSE(RoundTripClient(applied)->IsValid());
+
+    CampaignRecoveryComplete complete;
+    complete.CampaignId = "campaign-1";
+    complete.RestoreAttemptId = "restore-attempt-1";
+    complete.CheckpointId = "checkpoint-42";
+    complete.RestoreRevision = 1;
+    REQUIRE(RoundTripServer(complete)->IsValid());
+    complete.RestoreAttemptId = "stale attempt";
+    REQUIRE_FALSE(RoundTripServer(complete)->IsValid());
+
+    Buffer truncated(8);
+    Buffer::Writer writer(&truncated);
+    writer.WriteBits(kCampaignRecoverySnapshot, 8);
+    Buffer::Reader reader(&truncated);
+    auto decoded = ServerMessageFactory{}.Extract(reader);
+    REQUIRE(decoded);
+    REQUIRE_FALSE(CastUnique<CampaignRecoverySnapshot>(
+        std::move(decoded))->IsValid());
 }
 
 TEST_CASE("Malformed and truncated campaign packets fail validation safely", "[campaign.protocol][robustness]")

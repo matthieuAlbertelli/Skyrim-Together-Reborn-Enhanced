@@ -1,0 +1,214 @@
+<app-campaign-shell [screen]="state.phase">
+  <div class="resume-panel" [attr.data-phase]="state.phase">
+    <h1>
+      {{
+        (state.disconnectIncident
+          ? incidentTitleKey()
+          : state.phase === 'error'
+          ? 'CAMPAIGN_RESUME.ERROR_TITLE'
+          : state.disconnectRecovery
+          ? 'CAMPAIGN_RESUME.RECOVERY_SHELL_TITLE'
+          : state.resumeRequired
+          ? 'CAMPAIGN_RESUME.SAVE_TITLE'
+          : 'CAMPAIGN_RESUME.TITLE'
+        ) | transloco
+      }}
+    </h1>
+
+    <section
+      *ngIf="state.disconnectIncident"
+      class="resume-state incident-state"
+    >
+      <p class="lead">
+        {{ 'CAMPAIGN_RESUME.INCIDENT.BODY' | transloco }}
+      </p>
+      <app-campaign-roster
+        [members]="rosterMembers"
+        [summary]="rosterSummary"
+        [presentLabel]="rosterPresentLabel"
+        [absentLabel]="rosterWaitingLabel"
+      ></app-campaign-roster>
+      <div class="incident-actions">
+        <button
+          class="primary main-action"
+          autofocus
+          (click)="stayAndRecover()"
+        >
+          {{ 'CAMPAIGN_RESUME.INCIDENT.STAY_AND_RECOVER' | transloco }}
+        </button>
+        <button (click)="returnToMainMenu()">
+          {{ 'CAMPAIGN_RESUME.RETURN_MAIN_MENU' | transloco }}
+        </button>
+      </div>
+    </section>
+
+    <ng-container *ngIf="!state.disconnectIncident">
+      <ol *ngIf="mandatoryRecovery" class="resume-progress">
+        <li *ngIf="state.resumeRequired" [attr.data-state]="progressState(0)">
+          <span aria-hidden="true">{{
+            progressState(0) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_LOCAL_VERIFIED' | transloco }}
+        </li>
+        <li *ngIf="state.resumeRequired" [attr.data-state]="progressState(1)">
+          <span aria-hidden="true">{{
+            progressState(1) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_SERVER_CONNECTION' | transloco }}
+        </li>
+        <li *ngIf="state.resumeRequired" [attr.data-state]="progressState(2)">
+          <span aria-hidden="true">{{
+            progressState(2) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_CAMPAIGN_VERIFICATION' | transloco }}
+        </li>
+        <li [attr.data-state]="progressState(3)">
+          <span aria-hidden="true">{{
+            progressState(3) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_ROSTER' | transloco }}
+        </li>
+        <li [attr.data-state]="progressState(4)">
+          <span aria-hidden="true">{{
+            progressState(4) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_RESTORE' | transloco }}
+        </li>
+        <li [attr.data-state]="progressState(5)">
+          <span aria-hidden="true">{{
+            progressState(5) === 'complete' ? '✓' : '○'
+          }}</span>
+          {{ 'CAMPAIGN_RESUME.PROGRESS_SYNC' | transloco }}
+        </li>
+      </ol>
+
+      <ng-container [ngSwitch]="state.phase">
+        <section *ngSwitchCase="'ready'" class="resume-state">
+          <ng-container *ngIf="state.resumeRequired; else regularResume">
+            <p class="lead">
+              {{ 'CAMPAIGN_RESUME.SAVE_BELONGS_TO_CAMPAIGN' | transloco }}
+            </p>
+            <p>{{ 'CAMPAIGN_RESUME.SAVE_REQUIRES_RESUME' | transloco }}</p>
+
+            <app-connect
+              *ngIf="!state.connected"
+              [allowCancel]="false"
+              [showInfo]="false"
+              [showServerList]="false"
+              (done)="refresh()"
+            ></app-connect>
+
+            <button
+              *ngIf="state.connected && exactCandidate"
+              class="primary main-action"
+              autofocus
+              (click)="resumeAssociated()"
+            >
+              {{ 'CAMPAIGN_RESUME.RESUME_ASSOCIATED' | transloco }}
+            </button>
+          </ng-container>
+
+          <ng-template #regularResume>
+            <p *ngIf="regularCandidates.length === 0">
+              {{ 'CAMPAIGN_RESUME.ZERO_CANDIDATE' | transloco }}
+            </p>
+            <p *ngIf="regularCandidates.length > 0">
+              {{ 'CAMPAIGN_RESUME.SELECT_PROMPT' | transloco }}
+            </p>
+            <div class="candidate-list">
+              <button
+                *ngFor="let candidate of regularCandidates"
+                (click)="select(candidate.token)"
+              >
+                {{
+                  'CAMPAIGN_RESUME.CANDIDATE'
+                    | transloco : { number: candidate.ordinal }
+                }}
+              </button>
+            </div>
+          </ng-template>
+        </section>
+
+        <section *ngSwitchCase="'submitting'" class="resume-state status-state">
+          <div class="status-pulse" aria-hidden="true"></div>
+          <h2>{{ 'CAMPAIGN_RESUME.CONNECTING_TITLE' | transloco }}</h2>
+          <p>{{ 'CAMPAIGN_RESUME.SUBMITTING' | transloco }}</p>
+        </section>
+
+        <section *ngSwitchCase="'admitted'" class="resume-state status-state">
+          <div class="status-pulse" aria-hidden="true"></div>
+          <h2>{{ 'CAMPAIGN_RESUME.CONNECTING_TITLE' | transloco }}</h2>
+          <p>{{ 'CAMPAIGN_RESUME.ADMITTED' | transloco }}</p>
+        </section>
+
+        <section
+          *ngSwitchCase="'waitingForRoster'"
+          class="resume-state status-state"
+        >
+          <h2>{{ 'CAMPAIGN_RESUME.WAITING_TITLE' | transloco }}</h2>
+          <app-campaign-roster
+            [members]="rosterMembers"
+            [summary]="rosterSummary"
+            [presentLabel]="rosterPresentLabel"
+            [absentLabel]="rosterWaitingLabel"
+          ></app-campaign-roster>
+          <p>{{ 'CAMPAIGN_RESUME.WAITING_FOR_ROSTER' | transloco }}</p>
+          <app-connect
+            *ngIf="state.disconnectRecovery && !state.connected"
+            [allowCancel]="false"
+            [showInfo]="false"
+            [showServerList]="false"
+          ></app-connect>
+        </section>
+
+        <section *ngSwitchCase="'recovery'" class="resume-state status-state">
+          <div class="status-pulse" aria-hidden="true"></div>
+          <h2>{{ 'CAMPAIGN_RESUME.RECOVERY_TITLE' | transloco }}</h2>
+          <p>{{ 'CAMPAIGN_RESUME.RECOVERY' | transloco }}</p>
+        </section>
+
+        <section
+          *ngSwitchCase="'synchronizing'"
+          class="resume-state status-state"
+        >
+          <div class="status-pulse" aria-hidden="true"></div>
+          <h2>{{ 'CAMPAIGN_RESUME.SYNCHRONIZING_TITLE' | transloco }}</h2>
+          <p>{{ 'CAMPAIGN_RESUME.SYNCHRONIZING' | transloco }}</p>
+        </section>
+
+        <section *ngSwitchCase="'active'" class="resume-state status-state">
+          <h2>{{ 'CAMPAIGN_RESUME.ACTIVE' | transloco }}</h2>
+        </section>
+
+        <section *ngSwitchCase="'error'" class="resume-state error-state">
+          <p>{{ 'CAMPAIGN_RESUME.ERROR_SUMMARY' | transloco }}</p>
+          <p class="error-line" role="alert">{{ errorKey() | transloco }}</p>
+          <button
+            *ngIf="!state.disconnectRecovery"
+            class="primary main-action"
+            autofocus
+            (click)="retry()"
+          >
+            {{ 'CAMPAIGN_RESUME.RETRY' | transloco }}
+          </button>
+        </section>
+      </ng-container>
+
+      <div class="secondary-actions">
+        <button
+          *ngIf="state.resumeRequired"
+          disabled
+          [attr.title]="'CAMPAIGN_RESUME.MAIN_MENU_UNAVAILABLE' | transloco"
+        >
+          {{ 'CAMPAIGN_RESUME.RETURN_MAIN_MENU' | transloco }}
+        </button>
+        <button *ngIf="!mandatoryRecovery" (click)="close()">
+          {{ 'CAMPAIGN_RESUME.CLOSE' | transloco }}
+        </button>
+      </div>
+      <p *ngIf="state.resumeRequired" class="main-menu-limit">
+        {{ 'CAMPAIGN_RESUME.MAIN_MENU_UNAVAILABLE' | transloco }}
+      </p>
+    </ng-container>
+  </div>
+</app-campaign-shell>

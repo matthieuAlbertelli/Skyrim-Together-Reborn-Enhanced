@@ -23,8 +23,12 @@ struct CampaignRuntimeGateService final : BSTEventSink<TESLoadGameEvent>
     static CampaignRuntimeGateService* TryGet() noexcept;
 
     [[nodiscard]] bool ArmManagedLoad() noexcept;
+    [[nodiscard]] bool ArmResumeRequiredLoad() noexcept;
+    [[nodiscard]] bool CommitResumeRequiredTransition() noexcept;
+    [[nodiscard]] bool LockForRecovery() noexcept;
     [[nodiscard]] bool CancelManagedLoad() noexcept;
     [[nodiscard]] bool ReleaseManagedLoad() noexcept;
+    [[nodiscard]] bool ReleaseForMainMenuRuntimeDeparture() noexcept;
     [[nodiscard]] bool OnNativeLoadEnter(const char* apSaveName) noexcept;
     void OnNativeLoadReturn(bool aManaged, bool aSucceeded) noexcept;
     void BeforeWorldUpdate() noexcept;

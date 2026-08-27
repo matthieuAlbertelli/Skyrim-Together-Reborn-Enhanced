@@ -14,6 +14,9 @@ inline constexpr std::size_t kCampaignLobbyMaximumDisplayNameLength = 24;
 inline constexpr std::size_t kCampaignLobbyMaximumDisplayNameBytes = 96;
 inline constexpr std::uint8_t kCampaignWirePhaseCharacterCreation = 1;
 inline constexpr std::uint8_t kCampaignWireRuntimeActive = 1;
+inline constexpr std::uint8_t kCampaignWireRuntimeCheckpointing = 2;
+inline constexpr std::uint8_t kCampaignWireRuntimeRecoveryLock = 3;
+inline constexpr std::uint8_t kCampaignWireRuntimeRestoringCheckpoint = 4;
 inline constexpr std::string_view kCampaignJoinCodeAlphabet =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 inline constexpr std::string_view kCampaignNativeSaveIdentityPrefix = "stre-";
