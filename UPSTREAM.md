@@ -8,18 +8,21 @@ The current STRE history carries:
 
 - upstream repository: `tiltedphoques/TiltedEvolution`;
 - upstream branch: `dev`;
-- exact upstream base commit: `ca3f32348d3217e766b45afa9cce8a645f3a6444`;
+- exact upstream base commit, carried unchanged for this release:
+  `ca3f32348d3217e766b45afa9cce8a645f3a6444`;
+- latest published STRE player release: `stre-v0.3.0-alpha.1`;
+- exact released commit: `65387e7e59cf5e2fb3a04f12888ef671268f0323`;
+- immutable annotated tag object: `f822346c92a41f2092e2c406ae10b5e1d2f39dc5`;
+- product version: `0.3.0-alpha.1`;
+- published: **28 August 2026**;
+- baseline verified for this release: **27 August 2026**;
 - previous published STRE player release: `v0.2.0-alpha.1`;
-- exact release commit: `edbbc487fbed1f0fa61ef9c05dad664d2368920d`;
-- release candidate product version: `0.3.0-alpha.1`;
-- intended immutable tag: `stre-v0.3.0-alpha.1`;
-- carried baseline verified for the candidate: **27 August 2026**.
+- previous release commit: `edbbc487fbed1f0fa61ef9c05dad664d2368920d`.
 
-The release-preparation commit cannot contain its own future merged/tagged SHA.
-Until the PR is accepted, `v0.2.0-alpha.1` and its exact commit above remain the
-latest published release record. After merge, the annotated tag and GitHub
-Release must record and resolve to the exact accepted `main` SHA before any
-artifact is published.
+The release-preparation commit could not self-record its future merged SHA.
+This post-publication record captures the accepted commit and annotated tag
+object. The immutable annotated tag and GitHub Release are the authoritative
+release identity; a published tag must never be repointed.
 
 At that verification, current `upstream/dev`
 (`9d81ef07d68e4bb2bd94fca246e798a564b7fb92`) had the same source tree as the
