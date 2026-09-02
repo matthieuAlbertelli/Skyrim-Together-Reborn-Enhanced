@@ -98,6 +98,26 @@ The vanilla `MQQuickstart == 0` fragment remains unchanged and still calls `SetS
 
 Never hard-code a loaded FormID that depends on load order. CK references use aliases and properties; the native catalog uses plugin name plus local FormID.
 
+## Headquarters v1 implementation boundary
+
+The existing `STRE_CELL_AlternateStart` remains the physical headquarters cell
+for v1. Headquarters completion happens inside the Creation Kit using normal
+instanced-interior mechanics, including Skyrim cell transitions and load doors
+where applicable.
+
+The v1 CK work must audit and complete the layout, doors, room bounds and
+portals, occlusion, navmesh, collision, lighting, and NPC pathing needed by the
+hub, Valen integration, and ten player rooms. A custom open-world or seamless
+building shell is not required to complete issues #22, #23, or #24.
+
+This physical boundary does not change campaign authority: the future seamless
+replacement must preserve the existing server-authoritative campaign contract.
+Stable room ownership identities must remain logical and must not be defined by
+the cell, a physical mesh, or load-order-dependent FormIDs. This section defines
+the v1 implementation boundary; it does not claim that the final inn is
+implemented. Current implementation and validation remain documented only in
+[`STATUS.md`](../../project/STATUS.md).
+
 ## M7 records and continuity helper
 
 The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 67 expected STRE-owned records:

@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 13 August 2026.
+> **Last updated:** 2 September 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -57,6 +57,15 @@ The class program covers all 21 classes in the canonical v1 roster, all starting
 Complete Messire Valen's narrative, visual, audio, CK and gameplay implementation. Complete the headquarters inn as the campaign hub, including ten usable player rooms.
 
 Introduce persistent, unambiguous player-to-room ownership/assignment with reconnect and campaign restoration behavior. Decoration and advanced housing customization are explicitly post-1.0 unless needed to validate the foundation.
+
+For v1.0.0, the headquarters is an instanced Skyrim interior cell, with
+`STRE_CELL_AlternateStart` as its implementation basis. Creation Kit layout and
+Skyrim-compatible architectural content are sufficient for v1 acceptance;
+bespoke Blender- or AI-generated architecture is not required. A seamless/no-load
+headquarters whose exterior and interior physically coexist in the Tamriel
+worldspace is a desired post-v1 enhancement, not a v1 release gate. The
+feature-local contract is defined in
+[`HEADQUARTERS_INN.md`](docs/features/alternate-start/HEADQUARTERS_INN.md).
 
 ### Cooperative campaign continuity
 

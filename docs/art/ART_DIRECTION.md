@@ -12,15 +12,20 @@ Nordic, weathered, functional, tactile, dark without being unreadable, scholarly
 
 ## Alternate Start hub
 
-The Bannered Mare base should become distinct through:
+The STRE v1 headquarters interior should use a Skyrim-native visual language:
+Nordic, weathered, functional, and tactile. It should support the complete
+campaign-hub program through:
 
-- a council table;
-- maps, notes, and research objects;
-- preparation areas;
-- discreet class signage;
-- Valen's desk;
-- clear circulation paths;
-- focused lighting on Valen and the table.
+- a council and common gathering area;
+- maps, notes, research objects, and preparation areas;
+- a focused Messire Valen workspace;
+- clear circulation for ten players;
+- controlled clutter that preserves readability and movement;
+- focused lighting on Valen, research, and gathering points.
+
+For v1, the headquarters uses Creation Kit and Skyrim-compatible architecture
+inside the instanced `STRE_CELL_AlternateStart` interior. A bespoke seamless
+architectural building is a post-v1 direction rather than a v1 art requirement.
 
 ## Constraints
 
