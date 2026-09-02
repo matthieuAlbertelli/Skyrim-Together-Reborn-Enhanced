@@ -172,6 +172,16 @@ as blocker edges. Design can proceed in parallel where only part of a contract i
 needed; add a dependency only when the blocked issue cannot satisfy its acceptance
 criteria before the blocker is complete.
 
+## Post-v1 headquarters enhancement
+
+```text
+v1 headquarters + stable Room01…Room10 contract
+  → future seamless headquarters enhancement
+```
+
+The future seamless headquarters is downstream of the v1 headquarters and room
+contract. It does not block #22, #23, #24, or #25 and does not block v1.0.0.
+
 ## Release dependency
 
 ```text
