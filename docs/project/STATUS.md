@@ -168,15 +168,22 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   placement by Lake Ilinalta, the working interior/Tamriel load-door pair,
   tavern music, the initial warm lighting pass, the STRE-owned fireplace/light
   records, and ten stable STRE starting-seat references are present;
+- the current Ilinalta's Vigil geometry has an implemented interior navmesh; a
+  temporary vanilla NPC successfully runtime-tested normal circulation,
+  obstacle avoidance, stairs, and passages before the test reference was
+  removed;
 - the headquarters exterior spans Tamriel cells `(-9, -16)` and `(-9, -17)`;
   the xEdit audit removed unintended overrides, while two vanilla rocks and the
   nearby two-reference forest-predator encounter are intentionally disabled to
   keep the headquarters footprint clear without deleting master references;
-- the strict CK manifest now covers 78 expected STRE-owned records and rejects
-  unexpected master overrides, including the qualified Ilinalta exterior
-  overrides and the existing captured jail-door bindings; the strict audit,
-  `build-and-deploy-dev.ps1`, and the runtime smoke test are green for this
-  checkpoint.
+- the explicit CK import for the navmesh checkpoint changed only
+  `GameFiles/Skyrim/STRE_AlternateStart.esp`; the strict CK manifest remains at
+  78 expected STRE-owned records and the audit is green with no unexpected
+  master override, so no expected `NAVM` entry was added;
+- `build-and-deploy-dev.ps1` completed successfully, and the post-deployment
+  runtime smoke test passed entry, normal traversal, the interior/exterior
+  load-door transition, stairs and passages, collision and pathing while
+  preserving the existing fireplace and lighting presentation.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -210,10 +217,17 @@ The current catalog uses `BuildVersion = 5`.
 - rescue/liberation and physical `Freed`/`Departed` projections remain
   unimplemented; mixed-state and save/load/cell-reset regressions for the new
   occupation flow are still required;
-- the physical Ilinaltaâ€™s Vigil checkpoint does not complete headquarters
-  issue #23: final navmesh, room bounds/portals and occlusion, NPC pathing,
-  ready/departure circulation, the ten-room housing work owned by #24, and
-  multiplayer validation through the ten-player target remain;
+- the physical Ilinalta's Vigil checkpoint completes neither headquarters issue
+  #23 nor room issue #24: the architecture remains provisional, decoration is a
+  minimal and incomplete first pass, and the ten player-room spaces are empty
+  and doorless rather than usable rooms;
+- the exterior stair/access path still has to reach the road, and the exterior
+  still needs a Skyrim-appropriate sign or signpost for Ilinalta's Vigil;
+- Room Bounds and Portals were deliberately skipped because profiling and
+  runtime validation have not demonstrated a concrete visibility or
+  performance need. They are conditional optimizations, while acceptable
+  runtime performance and the remaining Valen, ready/departure, housing, and
+  ten-player validation work are still required;
 - the development fireplace currently uses the selected EEK loose mesh/texture
   resource; redistribution permission and final packaging must be resolved
   before release so players are not left with an undocumented manual

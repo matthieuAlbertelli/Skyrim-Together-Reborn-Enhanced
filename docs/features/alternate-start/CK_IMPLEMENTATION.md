@@ -107,12 +107,21 @@ now carries the player-facing name `Ilinaltaâ€™s Vigil`. Headquarters compl
 uses normal Creation Kit instanced-interior mechanics, including Skyrim cell
 transitions and load doors where applicable.
 
-The first physical headquarters checkpoint is implemented and runtime-smoke-
+The current physical headquarters checkpoint is implemented and runtime-smoke-
 tested. It includes the main inn shell and circulation space, the exterior
 placement by Lake Ilinalta, a working interior/Tamriel load-door pair, tavern
 music, an initial warm lighting pass, the STRE-owned fireplace/light records,
-and ten stable STRE starting-seat references. The exterior footprint touches
-Tamriel cells `(-9, -16)` and `(-9, -17)`.
+ten stable STRE starting-seat references, and an interior navmesh for the
+current geometry. The exterior footprint touches Tamriel cells `(-9, -16)` and
+`(-9, -17)`.
+
+The interior architecture remains provisional: geometry, proportions, room
+shapes, secondary circulation, composition, and some structural placements may
+still evolve. Decoration is only a minimal first pass and does not yet provide
+the intended furniture, clutter, functional tavern areas, environmental
+storytelling, lived-in character, or final lighting/readability polish. The ten
+current room spaces are empty and have no doors; they are not yet the ten usable
+v1 player rooms, so issue #24 remains incomplete.
 
 The xEdit pass for this checkpoint removed unintended master overrides. Two
 vanilla exterior rock references and the nearby two-reference forest-predator
@@ -121,10 +130,18 @@ footprint remains clear without deleting the Skyrim master references. The two
 exterior CELL overrides are retained as structural CK parents.
 
 This checkpoint does **not** complete issue #23. The v1 CK work still has to
-finish and validate the final navmesh, room bounds/portals and occlusion,
-collision and NPC pathing, Valen integration, ready/departure circulation, the
-ten-room housing work owned by #24, and multiplayer validation through the
-ten-player target.
+finish the architecture and substantial decoration pass, continue the exterior
+stair/access path down to the road, add a Skyrim-appropriate sign or signpost
+for Ilinalta's Vigil, complete Valen integration and ready/departure
+circulation, deliver the ten-room housing work owned by #24, and validate the
+finished hub through the ten-player target.
+
+Room Bounds and Portals were deliberately not implemented for the current
+interior. They are no longer an unconditional v1 implementation technique or
+acceptance gate: add them, or another explicit visibility-partitioning
+solution, only if profiling or runtime validation demonstrates a concrete
+visibility or performance problem. Navmesh, NPC pathing, collision, lighting,
+visual readability, and acceptable runtime performance remain required.
 
 The fireplace currently uses the selected EEK fireplace mesh/texture resource
 in the development environment. Redistribution permission and final packaging
@@ -411,7 +428,11 @@ implementation.
 
 ## Navmesh
 
-The cell contains several navmesh fragments. Avoid relying on complex NPC pathfinding until the cell has received a complete CK audit. Every furniture or door change must be followed by a navigation test.
+The current `STRE_CELL_AlternateStart` geometry has an implemented interior
+navmesh. A temporary vanilla NPC successfully navigated normal circulation,
+obstacles, stairs, and passages in game; the test reference was removed
+afterward. Architecture, furniture, or door changes that affect traversal must
+be followed by the necessary navmesh update and another NPC navigation test.
 
 ## Remaining implementation
 
@@ -458,6 +479,26 @@ py -3 .\Tools\Scripts\audit_character_build_catalog.py `
 ```
 
 Reports under `_audit/*.tsv` and logs are generated locally and must not be committed.
+
+Ilinalta's Vigil navmesh checkpoint validated on 3 September 2026:
+
+- the Creation Kit interior navmesh was implemented for
+  `STRE_CELL_AlternateStart`;
+- a temporary vanilla NPC completed in-game pathing checks for normal
+  circulation, obstacle avoidance, stairs, and passages, then was removed;
+- the explicit CK-to-repository import changed only
+  `GameFiles/Skyrim/STRE_AlternateStart.esp`;
+- the strict plugin audit remained conforming with 78 expected STRE-owned
+  records and no unexpected master override; no new expected `NAVM` manifest
+  entry was required;
+- `build-and-deploy-dev.ps1` completed successfully;
+- the post-deployment runtime smoke test passed entry, normal traversal, the
+  interior/exterior load-door transition, stairs and passages, collision and
+  pathing, while preserving the existing fireplace and lighting presentation.
+
+Room Bounds and Portals were not implemented in this checkpoint. Their use is
+conditional on a demonstrated profiling or runtime need, and this evidence does
+not imply that issue #23 or #24 is complete.
 
 ## New Game acceptance
 
