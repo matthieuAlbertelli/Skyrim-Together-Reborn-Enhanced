@@ -29,12 +29,14 @@ PSC files alone are not executed by Skyrim: the compiled PEX must be retrieved a
 
 ## Confirmed primary records
 
-- `STRE_CELL_AlternateStart`
+- `STRE_CELL_AlternateStart` (`Ilinaltaâ€™s Vigil`)
 - `STRE_CELL_DevSandbox`
 - `STRE_QUEST_AlternateStart`
-- `STRE_FURN_PlayerSeat01`
-- `STRE_FURN_PlayerSeat02`
+- `STRE_FURN_PlayerSeat01` through `STRE_FURN_PlayerSeat10`
 - `STRE_REFR_NewGameStartMarker`
+- `STRE_STAT_IlinaltaFireplace01`
+- `STRE_LIGH_IlinaltaFireplace01`
+- `STRE_LIGH_CandleHornWall01`
 
 Intentional Skyrim master overrides include:
 
@@ -100,29 +102,48 @@ Never hard-code a loaded FormID that depends on load order. CK references use al
 
 ## Headquarters v1 implementation boundary
 
-The existing `STRE_CELL_AlternateStart` remains the physical headquarters cell
-for v1. Headquarters completion happens inside the Creation Kit using normal
-instanced-interior mechanics, including Skyrim cell transitions and load doors
-where applicable.
+`STRE_CELL_AlternateStart` is the physical headquarters interior cell for v1 and
+now carries the player-facing name `Ilinaltaâ€™s Vigil`. Headquarters completion
+uses normal Creation Kit instanced-interior mechanics, including Skyrim cell
+transitions and load doors where applicable.
 
-The v1 CK work must audit and complete the layout, doors, room bounds and
-portals, occlusion, navmesh, collision, lighting, and NPC pathing needed by the
-hub, Valen integration, and ten player rooms. A custom open-world or seamless
-building shell is not required to complete issues #22, #23, or #24.
+The first physical headquarters checkpoint is implemented and runtime-smoke-
+tested. It includes the main inn shell and circulation space, the exterior
+placement by Lake Ilinalta, a working interior/Tamriel load-door pair, tavern
+music, an initial warm lighting pass, the STRE-owned fireplace/light records,
+and ten stable STRE starting-seat references. The exterior footprint touches
+Tamriel cells `(-9, -16)` and `(-9, -17)`.
+
+The xEdit pass for this checkpoint removed unintended master overrides. Two
+vanilla exterior rock references and the nearby two-reference forest-predator
+encounter are intentionally retained as disabled overrides so the headquarters
+footprint remains clear without deleting the Skyrim master references. The two
+exterior CELL overrides are retained as structural CK parents.
+
+This checkpoint does **not** complete issue #23. The v1 CK work still has to
+finish and validate the final navmesh, room bounds/portals and occlusion,
+collision and NPC pathing, Valen integration, ready/departure circulation, the
+ten-room housing work owned by #24, and multiplayer validation through the
+ten-player target.
+
+The fireplace currently uses the selected EEK fireplace mesh/texture resource
+in the development environment. Redistribution permission and final packaging
+must be resolved before release; the v1 distribution must not require an
+undocumented manual asset dependency.
 
 This physical boundary does not change campaign authority: the future seamless
 replacement must preserve the existing server-authoritative campaign contract.
 Stable room ownership identities must remain logical and must not be defined by
-the cell, a physical mesh, or load-order-dependent FormIDs. This section defines
-the v1 implementation boundary; it does not claim that the final inn is
-implemented. Current implementation and validation remain documented only in
+the cell, a physical mesh, or load-order-dependent FormIDs. Current
+implementation and validation remain documented only in
 [`STATUS.md`](../../project/STATUS.md).
 
 ## M7 records and continuity helper
 
-The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 67 expected STRE-owned records:
+The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 78 expected STRE-owned records:
 
-- cells, quests, and seat references;
+- cells, quests, and the ten headquarters seat references;
+- the Ilinalta fireplace static plus the two STRE-owned headquarters light records;
 - outfits and boots;
 - weak enchantments;
 - Destruction and Alteration spells;
@@ -142,7 +163,10 @@ The `CK_RECORDS_M7_IMPLEMENTED.json` manifest covers 67 expected STRE-owned reco
   used by the `CapturedInKeep` projection.
 
 The same strict manifest allows only the explicit named and anonymous
-Skyrim-master records listed in its allowlists. Any additional master-backed
+Skyrim-master records listed in its allowlists. For the Ilinalta checkpoint this
+includes the two exterior CELL structural parents, two deliberately disabled
+rock references, and the two deliberately disabled forest-predator ACHR
+references qualified during the xEdit audit. Any additional master-backed
 record is rejected by `--reject-unexpected`.
 
 The three ally buffs must retain compatible values in both `SPEL` and `MGEF`:

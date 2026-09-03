@@ -25,7 +25,7 @@
       "signature": "CELL",
       "editorId": "STRE_CELL_AlternateStart",
       "expectedLocalFormId": "0x000012D1",
-      "displayName": "STRE CELL AlternateStart"
+      "displayName": "Ilinalta’s Vigil"
     },
     {
       "signature": "CELL",
@@ -41,12 +41,12 @@
     {
       "signature": "REFR",
       "editorId": "STRE_FURN_PlayerSeat01",
-      "expectedLocalFormId": "0x00001325"
+      "expectedLocalFormId": "0x000BF3DD"
     },
     {
       "signature": "REFR",
       "editorId": "STRE_FURN_PlayerSeat02",
-      "expectedLocalFormId": "0x00001321"
+      "expectedLocalFormId": "0x000BF3DC"
     },
     {
       "signature": "ARMO",
@@ -395,6 +395,61 @@
       "signature": "REFR",
       "editorId": "STRE_HelgenRalofCapturedMarker",
       "expectedLocalFormId": "0x00096452"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat03",
+      "expectedLocalFormId": "0x000C516E"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat04",
+      "expectedLocalFormId": "0x000C516F"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat05",
+      "expectedLocalFormId": "0x000C5173"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat06",
+      "expectedLocalFormId": "0x000C5171"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat07",
+      "expectedLocalFormId": "0x000C5174"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat08",
+      "expectedLocalFormId": "0x000C5172"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat09",
+      "expectedLocalFormId": "0x000C5176"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_FURN_PlayerSeat10",
+      "expectedLocalFormId": "0x000C5178"
+    },
+    {
+      "signature": "STAT",
+      "editorId": "STRE_STAT_IlinaltaFireplace01",
+      "expectedLocalFormId": "0x000CAF31"
+    },
+    {
+      "signature": "LIGH",
+      "editorId": "STRE_LIGH_IlinaltaFireplace01",
+      "expectedLocalFormId": "0x000CAF38"
+    },
+    {
+      "signature": "LIGH",
+      "editorId": "STRE_LIGH_CandleHornWall01",
+      "expectedLocalFormId": "0x000CAF4B"
     }
   ],
   "spellEffectExpectations": {
@@ -509,6 +564,42 @@
       "expectedFormId": "0x00091587",
       "master": "Skyrim.esm",
       "reason": "Vanilla Helgen Keep jail door promoted by the CK for the RalofCapturedDoor quest-alias binding."
+    },
+    {
+      "signature": "CELL",
+      "expectedFormId": "0x00009BBB",
+      "master": "Skyrim.esm",
+      "reason": "Tamriel exterior cell (-9, -16) retained structurally by the Creation Kit for Ilinaltaâ€™s Vigil exterior references."
+    },
+    {
+      "signature": "CELL",
+      "expectedFormId": "0x00009BDC",
+      "master": "Skyrim.esm",
+      "reason": "Tamriel exterior cell (-9, -17) retained structurally by the Creation Kit for Ilinaltaâ€™s Vigil exterior references."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x0005D09A",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla exterior rock reference intentionally disabled to clear the Ilinaltaâ€™s Vigil footprint without deleting the master reference."
+    },
+    {
+      "signature": "REFR",
+      "expectedFormId": "0x0005D0B0",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla exterior rock reference intentionally disabled to clear the Ilinaltaâ€™s Vigil footprint without deleting the master reference."
+    },
+    {
+      "signature": "ACHR",
+      "expectedFormId": "0x00099CBE",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla forest-predator encounter reference intentionally disabled inside the Ilinaltaâ€™s Vigil headquarters footprint."
+    },
+    {
+      "signature": "ACHR",
+      "expectedFormId": "0x00099CBF",
+      "master": "Skyrim.esm",
+      "reason": "Vanilla forest-predator encounter reference intentionally disabled inside the Ilinaltaâ€™s Vigil headquarters footprint."
     }
   ]
 }

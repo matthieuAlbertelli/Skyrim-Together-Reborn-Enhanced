@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 27, 2026.
+> **Last updated:** September 3, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -162,10 +162,21 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   both survivor jail projections; revalidation on 24 August confirmed the final
   FX/encounters/rubble/bridge invariant in standalone and in a multiplayer
   campaign;
-- the strict CK manifest now covers 67 expected STRE-owned records and rejects
-  unexpected master overrides, including exact allowlisting of the two captured
-  jail-door bindings; CK packaging passes with 19 managed files, the client/server
-  builds are green, and TPTests pass 2199 assertions in 158 test cases.
+- the first physical v1 headquarters checkpoint is implemented and runtime-
+  smoke-tested in `STRE_CELL_AlternateStart`, now player-facing as
+  `Ilinaltaâ€™s Vigil`: the main inn shell and circulation space, exterior
+  placement by Lake Ilinalta, the working interior/Tamriel load-door pair,
+  tavern music, the initial warm lighting pass, the STRE-owned fireplace/light
+  records, and ten stable STRE starting-seat references are present;
+- the headquarters exterior spans Tamriel cells `(-9, -16)` and `(-9, -17)`;
+  the xEdit audit removed unintended overrides, while two vanilla rocks and the
+  nearby two-reference forest-predator encounter are intentionally disabled to
+  keep the headquarters footprint clear without deleting master references;
+- the strict CK manifest now covers 78 expected STRE-owned records and rejects
+  unexpected master overrides, including the qualified Ilinalta exterior
+  overrides and the existing captured jail-door bindings; the strict audit,
+  `build-and-deploy-dev.ps1`, and the runtime smoke test are green for this
+  checkpoint.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -199,6 +210,14 @@ The current catalog uses `BuildVersion = 5`.
 - rescue/liberation and physical `Freed`/`Departed` projections remain
   unimplemented; mixed-state and save/load/cell-reset regressions for the new
   occupation flow are still required;
+- the physical Ilinaltaâ€™s Vigil checkpoint does not complete headquarters
+  issue #23: final navmesh, room bounds/portals and occlusion, NPC pathing,
+  ready/departure circulation, the ten-room housing work owned by #24, and
+  multiplayer validation through the ten-player target remain;
+- the development fireplace currently uses the selected EEK loose mesh/texture
+  resource; redistribution permission and final packaging must be resolved
+  before release so players are not left with an undocumented manual
+  dependency;
 - Valen and the narrative departure are not finalized;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;
