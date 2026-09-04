@@ -450,6 +450,33 @@
       "signature": "LIGH",
       "editorId": "STRE_LIGH_CandleHornWall01",
       "expectedLocalFormId": "0x000CAF4B"
+    },
+    {
+      "signature": "ARMA",
+      "editorId": "STRE_ARMA_ValenFullBody",
+      "expectedLocalFormId": "0x000D3C37"
+    },
+    {
+      "signature": "ARMO",
+      "editorId": "STRE_ARMO_ValenFullBody",
+      "expectedLocalFormId": "0x000D3C38",
+      "displayName": "Messire Valen"
+    },
+    {
+      "signature": "OTFT",
+      "editorId": "STRE_OTFT_Valen",
+      "expectedLocalFormId": "0x000D3C39"
+    },
+    {
+      "signature": "NPC_",
+      "editorId": "STRE_NPC_MessireValen",
+      "expectedLocalFormId": "0x000D3C3A",
+      "displayName": "Messire Valen"
+    },
+    {
+      "signature": "PACK",
+      "editorId": "STRE_PACK_ValenInnSandbox",
+      "expectedLocalFormId": "0x000D3C3C"
     }
   ],
   "spellEffectExpectations": {
