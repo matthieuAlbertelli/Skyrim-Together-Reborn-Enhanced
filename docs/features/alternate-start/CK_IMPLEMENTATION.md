@@ -155,12 +155,39 @@ the cell, a physical mesh, or load-order-dependent FormIDs. Current
 implementation and validation remain documented only in
 [`STATUS.md`](../../project/STATUS.md).
 
+### Messire Valen prototype checkpoint
+
+Versioned assets:
+
+- `meshes\STRE\Valen\STRE_Valen_Master_test.nif`;
+- `textures\STRE\Valen\STRE_Valen_d.dds`.
+
+CK records:
+
+- `STRE_ARMA_ValenFullBody`;
+- `STRE_ARMO_ValenFullBody`;
+- `STRE_OTFT_Valen`;
+- `STRE_NPC_MessireValen`;
+- `STRE_PACK_ValenInnSandbox`.
+
+The integrated custom full-body prototype uses the Skyrim skeleton with
+transferred prototype weights. Its Armor/ArmorAddon biped-slot setup hides
+overlapping vanilla head, body, and hand geometry. Locomotion and general
+animations were runtime-tested in game.
+
+This is not the production FaceGen/dialogue head. Finger weighting remains
+imperfect, the material/shader pass is provisional, and the temporary Sandbox
+behavior moves Valen between chairs or other furniture too frequently. Final
+AI, dialogue, scene, and narrative-departure work is deferred.
+
 ## M7 records and continuity helper
 
-The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 78 expected STRE-owned records:
+The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 83 expected STRE-owned records:
 
 - cells, quests, and the ten headquarters seat references;
 - the Ilinalta fireplace static plus the two STRE-owned headquarters light records;
+- the Messire Valen prototype's full-body `ARMA`/`ARMO`, outfit, NPC base, and
+  provisional inn Sandbox package;
 - outfits and boots;
 - weak enchantments;
 - Destruction and Alteration spells;
@@ -445,7 +472,7 @@ be followed by the necessary navmesh update and another NPC navigation test.
 - neutral MQ102/MQ103 vanilla-continuity handoff and its Riverwood/Alduin/Civil
   War semantics;
 - Hadvar/Ralof branch commit without making rescue itself a faction choice;
-- Valen, scenes, dialogue, and aliases;
+- final Valen AI, FaceGen/dialogue head, scenes, dialogue, and aliases;
 - real Departure/exit flow and main-quest resumption;
 - markers and placements for more players;
 - automated Papyrus compilation.

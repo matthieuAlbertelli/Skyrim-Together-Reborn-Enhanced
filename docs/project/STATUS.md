@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 3, 2026.
+> **Last updated:** September 4, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -172,14 +172,19 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   temporary vanilla NPC successfully runtime-tested normal circulation,
   obstacle avoidance, stairs, and passages before the test reference was
   removed;
+- a Messire Valen full-body prototype is integrated into the headquarters with
+  versioned NIF/DDS assets; it uses a prototype Skyrim-skeleton rig, hides the
+  overlapping vanilla geometry through its biped-slot setup, and was validated
+  in game for locomotion and general animations;
 - the headquarters exterior spans Tamriel cells `(-9, -16)` and `(-9, -17)`;
   the xEdit audit removed unintended overrides, while two vanilla rocks and the
   nearby two-reference forest-predator encounter are intentionally disabled to
   keep the headquarters footprint clear without deleting master references;
 - the explicit CK import for the navmesh checkpoint changed only
-  `GameFiles/Skyrim/STRE_AlternateStart.esp`; the strict CK manifest remains at
-  78 expected STRE-owned records and the audit is green with no unexpected
-  master override, so no expected `NAVM` entry was added;
+  `GameFiles/Skyrim/STRE_AlternateStart.esp`, so no expected `NAVM` entry was
+  added; after the Valen checkpoint, the strict CK manifest covers 83 expected
+  STRE-owned records and the audit is green with no new unexpected master
+  override;
 - `build-and-deploy-dev.ps1` completed successfully, and the post-deployment
   runtime smoke test passed entry, normal traversal, the interior/exterior
   load-door transition, stairs and passages, collision and pathing while
@@ -232,7 +237,11 @@ The current catalog uses `BuildVersion = 5`.
   resource; redistribution permission and final packaging must be resolved
   before release so players are not left with an undocumented manual
   dependency;
-- Valen and the narrative departure are not finalized;
+- Messire Valen remains a full-body prototype: the head and body are still one
+  mesh rather than a production FaceGen/dialogue head, finger weighting is
+  imperfect, the material/shader pass is provisional, and the temporary
+  Sandbox package changes furniture too often; final AI, dialogue, scene, and
+  narrative-departure work is not complete;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;
 - several schools and kits remain to be materialized;
