@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** August 27, 2026.
+> **Last updated:** September 4, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -162,10 +162,33 @@ See [`docs/features/item-preview/`](../features/item-preview/).
   both survivor jail projections; revalidation on 24 August confirmed the final
   FX/encounters/rubble/bridge invariant in standalone and in a multiplayer
   campaign;
-- the strict CK manifest now covers 67 expected STRE-owned records and rejects
-  unexpected master overrides, including exact allowlisting of the two captured
-  jail-door bindings; CK packaging passes with 19 managed files, the client/server
-  builds are green, and TPTests pass 2199 assertions in 158 test cases.
+- the first physical v1 headquarters checkpoint is implemented and runtime-
+  smoke-tested in `STRE_CELL_AlternateStart`, now player-facing as
+  `Ilinaltaâ€™s Vigil`: the main inn shell and circulation space, exterior
+  placement by Lake Ilinalta, the working interior/Tamriel load-door pair,
+  tavern music, the initial warm lighting pass, the STRE-owned fireplace/light
+  records, and ten stable STRE starting-seat references are present;
+- the current Ilinalta's Vigil geometry has an implemented interior navmesh; a
+  temporary vanilla NPC successfully runtime-tested normal circulation,
+  obstacle avoidance, stairs, and passages before the test reference was
+  removed;
+- a Messire Valen full-body prototype is integrated into the headquarters with
+  versioned NIF/DDS assets; it uses a prototype Skyrim-skeleton rig, hides the
+  overlapping vanilla geometry through its biped-slot setup, and was validated
+  in game for locomotion and general animations;
+- the headquarters exterior spans Tamriel cells `(-9, -16)` and `(-9, -17)`;
+  the xEdit audit removed unintended overrides, while two vanilla rocks and the
+  nearby two-reference forest-predator encounter are intentionally disabled to
+  keep the headquarters footprint clear without deleting master references;
+- the explicit CK import for the navmesh checkpoint changed only
+  `GameFiles/Skyrim/STRE_AlternateStart.esp`, so no expected `NAVM` entry was
+  added; after the Valen checkpoint, the strict CK manifest covers 83 expected
+  STRE-owned records and the audit is green with no new unexpected master
+  override;
+- `build-and-deploy-dev.ps1` completed successfully, and the post-deployment
+  runtime smoke test passed entry, normal traversal, the interior/exterior
+  load-door transition, stairs and passages, collision and pathing while
+  preserving the existing fireplace and lighting presentation.
 
 The current catalog uses `BuildVersion = 5`.
 
@@ -199,7 +222,26 @@ The current catalog uses `BuildVersion = 5`.
 - rescue/liberation and physical `Freed`/`Departed` projections remain
   unimplemented; mixed-state and save/load/cell-reset regressions for the new
   occupation flow are still required;
-- Valen and the narrative departure are not finalized;
+- the physical Ilinalta's Vigil checkpoint completes neither headquarters issue
+  #23 nor room issue #24: the architecture remains provisional, decoration is a
+  minimal and incomplete first pass, and the ten player-room spaces are empty
+  and doorless rather than usable rooms;
+- the exterior stair/access path still has to reach the road, and the exterior
+  still needs a Skyrim-appropriate sign or signpost for Ilinalta's Vigil;
+- Room Bounds and Portals were deliberately skipped because profiling and
+  runtime validation have not demonstrated a concrete visibility or
+  performance need. They are conditional optimizations, while acceptable
+  runtime performance and the remaining Valen, ready/departure, housing, and
+  ten-player validation work are still required;
+- the development fireplace currently uses the selected EEK loose mesh/texture
+  resource; redistribution permission and final packaging must be resolved
+  before release so players are not left with an undocumented manual
+  dependency;
+- Messire Valen remains a full-body prototype: the head and body are still one
+  mesh rather than a production FaceGen/dialogue head, finger weighting is
+  imperfect, the material/shader pass is provisional, and the temporary
+  Sandbox package changes furniture too often; final AI, dialogue, scene, and
+  narrative-departure work is not complete;
 - the live Character Build service is not yet bound to durable campaign identity
   or reconnect restoration;
 - several schools and kits remain to be materialized;

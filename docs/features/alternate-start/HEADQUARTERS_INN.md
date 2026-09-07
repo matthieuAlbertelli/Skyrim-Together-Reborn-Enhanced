@@ -20,11 +20,20 @@ For v1.0.0:
   and vanilla-compatible content;
 - bespoke Blender- or AI-generated architectural meshes are not required for v1
   acceptance;
-- room bounds and portals, navmesh, collision, lighting, and CK performance are
-  part of the v1 implementation.
+- navmesh, NPC pathing, collision, lighting, visual readability, and acceptable
+  runtime performance are required for v1 acceptance;
+- room bounds, portals, and explicit visibility partitioning are conditional
+  optimizations, added only when profiling or runtime validation demonstrates a
+  concrete visibility or performance need.
 
 This is a deliberate product-scope decision, not a statement of engine
 limitation.
+
+These are target acceptance requirements, not claims about the current
+checkpoint. [`STATUS.md`](../../project/STATUS.md) owns implementation truth:
+the current architecture remains provisional, decoration is only a minimal
+first pass, and the existing empty, doorless room spaces are not yet the ten
+usable rooms required for v1.
 
 ## Functional v1 program
 
@@ -64,9 +73,11 @@ Acceptance requires audits and in-game checks for:
 
 - navmesh and NPC pathing;
 - collision;
-- room bounds, portals, and occlusion;
 - lighting and visual readability;
 - clear circulation and controlled clutter;
+- acceptable runtime performance, with profiling or runtime evidence used to
+  decide whether room bounds, portals, or other explicit visibility
+  partitioning are needed;
 - save/load behavior;
 - ten-player stress, circulation, scene, and room-scale behavior.
 

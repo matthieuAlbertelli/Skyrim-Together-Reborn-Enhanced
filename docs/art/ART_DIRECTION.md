@@ -29,7 +29,9 @@ architectural building is a post-v1 direction rather than a v1 art requirement.
 
 ## Constraints
 
-- preserve occlusion, room bounds, and performance;
+- preserve visual readability and performance; add room bounds, portals, or
+  other explicit visibility partitioning only when profiling or runtime
+  validation demonstrates a concrete need;
 - limit unnecessary unique meshes;
 - keep textures appropriate for viewing distance;
 - avoid prop accumulation that obstructs 10 players;
