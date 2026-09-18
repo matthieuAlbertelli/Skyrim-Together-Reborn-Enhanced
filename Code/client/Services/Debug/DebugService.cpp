@@ -1,6 +1,5 @@
 #include <BranchInfo.h>
 #include <NativeLifetimeProbe.h>
-#include <Services/RemoteRespawnLab.h>
 
 #include <Havok/hkbStateMachine.h>
 #include <Structs/AnimationGraphDescriptorManager.h>
@@ -181,12 +180,14 @@ void DebugService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
     const bool nativeLifetimeKeyDown = (GetAsyncKeyState(VK_F11) & 0x8000) != 0;
     if (nativeLifetimeKeyDown && !s_nativeLifetimeKeyDown)
     {
-        if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
-            STRE::RemoteRespawnLab::SetEnabled(!STRE::RemoteRespawnLab::Enabled());
-        else if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-            RequestObserveCurrentPrivateRemote();
-        else
-            SetNativeLifetimeProbeEnabled(!IsNativeLifetimeProbeEnabled());
+        // Ctrl+F11 no longer controls final rematerialization or arms a probe.
+        if (!(GetAsyncKeyState(VK_CONTROL) & 0x8000))
+        {
+            if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                RequestObserveCurrentPrivateRemote();
+            else
+                SetNativeLifetimeProbeEnabled(!IsNativeLifetimeProbeEnabled());
+        }
     }
     s_nativeLifetimeKeyDown = nativeLifetimeKeyDown;
 
@@ -427,9 +428,6 @@ void DebugService::OnDraw() noexcept
 
 #if (!IS_MASTER)
         bool nativeLifetimeEnabled = IsNativeLifetimeProbeEnabled();
-        bool remoteRespawnLab = STRE::RemoteRespawnLab::Enabled();
-        if (ImGui::MenuItem("Final Character Creation local respawn LAB", "Ctrl+F11", &remoteRespawnLab))
-            STRE::RemoteRespawnLab::SetEnabled(remoteRespawnLab);
         if (ImGui::MenuItem("Passive native lifetime probe (next private remote)", nullptr, &nativeLifetimeEnabled))
             SetNativeLifetimeProbeEnabled(nativeLifetimeEnabled);
         if (ImGui::MenuItem("Passive native lifetime probe (observe current private remote)", "Shift+F11", false, !nativeLifetimeEnabled))

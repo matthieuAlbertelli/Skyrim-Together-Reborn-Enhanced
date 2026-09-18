@@ -30,6 +30,7 @@ this register allocates numbers and serves only as an index.
 | ADR-0020 | Character Creation final local materialization | Accepted | [ADR-0020](../architecture/ADRs/ADR-0020-character-creation-final-local-materialization.md) |
 | ADR-0021 | Natural-join final representation and standing Character Creation | Accepted | [ADR-0021](../architecture/ADRs/ADR-0021-natural-join-final-representation-standing-creation.md) |
 | ADR-0022 | Posture-independent Character Creation and final rematerialization | Accepted | [ADR-0022](../architecture/ADRs/ADR-0022-posture-independent-character-creation.md) |
+| ADR-0023 | Automatic final Character Creation rematerialization, including MASTER | Accepted | [ADR-0023](../architecture/ADRs/ADR-0023-automatic-final-character-creation-rematerialization.md) |
 
 `Implemented` is retained for a few historical ADRs. For new decisions, status
 describes the decision (`Proposed`, `Accepted`, `Rejected`, or `Superseded`);

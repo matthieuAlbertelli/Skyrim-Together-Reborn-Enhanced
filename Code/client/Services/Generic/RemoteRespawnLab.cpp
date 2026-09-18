@@ -22,21 +22,18 @@
 #include <Forms/TESObjectCELL.h>
 #include <Forms/TESWorldSpace.h>
 #include <Forms/BGSHeadPart.h>
-#include <atomic>
 #include <chrono>
 #include <map>
 #include <memory>
 
 namespace STRE::RemoteRespawnLab
 {
-#if (!IS_MASTER)
 namespace
 {
 using namespace CharacterCreation;
 static_assert(offsetof(ActorState, flags1) == 0x8);
 static_assert(offsetof(ActorState, flags2) == 0xC);
 using Clock = std::chrono::steady_clock;
-std::atomic_bool s_enabled{false};
 uint64_t s_session{1}, s_generation{};
 struct NativePair
 {
@@ -482,7 +479,7 @@ void Advance(World& aWorld, Job& aJob)
     RemoteActorProjection::Place(candidate, {old->GetParentCell(), old->GetWorldSpace(), old->position, old->rotation});
     if (Resolve(aJob.Candidate) != candidate || !Geometry(aJob, candidate) || !SafeActor(candidate, aJob, "post-placement") || !candidate->GetParentCell() ||
         candidate->GetParentCell()->formID != aJob.Cell || (candidate->GetWorldSpace() ? candidate->GetWorldSpace()->formID : 0) != aJob.Space || !Bound(aWorld, aJob, aJob.Old) ||
-        Locked() || !Enabled() || !aWorld.GetTransport().IsConnected() || aJob.Lifecycle.Key().Session != s_session)
+        Locked() || !aWorld.GetTransport().IsConnected() || aJob.Lifecycle.Key().Session != s_session)
         return Abort(aJob, "post-placement-invariant");
     if (!aJob.Lifecycle.MarkReady(aJob.Lifecycle.Key()))
         return Abort(aJob, "candidate-not-discovered");
@@ -504,27 +501,10 @@ void Advance(World& aWorld, Job& aJob)
     Log(aJob, "complete", "natural-join-local-representation-committed-native-retirement-observation-pending");
 }
 } // namespace
-#endif
 
-bool Enabled() noexcept
-{
-#if (!IS_MASTER)
-    return s_enabled.load();
-#else
-    return false;
-#endif
-}
-void SetEnabled(bool aEnabled) noexcept
-{
-#if (!IS_MASTER)
-    s_enabled.store(aEnabled);
-    spdlog::info("[STRE][RemoteRespawnLAB] phase=feature-gate enabled={} serverId=0 entityVersioned=0 generation=0 oldActor=0 oldBase=0 newActor=0 newBase=0", aEnabled);
-#endif
-}
 void ReceiveBuild(World&, const NotifyCharacterBuildState& aBuild) noexcept
 {
-#if (!IS_MASTER)
-    if (!Enabled() || aBuild.State != CharacterBuildNetworkState::Applied || !aBuild.Revision ||
+    if (aBuild.State != CharacterBuildNetworkState::Applied || !aBuild.Revision ||
         ComputeCharacterBuildInventoryHash(aBuild.Build.CanonicalInventory) != aBuild.Build.InventoryHash)
         return;
     if (!s_jobs.contains(aBuild.ServerId) && s_jobs.size() >= 10)
@@ -536,18 +516,26 @@ void ReceiveBuild(World&, const NotifyCharacterBuildState& aBuild) noexcept
         return;
     job->Server = aBuild.ServerId;
     job->Build = aBuild;
-#endif
 }
 void ReceiveFinal(World& aWorld, const NotifyCharacterAppearanceUpdate& aFinal) noexcept
 {
-#if (!IS_MASTER)
     Job rejected;
     rejected.Server = aFinal.ActorId;
     rejected.Final = aFinal;
-    if (!Enabled() || !aWorld.GetTransport().IsConnected() || !aFinal.FinalBuildRevision || Locked() || !aFinal.IsValid() ||
-        (!s_jobs.contains(aFinal.ActorId) && s_jobs.size() >= 10))
+    const char* reason = nullptr;
+    if (!aWorld.GetTransport().IsConnected())
+        reason = "transport-disconnected";
+    else if (!aFinal.FinalBuildRevision)
+        reason = "missing-final-build-revision";
+    else if (Locked())
+        reason = "recovery-locked";
+    else if (!aFinal.IsValid())
+        reason = "invalid-canonical-snapshot";
+    else if (!s_jobs.contains(aFinal.ActorId) && s_jobs.size() >= 10)
+        reason = "transaction-capacity";
+    if (reason)
     {
-        Log(rejected, "gate-rejected", "missing-matching-applied-build-or-feature-disabled");
+        Log(rejected, "gate-rejected", reason);
         return;
     }
     auto& ptr = s_jobs[aFinal.ActorId];
@@ -564,11 +552,9 @@ void ReceiveFinal(World& aWorld, const NotifyCharacterAppearanceUpdate& aFinal) 
     if (!job.Final)
         job.Started = Clock::now(); // Duplicate delivery cannot extend the pending deadline.
     job.Final = aFinal;             // Latest valid delivery before reservation; one immutable canonical final.
-#endif
 }
 void BeforeSpawn(Actor* aActor, TESNPC* aBase) noexcept
 {
-#if (!IS_MASTER)
     if (!s_creating || s_creating->ExpectedBase != reinterpret_cast<uintptr_t>(aBase) || s_creating->Candidate.ActorToken)
         return;
     auto& job = *s_creating;
@@ -578,18 +564,14 @@ void BeforeSpawn(Actor* aActor, TESNPC* aBase) noexcept
     aActor->GetExtension()->SetPlayer(true);
     // Register allocation tokens BEFORE world exposure, even if Spawn assigns IDs.
     // The creator still owns its GamePtr during this source boundary.
-#endif
 }
 void CandidateBase(TESNPC* aBase) noexcept
 {
-#if (!IS_MASTER)
     if (s_creating)
         s_creating->ExpectedBase = reinterpret_cast<uintptr_t>(aBase);
-#endif
 }
 void AfterSpawn(Actor* aActor, TESNPC* aBase) noexcept
 {
-#if (!IS_MASTER)
     if (!s_creating || s_creating->ExpectedBase != reinterpret_cast<uintptr_t>(aBase) || s_creating->Candidate.ActorToken != reinterpret_cast<uintptr_t>(aActor))
         return;
     auto& job = *s_creating;
@@ -602,20 +584,16 @@ void AfterSpawn(Actor* aActor, TESNPC* aBase) noexcept
     }
     if (job.EarlyDiscovery)
         job.Lifecycle.Observe(job.Lifecycle.Key(), aActor->formID, true);
-#endif
 }
 void DeleteRequested(const Actor* aActor) noexcept
 {
-#if (!IS_MASTER)
     for (auto& [id, ptr] : s_jobs)
         for (auto* pair : {&ptr->Old, &ptr->Candidate})
             if (pair->ActorToken == reinterpret_cast<uintptr_t>(aActor) && (pair->Forms.Actor == aActor->formID || (s_creating == ptr.get() && pair == &ptr->Candidate)))
                 pair->DeleteIssued = true;
-#endif
 }
 bool Discovery(uint32_t aFormId, uintptr_t aToken, bool aAdded) noexcept
 {
-#if (!IS_MASTER)
     for (auto& [id, ptr] : s_jobs)
     {
         auto& job = *ptr;
@@ -643,12 +621,10 @@ bool Discovery(uint32_t aFormId, uintptr_t aToken, bool aAdded) noexcept
             return false;
         return true; // Candidate staging/retirement must not reach ANY legacy subscriber.
     }
-#endif
     return false;
 }
 bool Tracks(uint32_t aFormId, uintptr_t aToken) noexcept
 {
-#if (!IS_MASTER)
     for (const auto& [id, ptr] : s_jobs)
     {
         if (ptr->Lifecycle.State() == MaterializationState::Idle)
@@ -657,12 +633,10 @@ bool Tracks(uint32_t aFormId, uintptr_t aToken) noexcept
             if (pair->Forms.Actor == aFormId && pair->ActorToken == aToken)
                 return true;
     }
-#endif
     return false;
 }
 void Tick(World& aWorld) noexcept
 {
-#if (!IS_MASTER)
     for (auto& [id, ptr] : s_jobs)
     {
         auto& job = *ptr;
@@ -684,9 +658,7 @@ void Tick(World& aWorld) noexcept
         }
         if (!job.Done)
         {
-            if (!Enabled())
-                Abort(job, "feature-disabled");
-            else if (!FinalRespawnEligible(true, false, true, true, job.Build.State == CharacterBuildNetworkState::Applied, job.Final->FinalBuildRevision, job.Build.Revision))
+            if (!FinalRespawnEligible(true, true, job.Build.State == CharacterBuildNetworkState::Applied, job.Final->FinalBuildRevision, job.Build.Revision))
             {
                 if (Clock::now() - job.Started > std::chrono::seconds(10))
                     Abort(job, "matching-applied-build-timeout");
@@ -695,6 +667,7 @@ void Tick(World& aWorld) noexcept
                 Advance(aWorld, job);
         }
         DispatchRetirement(job);
+#if (!IS_MASTER)
         if (job.Old.DeleteIssued && !job.RetirementLogged && job.RetirementStarted != Clock::time_point{} && Clock::now() - job.RetirementStarted >= std::chrono::seconds(30))
         {
             job.RetirementLogged = true;
@@ -706,12 +679,11 @@ void Tick(World& aWorld) noexcept
                 job.Server, static_cast<uint32_t>(job.Entity), job.Lifecycle.Key().Session, job.Lifecycle.Key().Generation, job.Old.Forms.Actor, job.Old.Forms.Base,
                 job.Candidate.Forms.Actor, job.Candidate.Forms.Base, actorPresent, basePresent);
         }
-    }
 #endif
+    }
 }
 void Disconnect(World& aWorld) noexcept
 {
-#if (!IS_MASTER)
     ++s_session;
     for (auto& [id, ptr] : s_jobs)
     {
@@ -720,8 +692,6 @@ void Disconnect(World& aWorld) noexcept
         DispatchRetirement(*ptr);
     }
     // Tombstones survive disconnect: delayed Discovery must not become assignments.
-    // A fresh process is required for another LAB session.
-    s_enabled.store(false);
-#endif
+    // A fresh process is still required for another initial-creation session.
 }
 } // namespace STRE::RemoteRespawnLab

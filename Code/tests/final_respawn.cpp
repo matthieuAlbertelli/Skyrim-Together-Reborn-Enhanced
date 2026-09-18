@@ -5,16 +5,15 @@
 
 using namespace STRE::CharacterCreation;
 
-TEST_CASE("Final respawn requires enabled non-master connected official Applied build", "[final-respawn]")
+TEST_CASE("Final rematerialization automatically requires connected official Applied build", "[final-respawn]")
 {
-    REQUIRE(FinalRespawnEligible(true, false, true, true, true, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(false, false, true, true, true, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(true, true, true, true, true, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(true, false, false, true, true, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(true, false, true, false, true, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(true, false, true, true, false, 42, 42));
-    REQUIRE_FALSE(FinalRespawnEligible(true, false, true, true, true, 0, 0));
-    REQUIRE_FALSE(FinalRespawnEligible(true, false, true, true, true, 41, 42));
+    REQUIRE(FinalRespawnEligible(true, true, true, 42, 42));
+    REQUIRE_FALSE(FinalRespawnEligible(false, true, true, 42, 42));
+    REQUIRE_FALSE(FinalRespawnEligible(true, false, true, 42, 42));
+    REQUIRE_FALSE(FinalRespawnEligible(true, true, false, 42, 42));
+    REQUIRE_FALSE(FinalRespawnEligible(true, true, true, 0, 0));
+    REQUIRE_FALSE(FinalRespawnEligible(true, true, true, 41, 42));
+    REQUIRE_FALSE(FinalRespawnEligible(true, true, true, 42, 0));
 }
 
 TEST_CASE("Final respawn ignores every sit sleep state while retaining independent safety guards", "[final-respawn]")

@@ -2,6 +2,39 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Automatic final activation - ADR-0023 acceptance (2026-09-18)
+
+Initial Character Creation has no live remote appearance synchronization. The
+matching pending authoritative Applied build publishes one canonical final after
+build seal; observers automatically rematerialize through the shared natural-join
+path in every build, including MASTER. No Ctrl+F11 or debug activation is required.
+Post-creation appearance changes and collective seating remain out of scope.
+
+| ID | Required automated evidence | Human acceptance boundary |
+|---|---|---|
+| T1 | Matching Applied/final revision reaches the transaction with no enabled input; official trigger and duplicate fences retained. | Fresh A+B final rematerialization without a toggle. |
+| T2 | Functional publisher/receiver/policy have no Enabled/SetEnabled state; functional menu removed; Ctrl+F11 cannot arm the passive probe. | No debug step in the procedure below. |
+| T3 | Functional helpers, native hooks, materializer and publisher survive MASTER preprocessing; isolated C++ compilation with IS_MASTER=1 supplements source checks. | Full MASTER runtime acceptance remains separate. |
+| T4 | Startup emits final-rematerialization-enabled, source=official-character-creation-default; no opt-in state exists. | Both clients report this on startup. |
+| T5 | Matching pending Applied is the sole event producer; no menu/tick publisher. | Intermediate closes and ModifyRace remain local. |
+| T6 | Duplicate Applied cannot publish after the pending flag is cleared; manual menu is not a producer. | Later showracemenu publishes nothing. |
+| T7 | Disconnected/Solo eligibility rejects; publisher cannot queue/send without transport. | Solo creation succeeds without appearance traffic or remote work. |
+| T8 | Legacy hot dispatch remains unreachable; candidate failure preserves valid old binding and never invokes SwitchRace/Reset3D. | Failure has a precise rejection/abort, with no hot fallback. |
+| T9 | Versioned entity, serverId/PlayerId/ownership and animation/interpolation identity preserved; only native binding changes. | Correlate old/new Actor/Base and unchanged logical identity. |
+| T10 | One shared canonical bytes/flags/tints materializer; natural spawn callers and race-independent projection unchanged. | Full race/sex/cosmetic/no-change matrix remains pending. |
+| T11 | Exact-runtime, binding, native safety, canonical, capacity, readiness and lifecycle tests retained; no sit/sleep veto. | Invalid binding/state/geometry must still fail closed. |
+| T12 | Recovery/disconnection abort or defer cleanup; generation/tokens quarantine candidate and retirement observations. | Coordinated recovery/reconnect matrix remains pending. |
+
+Run TPTests, the six structural suites listed below, client/server/launcher builds
+and git diff --check. MASTER source checks are not a full MASTER executable build
+or game run; record the exact scope of any additional compilation in STATUS.
+Papyrus is unchanged by this promotion: compare PSC/PEX hashes to the verified
+checkpoint and PEX bytes to its retained compiler output; recompile only if changed.
+Current implementation and validation results are recorded in STATUS, not inferred
+from this acceptance matrix. The maintainer subsequently confirmed automatic
+final rematerialization without debug activation on the tested multiplayer run;
+see STATUS. The remaining permutations and full MASTER runtime remain pending.
+
 ## Final-rematerialization runtime checkpoint and regression gate
 
 The maintainer's successful 2026-09-18 A-observes-B run is recorded in STATUS,
@@ -48,8 +81,8 @@ Human runtime procedure (no game launch or deployment by the coding task):
 
 1. Use the matching rebuilt artifacts, fresh A+B client processes and a fresh
    campaign; keep the existing required posture-independent bootstrap PEX.
-   Enable the default-off non-MASTER LAB with Ctrl+F11 on publisher and observer
-   before final build sealing. Intermediate RaceMenu closes remain local.
+   Final rematerialization is now automatic on publisher and observer (ADR-0023).
+   Intermediate RaceMenu closes remain local until final build sealing.
 2. Seal the final build. For the reported pair, expect actor-state-accepted with
    lifeState=9 lifeName=dont-move stateVeto=none safeState=1, all other decoded
    state fields idle, then gate-accepted, transaction-reserved and
@@ -105,7 +138,7 @@ Next native diagnostic run (human execution):
    standing-position and then Race menu requested. A timeout/fence failure logs
    result=rejected and standing-position-rejected reason=move-validation-failed
    detail=<exact reason>. No extra MoveTo or posture operation should occur.
-4. Enable the existing LAB and seal the build as described below. If capture fails,
+4. Seal the build using the automatic final flow described below. If capture fails,
    gate-rejected detail=<exact guard> replaces the old aggregate. Inspect the same
    line's FormId/CachedRefId, Actor/Base IDs and tokens, entity/version,
    WaitingFor3D, Local/Assignment, recoveryState/recoveryLocked, actor flags and
@@ -203,7 +236,7 @@ Current execution results belong in STATUS and the corrective A-K audit.
 | T10 | Source: hot receiver/applier bypassed; only matching pending Applied publishes once. | RaceMenu edits/closes/reopens remain local until seal. |
 | T11 | All 16 sit/sleep values accepted independently of safety guards; no furniture eligibility check or normalization; both CK fragments share one placement helper; sorted PlayerId ranks and ten anchors. | Seated/standing/transition states do not gate entry or final rematerialization; valid cell/position; no forced furniture exit or chair restoration. |
 | T12 | Source: official pending Applied is the sole publisher. | Later manual showracemenu never publishes/rematerializes. |
-| T13 | Source/policy: default OFF, MASTER stubs, common menu/hotkey setter. | Default OFF and Ctrl+F11 toggle. No separate MASTER build claimed. |
+| T13 | Superseded by ADR-0023 activation T1-T4 above: automatic in all builds; no functional toggle. | Fresh A+B run without Ctrl+F11 remains required. |
 | T14 | Policy/source: disconnected/Solo never publishes or starts a transaction. | Solo creates a local character regardless of posture, with no remote work. |
 
 Additional regression coverage: stale generation/session/entity, candidate failure,
@@ -215,14 +248,16 @@ historical reports remain historical and are not this corrective matrix.
 Run TPTests and these Python suites in Tools/Scripts:
 test_natural_join_rematerialization.py, test_remote_respawn_lab.py,
 test_private_remote_materializer.py, test_remote_materialization_lifecycle.py,
-test_native_lifetime_probe.py. Compile the changed Papyrus fragment to the tracked
-PEX; run audit_ck_packaging.py and audit_mq101_quickstart5.py against the ESP.
+test_native_lifetime_probe.py, test_standing_placement_diagnostics.py. If Papyrus
+changes, compile the fragment to the tracked PEX; otherwise verify checkpoint
+hashes and retained compiler output. Run audit_ck_packaging.py and
+audit_mq101_quickstart5.py against the ESP.
 Build client/server/launcher and run git diff --check. No game is launched by tests.
 
-### Human LAB procedure (not executed by this mission)
+### Human automatic-final procedure (not executed by this promotion)
 
-1. Use a NEW campaign, fresh non-MASTER client processes A/B, matching schema-2
-   server and rebuilt client/launcher plus the rebuilt Alternate Start PEX. Keep
+1. Use a NEW campaign, fresh client processes A/B, matching schema-2
+   server and rebuilt client/launcher plus the verified Alternate Start PEX. Keep
    the existing ESP. This mission does not install any of these artifacts.
 2. Check the new entry: Papyrus emits `[STRE][AlternateStart] Creation placement
    ready; entering stage 20`. Both legacy stages 10/11 use this helper; stage 20
@@ -233,11 +268,11 @@ Build client/server/launcher and run git diff --check. No game is launched by te
    floor, furniture clearance, camera and controls for both rows; later extend to
    all ten slots. Solo must select its first position. Missing/duplicate PlayerId,
    marker, anchor/cell or invalid position must fail; posture alone must not.
-3. Before either final seal, foreground Skyrim on EACH client and press Ctrl+F11
-   once, releasing F11 between presses. Expect `[STRE][RemoteRespawnLAB]
-   phase=feature-gate enabled=true`. Menu equivalent: Debuggers > Final Character
-   Creation local respawn LAB (F2/F3 opens the debug UI). Another Ctrl+F11 logs
-   enabled=false. F11/Shift+F11 remain the separate passive-probe controls.
+3. Do not enable any debug gate. On EACH client, expect the startup log
+   `[STRE][RemoteRespawnLAB] phase=final-rematerialization-enabled
+   source=official-character-creation-default`. Ctrl+F11 has no activation role;
+   the former functional menu item is removed. F11/Shift+F11 remain optional
+   non-MASTER passive-probe controls, unrelated to final activation.
 4. First run: A chooses Orc, B chooses Khajiit (or reverse). Change race/sex and
    cosmetics locally; close RaceMenu, use ModifyRace and reopen. Observers must
    keep the old appearance. No final snapshot/create occurs before final sealing.
@@ -255,18 +290,20 @@ Build client/server/launcher and run git diff --check. No game is launched by te
    Old removal must not strip the new binding. No SwitchRace/Reset3D, assignment,
    ownership transfer or server-side spawn/despawn should be attributable to this
    operation. No final collective seating is implemented in this mission.
-7. Keep gate/connection stable for at least 30 seconds after retirement; retain
-   retirement-window observations. Save logs immediately afterward, or immediately
-   on failure/crash, BEFORE relaunch/rotation. Collect the complete A/B
+7. Keep the connection stable after retirement. In non-MASTER, wait at least
+   30 seconds and retain the additional retirement-window observation. MASTER
+   retains transaction logs but omits that passive lookup window. Save logs after
+   completion or immediately on failure/crash, BEFORE relaunch/rotation. Collect the complete A/B
    `Data/SkyrimTogetherReborn/logs/` directories, especially tp_client.log and
    tp_client.1.log through tp_client.3.log, server logs and any crash/Papyrus logs.
    On this machine client logs are under `C:/Program Files (x86)/Steam/steamapps/
    common/Skyrim Special Edition/`. Record timestamps, artifact hashes and chosen
    races/sexes. A filtered console excerpt is insufficient.
-8. Restart client processes between attempts: OFF/ON does not reset attempted
-   finals or tombstones. Repeat Nord/Orc/Khajiit/Argonian, both sexes, unchanged,
+8. Restart client processes between independent creation attempts: attempted
+   finals and tombstones remain process-scoped; there is no reset toggle. Repeat
+   Nord/Orc/Khajiit/Argonian, both sexes, unchanged,
    cosmetic-only, same-race sex change, race-only and combined changes. Exercise
-   duplicate final, abort, recovery/disconnect, default OFF, Solo and later manual
+   duplicate final, abort, recovery/disconnect, automatic activation, Solo and later manual
    showracemenu. The latter is out of scope and must not publish a new final.
 
 If Khajiit/Argonian fails, compare natural join with the EXACT SAME final canonical

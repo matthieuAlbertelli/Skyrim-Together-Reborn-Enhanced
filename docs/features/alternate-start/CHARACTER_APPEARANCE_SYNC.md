@@ -5,8 +5,13 @@ This contract concerns initial Character Creation on Steam Skyrim 1.6.1170, with
 SKSE64 2.2.6 as the native reference. It does not change classes, loadouts,
 camera or campaign recovery authority. ADR-0022 makes entry and final
 rematerialization independent of posture; collective seating is a future phase.
+ADR-0023 makes the official final flow automatic in every build, including MASTER.
 
 ## Runtime checkpoint and remaining validation
+
+The maintainer also confirms automatic final rematerialization without Ctrl+F11
+on the tested multiplayer creation run (2026-09-18 commit handoff). This is bounded
+human acceptance of default activation, not full matrix or native lifetime proof.
 
 Character Creation live appearance sync is superseded; final local natural-join
 rematerialization is implemented. The maintainer has human-validated observer A
@@ -26,6 +31,8 @@ supersedes the hot-appearance strategy below for initial STRE Character Creation
 adds race-agnostic natural-join projection.
 [ADR-0022](../../architecture/ADRs/ADR-0022-posture-independent-character-creation.md)
 supersedes its standing eligibility requirement without changing the materializer.
+[ADR-0023](../../architecture/ADRs/ADR-0023-automatic-final-character-creation-rematerialization.md)
+supersedes the debug activation gate and non-MASTER functional restriction.
 
 Final Character Creation rematerialization is race-agnostic. It recreates the
 remote as a natural join representation. No live appearance synchronization
@@ -38,7 +45,7 @@ records and unsafe lifecycle states still reject.
 - RaceMenu in progress and intermediate closes: NO live remote appearance sync.
 - After authoritative build sealing: ONE final canonical
   AppearanceBuffer/ChangeFlags/FaceTints snapshot for the entire creation.
-- Observers: ONE systematic local remote respawn, including unchanged appearance,
+- Observers: ONE automatic local natural-join rematerialization, including unchanged appearance,
   cosmetics only, same race/sex, sex only, race only and combined changes.
 - Post-Character-Creation editing, including later manual showracemenu: OUT OF SCOPE.
 
@@ -50,10 +57,14 @@ identical retries. Schema 2 requires matching client/server builds. Race/sex/wei
 descriptors are validation metadata; the materializer receives only canonical
 native appearance bytes/flags/tints, never a sequence of visual deltas.
 
-The non-MASTER LAB is default OFF. Ctrl+F11 toggles it, sharing the setter used by
-Debuggers > Final Character Creation local respawn LAB. Enable on publisher and
-observers before sealing. MASTER returns OFF. Rejection/OFF never falls back to
-legacy hot apply. Solo sends no snapshot and creates no remote representation.
+This is the normal initial Character Creation behavior in MASTER and non-MASTER.
+No user/debug activation is required. Ctrl+F11 and the Final Character Creation
+local respawn LAB menu item no longer control or enable it; that toggle is removed.
+Service startup logs `phase=final-rematerialization-enabled
+source=official-character-creation-default`. The internal RemoteRespawnLab name
+and log prefix remain for trace continuity. F11/Shift+F11 still control only the
+separate non-MASTER passive probes. Rejection never falls back to legacy hot apply.
+Solo sends no snapshot and creates no remote representation.
 
 Only the observer's native Actor/private TESNPC pair changes. serverId, PlayerId,
 ownership, sealed roster and versioned ECS entity remain unchanged. The shared
@@ -75,11 +86,11 @@ Candidate-local FaceGen is published only at commit. Geometry and canonical live
 inventory counts/equipment must pass; old retirement uses the existing Actor Delete.
 No SwitchRace, Reset3D, live Actor Deserialize, manual TESNPC free or server respawn.
 
-LAB records are bounded to ten server identities and retained as tombstones through
-disconnect. Toggle OFF/ON does not reset an attempted final. Restart client processes
+Transaction records are bounded to ten server identities and retained as tombstones through
+disconnect. An attempted final cannot be reset by a debug control. Restart client processes
 between runs. Readiness/build matching each has a bounded ten-second wait; abort
 keeps a still-valid old binding. Recovery defers candidate cleanup while locked.
-Native retirement is observed for thirty seconds; registry persistence is not leak
+Additional non-MASTER retirement diagnostics observe thirty seconds; registry persistence is not leak
 proof. Native rendering is human-validated only for the recorded scenario;
 full state-projection/race/sex/lifetime coverage remains pending (see STATUS).
 

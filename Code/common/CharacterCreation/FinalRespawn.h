@@ -5,9 +5,9 @@ namespace STRE::CharacterCreation
 {
 // Only an authoritative Applied build can identify the one initial final.
 // Appearance transition type deliberately is not an input.
-inline bool FinalRespawnEligible(bool aEnabled, bool aMaster, bool aConnected, bool aOfficialCreation, bool aApplied, uint64_t aFinalRevision, uint64_t aAppliedRevision) noexcept
+inline bool FinalRespawnEligible(bool aConnected, bool aOfficialCreation, bool aApplied, uint64_t aFinalRevision, uint64_t aAppliedRevision) noexcept
 {
-    return aEnabled && !aMaster && aConnected && aOfficialCreation && aApplied && aFinalRevision && aFinalRevision == aAppliedRevision;
+    return aConnected && aOfficialCreation && aApplied && aFinalRevision && aFinalRevision == aAppliedRevision;
 }
 
 // Read-only policy for the 1.6.1170 LAB, not a general native Actor safety API.

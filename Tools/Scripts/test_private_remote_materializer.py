@@ -92,10 +92,11 @@ class PrivateRemoteMaterializerContract(unittest.TestCase):
         self.assertNotIn("empty()", HELPER)
 
     def test_t7_only_existing_spawn_entry_points(self):
-        # Slice 3 adds one non-MASTER LAB adapter; ordinary spawn still has two callers.
+        # The official final adapter shares creation; ordinary spawn still has two callers.
         self.assertEqual(SOURCE.count("MaterializePrivateRemoteActor("), 4)
         lab = body(SOURCE, "Actor* STRE::RemoteRespawnLab::Materialize(")
-        self.assertIn("#if (!IS_MASTER)", lab)
+        self.assertNotIn("#if", lab)
+        self.assertNotIn("return nullptr", lab)
         self.assertIn("&aTints", lab)
         for path in (ROOT / "Code/client").rglob("*.cpp"):
             if path.name != "CharacterService.cpp":

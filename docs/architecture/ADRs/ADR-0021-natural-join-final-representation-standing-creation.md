@@ -6,6 +6,7 @@
 - **Issue / discussion:** Corrective natural-join mission and explicit standing-bootstrap clarification in the local handoff
 - **Supersedes:** ADR-0020 in part: local projection scope and the seated-product consequence
 - **Superseded by:** [ADR-0022](ADR-0022-posture-independent-character-creation.md), in part (posture-independent entry and LAB eligibility)
+- **Activation superseded by:** [ADR-0023](ADR-0023-automatic-final-character-creation-rematerialization.md) (automatic final flow, including MASTER; no debug gate)
 
 ## Context
 

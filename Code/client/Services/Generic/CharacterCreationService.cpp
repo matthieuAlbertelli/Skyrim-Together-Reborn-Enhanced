@@ -843,8 +843,7 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
     m_serverBuildAccepted = false;
     m_buildConfirmed = true;
 
-    if (STRE::RemoteRespawnLab::Enabled())
-        m_world.GetDispatcher().trigger(RequestLocalAppearanceUpdateEvent{acMessage.Revision});
+    m_world.GetDispatcher().trigger(RequestLocalAppearanceUpdateEvent{acMessage.Revision});
 
     spdlog::info(
         "[STRE][CharacterBuild][Client] Authoritative build finalized revision={} classId={}",

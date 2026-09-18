@@ -9,11 +9,53 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Automatic final Character Creation rematerialization (2026-09-18)
+
+Initial Character Creation now uses the final rematerialization flow automatically,
+including MASTER (ADR-0023). There is no live remote appearance sync; the matching
+pending authoritative Applied build publishes one canonical final after sealing.
+Observers rebuild only the local native Actor/private TESNPC representation through
+the unchanged natural-join materializer, preserving logical ECS/network identity.
+No user/debug activation is required. Ctrl+F11 and its functional menu toggle are
+removed; F11/Shift+F11 passive probes remain non-MASTER and default OFF.
+
+Connection, exact 1.6.1170 runtime, canonical/revision, binding, ActorState,
+transaction, readiness and recovery guards are retained. Rejection fails closed
+without hot apply, SwitchRace or Reset3D. Solo has no appearance transport/remote
+transaction. Intermediate RaceMenu closes and later manual showracemenu do not
+publish. Post-creation appearance edits and collective seating remain out of scope.
+Papyrus, creation placement, network schema, roster and Discovery policy are unchanged.
+
+Activation verification: TPTests **41574 assertions / 364 cases PASS**; all
+**58 structural checks PASS**; client/server/launcher debug builds PASS. Six
+functional translation units also compile in isolation with **IS_MASTER=1**,
+PCH reuse disabled and the normal common headers included. This verifies the
+MASTER code path, not a complete linked MASTER executable or MASTER game run.
+Papyrus is untouched: PSC/PEX hashes match the verified checkpoint and the PEX
+is byte-identical to its retained compiler output. CK packaging/MQ101 audits and
+git diff --check PASS. Source comparisons preserve the materializer, natural spawn
+callers, placement and native safety predicates; network/Discovery sources are unchanged.
+
+**HUMAN VALIDATED:** the maintainer confirms that automatic final remote
+rematerialization succeeds without debug activation on the tested multiplayer
+Character Creation run (2026-09-18 commit handoff). No Ctrl+F11 was required:
+normal creation, final build sealing, canonical final snapshot and automatic
+natural-join rematerialization produced the correct remote appearance. Initial
+creation retains no live remote appearance synchronization. This attestation does
+not identify an exact race/sex pair, MASTER build or complete test matrix.
+
+No game was launched by the agent. General production readiness, native retirement,
+repeated cycles, recovery/reconnect, the full race/sex matrix and future collective
+seating remain open. Post-creation appearance editing remains out of scope.
+Final commit checks validate the approved source snapshot, retaining the verified
+checkpoint Papyrus; unrelated working-copy Papyrus changes are excluded.
+
 ## First final-rematerialization runtime checkpoint (2026-09-18)
 
 Character Creation live appearance sync = **superseded** (ADR-0020/0021/0022).
-Final local natural-join rematerialization = **implemented**, non-MASTER LAB,
-default OFF. Runtime = **human validated on the tested scenario only**.
+At this checkpoint, final local natural-join rematerialization was a non-MASTER,
+default-OFF LAB (activation now superseded by ADR-0023 above).
+Runtime = **human validated on the tested scenario only**.
 This checkpoint does not complete Alternate Start or Character Creation (#9).
 
 **HUMAN VALIDATED**, according to the maintainer's 2026-09-18 finalization handoff,
@@ -70,6 +112,9 @@ and [test plan](../features/alternate-start/TEST_PLAN.md). The earlier diagnosti
 entries below retain their original, narrower validation context.
 
 ## LAB native state veto: DontMove identified and admitted (2026-09-18)
+
+Historical diagnostic entry: the native policy remains; ADR-0023 supersedes its
+optional activation. Current automatic behavior and validation are recorded above.
 
 The subsequent supplied run isolates unsafe-actor-state with flags 01200041 /
 00001008. The only failed state field is life=9; knock, attack, fly, weapon,
@@ -211,6 +256,9 @@ in `_audit/standing-placement-diagnostic-fix.md`; their old SlotId selection is
 superseded for this step. Current evidence: `_audit/standing-player-rank-report.md`.
 
 ## Character Creation Slice 3 natural-join correction (2026-09-18)
+
+Historical implementation entry: its activation and absence of runtime evidence
+are superseded by the automatic flow and bounded runtime checkpoint above.
 
 EXPERIMENTAL NON-MASTER LAB IMPLEMENTED, DEFAULT OFF; NO SLICE 3 GAME RUNTIME
 VALIDATION. ADR-0020 and ADR-0021 govern the final-only, race-agnostic local

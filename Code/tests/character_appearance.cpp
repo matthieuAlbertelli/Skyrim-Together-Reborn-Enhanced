@@ -53,7 +53,7 @@ TEST_CASE("Nord Orc Khajiit and Argonian finals share eligibility and the identi
     request.Descriptor.Sex = sex;
     REQUIRE(request.IsValid());
     REQUIRE(MatchesAppliedCharacterBuild(request, true, request.FinalBuildRevision, request.Descriptor.Race, std::nullopt));
-    REQUIRE(FinalRespawnEligible(true, false, true, true, true, request.FinalBuildRevision, request.FinalBuildRevision));
+    REQUIRE(FinalRespawnEligible(true, true, true, request.FinalBuildRevision, request.FinalBuildRevision));
     // Same production policy/model for every row; native creation is covered by
     // source contracts and still needs the corresponding in-game acceptance.
     RemoteMaterializationLifecycle cycle;
@@ -81,7 +81,7 @@ TEST_CASE("Every sealed appearance kind uses the same final respawn eligibility"
             if (scenario == 1)
                 request.FaceTints.Entries.front().Color ^= 1;
             REQUIRE(MatchesAppliedCharacterBuild(request, true, request.FinalBuildRevision, request.Descriptor.Race, std::nullopt));
-            REQUIRE(STRE::CharacterCreation::FinalRespawnEligible(true, false, true, true, true, request.FinalBuildRevision, request.FinalBuildRevision));
+            REQUIRE(STRE::CharacterCreation::FinalRespawnEligible(true, true, true, request.FinalBuildRevision, request.FinalBuildRevision));
         }
     }
 }

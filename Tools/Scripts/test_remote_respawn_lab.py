@@ -1,4 +1,4 @@
-"""Slice 3 source contracts. Complements TPTests; no Skyrim/native validation."""
+"""Final creation rematerialization contracts. No Skyrim/native validation."""
 from pathlib import Path
 import re
 import unittest
@@ -209,27 +209,71 @@ class FinalRespawnContract(unittest.TestCase):
         self.assertIn("Resolve(aPair)", retire)
         self.assertIn("aPair.Forms.Actor != aJob.Old.Forms.Actor || aPair.ActorToken != aJob.Old.ActorToken", retire)
 
-    def test_t14_t15_off_master_and_solo_gates(self):
-        self.assertIn("std::atomic_bool s_enabled{false}", LAB)
-        enabled = body(LAB, "bool Enabled(")
-        self.assertIn("#else\n    return false;", enabled)
-        for fn in ("ReceiveFinal", "ReceiveBuild", "Tick", "BeforeSpawn", "AfterSpawn", "Disconnect"):
-            signature = ("void " + fn + "(")
-            self.assertIn("#if (!IS_MASTER)", body(LAB, signature))
+    def test_default_activation_without_debug_gate_retains_solo_and_recovery_guards(self):
+        for source in (LAB, SERVICE, CREATION, PROBE, read("Code/client/Services/RemoteRespawnLab.h")):
+            self.assertNotIn("RemoteRespawnLab::Enabled", source)
+            self.assertNotIn("RemoteRespawnLab::SetEnabled", source)
+        for forbidden in ("s_enabled", "bool Enabled(", "void SetEnabled(", "feature-disabled", "phase=feature-gate"):
+            self.assertNotIn(forbidden, LAB)
+        policy = body(read("Code/common/CharacterCreation/FinalRespawn.h"), "inline bool FinalRespawnEligible(")
+        self.assertNotIn("aEnabled", policy)
+        self.assertNotIn("aMaster", policy)
+        self.assertIn("aConnected && aOfficialCreation && aApplied && aFinalRevision && aFinalRevision == aAppliedRevision", policy)
+        constructor = body(SERVICE, "CharacterService::CharacterService(")
+        self.assertIn("phase=final-rematerialization-enabled source=official-character-creation-default", constructor)
         publish = body(PROBE, "void CharacterService::OnLocalAppearanceUpdate(")
         self.assertLess(publish.index("!m_transport.IsConnected()"), publish.index("m_appearanceFinal.Queue("))
         flush = body(PROBE, "void CharacterService::FlushAppearanceFinal(")
-        self.assertIn("!STRE::RemoteRespawnLab::Enabled()", flush)
+        self.assertIn("if (AppearanceRuntimeLocked())", flush)
+        self.assertIn("m_transport.IsConnected(), id,", flush)
+        receive = body(LAB, "void ReceiveFinal(")
+        for guard in ("!aWorld.GetTransport().IsConnected()", "!aFinal.FinalBuildRevision", "Locked()",
+                      "!aFinal.IsValid()", "s_jobs.size() >= 10"):
+            self.assertLess(receive.index(guard), receive.index("s_jobs[aFinal.ActorId]"))
+        self.assertIn("FinalRespawnEligible(true, true, job.Build.State == CharacterBuildNetworkState::Applied", LAB)
 
-    def test_hotkey_and_menu_share_transition(self):
+    def test_functional_path_survives_removal_of_all_non_master_blocks(self):
+        # Project IS_MASTER is generated from the branch; no branch checkout is
+        # needed to verify these source regions. Only the retirement diagnostic
+        # may disappear from the transaction in MASTER.
+        master = re.sub(r"#if \(!IS_MASTER\).*?#endif", "", LAB, flags=re.S)
+        for signature, operation in (
+            ("bool Capture(", '"unsupported-runtime"'),
+            ("void Advance(", "Materialize("),
+            ("void ReceiveBuild(", "job->Build = aBuild"),
+            ("void ReceiveFinal(", "job.Final = aFinal"),
+            ("void Tick(", "Advance(aWorld, job)"),
+            ("void BeforeSpawn(", "job.Candidate ="),
+            ("void CandidateBase(", "s_creating->ExpectedBase ="),
+            ("void AfterSpawn(", "Lifecycle.RecordCandidate("),
+            ("void DeleteRequested(", "pair->DeleteIssued = true"),
+            ("bool Discovery(", "Lifecycle.Observe("),
+            ("bool Tracks(", "return true"),
+            ("void Disconnect(", "Lifecycle.Invalidate(")):
+            self.assertIn(operation, body(master, signature))
+        self.assertNotIn("phase=retirement-window", master)
+        for source, signature, operation in (
+            (SERVICE, "Actor* STRE::RemoteRespawnLab::Materialize(", "MaterializePrivateRemoteActor("),
+            (CREATION, "void CharacterCreationService::OnNotifyCharacterBuildState(", "trigger(RequestLocalAppearanceUpdateEvent"),
+            (PROBE, "void CharacterService::OnLocalAppearanceUpdate(", "m_appearanceFinal.Queue("),
+            (PROBE, "void CharacterService::OnAppearanceProbe(", "RemoteRespawnLab::ReceiveFinal"),
+            (ACTOR, "GamePtr<Actor> Actor::Create(", "RemoteRespawnLab::BeforeSpawn"),
+            (DISCOVERY, "void DiscoveryService::VisitForms(", "RemoteRespawnLab::Discovery(")):
+            production = re.sub(r"#if \(!IS_MASTER\).*?#endif", "", source, flags=re.S)
+            self.assertIn(operation, body(production, signature))
+
+    def test_functional_toggle_removed_and_passive_controls_remain_non_master(self):
         debug = read("Code/client/Services/Debug/DebugService.cpp")
-        self.assertIn("Final Character Creation local respawn LAB", debug)
-        self.assertIn('"Ctrl+F11"', debug)
-        self.assertEqual(debug.count("RemoteRespawnLab::SetEnabled("), 2)
+        self.assertNotIn("Final Character Creation local respawn LAB", debug)
+        self.assertNotIn("RemoteRespawnLab::", debug)
         update = body(debug, "void DebugService::OnUpdate(")
-        self.assertIn("VK_CONTROL", update)
+        ctrl_ignored = body(update, "if (!(GetAsyncKeyState(VK_CONTROL) & 0x8000))")
+        self.assertIn("RequestObserveCurrentPrivateRemote();", ctrl_ignored)
+        self.assertIn("SetNativeLifetimeProbeEnabled(!IsNativeLifetimeProbeEnabled());", ctrl_ignored)
         self.assertIn("!s_nativeLifetimeKeyDown", update)
-        self.assertIn("#if (!IS_MASTER)", update)
+        master = re.sub(r"#if \(!IS_MASTER\).*?#endif", "", debug, flags=re.S)
+        self.assertNotIn("VK_F11", master)
+        self.assertNotIn("SetNativeLifetimeProbeEnabled", master)
 
     def test_server_requires_sealed_final(self):
         server = body(read("Code/server/Services/CharacterService.cpp"), "void CharacterService::OnCharacterAppearanceUpdate(")

@@ -5,7 +5,7 @@
 - **Decision makers:** STRE maintainer
 - **Issue / discussion:** Explicit contract correction in the local implementation handoff
 - **Supersedes:** ADR-0021 in part: standing entry and standing-idle LAB eligibility
-- **Superseded by:** None
+- **Superseded by:** [ADR-0023](ADR-0023-automatic-final-character-creation-rematerialization.md), in part (retained default-OFF/non-MASTER activation only; posture independence remains)
 
 ## Context
 

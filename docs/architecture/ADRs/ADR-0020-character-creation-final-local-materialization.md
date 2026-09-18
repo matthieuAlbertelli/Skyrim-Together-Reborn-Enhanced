@@ -6,6 +6,7 @@
 - **Issue / discussion:** Local implementation handoff; no GitHub issue created by this mission
 - **Supersedes:** The Character Creation hot-appearance strategy in the feature contract, not a prior ADR
 - **Superseded by:** [ADR-0021](ADR-0021-natural-join-final-representation-standing-creation.md), in part (natural-join projection and standing creation)
+- **Activation superseded by:** [ADR-0023](ADR-0023-automatic-final-character-creation-rematerialization.md) (automatic final flow, including MASTER; no debug gate)
 
 ## Context
 

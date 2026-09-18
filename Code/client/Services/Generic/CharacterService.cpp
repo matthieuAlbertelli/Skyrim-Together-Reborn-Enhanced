@@ -113,12 +113,8 @@ PrivateRemoteActor MaterializePrivateRemoteActor(World& aWorld, entt::entity aEn
 
 Actor* STRE::RemoteRespawnLab::Materialize(World& aWorld, entt::entity aEntity, const CharacterAppearanceUpdate& aFinal, FaceGenComponent& aTints, const ActorSpawnLocation& aLocation) noexcept
 {
-#if (!IS_MASTER)
     return MaterializePrivateRemoteActor(aWorld, aEntity, aFinal.AppearanceBuffer, aFinal.ChangeFlags, aFinal.FaceTints,
         [](const char*) {}, &aTints, &aLocation).pActor;
-#else
-    return nullptr;
-#endif
 }
 
 CharacterService::CharacterService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
@@ -126,6 +122,7 @@ CharacterService::CharacterService(World& aWorld, entt::dispatcher& aDispatcher,
     , m_dispatcher(aDispatcher)
     , m_transport(aTransport)
 {
+    spdlog::info("[STRE][RemoteRespawnLAB] phase=final-rematerialization-enabled source=official-character-creation-default");
     m_appearanceFinalConnection = m_dispatcher.sink<RequestLocalAppearanceUpdateEvent>().connect<&CharacterService::OnLocalAppearanceUpdate>(this);
     m_appearanceProbeConnection = m_dispatcher.sink<NotifyCharacterAppearanceUpdate>().connect<&CharacterService::OnAppearanceProbe>(this);
     m_raceAppearanceEventConnection = m_dispatcher.sink<RaceAppearanceCompleteEvent>().connect<&CharacterService::OnRaceAppearanceComplete>(this);

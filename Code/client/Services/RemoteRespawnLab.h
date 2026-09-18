@@ -12,8 +12,6 @@ struct NotifyCharacterAppearanceUpdate;
 
 namespace STRE::RemoteRespawnLab
 {
-bool Enabled() noexcept;
-void SetEnabled(bool aEnabled) noexcept;
 void ReceiveBuild(World& aWorld, const NotifyCharacterBuildState& aBuild) noexcept;
 void ReceiveFinal(World& aWorld, const NotifyCharacterAppearanceUpdate& aFinal) noexcept;
 void Tick(World& aWorld) noexcept;

@@ -119,7 +119,7 @@ void CharacterService::OnRaceAppearanceComplete(const RaceAppearanceCompleteEven
 
 void CharacterService::OnLocalAppearanceUpdate(const RequestLocalAppearanceUpdateEvent& aEvent) noexcept
 {
-    if (!STRE::RemoteRespawnLab::Enabled() || !aEvent.FinalBuildRevision)
+    if (!aEvent.FinalBuildRevision)
         return;
     const auto attempt = ++m_appearanceAttemptSeq;
     auto* tracePlayer = PlayerCharacter::Get();
@@ -224,7 +224,7 @@ void CharacterService::OnLocalAppearanceUpdate(const RequestLocalAppearanceUpdat
 
 void CharacterService::FlushAppearanceFinal() noexcept
 {
-    if (!STRE::RemoteRespawnLab::Enabled() || AppearanceRuntimeLocked())
+    if (AppearanceRuntimeLocked())
     {
         if (m_appearanceFinal.Snapshot)
             spdlog::info("[STRE][AppearanceTrace][Publisher] phase=flush attemptSeq={} reason=runtime-locked snapshotPending=true", m_appearanceAttemptSeq);
@@ -269,7 +269,7 @@ void CharacterService::FlushAppearanceFinal() noexcept
 
 void CharacterService::OnAppearanceProbe(const NotifyCharacterAppearanceUpdate& acSnapshot) noexcept
 {
-    // Legacy hot dispatch is intentionally bypassed, including when the LAB is OFF.
+    // Official final rematerialization fails closed; legacy hot dispatch stays bypassed.
     STRE::RemoteRespawnLab::ReceiveFinal(m_world, acSnapshot);
 }
 
