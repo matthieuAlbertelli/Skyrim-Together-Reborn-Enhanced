@@ -9,6 +9,41 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Individual Applied seating (2026-09-18)
+
+Implemented individual seating projection after each player's Applied, without
+waiting for another player's build (ADR-0024). Local finalization removes the
+1.6-second confirmation delay, unlocks controls/stops the quest and requests
+seating from game update. Solo uses Seat01. Durable roster rank selects SeatXX,
+matching MarkerXX. Observers wait for a read-only final-revision/current-binding
+fence on the committed remote representation.
+
+NotifyCharacterBuildState carries a version-1 optional seating identity tail
+(campaign/durable PlayerId, each <=128 bytes), populated from server admission.
+Revision/inventory/spell hash checks and appearance opcodes/payloads are unchanged.
+Matching updated peers are required for seating; absent/invalid identity cannot
+authorize it. No new packet type, per-player quest stage or collective phase.
+
+Native projection checks occupancy/reservations before the existing RealActivate
+wrapper. Correct furniture/seated state confirms success; duplicate notifications
+do not rearm; token changes permit a new projection. Missing actors/functions or
+occupation conflicts remain pending; no teleport/ejection. Recovery lock suspends,
+disconnect clears session intentions. Fresh canonical replay is required after
+reconnection; seat-intention persistence is not claimed.
+
+Executed on Windows debug: targeted TPTests 23 assertions / 5 cases PASS; full
+TPTests 41654 assertions / 370 cases PASS; seven Python structural suites 66
+checks PASS; client and server builds PASS. CK packaging 19 files PASS, strict
+manifest 93 STRE records CONFORME, diff --check PASS. No Skyrim/CK launch or
+deployment. Native seating, approach/animation, observer interpolation, callback
+availability and runtime offset use still require in-game acceptance on 1.6.1170.
+
+ESP unchanged from f5ee7e88. The pre-existing obsolete PSC/PEX pair was backed
+up under _audit/seating-preexisting-papyrus and restored from f5ee7e88 with explicit
+maintainer authorization; both restored hashes match that validated commit.
+No new PSC/PEX compilation or asset change belongs to this implementation.
+Valen, collective ready/departure and native lifetime remain outside this slice.
+
 ## Explicit initial creation markers (2026-09-18)
 
 Initial placement now resolves the sealed durable PlayerId's lexical rank to ten

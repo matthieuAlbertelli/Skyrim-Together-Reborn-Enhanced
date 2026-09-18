@@ -15,6 +15,8 @@ namespace STRE::RemoteRespawnLab
 void ReceiveBuild(World& aWorld, const NotifyCharacterBuildState& aBuild) noexcept;
 void ReceiveFinal(World& aWorld, const NotifyCharacterAppearanceUpdate& aFinal) noexcept;
 void Tick(World& aWorld) noexcept;
+// Read-only seating fence: never expose the pre-final or an uncommitted candidate.
+Actor* CommittedActor(World& aWorld, uint32_t aServerId, uint64_t aRevision) noexcept;
 void Disconnect(World& aWorld) noexcept;
 // Called synchronously before the existing native Spawn; no additional native call.
 void BeforeSpawn(Actor* aActor, TESNPC* aBase) noexcept;

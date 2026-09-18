@@ -679,3 +679,44 @@ resetquest STRE_QUEST_AlternateStart
 startquest STRE_QUEST_AlternateStart
 setstage STRE_QUEST_AlternateStart 10
 ```
+
+## Individual Applied seating (ADR-0024, 2026-09-18)
+
+Applied is individual: after authoritative build completion, local finalization
+unlocks controls and stops the creation quest, then requests SeatXX immediately
+on the game update. Solo uses Seat01. No other player's Applied is required.
+An observer keeps an intention pending until the matching final revision has
+committed a current remote native binding (WaitingFor3D/assignment still reject).
+No change is made to the natural-join materializer or its transaction.
+
+The same durable PlayerId rank selects the existing furniture references:
+0=0x000BF3DD, 1=0x000BF3DC, 2=0x000C516E, 3=0x000C516F,
+4=0x000C5173, 5=0x000C5171, 6=0x000C5174,
+7=0x000C5172, 8=0x000C5176, 9=0x000C5178.
+All values are plugin-local to STRE_AlternateStart.esp.
+The manifest and CreationSeatLocalFormId table are tested for exact concordance.
+
+Native boundary: TESObjectREFR::Activate calls RealActivate under the existing
+ScopedActivateOverride, as used by STR ObjectService for remote activation.
+This avoids generating another ActivateRequest. There is no supported dedicated
+Sit adapter in this repository. Before activation, the registered vanilla
+ObjectReference.IsFurnitureInUse(false) includes reservations; Actor.GetSitState
+and occupiedFurniture identify the correct occupant. The occupiedFurniture
+handle is exposed at MiddleHighProcessData offset 0x208, with a static assertion,
+following CommonLibSSE-NG include/RE/M/MiddleHighProcessData.h and
+src/RE/A/AIProcess.cpp:
+https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/M/MiddleHighProcessData.h
+https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/RE/A/AIProcess.cpp
+
+Actor/cell/seat, root, current binding, process, exact runtime and registered
+Papyrus functions must be available. Dead/disabled/combat/mounted or unsafe
+life/knock/attack states wait. Another occupant/reservation is never ejected.
+There is one activation per Actor FormID/token; a pending animation is observed,
+not repeatedly activated. After ten seconds, log pending-entry-timeout-no-reactivation.
+A rejected activation is not retried on that same token. Confirmed seating is
+terminal for that token, so voluntary later movement does not force reseating.
+A new committed Actor token permits a fresh projection.
+
+No PSC/PEX/ESP change is needed. Posture queries exist only here, after completion.
+Collective sequencing, Valen, ready/departure and furniture lifetime are out of scope.
+Runtime success remains unvalidated; missing native registrations fail closed.

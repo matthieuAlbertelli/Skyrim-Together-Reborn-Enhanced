@@ -3,6 +3,7 @@
 
 #include <Services/CharacterCreationService.h>
 #include <Services/RemoteRespawnLab.h>
+#include <Services/CreationSeating.h>
 
 #include <Services/CampaignBootstrapService.h>
 #include <Services/CampaignService.h>
@@ -76,7 +77,6 @@ constexpr std::uint16_t kCreationReadyStage = 20;
 constexpr double kRaceMenuOpenTimeoutSeconds = 5.0;
 constexpr double kPresentationDiagnosticSeconds = 0.5;
 constexpr double kRecoveryPollSeconds = 1.0;
-constexpr double kBuildSealSeconds = 1.6;
 constexpr double kBuildApplicationSettleSeconds = 0.25;
 constexpr double kServerBuildTimeoutSeconds = 15.0;
 constexpr std::uint8_t kMaxInventoryWipePasses = 8;
@@ -579,6 +579,7 @@ void CharacterCreationService::OnUpdate(
     const UpdateEvent& acEvent) noexcept
 {
     TickSexChangeProbe();
+    STRE::CreationSeating::Tick(m_world);
     if (IsRaceMenuDiagnosticActive() || m_raceSwitchNextTick)
     {
         ++m_localRaceProbeTick;
@@ -686,8 +687,7 @@ void CharacterCreationService::OnUpdate(
         break;
 
     case CharacterCreationPhase::BuildConfirmed:
-        if (m_phaseElapsed >= kBuildSealSeconds)
-            FinalizeCompletedBuild();
+        FinalizeCompletedBuild();
         break;
 
     default:
@@ -819,6 +819,8 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
         acMessage.Build.CanonicalInventory.Entries.size(),
         acMessage.Build.CanonicalSpells.size());
 
+    STRE::CreationSeating::Receive(m_world, acMessage);
+
     const bool isLocalPlayer =
         acMessage.PlayerId ==
         m_world.GetTransport().GetLocalPlayerId();
@@ -856,6 +858,7 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
 void CharacterCreationService::OnDisconnected(
     const DisconnectedEvent&) noexcept
 {
+    STRE::CreationSeating::Clear();
     if (m_creationPlacement)
     {
         AdvanceCreationPlacement("transport-disconnected");
@@ -1091,6 +1094,7 @@ void CharacterCreationService::AdvanceCreationPlacement(const char* apCancelReas
 
 bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
 {
+    STRE::CreationSeating::Clear();
     m_creationPlacement.reset();
     spdlog::info(
         "[STRE][CharacterCreation] Fresh stage 20 bootstrap resetting previous phase={}",
@@ -1592,8 +1596,11 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
     m_phaseElapsed = 0.0;
     m_suppressStageRecovery = true;
     m_error.clear();
+    STRE::CreationSeating::FinalizeLocal(m_world, m_serverCharacterId, m_serverBuildRevision);
     ResetNetworkBuildState();
     PushState(true);
+
+    STRE::CreationSeating::Tick(m_world);
 
     spdlog::info(
         "[STRE][CharacterCreation] Character creation completed and controls unlocked classId={}",

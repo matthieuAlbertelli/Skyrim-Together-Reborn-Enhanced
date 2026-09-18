@@ -502,6 +502,18 @@ void Advance(World& aWorld, Job& aJob)
 }
 } // namespace
 
+Actor* CommittedActor(World& aWorld, uint32_t aServerId, uint64_t aRevision) noexcept
+{
+    const auto found = s_jobs.find(aServerId);
+    if (found == s_jobs.end())
+        return nullptr;
+    const auto& job = *found->second;
+    if (!job.Final || job.Final->FinalBuildRevision != aRevision ||
+        job.Lifecycle.State() != MaterializationState::Committed || !Bound(aWorld, job, job.Candidate))
+        return nullptr;
+    return Resolve(job.Candidate);
+}
+
 void ReceiveBuild(World&, const NotifyCharacterBuildState& aBuild) noexcept
 {
     if (aBuild.State != CharacterBuildNetworkState::Applied || !aBuild.Revision ||

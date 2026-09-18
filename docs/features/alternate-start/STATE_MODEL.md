@@ -110,3 +110,31 @@ recovery architecture. Roster, checkpoint, authority, and collective-restore
 semantics are governed by
 [ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
 The standalone solo path remains outside the multiplayer full-roster invariant.
+
+## Individual completion projection (ADR-0024)
+
+NotifyCharacterBuildState::Applied remains server-authoritative after matching
+revision and canonical inventory/spell hashes. Each Applied projects seating
+independently; there is no aggregate all-Applied prerequisite. The existing
+numeric PlayerId identifies the connection, not the durable roster identity.
+
+The notification appends a seating identity tail after Build: version uint8=1,
+campaign length uint8 + bytes, durable PlayerId length uint8 + bytes. Each string
+is capped at 128 bytes; invalid/truncated/version-unknown tails leave both
+identity fields empty and cannot request seating. Empty fields indicate that
+no admitted campaign identity was supplied. Existing build/appearance payloads
+and opcodes are unchanged. Matching updated clients/server are required for the
+seating feature: old senders provide no usable identity; old receivers ignore
+the new tail. This is not a general protocol negotiation guarantee.
+
+Server identity comes from CampaignProtocolService admission, never from a
+client-provided rank. Clients validate the current sealed campaign and resolve
+the durable PlayerId rank locally. Up to ten session-scoped intentions retain
+serverId, transport PlayerId, durable identity and revision. Duplicates do not
+rearm; contradictory identities/revisions reject. Recovery lock suspends; fresh
+creation/disconnect clears intentions. Reconnection needs fresh Applied evidence;
+this slice does not claim checkpoint persistence/replay of seat intentions.
+
+Applied can precede native availability: observers wait for the matching committed
+final representation. Seat posture is a visual projection, not canonical authority.
+No next collective phase is introduced.

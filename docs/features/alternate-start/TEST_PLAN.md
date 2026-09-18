@@ -1218,3 +1218,26 @@ Runtime pending: verify Solo Marker01, A+B distinct ranked markers and ten-playe
 Marker01..10 placement/facing and physical clearance. Source tests do not execute
 native MoveTo. Papyrus bootstrap is unchanged; post-creation seating is not
 implemented by this slice.
+
+## Individual Applied seating acceptance (2026-09-18)
+
+Automated tests are domain/wire/source tests, not native engine execution.
+Runtime cases still required:
+- Solo finishes: controls unlock, quest stops, Seat01 is activated.
+- A Applied while B creates: A seats immediately; B stays at MarkerXX.
+- B then Applied: B seats independently; no Valen/collective transition.
+- Duplicate Applied: no second activation. Wrong identity/revision: reject.
+- Remote absent/WaitingFor3D/final replacement pending: retain intention;
+  activate only the committed matching revision/current binding.
+- Occupied by another actor or reserved: no ejection or teleport.
+- Already seated on own SeatXX: success without activation.
+- Rematerialized native token: project only onto the new valid binding.
+- Recovery lock: no activation; disconnect: clear stale session intentions.
+- Native function missing: pending-native-functions, no unsafe fallback.
+- Confirm observer animation/interpolation, facing and furniture approach.
+- Confirm Marker01/02/10 map to Seat01/02/10 and entry stays posture-independent.
+
+Log prefix: [STRE][CreationSeating]; phase activation-issued is an issued request,
+not proof of seating. phase seated requires correct furniture identity plus
+native seated state. pending-entry-timeout-no-reactivation requires runtime
+diagnosis; no repeated activation loop is used.
