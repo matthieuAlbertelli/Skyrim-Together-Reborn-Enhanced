@@ -33,17 +33,35 @@ TEST_CASE("Standing creation rejects incomplete or contradictory player identity
     REQUIRE(StandingCreationPositionIndex(std::span(valid).first(1), "b") == 0);
 }
 
-TEST_CASE("Standing placement leaves both chair rows behind their furniture without changing floor", "[character-creation]")
+TEST_CASE("Explicit creation markers follow durable rank including Solo and fail closed", "[character-creation]")
 {
-    const auto nearRow = StandingCreationPosition({100.f, -2500.f, 12.f}, 0.f);
-    const auto farRow = StandingCreationPosition({100.f, -2300.f, 12.f}, 3.14159265f);
-    REQUIRE(nearRow.x == Approx(100.f));
-    REQUIRE(nearRow.y == Approx(-2596.f));
-    REQUIRE(nearRow.z == 12.f);
-    REQUIRE(farRow.x == Approx(100.f));
-    REQUIRE(farRow.y == Approx(-2204.f));
-    REQUIRE(farRow.z == 12.f);
-    REQUIRE(farRow.y - nearRow.y > 200.f);
+    REQUIRE(CreationMarkerLocalFormId(0) == 0x000D6B08);
+    REQUIRE(CreationMarkerLocalFormId(1) == 0x000D6B09);
+    REQUIRE(CreationMarkerLocalFormId(9) == 0x000D6B0F);
+    REQUIRE_FALSE(CreationMarkerLocalFormId(10));
+    REQUIRE_FALSE(CreationMarkerLocalFormId(std::numeric_limits<size_t>::max()));
+    const std::array<std::string_view, 1> solo{"a"};
+    REQUIRE(CreationMarkerLocalFormId(*StandingCreationPositionIndex(solo, "a")) == 0x000D6B08);
+    const std::array<std::string_view, 2> pair{"b", "a"};
+    REQUIRE(CreationMarkerLocalFormId(*StandingCreationPositionIndex(pair, "a")) == 0x000D6B08);
+    REQUIRE(CreationMarkerLocalFormId(*StandingCreationPositionIndex(pair, "b")) == 0x000D6B09);
+    for (size_t i = 0; i < 10; ++i)
+        for (size_t j = 0; j < i; ++j)
+            REQUIRE(CreationMarkerLocalFormId(i) != CreationMarkerLocalFormId(j));
+}
+
+TEST_CASE("Marker position and all orientation axes must be finite", "[character-creation]")
+{
+    const glm::vec3 position{100.f, 200.f, 12.f}, rotation{0.1f, 0.2f, 1.5f};
+    REQUIRE(CreationMarkerTransformValid(position, rotation));
+    for (const auto invalid : {std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
+        for (unsigned axis = 0; axis < 3; ++axis)
+        {
+            auto bad = position;
+            bad[axis] = invalid;
+            REQUIRE_FALSE(CreationMarkerTransformValid(bad, rotation));
+            REQUIRE_FALSE(CreationMarkerTransformValid(position, bad));
+        }
 }
 
 TEST_CASE("Creation move validation accepts nearby coordinates and rejects missed or nonfinite moves", "[character-creation]")

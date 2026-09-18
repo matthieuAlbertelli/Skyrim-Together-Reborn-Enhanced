@@ -59,7 +59,7 @@ for any additional master-backed record from this prose summary.
 Aliases used:
 
 - `Alias_Player`
-- `Alias_PlayerSeat01` through `Alias_PlayerSeat10` (position anchors; future seating)
+- `Alias_PlayerSeat01` through `Alias_PlayerSeat10` (future seating only; not creation anchors)
 
 Quest stages:
 
@@ -69,7 +69,7 @@ Quest stages:
 
 The quest is intentionally excluded from generic quest synchronization.
 
-## Temporary standing placement by PlayerId (2026-09-18)
+## Explicit creation markers by PlayerId (2026-09-18)
 
 For this local placement step only, use the current sealed roster's stable
 PlayerIds. Sort a copy lexicographically; the authenticated local PlayerId's rank
@@ -83,14 +83,30 @@ It never inspects SlotId validity or uniqueness. Solo uses index 0. Multiplayer
 identity errors reject; they never fall back to Solo. This does not alter campaign
 admission, protocol validation, SlotId persistence/ownership or recovery semantics.
 
-Index 0..9 maps to the existing aliases 1..10. The adapter reads loaded parentCell
-on player/reference, not the inherited GetParentCell save-parent virtual. No new
-reference, loaded FormID, furniture activation or position constant is introduced.
+Index 0..9 maps to the ten distinct CK XMarkerHeading references
+STRE_REFR_PlayerCreationMarker01..10. ResolvePluginFormId uses the loaded
+STRE_AlternateStart.esp and the local IDs below, never a fixed load-order prefix.
+The adapter verifies a live reference, STRE_CELL_AlternateStart (local 0x000012D1),
+and finite position/rotation. It copies the marker position and full orientation;
+there is no chair-derived offset or yaw. The existing quest aliases remain untouched.
+
+| Index | Marker suffix | Local FormID |
+| --- | --- | --- |
+| 0 | 01 | 0x000D6B08 |
+| 1 | 02 | 0x000D6B09 |
+| 2 | 03 | 0x000D6B13 |
+| 3 | 04 | 0x000D6B12 |
+| 4 | 05 | 0x000D6B0A |
+| 5 | 06 | 0x000D6B11 |
+| 6 | 07 | 0x000D6B0B |
+| 7 | 08 | 0x000D6B10 |
+| 8 | 09 | 0x000D6B0D |
+| 9 | 10 | 0x000D6B0F |
 
 Expected progression: standing-index-resolved source=sealed-roster-player-id,
 then standing-position playerId=... creationPositionIndex=... rosterCount=....
 Failures retain standing-position-rejected reason=... with identity, revision,
-alias/reference/current-cell IDs. Missing/duplicate PlayerId
+marker local/reference/current-cell IDs. Missing/duplicate PlayerId
 and absent local membership remain distinct errors; see TEST_PLAN.
 
 ADR-0022 removes every sit/sleep eligibility check from entry and LAB. The
@@ -113,13 +129,11 @@ FormID. Missing player/marker/cell or a wrong-cell/out-of-range move rejects.
 The fixed one-second placement settle is not a posture poll. GetSitState,
 furniture activation and posture normalization are absent. ESP is unchanged.
 
-Distinct creation positions are selected after lobby authorization, when canonical
-roster identity exists: lexical rank of stable sealed PlayerIds selects aliases
-1..10, and coordinates are offset 96 units behind their furniture yaw. MoveTo uses
-cell/coordinates, not the furniture reference. Solo uses the first alias. Geometry
-tests establish ten distinct positions; physical clearance remains human acceptance.
-Pre-lobby entry uses the common start marker. Collective post-creation seating is
-a separate future slice, not a state to restore during final rematerialization.
+Distinct creation positions are selected after lobby authorization: lexical
+rank of stable sealed PlayerIds selects Marker01..10. Solo selects Marker01.
+MoveTo uses the marker's cell/coordinates and orientation is applied on arrival.
+Physical clearance and visual orientation still require in-game acceptance.
+Post-creation collective seating is not implemented by this placement slice.
 
 ```text
 Main menu: New Game

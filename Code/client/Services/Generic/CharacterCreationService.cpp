@@ -903,15 +903,15 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
     const std::string_view playerId = durablePlayerId ? std::string_view(durablePlayerId->data(), durablePlayerId->size()) : std::string_view{};
     const size_t rosterCount = connected ? (snapshot ? snapshot->Roster.size() : 0) : 1;
     size_t creationPositionIndex = 0; // Explicit offline Solo position; never a campaign fallback.
-    int aliasId = -1;
-    uint32_t anchorId{}, playerCellId{}, seatCellId{};
+    uint32_t markerLocalId{};
+    uint32_t anchorId{}, playerCellId{}, markerCellId{};
     const auto reject = [&](const char* reason)
     {
         spdlog::error(
             "[STRE][CharacterCreation] phase=standing-position-rejected reason={} connected={} campaign={} "
-            "playerId={} revision={} sealed={} rosterCount={} aliasId={} anchor={:X} playerCell={:X} seatCell={:X}",
+            "playerId={} revision={} sealed={} rosterCount={} markerLocalId={} anchor={:X} playerCell={:X} markerCell={:X}",
             reason, connected, snapshot ? snapshot->CampaignId.c_str() : "", playerId, snapshot ? snapshot->StateVersion : 0, snapshot && snapshot->RosterSealed,
-            rosterCount, aliasId, anchorId, playerCellId, seatCellId);
+            rosterCount, markerLocalId, anchorId, playerCellId, markerCellId);
         return false;
     };
     if (connected)
@@ -921,40 +921,42 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
             return reject(selection.Reason);
         creationPositionIndex = *selection.Index;
     }
-    if (creationPositionIndex >= 10)
+    const auto marker = STRE::CharacterCreation::CreationMarkerLocalFormId(creationPositionIndex);
+    if (!marker)
         return reject("creation-position-index-out-of-range");
-    aliasId = static_cast<int>(creationPositionIndex + 1);
+    markerLocalId = *marker;
     spdlog::info(
-        "[STRE][CharacterCreation] phase=standing-index-resolved source={} campaign={} playerId={} revision={} creationPositionIndex={} rosterCount={} aliasId={}",
+        "[STRE][CharacterCreation] phase=standing-index-resolved source={} campaign={} playerId={} revision={} creationPositionIndex={} rosterCount={} markerLocalId={}",
         connected ? "sealed-roster-player-id" : "offline-solo", snapshot ? snapshot->CampaignId.c_str() : "",
-        playerId, snapshot ? snapshot->StateVersion : 0, creationPositionIndex, rosterCount, aliasId);
+        playerId, snapshot ? snapshot->StateVersion : 0, creationPositionIndex, rosterCount, markerLocalId);
 
     auto* player = PlayerCharacter::Get();
     if (!player || TESForm::GetById(player->formID) != player)
         return reject("player-missing");
     playerCellId = player->parentCell ? player->parentCell->formID : 0;
     if (!m_pQuest)
-        return reject("seat-quest-missing");
-    // Existing quest aliases 1..10. Never infer a substitute reference/slot.
-    auto* anchor = m_pQuest->GetAliasedRef(static_cast<uint32_t>(aliasId));
+        return reject("creation-quest-missing");
+    auto* anchor = Cast<TESObjectREFR>(TESForm::GetById(ResolvePluginFormId("STRE_AlternateStart.esp", markerLocalId)));
     if (!anchor)
-        return reject("seat-alias-empty"); // GetAliasedRef could not resolve this alias's live reference.
+        return reject("creation-marker-missing");
     anchorId = anchor->formID;
     if (TESForm::GetById(anchorId) != anchor)
-        return reject("seat-reference-missing");
-    // STRE's virtual GetParentCell is native GetSaveParentCell (vslot 0x97).
-    // Placement needs the loaded current cell, not the persistent save owner.
+        return reject("creation-marker-reference-mismatch");
+    // Use the loaded current cell, not the save-parent virtual.
     auto* cell = anchor->parentCell;
-    seatCellId = cell ? cell->formID : 0;
+    markerCellId = cell ? cell->formID : 0;
     if (!cell)
-        return reject("seat-cell-missing");
+        return reject("creation-marker-cell-missing");
+    const auto expectedCellId = ResolvePluginFormId("STRE_AlternateStart.esp", 0x000012D1);
+    if (!expectedCellId || cell->formID != expectedCellId || TESForm::GetById(expectedCellId) != cell)
+        return reject("creation-marker-wrong-cell");
     if (!player->parentCell)
         return reject("player-cell-missing");
     if (player->parentCell != cell)
-        return reject("player-seat-cell-mismatch");
-    const auto position = STRE::CharacterCreation::StandingCreationPosition(anchor->position, anchor->rotation.z);
-    if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z) || !std::isfinite(anchor->rotation.z))
-        return reject("seat-transform-invalid");
+        return reject("player-marker-cell-mismatch");
+    const auto position = anchor->position;
+    if (!STRE::CharacterCreation::CreationMarkerTransformValid(position, anchor->rotation))
+        return reject("creation-marker-transform-invalid");
     PendingCreationPlacement pending;
     pending.Actor = player->formID;
     pending.ActorToken = reinterpret_cast<uintptr_t>(player);
@@ -966,7 +968,7 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
     pending.QuestToken = reinterpret_cast<uintptr_t>(m_pQuest);
     pending.Target = position;
     pending.Before = player->position;
-    pending.TargetRotation = {0.f, 0.f, anchor->rotation.z};
+    pending.TargetRotation = anchor->rotation;
     pending.Index = creationPositionIndex;
     pending.RosterCount = rosterCount;
     pending.Connected = connected;

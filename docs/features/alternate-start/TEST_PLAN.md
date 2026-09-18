@@ -197,11 +197,11 @@ logs on any failure, especially standing-position-rejected reason=....
 | campaign-phase-not-character-creation / campaign-runtime-not-active | Canonical phase/runtime is ineligible. |
 | sealed-roster-incomplete | A required member is absent. |
 | creation-position-index-out-of-range | More than ten members or index outside 0..9. |
-| player-missing / seat-quest-missing | Native player or quest unavailable. |
-| seat-alias-empty | GetAliasedRef could not resolve the selected alias's live reference. |
-| seat-reference-missing / seat-cell-missing | Stale reference or missing loaded current cell. |
-| player-cell-missing / player-seat-cell-mismatch | Current player cell missing or different from anchor cell. |
-| seat-transform-invalid | Anchor-derived position/yaw is non-finite. |
+| player-missing / creation-quest-missing | Native player or quest unavailable. |
+| creation-marker-missing | Plugin-local marker could not resolve to a live reference. |
+| creation-marker-reference-mismatch / creation-marker-cell-missing | Stale reference or missing loaded current cell. |
+| player-cell-missing / player-marker-cell-mismatch | Current player cell missing or different from anchor cell. |
+| creation-marker-transform-invalid | Marker position or rotation is non-finite. |
 | move-validation-failed | See detail and standing-move-observation: invalid identity/context, non-finite position, or cell/position timeout after at most five seconds. |
 
 Success is logged only after final validation. The existing ten anchors and
@@ -1207,3 +1207,14 @@ non-temporary or equal Actor/Base IDs and mismatching cache IDs. Structural fenc
 keep this classifier confined to the non-MASTER passive selection and check evidence
 labels, alias guards and unchanged production separation.
 These checks and builds do not substitute for the pending human acceptance.
+
+
+## Explicit creation markers (2026-09-18)
+
+Automated: Solo/two/ten durable PlayerId ranks, exact marker mapping, invalid
+identity/index, missing marker/wrong cell and nonfinite transforms, bounded
+arrival/timeout, full marker orientation, no SlotId or posture dependency.
+Runtime pending: verify Solo Marker01, A+B distinct ranked markers and ten-player
+Marker01..10 placement/facing and physical clearance. Source tests do not execute
+native MoveTo. Papyrus bootstrap is unchanged; post-creation seating is not
+implemented by this slice.

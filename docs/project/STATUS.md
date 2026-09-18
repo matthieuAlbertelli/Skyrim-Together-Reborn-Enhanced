@@ -9,6 +9,33 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Explicit initial creation markers (2026-09-18)
+
+Initial placement now resolves the sealed durable PlayerId's lexical rank to ten
+explicit CK XMarkerHeading references in STRE_CELL_AlternateStart. Solo selects
+Marker01. The adapter resolves plugin-local IDs, validates marker/current cell
+and finite position/rotation, and copies the marker transform without a chair
+offset. Existing bounded MoveTo observation and posture independence remain.
+Papyrus, campaign authority and final rematerialization are unchanged.
+Post-creation collective seating is not implemented.
+
+Validation on Windows debug: targeted TPTests 220 assertions / 9 cases PASS;
+full TPTests 41631 assertions / 365 cases PASS; six Python structural suites
+59 checks PASS; client build PASS (initial
+sandbox attempt failed at Node EPERM, then succeeded outside sandbox).
+Strict CK manifest: 93 expected STRE records, zero anomalies; packaging: 19
+managed files PASS; MQ101 structural audit CONFORME. PSC/PEX hashes are unchanged.
+The supplied ESP is preserved byte-for-byte (SHA256
+3ffb7fb72d67b93518a122f080606132b21da4dde6f615822f572e891072f0b4).
+Its ten added references are XMarkerHeading records in the intended cell.
+Relative to the previous commit it also contains pre-existing CK payload changes
+in 19 records (including TES4 and the start marker), so this is not claimed to
+be a binary delta limited to ten additions. The manifest audit is not an
+exhaustive behavioral validation of those existing CK changes.
+
+No Skyrim/CK launch or deployment. Physical clearance, final facing and
+Solo/two/ten-player runtime acceptance remain to be confirmed.
+
 ## Cumulative Character Creation review validation (2026-09-18)
 
 The cumulative source at `1e9ddb02174bb0cf8113e2be923152a2f90ad51a`, compared

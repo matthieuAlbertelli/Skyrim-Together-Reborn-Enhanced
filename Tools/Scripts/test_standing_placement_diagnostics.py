@@ -13,10 +13,10 @@ class StandingPlacementDiagnostics(unittest.TestCase):
         # The only bare false is inside the diagnostic sink. All failed branches use it.
         self.assertEqual(PLACEMENT.count('return false;'), 1)
         self.assertIn('phase=standing-position-rejected reason={}', PLACEMENT)
-        for reason in ('creation-position-index-out-of-range', 'player-missing', 'seat-quest-missing',
-                       'seat-alias-empty', 'seat-reference-missing', 'seat-cell-missing',
-                       'player-cell-missing', 'player-seat-cell-mismatch',
-                       'seat-transform-invalid'):
+        for reason in ('creation-position-index-out-of-range', 'player-missing', 'creation-quest-missing',
+                       'creation-marker-missing', 'creation-marker-reference-mismatch', 'creation-marker-cell-missing', 'creation-marker-wrong-cell',
+                       'player-cell-missing', 'player-marker-cell-mismatch',
+                       'creation-marker-transform-invalid'):
             self.assertIn(f'return reject("{reason}")', PLACEMENT)
         self.assertIn('return reject(selection.Reason)', PLACEMENT)
         self.assertIn('reason=move-validation-failed detail={}', ADVANCE)
@@ -42,8 +42,15 @@ class StandingPlacementDiagnostics(unittest.TestCase):
         self.assertIn('campaign.GetDurablePlayerIdForAuthentication()', PLACEMENT)
         self.assertIn('ResolveCampaignStandingPlacement(snapshot ? &*snapshot : nullptr, playerId)', PLACEMENT)
         self.assertIn('creationPositionIndex = *selection.Index;', PLACEMENT)
-        self.assertIn('creationPositionIndex + 1', PLACEMENT)
-        self.assertIn('GetAliasedRef(static_cast<uint32_t>(aliasId))', PLACEMENT)
+        self.assertIn('CreationMarkerLocalFormId(creationPositionIndex)', PLACEMENT)
+        self.assertIn('ResolvePluginFormId("STRE_AlternateStart.esp", markerLocalId)', PLACEMENT)
+        self.assertNotIn('GetAliasedRef', PLACEMENT)
+        self.assertNotIn('StandingCreationPosition(', PLACEMENT)
+        self.assertIn('const auto position = anchor->position;', PLACEMENT)
+        self.assertIn('pending.TargetRotation = anchor->rotation;', PLACEMENT)
+        self.assertIn('CreationMarkerTransformValid(position, anchor->rotation)', PLACEMENT)
+        self.assertIn('cell->formID != expectedCellId', PLACEMENT)
+        self.assertIn('player->SetRotation(pending.TargetRotation.x, pending.TargetRotation.y, pending.TargetRotation.z)', ADVANCE)
         for source in (PLACEMENT, SELECTION):
             for forbidden in ('GetAdmission()', 'CampaignSlotId', '.SlotId', '.IsValid()', 'GetLocalPlayerId()',
                               'TakeOwnership', '.Send(', '->Activate(', 'MoveTo(anchor', 'SetStage(', 'GetByEditorID'):
@@ -77,6 +84,20 @@ class StandingPlacementDiagnostics(unittest.TestCase):
             self.assertIn(value, ADVANCE)
         self.assertIn('std::chrono::steady_clock::now()', ADVANCE)
         self.assertIn('std::chrono::milliseconds(250)', ADVANCE)
+
+    def test_marker_table_matches_manifest_in_exact_index_order(self):
+        import json
+        from test_remote_respawn_lab import ROOT
+        header = read('Code/common/CharacterCreation/StandingCreation.h')
+        table = body(header, 'inline std::optional<uint32_t> CreationMarkerLocalFormId(')
+        ids = [int(value, 16) for value in re.findall(r'0x[0-9A-F]+', table)]
+        manifest = json.loads((ROOT / 'docs/features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json').read_text(encoding='utf-8'))
+        records = {r['editorId']: r for r in manifest['records']}
+        self.assertEqual(len(ids), 10)
+        for index, form_id in enumerate(ids):
+            record = records[f'STRE_REFR_PlayerCreationMarker{index+1:02d}']
+            self.assertEqual(record['signature'], 'REFR')
+            self.assertEqual(int(record['expectedLocalFormId'], 16), form_id)
 
     def test_solo_keeps_index_zero_without_campaign_selection(self):
         self.assertIn('size_t creationPositionIndex = 0;', PLACEMENT)

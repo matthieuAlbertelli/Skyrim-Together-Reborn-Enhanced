@@ -9,7 +9,8 @@ Start a campaign in an inn without importing an already-advanced character. Each
 ## Implemented today
 
 1. Enter the inn through the CK quest; before RaceMenu assign a distinct creation
-   position by sealed PlayerId rank (Solo: first anchor). Entry and final remote
+   position at one of ten explicit CK XMarkerHeading references by sealed PlayerId
+   rank (Solo: PlayerCreationMarker01). Entry and final remote
    rematerialization have no sitting/standing/furniture precondition (ADR-0022).
    The corrected bootstrap is source/PEX implemented; runtime acceptance is pending.
 2. Open RaceMenu.

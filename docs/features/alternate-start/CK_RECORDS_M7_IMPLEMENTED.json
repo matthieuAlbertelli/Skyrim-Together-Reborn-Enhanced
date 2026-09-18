@@ -477,6 +477,56 @@
       "signature": "PACK",
       "editorId": "STRE_PACK_ValenInnSandbox",
       "expectedLocalFormId": "0x000D3C3C"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker01",
+      "expectedLocalFormId": "0x000D6B08"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker02",
+      "expectedLocalFormId": "0x000D6B09"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker03",
+      "expectedLocalFormId": "0x000D6B13"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker04",
+      "expectedLocalFormId": "0x000D6B12"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker05",
+      "expectedLocalFormId": "0x000D6B0A"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker06",
+      "expectedLocalFormId": "0x000D6B11"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker07",
+      "expectedLocalFormId": "0x000D6B0B"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker08",
+      "expectedLocalFormId": "0x000D6B10"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker09",
+      "expectedLocalFormId": "0x000D6B0D"
+    },
+    {
+      "signature": "REFR",
+      "editorId": "STRE_REFR_PlayerCreationMarker10",
+      "expectedLocalFormId": "0x000D6B0F"
     }
   ],
   "spellEffectExpectations": {

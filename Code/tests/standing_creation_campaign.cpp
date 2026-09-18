@@ -66,9 +66,9 @@ TEST_CASE("Create A JoinByCode B use durable PlayerId ranks after seal authoriza
     REQUIRE(snapshot.RosterSealed);
     REQUIRE(snapshot.RuntimeState == kCampaignWireRuntimeActive);
     const auto sealedBeforePlacement = snapshot;
-    const std::array<glm::vec3, 2> fixtureAnchors{{{100.f, 200.f, 0.f}, {300.f, 200.f, 0.f}}};
+    const std::array<uint32_t, 2> expectedMarkers{0x000D6B08, 0x000D6B09};
     std::array<size_t, 2> indices;
-    std::array<glm::vec3, 2> positions;
+    std::array<uint32_t, 2> markers;
     for (size_t i = 0; i < 2; ++i)
     {
         const auto present = std::count_if(snapshot.Roster.begin(), snapshot.Roster.end(), [](const auto& slot) { return slot.Present; });
@@ -82,12 +82,11 @@ TEST_CASE("Create A JoinByCode B use durable PlayerId ranks after seal authoriza
         const auto selected = ResolveCampaignStandingPlacement(&snapshot, playerId);
         REQUIRE(selected.Index);
         REQUIRE(selected.Reason == nullptr);
-        REQUIRE(*selected.Index < fixtureAnchors.size());
+        REQUIRE(*selected.Index < expectedMarkers.size());
         indices[i] = *selected.Index;
         REQUIRE(indices[i] == i); // Sorted a/b identities produce exactly 0/1.
-        positions[i] = StandingCreationPosition(fixtureAnchors[indices[i]], 0.f);
-        REQUIRE(positions[i].x == fixtureAnchors[indices[i]].x);
-        REQUIRE(positions[i].y == fixtureAnchors[indices[i]].y - 96.f);
+        markers[i] = *CreationMarkerLocalFormId(indices[i]);
+        REQUIRE(markers[i] == expectedMarkers[i]);
         auto reordered = snapshot;
         std::reverse(reordered.Roster.begin(), reordered.Roster.end());
         REQUIRE(ResolveCampaignStandingPlacement(&reordered, playerId).Index == selected.Index);
@@ -100,7 +99,7 @@ TEST_CASE("Create A JoinByCode B use durable PlayerId ranks after seal authoriza
         }
     }
     REQUIRE(indices[0] != indices[1]);
-    REQUIRE(positions[0] != positions[1]);
+    REQUIRE(markers[0] != markers[1]);
     REQUIRE(snapshot == sealedBeforePlacement);
 }
 
