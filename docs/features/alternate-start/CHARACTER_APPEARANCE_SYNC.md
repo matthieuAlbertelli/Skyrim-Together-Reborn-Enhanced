@@ -323,8 +323,14 @@ Wire order:
 3. AppearanceBuffer: existing string wire format, including embedded zero bytes.
 4. FaceTints: existing `Tints::Serialize` format. Count is 8 bits; each entry has
    type varint, color 32 bits, CachedString name and alpha float bits.
-5. Phase 4C descriptor: schema byte 1, Race GameId (BaseId then ModId varints),
+5. Final-creation descriptor: schema byte 2, Race GameId (BaseId then ModId varints),
    Sex byte (0/1), Weight float bits (finite, 0..100).
+6. FinalBuildRevision: 64 bits, identifying the authoritative Applied build.
+
+This is the current wire contract, including the cumulative changes since `main`.
+The decoder rejects schema 1 and every unknown schema; there is no schema-1
+migration or negotiation. A zero final revision is decodable but is rejected by
+the final-build service gates. Matching client/server builds are required.
 
 Limits are 32 KiB of nonempty native bytes, 255 tints, 1023 bytes per texture
 name, finite alpha in [0,1], no embedded NUL in texture names, and a conservative
@@ -338,12 +344,15 @@ cached IDs, and commits the complete payload only after validation. There is no
 second tint model and no change to existing assignment/spawn encodings.
 
 Server `OnCharacterAppearanceUpdate` resolves an entity with OwnerComponent and
-CharacterComponent, then uses `ApplyCharacterAppearanceUpdate` to reject absent
-senders, mismatched owners and invalid payloads before mutation. A valid update
-replaces all three canonical fields, including an empty tint collection, then
-calls `SendToPlayersInRange` excluding the sender. Repeated updates leave
-identical canonical state and still relay, permitting a later forced final
-publication. No animation cache, inventory, ownership or entity is replaced.
+CharacterComponent. It also requires an Applied CharacterBuildComponent, a
+nonzero matching FinalBuildRevision and the build's canonical Race GameId.
+`MatchesAppliedCharacterBuild` rejects any final that differs from an already
+accepted FinalAppearance. `ApplyCharacterAppearanceUpdate` then rejects absent
+senders, mismatched owners and invalid payloads before mutation. The first valid
+final replaces all three canonical fields, including an empty tint collection,
+and is retained in FinalAppearance. Exact duplicate finals may relay again;
+conflicting updates cannot replace that final. `SendToPlayersInRange` excludes
+the sender. No animation cache, inventory, ownership or entity is replaced.
 
 The store is the existing in-memory character component, not new durable
 campaign checkpoint persistence. Future ordinary materialization reads these
@@ -361,15 +370,17 @@ GameServer similarly calls `Server::Send` with `kReliable`. Both implementations
 pass `k_nSteamNetworkingSend_Reliable` to GameNetworkingSockets. The installed
 1.4.1 `isteamnetworkingsockets.h` specifies in-order delivery of reliable
 messages. The receive loops consume one message at a time and dispatch it
-before taking the next. This connection stream therefore does not require an
-extra appearance revision. A new connection still requires pending-state reset.
+before taking the next. FinalBuildRevision correlates appearance with the Applied
+build; it is not a live-slider sequence number. Duplicate finals are fenced on
+the receiver as well as frozen on the server. A new connection still requires
+pending-state reset.
 
 `SkyrimVM64.cpp::HookVMUpdate` (relocation 53926) calls
 `TiltedOnlineApp::Update` when the VM context is active; this calls
 `World::Update`, which runs RunnerService and dispatches UpdateEvent.
 CharacterService's OnUpdate is the existing engine service path. TransportService
-is also pumped through UpdateEvent. A future receive callback should only queue
-the latest snapshot, with native work performed in the service tick. The
+is also pumped through UpdateEvent. The final receive callback queues its
+snapshot; native rematerialization runs in the service tick. The
 existence of this tick does not prove that a particular native reconstruction
 operation completes synchronously there.
 

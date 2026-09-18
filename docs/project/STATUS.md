@@ -9,6 +9,37 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Cumulative Character Creation review validation (2026-09-18)
+
+The cumulative source at `1e9ddb02174bb0cf8113e2be923152a2f90ad51a`, compared
+with `9108727b5d828afc4de2a90e1f4eece7dd811351`, was revalidated locally on
+Windows during PR preparation. These are new executions, distinct from the
+activation evidence below: TPTests **41574 assertions / 364 cases PASS**;
+the six appearance/materialization/placement Python suites **58 checks PASS**;
+debug client, server and launcher builds PASS. Six functional translation units
+compiled again in isolation with `IS_MASTER=1`; this is still not a complete
+linked MASTER executable or a MASTER game run.
+
+The exact tracked Alternate Start PSC compiled in a separate audit directory
+with zero errors/warnings. Its disassembled output and the tracked PEX match
+after normalizing compiler metadata, declaration order and label names, while
+preserving instruction order and operands. Both contain the same six functions,
+including BeginCharacterCreation. Tracked PSC/PEX/ESP hashes remained unchanged.
+The ESP is also unchanged across both commits relative to the base. CK packaging,
+MQ101 Quickstart-5 structure and strict plugin-manifest audits PASS.
+
+Review corrected the canonical wire reference from the obsolete schema 1 to
+schema 2 / FinalBuildRevision and documented the existing server final freeze;
+no functional source or asset change was needed for that correction. Historical
+hot appliers remain unreachable from Character Creation. Other appearance
+diagnostic hooks/traces remain compiled in MASTER; only the F11/Shift+F11 passive
+lifetime controls and the extra retirement-window sample are non-MASTER.
+
+No new game, visual, network-process integration or lifetime validation was
+performed. Earlier human attestations retain their stated scope; repeated cycles,
+recovery/reconnect, exhaustive appearance coverage and native retirement remain
+unvalidated. CI results and PR delivery state belong to GitHub, not this entry.
+
 ## Automatic final Character Creation rematerialization (2026-09-18)
 
 Initial Character Creation now uses the final rematerialization flow automatically,
