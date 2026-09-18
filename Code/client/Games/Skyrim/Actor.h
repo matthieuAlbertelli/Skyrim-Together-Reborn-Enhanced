@@ -15,6 +15,7 @@
 #include <Structs/ActorValues.h>
 
 struct TESNPC;
+struct ActorSpawnLocation;
 struct TESRace;
 struct ExActor;
 struct ExPlayerCharacter;
@@ -30,7 +31,7 @@ struct Actor : TESObjectREFR
     // Allocs and calls constructor
     static GamePtr<Actor> New() noexcept;
     // Places a brand new actor in the world
-    static GamePtr<Actor> Create(TESNPC* apBaseForm) noexcept;
+    static GamePtr<Actor> Create(TESNPC* apBaseForm, const ActorSpawnLocation* apLocation = nullptr) noexcept;
     static GamePtr<Actor> Spawn(uint32_t aBaseFormId) noexcept;
 
     virtual void sub_9C();
@@ -233,7 +234,10 @@ struct Actor : TESObjectREFR
     // Actions
     void UnEquipAll() noexcept;
     void RemoveFromAllFactions() noexcept;
-    void QueueUpdate() noexcept;
+    // Existing DoReset3D(true) wrapper; completion is not guaranteed on return.
+    bool QueueUpdate() noexcept;
+    // Runtime-gated native call; return only reports issuance, not visual readiness.
+    bool SwitchRace(TESRace* aRace, bool aPlayer) noexcept;
     bool InitiateMountPackage(Actor* apMount) noexcept;
     void GenerateMagicCasters() noexcept;
     void DispelAllSpells(bool aNow = false) noexcept;

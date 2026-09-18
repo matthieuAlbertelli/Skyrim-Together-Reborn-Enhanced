@@ -5,6 +5,13 @@
 > Evidence snapshots: New Game bootstrap — 15 August 2026; MQ101/post-Helgen continuity — 16 August 2026.
 > Runtime: Skyrim SE `1.6.1170.0`.
 
+## Historical scope
+
+The runtime evidence below predates the standing-bootstrap correction of
+2026-09-18. ADR-0021 and CK_IMPLEMENTATION.md supersede its seated creation flow;
+the new source/PEX still needs human runtime acceptance. MQ101 continuity evidence
+remains historical evidence for its unchanged path. See STATUS for current truth.
+
 ## Decision summary
 
 The validated production bootstrap uses the same early Creation Kit/Papyrus

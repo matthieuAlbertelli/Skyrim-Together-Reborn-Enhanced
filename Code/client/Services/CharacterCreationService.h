@@ -5,6 +5,9 @@
 #include <Structs/CharacterBuild.h>
 
 #include <array>
+#include <chrono>
+#include <optional>
+#include <glm/vec3.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -40,14 +43,16 @@ enum class CharacterCreationPhase : std::uint8_t
  * @brief Owns the local STRE character-creation flow started by
  * STRE_QUEST_AlternateStart stage 20.
  *
- * The Creation Kit quest remains responsible for teleporting and seating the
- * player. This service owns the control lock, RaceMenu lifecycle, class and
+ * The Creation Kit quest teleports the player to the standing entry marker.
+ * This service owns slot placement, the control lock, RaceMenu lifecycle, class and
  * loadout selection, build validation and CEF UI hand-off. It deliberately
  * does not depend on party or quest-sync state.
  */
 class CharacterCreationService final
     : public BSTEventSink<TESQuestStageEvent>
     , public BSTEventSink<TESQuestStartStopEvent>
+    , public BSTEventSink<TESFurnitureEvent>
+    , public BSTEventSink<TESSwitchRaceCompleteEvent>
 {
 public:
     CharacterCreationService(
@@ -103,6 +108,9 @@ public:
     }
 
 private:
+    BSTEventResult OnEvent(const TESFurnitureEvent* apEvent, const EventDispatcher<TESFurnitureEvent>* apSender) override;
+    BSTEventResult OnEvent(const TESSwitchRaceCompleteEvent* apEvent, const EventDispatcher<TESSwitchRaceCompleteEvent>* apSender) override;
+    [[nodiscard]] bool IsRaceMenuDiagnosticActive() const noexcept;
     BSTEventResult OnEvent(
         const TESQuestStartStopEvent* apEvent,
         const EventDispatcher<TESQuestStartStopEvent>* apSender) override;
@@ -118,7 +126,11 @@ private:
         const CampaignBootstrapAuthorizedEvent&) noexcept;
     [[nodiscard]] bool ResetForFreshCharacterCreation() noexcept;
     void BeginFromStage20(TESQuest* apQuest) noexcept;
+    [[nodiscard]] bool PlaceStandingForCreation() noexcept;
+    void AdvanceCreationPlacement(const char* apCancelReason = nullptr) noexcept;
     void OpenRaceMenu() noexcept;
+    void LogRaceMenuPresentationSnapshot(const char* apReason, bool aOnlyIfChanged = false) noexcept;
+    void ObserveLocalRaceSwitch(const char* apReason = nullptr) noexcept;
     void ShowRaceReview() noexcept;
     void ShowClassSelection() noexcept;
     void ShowLoadoutSelection() noexcept;
@@ -195,6 +207,18 @@ private:
     entt::scoped_connection m_bootstrapAuthorizedConnection;
 
     TESQuest* m_pQuest{};
+    struct PendingCreationPlacement
+    {
+        uint32_t Actor{}, Cell{}, Anchor{}, Quest{};
+        uintptr_t ActorToken{}, CellToken{}, AnchorToken{}, QuestToken{};
+        glm::vec3 Target{}, Before{}, TargetRotation{};
+        size_t Index{}, RosterCount{};
+        bool Connected{};
+        std::string PlayerId, CampaignId;
+        std::chrono::steady_clock::time_point Started{}, LastLog{};
+        uint32_t Samples{};
+    };
+    std::optional<PendingCreationPlacement> m_creationPlacement;
     CharacterCreationPhase m_phase{CharacterCreationPhase::Inactive};
     bool m_controlsLocked{};
     bool m_raceConfirmed{};
@@ -213,6 +237,11 @@ private:
     std::array<InputHandlerSnapshot, kLockedInputHandlerCount>
         m_inputHandlerSnapshot{};
     double m_phaseElapsed{};
+    double m_presentationDiagnosticElapsed{};
+    std::string m_lastPresentationFingerprint;
+    std::string m_lastRaceSwitchObservation;
+    bool m_raceSwitchNextTick{};
+    std::uint64_t m_localRaceProbeTick{};
     double m_recoveryAccumulator{};
     std::uint8_t m_inventoryWipePass{};
     std::size_t m_inventoryWipeIndex{};

@@ -76,6 +76,7 @@ enum ClientOpcode : unsigned char
     kCampaignRecoveryLoadedResult,
     kCampaignRecoverySnapshotApplied,
     kCampaignCheckpointRequest,
+    kRequestCharacterAppearanceUpdate,
     kClientOpcodeMax
 };
 
@@ -155,5 +156,6 @@ enum ServerOpcode : unsigned char
     kCampaignRecoverySnapshot,
     kCampaignRecoveryComplete,
     kNotifyCampaignCheckpointState,
+    kNotifyCharacterAppearanceUpdate,
     kServerOpcodeMax
 };

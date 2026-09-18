@@ -1,16 +1,26 @@
+#include <SexChangeProbe.h>
 #include <TiltedOnlinePCH.h>
 
 #include <Services/CharacterCreationService.h>
+#include <Services/RemoteRespawnLab.h>
 
 #include <Services/CampaignBootstrapService.h>
+#include <Services/CampaignService.h>
+#include <Services/CampaignRuntimeGateService.h>
+#include <CharacterCreation/StandingCreation.h>
+#include <CampaignStandingPlacement.h>
 
 #include <Services/OverlayService.h>
 #include <Services/PapyrusService.h>
 #include <Services/TradeItemPreviewService.h>
 #include <Services/UiSurfaceService.h>
 #include <Services/TransportService.h>
+#include <Systems/FaceGenSystem.h>
+#include <SwitchRaceProbe.h>
+#include <VersionDb.h>
 
 #include <Events/UpdateEvent.h>
+#include <Events/RequestLocalAppearanceUpdateEvent.h>
 #include <Events/DisconnectedEvent.h>
 #include <Events/CampaignBootstrapAuthorizedEvent.h>
 
@@ -25,7 +35,9 @@
 #include <Messages/NotifyCharacterBuildState.h>
 
 #include <Forms/TESQuest.h>
+#include <Forms/TESObjectCELL.h>
 #include <Forms/TESRace.h>
+#include <Forms/TESNPC.h>
 #include <Forms/MagicItem.h>
 #include <Forms/SpellItem.h>
 #include <Forms/TESActorBase.h>
@@ -37,14 +49,17 @@
 #include <Games/Skyrim/DefaultObjectManager.h>
 #include <Games/Skyrim/EquipManager.h>
 #include <Games/Skyrim/Interface/UI.h>
+#include <Interface/Menus/RaceSexMenu.h>
 #include <PlayerCharacter.h>
 #include <Actor.h>
 #include <Utils.h>
 #include <World.h>
 
 #include <OverlayApp.hpp>
+#include <TiltedCore/Hash.hpp>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -57,8 +72,9 @@ namespace
 {
 constexpr char kAlternateStartQuestEditorId[] =
     "STRE_QUEST_AlternateStart";
-constexpr std::uint16_t kSeatedAndLockedStage = 20;
+constexpr std::uint16_t kCreationReadyStage = 20;
 constexpr double kRaceMenuOpenTimeoutSeconds = 5.0;
+constexpr double kPresentationDiagnosticSeconds = 0.5;
 constexpr double kRecoveryPollSeconds = 1.0;
 constexpr double kBuildSealSeconds = 1.6;
 constexpr double kBuildApplicationSettleSeconds = 0.25;
@@ -443,6 +459,8 @@ CharacterCreationService::CharacterCreationService(
     {
         pEvents->questStartStopEvent.RegisterSink(this);
         pEvents->questStageEvent.RegisterSink(this);
+        pEvents->furnitureEvent.RegisterSink(this);
+        pEvents->switchRaceCompleteEvent.RegisterSink(this);
     }
 }
 
@@ -452,7 +470,45 @@ CharacterCreationService::~CharacterCreationService() noexcept
     {
         pEvents->questStartStopEvent.UnRegisterSink(this);
         pEvents->questStageEvent.UnRegisterSink(this);
+        pEvents->furnitureEvent.UnRegisterSink(this);
+        pEvents->switchRaceCompleteEvent.UnRegisterSink(this);
     }
+}
+
+bool CharacterCreationService::IsRaceMenuDiagnosticActive() const noexcept
+{
+    return m_phase == CharacterCreationPhase::WaitingForRaceMenuOpen || m_phase == CharacterCreationPhase::WaitingForRaceMenuClose;
+}
+
+BSTEventResult CharacterCreationService::OnEvent(const TESFurnitureEvent* apEvent, const EventDispatcher<TESFurnitureEvent>*)
+{
+    if (!IsRaceMenuDiagnosticActive() || !apEvent || !apEvent->character)
+        return BSTEventResult::kOk;
+    if (apEvent->character != PlayerCharacter::Get())
+        return BSTEventResult::kOk;
+
+    const char* const pReason = apEvent->state == TESFurnitureEvent::State::Enter  ? "furniture-enter"
+                                : apEvent->state == TESFurnitureEvent::State::Exit ? "furniture-exit"
+                                                                                   : "furniture-unknown";
+    spdlog::info(
+        "[STRE][CharacterCreation][PresentationDiag] reason={} player={:08X} furniture={:08X} furniturePresent={} eventState={}", pReason, apEvent->character->formID,
+        apEvent->furniture ? apEvent->furniture->formID : 0, apEvent->furniture != nullptr, static_cast<std::uint32_t>(apEvent->state));
+    LogRaceMenuPresentationSnapshot(pReason);
+    return BSTEventResult::kOk;
+}
+
+BSTEventResult CharacterCreationService::OnEvent(const TESSwitchRaceCompleteEvent* apEvent, const EventDispatcher<TESSwitchRaceCompleteEvent>*)
+{
+    if (!IsRaceMenuDiagnosticActive() || !apEvent || !apEvent->actor)
+        return BSTEventResult::kOk;
+    if (apEvent->actor != PlayerCharacter::Get())
+        return BSTEventResult::kOk;
+
+    spdlog::info("[CharacterService][RaceAppearanceApply] local-probe previous-observation available={} {}", !m_lastRaceSwitchObservation.empty(), m_lastRaceSwitchObservation);
+    ObserveLocalRaceSwitch("completion-event");
+    m_raceSwitchNextTick = true;
+    LogRaceMenuPresentationSnapshot("switch-race-complete");
+    return BSTEventResult::kOk;
 }
 
 BSTEventResult CharacterCreationService::OnEvent(
@@ -494,7 +550,7 @@ BSTEventResult CharacterCreationService::OnEvent(
     const TESQuestStageEvent* apEvent,
     const EventDispatcher<TESQuestStageEvent>*)
 {
-    if (!apEvent || apEvent->stageId != kSeatedAndLockedStage)
+    if (!apEvent || apEvent->stageId != kCreationReadyStage)
         return BSTEventResult::kOk;
 
     auto* const pQuest =
@@ -522,6 +578,15 @@ BSTEventResult CharacterCreationService::OnEvent(
 void CharacterCreationService::OnUpdate(
     const UpdateEvent& acEvent) noexcept
 {
+    TickSexChangeProbe();
+    if (IsRaceMenuDiagnosticActive() || m_raceSwitchNextTick)
+    {
+        ++m_localRaceProbeTick;
+        ObserveLocalRaceSwitch(m_raceSwitchNextTick ? "next-service-tick" : nullptr);
+        m_raceSwitchNextTick = false;
+    }
+    else
+        m_lastRaceSwitchObservation.clear();
     m_recoveryAccumulator += acEvent.Delta;
     m_phaseElapsed += acEvent.Delta;
 
@@ -541,6 +606,12 @@ void CharacterCreationService::OnUpdate(
         }
     }
 
+    if (m_creationPlacement)
+    {
+        AdvanceCreationPlacement();
+        return; // No stage recovery or RaceMenu until the actual move settles.
+    }
+
     if (m_phase == CharacterCreationPhase::Inactive &&
         !m_suppressStageRecovery &&
         m_recoveryAccumulator >= kRecoveryPollSeconds)
@@ -550,7 +621,7 @@ void CharacterCreationService::OnUpdate(
         TESQuest* const pQuest = FindAlternateStartQuest();
         if (pQuest &&
             !pQuest->IsStopped() &&
-            pQuest->currentStage == kSeatedAndLockedStage)
+            pQuest->currentStage == kCreationReadyStage)
         {
             spdlog::info(
                 "[STRE][CharacterCreation] Recovering stage 20 flow");
@@ -584,6 +655,7 @@ void CharacterCreationService::OnUpdate(
             m_phaseElapsed = 0.0;
             spdlog::info(
                 "[STRE][CharacterCreation] Race menu opened");
+            LogRaceMenuPresentationSnapshot("race-menu-open");
             PushState(true);
         }
         else if (m_phaseElapsed >= kRaceMenuOpenTimeoutSeconds)
@@ -597,7 +669,19 @@ void CharacterCreationService::OnUpdate(
         {
             spdlog::info(
                 "[STRE][CharacterCreation] Race menu closed");
+            LogRaceMenuPresentationSnapshot("race-menu-close");
+            // All RaceMenu closes remain local. Only the Applied build below is final.
             ShowRaceReview();
+        }
+        else
+        {
+            m_presentationDiagnosticElapsed += acEvent.Delta;
+            if (m_presentationDiagnosticElapsed >= kPresentationDiagnosticSeconds)
+            {
+                // At most one local sample per update; never catch up missed ticks.
+                m_presentationDiagnosticElapsed = 0.0;
+                LogRaceMenuPresentationSnapshot("appearance-sample", true);
+            }
         }
         break;
 
@@ -741,6 +825,7 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
 
     if (!isLocalPlayer)
     {
+        STRE::RemoteRespawnLab::ReceiveBuild(m_world, acMessage);
         if (acMessage.State == CharacterBuildNetworkState::Applied)
             ApplyRemoteCanonicalInventory(acMessage);
         return;
@@ -758,6 +843,8 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
     m_serverBuildAccepted = false;
     m_buildConfirmed = true;
 
+    m_world.GetDispatcher().trigger(RequestLocalAppearanceUpdateEvent{acMessage.Revision});
+
     spdlog::info(
         "[STRE][CharacterBuild][Client] Authoritative build finalized revision={} classId={}",
         acMessage.Revision,
@@ -769,6 +856,11 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
 void CharacterCreationService::OnDisconnected(
     const DisconnectedEvent&) noexcept
 {
+    if (m_creationPlacement)
+    {
+        AdvanceCreationPlacement("transport-disconnected");
+        return;
+    }
     if (!m_serverBuildRequestPending &&
         !m_serverBuildAccepted &&
         !m_waitingForServerFinalization)
@@ -783,7 +875,7 @@ void CharacterCreationService::OnDisconnected(
 void CharacterCreationService::OnCampaignBootstrapAuthorized(
     const CampaignBootstrapAuthorizedEvent&) noexcept
 {
-    if (!m_pQuest || m_pQuest->IsStopped() ||
+    if (m_creationPlacement || !m_pQuest || m_pQuest->IsStopped() ||
         m_phase != CharacterCreationPhase::Inactive ||
         !m_controlsLocked)
     {
@@ -793,12 +885,211 @@ void CharacterCreationService::OnCampaignBootstrapAuthorized(
     }
 
     spdlog::info(
-        "[STRE][CharacterCreation] campaign bootstrap authorized; opening RaceMenu");
-    OpenRaceMenu();
+        "[STRE][CharacterCreation] campaign bootstrap authorized; validating standing placement");
+    if (!PlaceStandingForCreation())
+    {
+        Fail("STRE : emplacement de creation debout indisponible.");
+        return;
+    }
+    AdvanceCreationPlacement();
+}
+
+bool CharacterCreationService::PlaceStandingForCreation() noexcept
+{
+    const bool connected = m_world.GetTransport().IsConnected();
+    const auto& campaign = m_world.GetCampaignService();
+    const auto& snapshot = campaign.GetLatestSnapshot();
+    const auto durablePlayerId = campaign.GetDurablePlayerIdForAuthentication();
+    const std::string_view playerId = durablePlayerId ? std::string_view(durablePlayerId->data(), durablePlayerId->size()) : std::string_view{};
+    const size_t rosterCount = connected ? (snapshot ? snapshot->Roster.size() : 0) : 1;
+    size_t creationPositionIndex = 0; // Explicit offline Solo position; never a campaign fallback.
+    int aliasId = -1;
+    uint32_t anchorId{}, playerCellId{}, seatCellId{};
+    const auto reject = [&](const char* reason)
+    {
+        spdlog::error(
+            "[STRE][CharacterCreation] phase=standing-position-rejected reason={} connected={} campaign={} "
+            "playerId={} revision={} sealed={} rosterCount={} aliasId={} anchor={:X} playerCell={:X} seatCell={:X}",
+            reason, connected, snapshot ? snapshot->CampaignId.c_str() : "", playerId, snapshot ? snapshot->StateVersion : 0, snapshot && snapshot->RosterSealed,
+            rosterCount, aliasId, anchorId, playerCellId, seatCellId);
+        return false;
+    };
+    if (connected)
+    {
+        const auto selection = STRE::Campaign::ResolveCampaignStandingPlacement(snapshot ? &*snapshot : nullptr, playerId);
+        if (!selection.Index)
+            return reject(selection.Reason);
+        creationPositionIndex = *selection.Index;
+    }
+    if (creationPositionIndex >= 10)
+        return reject("creation-position-index-out-of-range");
+    aliasId = static_cast<int>(creationPositionIndex + 1);
+    spdlog::info(
+        "[STRE][CharacterCreation] phase=standing-index-resolved source={} campaign={} playerId={} revision={} creationPositionIndex={} rosterCount={} aliasId={}",
+        connected ? "sealed-roster-player-id" : "offline-solo", snapshot ? snapshot->CampaignId.c_str() : "",
+        playerId, snapshot ? snapshot->StateVersion : 0, creationPositionIndex, rosterCount, aliasId);
+
+    auto* player = PlayerCharacter::Get();
+    if (!player || TESForm::GetById(player->formID) != player)
+        return reject("player-missing");
+    playerCellId = player->parentCell ? player->parentCell->formID : 0;
+    if (!m_pQuest)
+        return reject("seat-quest-missing");
+    // Existing quest aliases 1..10. Never infer a substitute reference/slot.
+    auto* anchor = m_pQuest->GetAliasedRef(static_cast<uint32_t>(aliasId));
+    if (!anchor)
+        return reject("seat-alias-empty"); // GetAliasedRef could not resolve this alias's live reference.
+    anchorId = anchor->formID;
+    if (TESForm::GetById(anchorId) != anchor)
+        return reject("seat-reference-missing");
+    // STRE's virtual GetParentCell is native GetSaveParentCell (vslot 0x97).
+    // Placement needs the loaded current cell, not the persistent save owner.
+    auto* cell = anchor->parentCell;
+    seatCellId = cell ? cell->formID : 0;
+    if (!cell)
+        return reject("seat-cell-missing");
+    if (!player->parentCell)
+        return reject("player-cell-missing");
+    if (player->parentCell != cell)
+        return reject("player-seat-cell-mismatch");
+    const auto position = STRE::CharacterCreation::StandingCreationPosition(anchor->position, anchor->rotation.z);
+    if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z) || !std::isfinite(anchor->rotation.z))
+        return reject("seat-transform-invalid");
+    PendingCreationPlacement pending;
+    pending.Actor = player->formID;
+    pending.ActorToken = reinterpret_cast<uintptr_t>(player);
+    pending.Cell = cell->formID;
+    pending.CellToken = reinterpret_cast<uintptr_t>(cell);
+    pending.Anchor = anchorId;
+    pending.AnchorToken = reinterpret_cast<uintptr_t>(anchor);
+    pending.Quest = m_pQuest->formID;
+    pending.QuestToken = reinterpret_cast<uintptr_t>(m_pQuest);
+    pending.Target = position;
+    pending.Before = player->position;
+    pending.TargetRotation = {0.f, 0.f, anchor->rotation.z};
+    pending.Index = creationPositionIndex;
+    pending.RosterCount = rosterCount;
+    pending.Connected = connected;
+    pending.PlayerId = playerId;
+    pending.CampaignId = connected ? snapshot->CampaignId.c_str() : "";
+    pending.Started = std::chrono::steady_clock::now();
+    m_creationPlacement = std::move(pending); // Reserve before the only native move.
+    player->MoveTo(cell, position);
+    return true;
+}
+
+void CharacterCreationService::AdvanceCreationPlacement(const char* apCancelReason) noexcept
+{
+    using namespace STRE::CharacterCreation;
+    if (!m_creationPlacement)
+        return;
+    auto& pending = *m_creationPlacement;
+    const auto now = std::chrono::steady_clock::now();
+    const double elapsed = std::chrono::duration<double>(now - pending.Started).count();
+    auto* player = PlayerCharacter::Get();
+    bool actorValid = player && reinterpret_cast<uintptr_t>(player) == pending.ActorToken && TESForm::GetById(pending.Actor) == player;
+    const float unavailable = std::numeric_limits<float>::quiet_NaN();
+    glm::vec3 actual{unavailable}, rotation{unavailable};
+    uint32_t actualCell{};
+    const char* reason = apCancelReason;
+    if (actorValid)
+    {
+        actual = player->position;
+        rotation = player->rotation;
+        actualCell = player->parentCell ? player->parentCell->formID : 0;
+    }
+    auto* cell = Cast<TESObjectCELL>(TESForm::GetById(pending.Cell));
+    const auto* anchor = TESForm::GetById(pending.Anchor);
+    const auto* quest = TESForm::GetById(pending.Quest);
+    if (!reason && !actorValid)
+        reason = "player-identity-lost";
+    if (!reason && (!cell || reinterpret_cast<uintptr_t>(cell) != pending.CellToken))
+        reason = "target-cell-lost";
+    if (!reason && (!anchor || reinterpret_cast<uintptr_t>(anchor) != pending.AnchorToken))
+        reason = "anchor-identity-lost";
+    if (!reason && (!quest || reinterpret_cast<uintptr_t>(quest) != pending.QuestToken || quest != m_pQuest || m_pQuest->IsStopped()))
+        reason = "quest-identity-lost";
+    const auto* recoveryGate = CampaignRuntimeGateService::TryGet();
+    if (!reason && recoveryGate && recoveryGate->IsLocked())
+        reason = "recovery-locked";
+    if (!reason && (!m_controlsLocked || m_phase != CharacterCreationPhase::Inactive))
+        reason = "creation-flow-changed";
+    if (!reason && m_world.GetTransport().IsConnected() != pending.Connected)
+        reason = "connection-changed";
+    if (!reason && pending.Connected)
+    {
+        const auto& campaign = m_world.GetCampaignService();
+        const auto& snapshot = campaign.GetLatestSnapshot();
+        const auto playerId = campaign.GetDurablePlayerIdForAuthentication();
+        const auto selected = STRE::Campaign::ResolveCampaignStandingPlacement(snapshot ? &*snapshot : nullptr, pending.PlayerId);
+        if (!playerId || std::string_view(playerId->data(), playerId->size()) != pending.PlayerId)
+            reason = "local-player-identity-changed";
+        else if (!selected.Index)
+            reason = selected.Reason;
+        else if (snapshot->CampaignId != pending.CampaignId.c_str() || *selected.Index != pending.Index || snapshot->Roster.size() != pending.RosterCount)
+            reason = "campaign-placement-changed";
+    }
+    const bool sameCell = actorValid && cell && player->parentCell == cell;
+    const auto status = ObserveCreationMove(sameCell, actual, pending.Target, elapsed);
+    if (!reason && status == CreationMoveStatus::InvalidPosition)
+        reason = "actual-position-nonfinite";
+    if (!reason && status == CreationMoveStatus::TimedOut)
+        reason = sameCell ? "position-timeout" : "cell-timeout";
+    if (!reason && status == CreationMoveStatus::Reached)
+    {
+        // Player MoveTo queues destination/rotation; orient only once it has arrived.
+        player->SetRotation(pending.TargetRotation.x, pending.TargetRotation.y, pending.TargetRotation.z);
+        if (PlayerCharacter::Get() != player || TESForm::GetById(pending.Actor) != player)
+        {
+            actorValid = false;
+            actual = rotation = glm::vec3{unavailable};
+            actualCell = 0;
+            reason = "player-identity-lost-after-rotation";
+        }
+        else
+        {
+            actual = player->position;
+            rotation = player->rotation;
+            actualCell = player->parentCell ? player->parentCell->formID : 0;
+            if (player->parentCell != cell || !CreationPositionReached(actual, pending.Target))
+                reason = "post-rotation-placement-changed";
+        }
+    }
+    const bool complete = !reason && status == CreationMoveStatus::Reached;
+    const auto delta = actual - pending.Target;
+    const double distance = std::sqrt(double(delta.x) * delta.x + double(delta.y) * delta.y + double(delta.z) * delta.z);
+    ++pending.Samples;
+    if (reason || complete || pending.Samples == 1 || now - pending.LastLog >= std::chrono::milliseconds(250))
+    {
+        spdlog::info(
+            "[STRE][CharacterCreation] phase=standing-move-observation result={} detail={} playerId={} creationPositionIndex={} rosterCount={} sample={} elapsedMs={} "
+            "targetPosition=({},{},{}) actualPositionBefore=({},{},{}) actualPositionAfter=({},{},{}) distance={} "
+            "targetRotation=({},{},{}) actualRotation=({},{},{}) targetCell={:X} actualCell={:X} actor={:X} actorToken={:X} actorValid={}",
+            reason ? "rejected" : complete ? "reached" : "pending", reason ? reason : "", pending.PlayerId, pending.Index, pending.RosterCount, pending.Samples,
+            elapsed * 1000.0, pending.Target.x, pending.Target.y, pending.Target.z, pending.Before.x, pending.Before.y, pending.Before.z,
+            actual.x, actual.y, actual.z, distance, pending.TargetRotation.x, pending.TargetRotation.y, pending.TargetRotation.z,
+            rotation.x, rotation.y, rotation.z, pending.Cell, actualCell, pending.Actor, pending.ActorToken, actorValid);
+        pending.LastLog = now;
+    }
+    if (reason)
+    {
+        spdlog::error("[STRE][CharacterCreation] phase=standing-position-rejected reason=move-validation-failed detail={} playerId={} creationPositionIndex={} rosterCount={}",
+            reason, pending.PlayerId, pending.Index, pending.RosterCount);
+        m_creationPlacement.reset();
+        Fail("STRE : emplacement de creation indisponible apres verification du mouvement.");
+    }
+    else if (complete)
+    {
+        spdlog::info("[STRE][CharacterCreation] phase=standing-position playerId={} creationPositionIndex={} rosterCount={} anchor={:X} cell={:X} position={},{},{}",
+            pending.PlayerId, pending.Index, pending.RosterCount, pending.Anchor, actualCell, actual.x, actual.y, actual.z);
+        m_creationPlacement.reset();
+        OpenRaceMenu();
+    }
 }
 
 bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
 {
+    m_creationPlacement.reset();
     spdlog::info(
         "[STRE][CharacterCreation] Fresh stage 20 bootstrap resetting previous phase={}",
         PhaseName(m_phase));
@@ -873,6 +1164,11 @@ void CharacterCreationService::BeginFromStage20(
 
 void CharacterCreationService::OpenRaceMenu() noexcept
 {
+    m_lastRaceSwitchObservation.clear();
+    m_raceSwitchNextTick = false;
+    m_localRaceProbeTick = 0;
+    m_presentationDiagnosticElapsed = 0.0;
+    m_lastPresentationFingerprint.clear();
     ClearLoadoutPreview();
     m_error.clear();
     m_phaseElapsed = 0.0;
@@ -897,6 +1193,7 @@ void CharacterCreationService::OpenRaceMenu() noexcept
         m_phaseElapsed = 0.0;
         spdlog::info(
             "[STRE][CharacterCreation] Race menu was already open");
+        LogRaceMenuPresentationSnapshot("race-menu-open");
         PushState(true);
         return;
     }
@@ -2963,6 +3260,7 @@ void CharacterCreationService::RecoverControls() noexcept
 void CharacterCreationService::Fail(
     std::string aMessage) noexcept
 {
+    m_creationPlacement.reset();
     ResetBuildApplicationState();
     ResetNetworkBuildState();
     ClearLoadoutPreview();
@@ -3017,6 +3315,118 @@ bool CharacterCreationService::IsAlternateStartQuest(
            std::strcmp(
                pEditorId,
                kAlternateStartQuestEditorId) == 0;
+}
+
+void CharacterCreationService::ObserveLocalRaceSwitch(const char* apReason) noexcept
+{
+    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+        return;
+    auto* player = PlayerCharacter::Get();
+    auto* base = player ? Cast<TESNPC>(player->baseForm) : nullptr;
+    if (!player || !base)
+    {
+        m_lastRaceSwitchObservation.clear();
+        return;
+    }
+    // One bounded cached value per service tick; three lines per local completion
+    // event (previous observation, event, next tick). No mutation, hook or packet.
+    m_lastRaceSwitchObservation = fmt::format(
+        "tick={} actor={:X} base={:X} runtimeRace={:X} baseRace={:X} overlayRace={:X} sex={} weight={} thirdPerson3D={:X} face={:X} head={:X} actorStateFlags1={:08X} actorStateFlags2={:08X}",
+        m_localRaceProbeTick, player->formID, base->formID, player->race ? player->race->formID : 0,
+        base->raceForm.race ? base->raceForm.race->formID : 0, base->overlayRace ? base->overlayRace->formID : 0,
+        base->actorData.IsFemale(), base->weight, reinterpret_cast<uintptr_t>(player->GetNiNode()),
+        reinterpret_cast<uintptr_t>(player->GetFaceGenNiNode()), reinterpret_cast<uintptr_t>(FaceGenSystem::GetHeadGeometry(player)),
+        player->actorState.flags1, player->actorState.flags2);
+    if (apReason)
+    {
+        ObserveSwitchRaceProbe(player, apReason);
+        spdlog::info("[CharacterService][RaceAppearanceApply] local-probe {} {}", apReason, m_lastRaceSwitchObservation);
+    }
+}
+void CharacterCreationService::LogRaceMenuPresentationSnapshot(const char* apReason, bool aOnlyIfChanged) noexcept
+{
+    PlayerCharacter* const pPlayer = PlayerCharacter::Get();
+    TESNPC* const pNpc = pPlayer ? Cast<TESNPC>(pPlayer->baseForm) : nullptr;
+    const TESRace* const pRace = pPlayer ? pPlayer->race : nullptr;
+    String appearance;
+    const std::uint32_t changeFlags = pNpc ? pNpc->GetChangeFlags() : 0;
+    if (pNpc)
+    {
+        // Use the same native save representation as CharacterService, without
+        // its assignment-time MarkChanged: diagnostics must not dirty the NPC.
+        pNpc->Serialize(&appearance);
+    }
+
+    // Hash exactly the GetTints fields captured by CharacterService. Do not call
+    // Tints::Serialize: CachedString serialization participates in the network
+    // string cache. Encode values explicitly, without pointers or struct padding.
+    String tintBytes;
+    const auto appendUint32 = [&tintBytes](std::uint32_t aValue)
+    {
+        for (unsigned shift = 0; shift < 32; shift += 8)
+            tintBytes.push_back(static_cast<char>((aValue >> shift) & 0xFF));
+    };
+    std::uint32_t tintCount = 0;
+    bool tintsComplete = pPlayer != nullptr;
+    if (pPlayer)
+    {
+        const auto& tints = pPlayer->GetTints();
+        tintCount = tints.length;
+        // The existing wire count is eight bits. Refuse oversized or transient
+        // arrays rather than walking arbitrary lengths during menu rebuilds.
+        tintsComplete = tintCount <= 255 && tintCount <= tints.capacity && (tintCount == 0 || tints.data);
+        if (tintsComplete)
+        {
+            appendUint32(tintCount);
+            for (std::uint32_t i = 0; i < tintCount; ++i)
+            {
+                const TintMask* const pTint = tints[i];
+                if (!pTint)
+                {
+                    tintsComplete = false;
+                    break;
+                }
+                appendUint32(pTint->type);
+                appendUint32(pTint->color);
+                appendUint32(std::bit_cast<std::uint32_t>(pTint->alpha));
+                const char* const pName = pTint->texture ? pTint->texture->name.AsAscii() : nullptr;
+                const std::size_t nameLength = pName ? strnlen(pName, 1024) : 0;
+                if (nameLength == 1024)
+                {
+                    tintsComplete = false;
+                    break;
+                }
+                appendUint32(static_cast<std::uint32_t>(nameLength));
+                if (nameLength)
+                    tintBytes.append(pName, nameLength);
+            }
+        }
+    }
+    const auto hashBytes = [](const String& acBytes)
+    {
+        return TiltedPhoques::FHash::Crc64(reinterpret_cast<const unsigned char*>(acBytes.data()), acBytes.size());
+    };
+    static BSFixedString s_raceMenuName{"RaceSex Menu"};
+    UI* const pUi = UI::Get();
+    IMenu* const pMenu = pUi ? pUi->FindMenuByName(s_raceMenuName) : nullptr;
+    const RaceSexCamera* const pCamera = GetRaceSexMenuCamera(pMenu);
+    const std::string cameraSnapshot =
+        pCamera ? fmt::format(
+                      "cameraAvailable=true rotZ={} rotX={} pos=({},{},{}) zoom={} cameraNodePresent={} cameraStatePresent={} cameraUnk={}", pCamera->rotZ, pCamera->rotX,
+                      pCamera->pos.x, pCamera->pos.y, pCamera->pos.z, pCamera->zoom, pCamera->cameraNode != nullptr, pCamera->state != nullptr, pCamera->unk)
+                : "cameraAvailable=false";
+    const std::string fingerprint = fmt::format(
+        "player={:08X} baseNpc={:08X} race={:08X} appearanceAvailable={} appearanceHash={:016X} appearanceBytes={} changeFlags={:08X} "
+        "tintsComplete={} tintHash={:016X} tintCount={} menuPresent={} {}",
+        pPlayer ? pPlayer->formID : 0, pNpc ? pNpc->formID : 0, pRace ? pRace->formID : 0, pNpc != nullptr, hashBytes(appearance), appearance.size(), changeFlags, tintsComplete,
+        tintsComplete ? hashBytes(tintBytes) : 0, tintCount, pMenu != nullptr, cameraSnapshot);
+    if (aOnlyIfChanged && fingerprint == m_lastPresentationFingerprint)
+        return;
+
+    m_lastPresentationFingerprint = fingerprint;
+    spdlog::info(
+        "[STRE][CharacterCreation][PresentationDiag] reason={} phase={} {} actorStateAvailable={} actorStateFlags1={:08X} actorStateFlags2={:08X}", apReason, PhaseName(m_phase),
+        fingerprint, pPlayer != nullptr, pPlayer ? pPlayer->actorState.flags1 : 0, pPlayer ? pPlayer->actorState.flags2 : 0);
 }
 
 bool CharacterCreationService::IsRaceMenuOpen() const noexcept

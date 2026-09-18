@@ -5,10 +5,13 @@
 #endif
 
 #include <Structs/CharacterBuild.h>
+#include <Messages/CharacterAppearanceUpdate.h>
+#include <optional>
 
 struct CharacterBuildComponent
 {
     std::uint64_t Revision{};
     CharacterBuildSnapshotData Build{};
     bool Applied{};
+    std::optional<CharacterAppearanceUpdate> FinalAppearance;
 };

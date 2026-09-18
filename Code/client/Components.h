@@ -12,6 +12,7 @@
 #include <Components/WaitingForAssignmentComponent.h>
 #include <Components/LocalComponent.h>
 #include <Components/RemoteComponent.h>
+#include <Components/RemotePlayerAppearanceBaseComponent.h>
 #include <Components/FaceGenComponent.h>
 #include <Components/CacheComponent.h>
 #include <Components/WaitingFor3D.h>

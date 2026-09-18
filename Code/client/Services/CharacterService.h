@@ -1,8 +1,13 @@
 #pragma once
+#include <CharacterCreation/AppearanceProbe.h>
+#include <Events/EventDispatcher.h>
+#include <Games/Events.h>
+struct RaceAppearanceCompleteEvent;
 #include "Structs/Inventory.h"
 #include "Structs/ActorData.h"
 
 struct ActorAddedEvent;
+struct RequestLocalAppearanceUpdateEvent;
 struct ActorRemovedEvent;
 struct UpdateEvent;
 struct ConnectedEvent;
@@ -49,10 +54,10 @@ struct TransportService;
 /**
  * @brief Handles actors and players.
  */
-struct CharacterService
+struct CharacterService : BSTEventSink<TESSwitchRaceCompleteEvent>
 {
     CharacterService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept;
-    ~CharacterService() noexcept = default;
+    ~CharacterService() noexcept;
 
     TP_NOCOPYMOVE(CharacterService);
 
@@ -64,7 +69,7 @@ struct CharacterService
     void OnActorRemoved(const ActorRemovedEvent& acEvent) noexcept;
     void OnUpdate(const UpdateEvent& acUpdateEvent) noexcept;
     void OnConnected(const ConnectedEvent& acConnectedEvent) const noexcept;
-    void OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) const noexcept;
+    void OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) noexcept;
     void OnAssignCharacter(const AssignCharacterResponse& acMessage) noexcept;
     void OnCharacterSpawn(const CharacterSpawnRequest& acMessage) const noexcept;
     void OnReferencesMoveRequest(const ServerReferencesMoveRequest& acMessage) const noexcept;
@@ -103,6 +108,15 @@ private:
 
     void RunLocalUpdates() const noexcept;
     void RunRemoteUpdates() noexcept;
+    void OnLocalAppearanceUpdate(const RequestLocalAppearanceUpdateEvent&) noexcept;
+    void OnAppearanceProbe(const NotifyCharacterAppearanceUpdate&) noexcept;
+    void ApplyAppearanceSnapshots() noexcept;
+    void RunSexAppearance(entt::entity entity) noexcept;
+    void RunCombinedAppearance(entt::entity entity) noexcept;
+    BSTEventResult OnEvent(const TESSwitchRaceCompleteEvent*, const EventDispatcher<TESSwitchRaceCompleteEvent>*) override;
+    void OnRaceAppearanceComplete(const RaceAppearanceCompleteEvent&) noexcept;
+    void FlushAppearanceFinal() noexcept;
+    void TraceRemoteAppearances(const char* source) noexcept;
     void RunFactionsUpdates() const noexcept;
     void RunSpawnUpdates() const noexcept;
     void RunExperienceUpdates() noexcept;
@@ -111,6 +125,12 @@ private:
     World& m_world;
     entt::dispatcher& m_dispatcher;
     TransportService& m_transport;
+
+    uint64_t m_appearanceAttemptSeq{}, m_appearanceTraceTick{};
+    STRE::CharacterCreation::PendingAppearanceFinal m_appearanceFinal;
+    entt::scoped_connection m_appearanceFinalConnection;
+    entt::scoped_connection m_appearanceProbeConnection;
+    entt::scoped_connection m_raceAppearanceEventConnection;
 
     float m_cachedExperience = 0.f;
 

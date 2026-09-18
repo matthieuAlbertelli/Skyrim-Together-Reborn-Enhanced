@@ -33,6 +33,53 @@
 #include <cmath>
 #include <algorithm>
 #include <vector>
+#include <map>
+
+bool InventoryService::MatchesCanonicalInventory(Actor* aActor, const Inventory& aCanonical) noexcept
+{
+    if (!aActor)
+        return false;
+    struct Item
+    {
+        int64_t Count{};
+        unsigned Worn{};
+    };
+    std::map<uint32_t, Item> expected;
+    auto& mods = World::Get().GetModSystem();
+    for (const auto& entry : aCanonical.Entries)
+    {
+        const auto id = mods.GetGameId(entry.BaseId);
+        if (entry.Count <= 0 || !Cast<TESBoundObject>(TESForm::GetById(id)))
+            return false;
+        auto& item = expected[id];
+        item.Count += entry.Count;
+        item.Worn |= (entry.ExtraWorn ? 1u : 0u) | (entry.ExtraWornLeft ? 2u : 0u);
+    }
+    // Serialized counts can contain container bookkeeping after a wipe. Use
+    // native live counts, as Character Build's applied acknowledgement does.
+    // Worn flags come from the same ExtraData-backed reader as GetEquipment().
+    std::map<uint32_t, unsigned> worn;
+    const auto observed = aActor->GetActorInventory();
+    for (const auto& entry : observed.Entries)
+    {
+        const auto id = mods.GetGameId(entry.BaseId);
+        auto* object = Cast<TESBoundObject>(TESForm::GetById(id));
+        if (!object)
+            return false;
+        if (aActor->GetItemCountInInventory(object) <= 0)
+            continue;
+        if (!expected.contains(id))
+            return false;
+        worn[id] |= (entry.ExtraWorn ? 1u : 0u) | (entry.ExtraWornLeft ? 2u : 0u);
+    }
+    for (const auto& [id, item] : expected)
+    {
+        auto* object = Cast<TESBoundObject>(TESForm::GetById(id));
+        if (!object || aActor->GetItemCountInInventory(object) != item.Count || worn[id] != item.Worn)
+            return false;
+    }
+    return observed.CurrentMagicEquipment == aCanonical.CurrentMagicEquipment;
+}
 
 namespace
 {

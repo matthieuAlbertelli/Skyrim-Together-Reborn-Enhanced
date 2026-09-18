@@ -34,6 +34,9 @@ struct NotifyWorldEntityManipulation;
  */
 struct InventoryService final : public BSTEventSink<TESGrabReleaseEvent>
 {
+    // Read-only acceptance of canonical counts and worn sides after native restoration.
+    static bool MatchesCanonicalInventory(Actor* aActor, const Inventory& aCanonical) noexcept;
+
     InventoryService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept;
     ~InventoryService() noexcept;
 

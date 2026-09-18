@@ -9,6 +9,7 @@ struct TESActorBaseData : BaseFormComponent
 {
     enum BaseFlags
     {
+        IS_FEMALE = 1 << 0,
         IS_ESSENTIAL = 1 << 1,
     };
 
@@ -35,6 +36,7 @@ struct TESActorBaseData : BaseFormComponent
     };
 
     bool IsEssential() const noexcept { return flags & BaseFlags::IS_ESSENTIAL; }
+    bool IsFemale() const noexcept { return flags & BaseFlags::IS_FEMALE; }
     void SetEssential(bool aSet) noexcept
     {
         if (aSet)

@@ -1,4 +1,5 @@
 #include <BranchInfo.h>
+#include <NativeLifetimeProbe.h>
 
 #include <Havok/hkbStateMachine.h>
 #include <Structs/AnimationGraphDescriptorManager.h>
@@ -174,6 +175,22 @@ void DebugService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
     }
 
 #if (!IS_MASTER)
+    // Keyboard access to the same diagnostic state as the Debuggers checkbox.
+    static bool s_nativeLifetimeKeyDown = false;
+    const bool nativeLifetimeKeyDown = (GetAsyncKeyState(VK_F11) & 0x8000) != 0;
+    if (nativeLifetimeKeyDown && !s_nativeLifetimeKeyDown)
+    {
+        // Ctrl+F11 no longer controls final rematerialization or arms a probe.
+        if (!(GetAsyncKeyState(VK_CONTROL) & 0x8000))
+        {
+            if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                RequestObserveCurrentPrivateRemote();
+            else
+                SetNativeLifetimeProbeEnabled(!IsNativeLifetimeProbeEnabled());
+        }
+    }
+    s_nativeLifetimeKeyDown = nativeLifetimeKeyDown;
+
     if (GetAsyncKeyState(VK_F6))
     {
         if (!s_f6Pressed)
@@ -410,6 +427,11 @@ void DebugService::OnDraw() noexcept
         ImGui::MenuItem("Dragon spawner", nullptr, &g_enableDragonSpawnerWindow);
 
 #if (!IS_MASTER)
+        bool nativeLifetimeEnabled = IsNativeLifetimeProbeEnabled();
+        if (ImGui::MenuItem("Passive native lifetime probe (next private remote)", nullptr, &nativeLifetimeEnabled))
+            SetNativeLifetimeProbeEnabled(nativeLifetimeEnabled);
+        if (ImGui::MenuItem("Passive native lifetime probe (observe current private remote)", "Shift+F11", false, !nativeLifetimeEnabled))
+            RequestObserveCurrentPrivateRemote();
         ImGui::MenuItem("Network", nullptr, &g_enableNetworkWindow);
         ImGui::MenuItem("Forms", nullptr, &g_enableFormsWindow);
         ImGui::MenuItem("Inventory", nullptr, &g_enableInventoryWindow);

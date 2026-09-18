@@ -856,7 +856,11 @@ bool GameServer::SendToPlayersInRange(const ServerMessage& acServerMessage, cons
     for (Player* pPlayer : m_pWorld->GetPlayerManager())
     {
         if (cellComponent.IsInRange(pPlayer->GetCellComponent(), isDragon) && pPlayer != apExcludedPlayer)
+        {
+            if (acServerMessage.GetOpcode() == kNotifyCharacterAppearanceUpdate)
+                spdlog::info("[STRE][AppearanceTrace][Server] phase=broadcast actorId={} recipient={} sendInvoked=true", World::ToInteger(acOrigin), pPlayer->GetId());
             pPlayer->Send(acServerMessage);
+        }
     }
 
     return true;

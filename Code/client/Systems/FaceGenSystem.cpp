@@ -50,6 +50,11 @@ __declspec(noinline) NiTriBasedGeom* GetHeadTriBasedGeom(Actor* apActor, uint32_
     return nullptr;
 }
 
+NiTriBasedGeom* FaceGenSystem::GetHeadGeometry(Actor* apActor) noexcept
+{
+    return apActor ? GetHeadTriBasedGeom(apActor, 1) : nullptr;
+}
+
 struct TextureHolder;
 TP_THIS_FUNCTION(TCreateResourceView, Ni2DBuffer*, TextureHolder, uint32_t, uint32_t);
 

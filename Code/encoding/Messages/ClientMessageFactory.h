@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Messages/CharacterAppearanceUpdate.h>
+
 #include <Messages/Message.h>
 
 #include <MetaMessage.h>
@@ -86,7 +88,7 @@ struct ClientMessageFactory
             CampaignCreateRequest, CampaignJoinRequest, CampaignResumeRequest, CampaignStartRequest, CampaignSetReadyRequest, CampaignLeaveRequest,
             CampaignJoinByCodeRequest, CampaignHelgenInvestigationReadyRequest,
             CampaignCheckpointSaveResult, CampaignRecoveryLoadedResult,
-            CampaignRecoverySnapshotApplied, CampaignCheckpointRequest>;
+            CampaignRecoverySnapshotApplied, CampaignCheckpointRequest, RequestCharacterAppearanceUpdate>;
 
         return s_visitor(std::forward<T>(func));
     }

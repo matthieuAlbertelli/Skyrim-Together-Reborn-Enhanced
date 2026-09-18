@@ -1,3 +1,7 @@
+#include <NativeLifetimeProbe.h>
+#include <Services/RemoteRespawnLab.h>
+#include <Services/RemoteActorProjection.h>
+#include <Services/CampaignRuntimeGateService.h>
 #include "Forms/TESObjectCELL.h"
 #include "Forms/TESWorldSpace.h"
 #include "Services/PapyrusService.h"
@@ -20,8 +24,11 @@
 #include <Systems/AnimationSystem.h>
 #include <Systems/CacheSystem.h>
 #include <Systems/FaceGenSystem.h>
+#include <Services/AppearanceTrace.h>
 
 #include <Events/ActorAddedEvent.h>
+#include <Events/RequestLocalAppearanceUpdateEvent.h>
+#include <Events/RaceAppearanceCompleteEvent.h>
 #include <Events/ActorRemovedEvent.h>
 #include <Events/UpdateEvent.h>
 #include <Events/ConnectedEvent.h>
@@ -67,11 +74,59 @@
 #include <World.h>
 #include <Games/TES.h>
 
+namespace
+{
+struct PrivateRemoteActor
+{
+    TESNPC* pBase;
+    Actor* pActor;
+};
+
+// Private-player creation shared with the final LAB. FaceGen writes the caller's
+// entity or isolated candidate storage; Actor::Create spawns into the world.
+// Borrowed native pointers, as before: no ownership, rollback or readiness guarantee.
+template <class TTrace>
+PrivateRemoteActor MaterializePrivateRemoteActor(World& aWorld, entt::entity aEntity, const String& acAppearanceBuffer,
+                                                uint32_t aChangeFlags, const Tints& acFaceTints, TTrace&& aTrace, FaceGenComponent* apCandidateTints = nullptr, const ActorSpawnLocation* apLocation = nullptr) noexcept
+{
+    NativeLifetimeStage("private-npc-create-enter");
+    aTrace("TESNPC-create");
+    TESNPC* pNpc = TESNPC::Create(acAppearanceBuffer, aChangeFlags);
+    NativeLifetimeStage("private-npc-create-return", pNpc, true);
+    NativeLifetimeStage("facegen-setup-enter");
+    aTrace("FaceGen-setup");
+    if (apCandidateTints)
+    {
+        STRE::RemoteRespawnLab::CandidateBase(pNpc);
+        apCandidateTints->Generated = false;
+        apCandidateTints->FaceTints = acFaceTints;
+    }
+    else
+        FaceGenSystem::Setup(aWorld, aEntity, acFaceTints);
+    NativeLifetimeStage("facegen-setup-return");
+    aTrace("Actor-create");
+    // Preserve the original temporary GamePtr release at the assignment boundary.
+    Actor* pActor = Actor::Create(pNpc, apLocation);
+    return {pNpc, pActor};
+}
+} // namespace
+
+Actor* STRE::RemoteRespawnLab::Materialize(World& aWorld, entt::entity aEntity, const CharacterAppearanceUpdate& aFinal, FaceGenComponent& aTints, const ActorSpawnLocation& aLocation) noexcept
+{
+    return MaterializePrivateRemoteActor(aWorld, aEntity, aFinal.AppearanceBuffer, aFinal.ChangeFlags, aFinal.FaceTints,
+        [](const char*) {}, &aTints, &aLocation).pActor;
+}
+
 CharacterService::CharacterService(World& aWorld, entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
     : m_world(aWorld)
     , m_dispatcher(aDispatcher)
     , m_transport(aTransport)
 {
+    spdlog::info("[STRE][RemoteRespawnLAB] phase=final-rematerialization-enabled source=official-character-creation-default");
+    m_appearanceFinalConnection = m_dispatcher.sink<RequestLocalAppearanceUpdateEvent>().connect<&CharacterService::OnLocalAppearanceUpdate>(this);
+    m_appearanceProbeConnection = m_dispatcher.sink<NotifyCharacterAppearanceUpdate>().connect<&CharacterService::OnAppearanceProbe>(this);
+    m_raceAppearanceEventConnection = m_dispatcher.sink<RaceAppearanceCompleteEvent>().connect<&CharacterService::OnRaceAppearanceComplete>(this);
+    if (auto* events = EventDispatcherManager::Get()) events->switchRaceCompleteEvent.RegisterSink(this);
     m_referenceAddedConnection = m_dispatcher.sink<ActorAddedEvent>().connect<&CharacterService::OnActorAdded>(this);
     m_referenceRemovedConnection = m_dispatcher.sink<ActorRemovedEvent>().connect<&CharacterService::OnActorRemoved>(this);
 
@@ -116,7 +171,7 @@ CharacterService::CharacterService(World& aWorld, entt::dispatcher& aDispatcher,
 
 void CharacterService::DeleteRemoteEntityComponents(entt::entity aEntity) const noexcept
 {
-    m_world.remove<FaceGenComponent, InterpolationComponent, RemoteAnimationComponent, RemoteComponent, CacheComponent, WaitingFor3D, PlayerComponent>(aEntity);
+    m_world.remove<RemotePlayerAppearanceBaseComponent, RemoteAppearanceProbeComponent, FaceGenComponent, InterpolationComponent, RemoteAnimationComponent, RemoteComponent, CacheComponent, WaitingFor3D, PlayerComponent>(aEntity);
 }
 
 bool CharacterService::TakeOwnership(const uint32_t acFormId, const uint32_t acServerId, const entt::entity acEntity) const noexcept
@@ -207,6 +262,8 @@ void CharacterService::OnActorAdded(const ActorAddedEvent& acEvent) noexcept
 
 void CharacterService::OnActorRemoved(const ActorRemovedEvent& acEvent) noexcept
 {
+    if (acEvent.FormId == 0x14)
+        m_appearanceFinal.Reset();
     auto view = m_world.view<FormIdComponent>();
     const auto entityIt = std::find_if(view.begin(), view.end(), [view, formId = acEvent.FormId](auto aEntity) { return view.get<FormIdComponent>(aEntity).Id == formId; });
 
@@ -234,12 +291,25 @@ void CharacterService::OnActorRemoved(const ActorRemovedEvent& acEvent) noexcept
 
 void CharacterService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 {
+    ++m_appearanceTraceTick;
+    TickNativeLifetimeProbe(m_world, m_appearanceTraceTick);
+    STRE::RemoteRespawnLab::Tick(m_world);
+    TraceRemoteAppearances("update-before-services");
+    FlushAppearanceFinal();
     RunSpawnUpdates();
+    TraceRemoteAppearances("after-RunSpawnUpdates");
     RunLocalUpdates();
     RunFactionsUpdates();
     RunRemoteUpdates();
+    TraceRemoteAppearances("after-RunRemoteUpdates");
+    // Legacy hot appliers are dormant; initial Character Creation uses the final LAB only.
+    const auto* appearanceGate = CampaignRuntimeGateService::TryGet();
+    if (!m_transport.IsConnected() || (appearanceGate && appearanceGate->IsLocked()))
+        m_world.clear<RemoteAppearanceProbeComponent, RemotePlayerAppearanceBaseComponent>();
+    TraceRemoteAppearances("after-appearance-state-invalidation");
     RunExperienceUpdates();
     ApplyCachedWeaponDraws(acUpdateEvent);
+    TraceRemoteAppearances("update-after-services");
 }
 
 void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const noexcept
@@ -265,8 +335,12 @@ void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const
     }
 }
 
-void CharacterService::OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) const noexcept
+void CharacterService::OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) noexcept
 {
+    NativeLifetimeDisconnect();
+    ResetAppearanceTrace(m_world);
+    m_appearanceFinal.Reset();
+    m_world.clear<RemotePlayerAppearanceBaseComponent, RemoteAppearanceProbeComponent>();
     auto remoteView = m_world.view<FormIdComponent, RemoteComponent>();
     for (auto entity : remoteView)
     {
@@ -283,10 +357,12 @@ void CharacterService::OnDisconnected(const DisconnectedEvent& acDisconnectedEve
     }
 
     m_world.clear<WaitingForAssignmentComponent, LocalComponent, RemoteComponent>();
+    STRE::RemoteRespawnLab::Disconnect(m_world);
 }
 
 void CharacterService::OnAssignCharacter(const AssignCharacterResponse& acMessage) noexcept
 {
+    spdlog::info("[STRE][AppearanceTrace][Assignment] phase=OnAssignCharacter-enter serverId={} cookie={} owner={}", acMessage.ServerId, acMessage.Cookie, acMessage.Owner);
     spdlog::info("Received for cookie {:X}, server id {:X}", acMessage.Cookie, acMessage.ServerId);
 
     auto view = m_world.view<WaitingForAssignmentComponent>();
@@ -299,6 +375,7 @@ void CharacterService::OnAssignCharacter(const AssignCharacterResponse& acMessag
     }
 
     const auto cEntity = *itor;
+    spdlog::info("[STRE][AppearanceTrace][Assignment] phase=entity-found serverId={} entity={} owner={} localBefore={} remoteBefore={} WaitingForAssignment={} WaitingFor3D={}", acMessage.ServerId, static_cast<uint32_t>(cEntity), acMessage.Owner, m_world.all_of<LocalComponent>(cEntity), m_world.all_of<RemoteComponent>(cEntity), m_world.all_of<WaitingForAssignmentComponent>(cEntity), m_world.all_of<WaitingFor3D>(cEntity));
 
     m_world.remove<WaitingForAssignmentComponent>(cEntity);
 #if (!IS_MASTER)
@@ -374,6 +451,8 @@ void CharacterService::OnAssignCharacter(const AssignCharacterResponse& acMessag
 
 void CharacterService::OnCharacterSpawn(const CharacterSpawnRequest& acMessage) const noexcept
 {
+    spdlog::info("[STRE][AppearanceTrace][Spawn] phase=OnCharacterSpawn-enter source=OnCharacterSpawn serverId={} isPlayer={} formId={:X}:{:X} baseId={:X}:{:X} bytes={} tints={} changeFlags={:X}", acMessage.ServerId, acMessage.IsPlayer, acMessage.FormId.ModId, acMessage.FormId.BaseId, acMessage.BaseId.ModId, acMessage.BaseId.BaseId, acMessage.AppearanceBuffer.size(), acMessage.FaceTints.Entries.size(), acMessage.ChangeFlags);
+
     auto remoteView = m_world.view<RemoteComponent>();
     const auto remoteItor = std::find_if(std::begin(remoteView), std::end(remoteView), [remoteView, Id = acMessage.ServerId](auto entity) { return remoteView.get<RemoteComponent>(entity).Id == Id; });
 
@@ -394,7 +473,21 @@ void CharacterService::OnCharacterSpawn(const CharacterSpawnRequest& acMessage) 
 
         entity = m_world.create();
 
-        if (acMessage.BaseId != GameId{})
+        if (acMessage.BaseId == GameId{} && acMessage.IsPlayer)
+        {
+            NativeLifetimeCreationScope lifetime(static_cast<uint32_t>(*entity), acMessage.ServerId);
+            const ActorSpawnLocation location{PlayerCharacter::Get()->parentCell, PlayerCharacter::Get()->GetWorldSpace(),
+                acMessage.Position, {acMessage.Rotation.x, PlayerCharacter::Get()->rotation.y, acMessage.Rotation.y}};
+            const auto materialized = MaterializePrivateRemoteActor(
+                m_world, *entity, acMessage.AppearanceBuffer, acMessage.ChangeFlags, acMessage.FaceTints,
+                [&acMessage](const char* apPhase)
+                {
+                    spdlog::info("[STRE][AppearanceTrace][Spawn] phase={} source=OnCharacterSpawn serverId={} isPlayer={}", apPhase, acMessage.ServerId, acMessage.IsPlayer);
+                }, nullptr, &location);
+            pNpc = materialized.pBase;
+            pActor = materialized.pActor;
+        }
+        else if (acMessage.BaseId != GameId{})
         {
             const auto cNpcId = World::Get().GetModSystem().GetGameId(acMessage.BaseId);
             if (cNpcId == 0)
@@ -404,16 +497,30 @@ void CharacterService::OnCharacterSpawn(const CharacterSpawnRequest& acMessage) 
             }
 
             pNpc = Cast<TESNPC>(TESForm::GetById(cNpcId));
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=TESNPC-deserialize-existing source=OnCharacterSpawn serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             pNpc->Deserialize(acMessage.AppearanceBuffer, acMessage.ChangeFlags);
         }
         else
         {
-            // Players and npcs with temporary ref ids and base ids (usually random events)
+            // Non-player NPCs with temporary ref ids and base ids (usually random events)
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=TESNPC-create source=OnCharacterSpawn serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             pNpc = TESNPC::Create(acMessage.AppearanceBuffer, acMessage.ChangeFlags);
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=FaceGen-setup source=OnCharacterSpawn serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             FaceGenSystem::Setup(m_world, *entity, acMessage.FaceTints);
         }
 
-        pActor = Actor::Create(pNpc);
+        if (acMessage.BaseId != GameId{} || !acMessage.IsPlayer)
+        {
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=Actor-create source=OnCharacterSpawn serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
+            pActor = Actor::Create(pNpc);
+        }
+        if (pActor && STRE::CharacterCreation::IsPrivatePlayerCreation(acMessage.IsPlayer, acMessage.BaseId == GameId{}, pActor->formID, pNpc->formID))
+        {
+            if (auto* probe = m_world.try_get<RemoteAppearanceProbeComponent>(*entity))
+                probe->Rebind();
+            m_world.emplace_or_replace<RemotePlayerAppearanceBaseComponent>(*entity, pActor->formID, pNpc->formID);
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=private-provenance-bound source=OnCharacterSpawn serverId={} actor={:X} base={:X}", acMessage.ServerId, pActor->formID, pNpc->formID);
+        }
     }
     else
     {
@@ -461,20 +568,11 @@ void CharacterService::OnCharacterSpawn(const CharacterSpawnRequest& acMessage) 
         pActor->EnableImpl();
     }
 
-    pActor->GetExtension()->SetRemote(true);
-
-    pActor->rotation.x = acMessage.Rotation.x;
-    pActor->rotation.z = acMessage.Rotation.y;
-    pActor->MoveTo(PlayerCharacter::Get()->parentCell, acMessage.Position);
-    pActor->SetActorValues(acMessage.InitialActorValues);
-
-    pActor->GetExtension()->SetPlayer(acMessage.IsPlayer);
+    const ActorSpawnLocation location{PlayerCharacter::Get()->parentCell, PlayerCharacter::Get()->GetWorldSpace(),
+        acMessage.Position, {acMessage.Rotation.x, pActor->rotation.y, acMessage.Rotation.y}};
+    STRE::RemoteActorProjection::Initialize(pActor, acMessage.IsPlayer, location, acMessage.InitialActorValues);
     if (acMessage.IsPlayer)
-    {
-        pActor->SetIgnoreFriendlyHit(true);
-        pActor->SetPlayerRespawnMode();
         m_world.emplace_or_replace<PlayerComponent>(*entity, acMessage.PlayerId);
-    }
 
     if (pActor->IsDead() != acMessage.IsDead)
         acMessage.IsDead ? pActor->Kill() : pActor->Respawn();
@@ -495,6 +593,7 @@ void CharacterService::OnCharacterSpawn(const CharacterSpawnRequest& acMessage) 
     AnimationSystem::Setup(m_world, *entity);
 
     m_world.emplace_or_replace<WaitingFor3D>(*entity, acMessage);
+    if (acMessage.IsPlayer) TraceAppearanceActor(m_world, *entity, acMessage.ServerId, pActor, "OnCharacterSpawn-created", m_appearanceTraceTick);
 
     auto& remoteAnimationComponent = m_world.get<RemoteAnimationComponent>(*entity);
 
@@ -656,6 +755,7 @@ void CharacterService::OnOwnershipTransfer(const NotifyOwnershipTransfer& acMess
 
 void CharacterService::OnRemoveCharacter(const NotifyRemoveCharacter& acMessage) const noexcept
 {
+    NativeLifetimeServerRemoval(acMessage.ServerId);
     auto view = m_world.view<RemoteComponent>();
 
     const auto itor = std::find_if(std::begin(view), std::end(view), [id = acMessage.ServerId, view](entt::entity entity) { return view.get<RemoteComponent>(entity).Id == id; });
@@ -1123,6 +1223,7 @@ void CharacterService::MoveActor(const Actor* apActor, const GameId& acWorldSpac
 
 void CharacterService::ProcessNewEntity(entt::entity aEntity) const noexcept
 {
+    spdlog::info("[STRE][AppearanceTrace][Assignment] phase=ProcessNewEntity entity={} local={} remote={} WaitingForAssignment={} WaitingFor3D={} online={}", static_cast<uint32_t>(aEntity), m_world.all_of<LocalComponent>(aEntity), m_world.all_of<RemoteComponent>(aEntity), m_world.all_of<WaitingForAssignmentComponent>(aEntity), m_world.all_of<WaitingFor3D>(aEntity), m_transport.IsOnline());
     if (!m_transport.IsOnline())
         return;
 
@@ -1306,6 +1407,7 @@ void CharacterService::CancelServerAssignment(const entt::entity aEntity, const 
 {
     if (m_world.all_of<RemoteComponent>(aEntity))
     {
+        m_world.remove<RemotePlayerAppearanceBaseComponent, RemoteAppearanceProbeComponent>(aEntity);
         Actor* pActor = Cast<Actor>(TESForm::GetById(aFormId));
 
         if (pActor)
@@ -1390,7 +1492,11 @@ Actor* CharacterService::CreateCharacterForEntity(entt::entity aEntity) const no
         return nullptr;
     }
 
+    if (const auto* oldRemote = m_world.try_get<RemoteComponent>(aEntity); oldRemote && m_world.all_of<PlayerComponent>(aEntity))
+        TraceAppearanceActor(m_world, aEntity, oldRemote->Id, Cast<Actor>(TESForm::GetById(oldRemote->CachedRefId)), "CreateCharacterForEntity-before", m_appearanceTraceTick);
+    m_world.remove<RemotePlayerAppearanceBaseComponent>(aEntity);
     auto& acMessage = pWaitingFor3D->SpawnRequest;
+    spdlog::info("[STRE][AppearanceTrace][Spawn] phase=enter source=CreateCharacterForEntity serverId={} isPlayer={} entity={} WaitingFor3D=true bytes={} tints={} changeFlags={:X} descriptor=not-in-spawn-wire", acMessage.ServerId, acMessage.IsPlayer, static_cast<uint32_t>(aEntity), acMessage.AppearanceBuffer.size(), acMessage.FaceTints.Entries.size(), acMessage.ChangeFlags);
 
     Actor* pActor = nullptr;
 
@@ -1399,7 +1505,21 @@ Actor* CharacterService::CreateCharacterForEntity(entt::entity aEntity) const no
     {
         TESNPC* pNpc = nullptr;
 
-        if (acMessage.BaseId != GameId{})
+        if (acMessage.BaseId == GameId{} && acMessage.IsPlayer)
+        {
+            NativeLifetimeCreationScope lifetime(static_cast<uint32_t>(aEntity), acMessage.ServerId);
+            const ActorSpawnLocation location{PlayerCharacter::Get()->parentCell, PlayerCharacter::Get()->GetWorldSpace(),
+                pInterpolationComponent->Position, {acMessage.Rotation.x, PlayerCharacter::Get()->rotation.y, acMessage.Rotation.y}};
+            const auto materialized = MaterializePrivateRemoteActor(
+                m_world, aEntity, acMessage.AppearanceBuffer, acMessage.ChangeFlags, acMessage.FaceTints,
+                [&acMessage](const char* apPhase)
+                {
+                    spdlog::info("[STRE][AppearanceTrace][Spawn] phase={} source=CreateCharacterForEntity serverId={} isPlayer={}", apPhase, acMessage.ServerId, acMessage.IsPlayer);
+                }, nullptr, &location);
+            pNpc = materialized.pBase;
+            pActor = materialized.pActor;
+        }
+        else if (acMessage.BaseId != GameId{})
         {
             const uint32_t cNpcId = World::Get().GetModSystem().GetGameId(acMessage.BaseId);
             if (cNpcId == 0)
@@ -1409,15 +1529,29 @@ Actor* CharacterService::CreateCharacterForEntity(entt::entity aEntity) const no
             }
 
             pNpc = Cast<TESNPC>(TESForm::GetById(cNpcId));
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=TESNPC-deserialize-existing source=CreateCharacterForEntity serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             pNpc->Deserialize(acMessage.AppearanceBuffer, acMessage.ChangeFlags);
         }
         else
         {
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=TESNPC-create source=CreateCharacterForEntity serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             pNpc = TESNPC::Create(acMessage.AppearanceBuffer, acMessage.ChangeFlags);
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=FaceGen-setup source=CreateCharacterForEntity serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
             FaceGenSystem::Setup(m_world, aEntity, acMessage.FaceTints);
         }
 
-        pActor = Actor::Create(pNpc);
+        if (acMessage.BaseId != GameId{} || !acMessage.IsPlayer)
+        {
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=Actor-create source=CreateCharacterForEntity serverId={} isPlayer={}", acMessage.ServerId, acMessage.IsPlayer);
+            pActor = Actor::Create(pNpc);
+        }
+        if (pActor && STRE::CharacterCreation::IsPrivatePlayerCreation(acMessage.IsPlayer, acMessage.BaseId == GameId{}, pActor->formID, pNpc->formID))
+        {
+            if (auto* probe = m_world.try_get<RemoteAppearanceProbeComponent>(aEntity))
+                probe->Rebind();
+            m_world.emplace_or_replace<RemotePlayerAppearanceBaseComponent>(aEntity, pActor->formID, pNpc->formID);
+            spdlog::info("[STRE][AppearanceTrace][Spawn] phase=private-provenance-bound source=CreateCharacterForEntity serverId={} actor={:X} base={:X}", acMessage.ServerId, pActor->formID, pNpc->formID);
+        }
     }
 
     auto& remoteComponent = m_world.get<RemoteComponent>(aEntity);
@@ -1428,25 +1562,18 @@ Actor* CharacterService::CreateCharacterForEntity(entt::entity aEntity) const no
         return nullptr;
     }
 
-    pActor->GetExtension()->SetRemote(true);
-    pActor->rotation.x = acMessage.Rotation.x;
-    pActor->rotation.z = acMessage.Rotation.y;
-    pActor->MoveTo(PlayerCharacter::Get()->parentCell, pInterpolationComponent->Position);
-    pActor->SetActorValues(acMessage.InitialActorValues);
-
-    pActor->GetExtension()->SetPlayer(acMessage.IsPlayer);
+    const ActorSpawnLocation location{PlayerCharacter::Get()->parentCell, PlayerCharacter::Get()->GetWorldSpace(),
+        pInterpolationComponent->Position, {acMessage.Rotation.x, pActor->rotation.y, acMessage.Rotation.y}};
+    STRE::RemoteActorProjection::Initialize(pActor, acMessage.IsPlayer, location, acMessage.InitialActorValues);
     if (acMessage.IsPlayer)
-    {
-        pActor->SetIgnoreFriendlyHit(true);
-        pActor->SetPlayerRespawnMode();
         m_world.emplace_or_replace<PlayerComponent>(aEntity, acMessage.PlayerId);
-    }
 
     if (pActor->IsDead() != acMessage.IsDead)
         acMessage.IsDead ? pActor->Kill() : pActor->Respawn();
 
     spdlog::info("Spawned character for entity, server id: {:X}", remoteComponent.Id);
 
+    if (acMessage.IsPlayer) TraceAppearanceActor(m_world, aEntity, acMessage.ServerId, pActor, "CreateCharacterForEntity-created", m_appearanceTraceTick);
     return pActor;
 }
 
@@ -1531,6 +1658,9 @@ void CharacterService::RunRemoteUpdates() noexcept
 
     for (auto entity : facegenView)
     {
+        const auto* appearance = m_world.try_get<RemoteAppearanceProbeComponent>(entity);
+        if (appearance && appearance->BlockFaceGen)
+            continue;
         auto& formIdComponent = facegenView.get<FormIdComponent>(entity);
         auto& faceGenComponent = facegenView.get<FaceGenComponent>(entity);
 
@@ -1551,18 +1681,12 @@ void CharacterService::RunRemoteUpdates() noexcept
         auto& waitingFor3D = waitingView.get<WaitingFor3D>(entity);
 
         Actor* pActor = Cast<Actor>(TESForm::GetById(formIdComponent.Id));
-        if (!pActor || !pActor->GetNiNode())
+        if (!STRE::RemoteActorProjection::ReadyFor3D(pActor))
             continue;
 
-        // By now, the actor has materialized in the world and is ready for further setup
-
-        pActor->SetActorInventory(waitingFor3D.SpawnRequest.InventoryContent);
-        pActor->SetFactions(waitingFor3D.SpawnRequest.FactionsContent);
-
-        if (!waitingFor3D.SpawnRequest.ActionsToReplay.Actions.empty())
-        {
-            pActor->LoadAnimationVariables(waitingFor3D.SpawnRequest.ActionsToReplay.Actions[0].Variables);
-        }
+        const auto& replay = waitingFor3D.SpawnRequest.ActionsToReplay.Actions;
+        STRE::RemoteActorProjection::Complete3D(pActor, waitingFor3D.SpawnRequest.InventoryContent,
+            waitingFor3D.SpawnRequest.FactionsContent, replay.empty() ? nullptr : &replay[0].Variables);
 
         m_weaponDrawUpdates[pActor->formID] = {waitingFor3D.SpawnRequest.IsWeaponDrawn};
 

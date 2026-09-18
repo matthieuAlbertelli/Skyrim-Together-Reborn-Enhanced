@@ -1,13 +1,349 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 4, 2026.
+> **Last updated:** September 18, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Cumulative Character Creation review validation (2026-09-18)
+
+The cumulative source at `1e9ddb02174bb0cf8113e2be923152a2f90ad51a`, compared
+with `9108727b5d828afc4de2a90e1f4eece7dd811351`, was revalidated locally on
+Windows during PR preparation. These are new executions, distinct from the
+activation evidence below: TPTests **41574 assertions / 364 cases PASS**;
+the six appearance/materialization/placement Python suites **58 checks PASS**;
+debug client, server and launcher builds PASS. Six functional translation units
+compiled again in isolation with `IS_MASTER=1`; this is still not a complete
+linked MASTER executable or a MASTER game run.
+
+The exact tracked Alternate Start PSC compiled in a separate audit directory
+with zero errors/warnings. Its disassembled output and the tracked PEX match
+after normalizing compiler metadata, declaration order and label names, while
+preserving instruction order and operands. Both contain the same six functions,
+including BeginCharacterCreation. Tracked PSC/PEX/ESP hashes remained unchanged.
+The ESP is also unchanged across both commits relative to the base. CK packaging,
+MQ101 Quickstart-5 structure and strict plugin-manifest audits PASS.
+
+Review corrected the canonical wire reference from the obsolete schema 1 to
+schema 2 / FinalBuildRevision and documented the existing server final freeze;
+no functional source or asset change was needed for that correction. Historical
+hot appliers remain unreachable from Character Creation. Other appearance
+diagnostic hooks/traces remain compiled in MASTER; only the F11/Shift+F11 passive
+lifetime controls and the extra retirement-window sample are non-MASTER.
+
+No new game, visual, network-process integration or lifetime validation was
+performed. Earlier human attestations retain their stated scope; repeated cycles,
+recovery/reconnect, exhaustive appearance coverage and native retirement remain
+unvalidated. CI results and PR delivery state belong to GitHub, not this entry.
+
+## Automatic final Character Creation rematerialization (2026-09-18)
+
+Initial Character Creation now uses the final rematerialization flow automatically,
+including MASTER (ADR-0023). There is no live remote appearance sync; the matching
+pending authoritative Applied build publishes one canonical final after sealing.
+Observers rebuild only the local native Actor/private TESNPC representation through
+the unchanged natural-join materializer, preserving logical ECS/network identity.
+No user/debug activation is required. Ctrl+F11 and its functional menu toggle are
+removed; F11/Shift+F11 passive probes remain non-MASTER and default OFF.
+
+Connection, exact 1.6.1170 runtime, canonical/revision, binding, ActorState,
+transaction, readiness and recovery guards are retained. Rejection fails closed
+without hot apply, SwitchRace or Reset3D. Solo has no appearance transport/remote
+transaction. Intermediate RaceMenu closes and later manual showracemenu do not
+publish. Post-creation appearance edits and collective seating remain out of scope.
+Papyrus, creation placement, network schema, roster and Discovery policy are unchanged.
+
+Activation verification: TPTests **41574 assertions / 364 cases PASS**; all
+**58 structural checks PASS**; client/server/launcher debug builds PASS. Six
+functional translation units also compile in isolation with **IS_MASTER=1**,
+PCH reuse disabled and the normal common headers included. This verifies the
+MASTER code path, not a complete linked MASTER executable or MASTER game run.
+Papyrus is untouched: PSC/PEX hashes match the verified checkpoint and the PEX
+is byte-identical to its retained compiler output. CK packaging/MQ101 audits and
+git diff --check PASS. Source comparisons preserve the materializer, natural spawn
+callers, placement and native safety predicates; network/Discovery sources are unchanged.
+
+**HUMAN VALIDATED:** the maintainer confirms that automatic final remote
+rematerialization succeeds without debug activation on the tested multiplayer
+Character Creation run (2026-09-18 commit handoff). No Ctrl+F11 was required:
+normal creation, final build sealing, canonical final snapshot and automatic
+natural-join rematerialization produced the correct remote appearance. Initial
+creation retains no live remote appearance synchronization. This attestation does
+not identify an exact race/sex pair, MASTER build or complete test matrix.
+
+No game was launched by the agent. General production readiness, native retirement,
+repeated cycles, recovery/reconnect, the full race/sex matrix and future collective
+seating remain open. Post-creation appearance editing remains out of scope.
+Final commit checks validate the approved source snapshot, retaining the verified
+checkpoint Papyrus; unrelated working-copy Papyrus changes are excluded.
+
+## First final-rematerialization runtime checkpoint (2026-09-18)
+
+Character Creation live appearance sync = **superseded** (ADR-0020/0021/0022).
+At this checkpoint, final local natural-join rematerialization was a non-MASTER,
+default-OFF LAB (activation now superseded by ADR-0023 above).
+Runtime = **human validated on the tested scenario only**.
+This checkpoint does not complete Alternate Start or Character Creation (#9).
+
+**HUMAN VALIDATED**, according to the maintainer's 2026-09-18 finalization handoff,
+corroborated by the observer's tp_client.log at 16:53:56:
+
+- The final Character Creation snapshot triggered local natural-join rematerialization.
+- The same logical remote/serverId/ECS identity was retained.
+- A new native Actor/private TESNPC pair was created.
+- The candidate committed successfully after readiness and inventory restoration.
+- Observer A saw remote B's final appearance correctly (human visual attestation).
+- Character Creation finalization used no SwitchRace/Reset3D/hot-apply path;
+  source contract checks also verify that bypass.
+
+The trace has finalRevision=2, serverId=3, entityVersioned=3, session=1 and
+materialization generation=1. The initial receipt log has no bound entity yet;
+the retained ECS identity is verified from gate acceptance through completion.
+
+| Representation | Actor | Private TESNPC |
+| --- | --- | --- |
+| Before | FF000826 | FF00081E |
+| After | FF00083D | FF000839 |
+
+The sequence is final-snapshot-received, actor-state-accepted (life=9 / dont-move),
+gate-accepted, transaction-reserved, old-binding-captured, candidate-create,
+inventory restoration, candidate-ready, candidate-commit, old-retirement-requested
+and complete. At 16:53:56.597, old-retirement-observed reports Discovery absence
+only. At 16:54:26.605 (+30 s), actorLookupPresent=true and baseLookupPresent=true:
+**native retirement completion remains unresolved and inconclusive**, neither
+leak proof nor destruction proof. Do not mark it validated.
+
+No exact race/sex pair or reciprocal direction is established by this handoff;
+no universal race/sex validation is inferred. Repeated cycles/native lifetime,
+recovery/reconnect, the full race/sex matrix and future collective seating remain
+pending. This is not production-ready or a seating validation. No new Skyrim run
+was launched by the agent.
+
+Before this checkpoint, tracked Fragment_0/4 had drifted back to a seated gate.
+They now share BeginCharacterCreation: resolve the existing non-furniture marker
+by plugin/local ID, validate player/cell/position and enter stage 20 without posture
+checks. The PEX tracked with that PSC was rebuilt from this exact source, compared
+byte-for-byte with the compiler output, and passes the bootstrap/packaging checks.
+The runtime observation above does not by itself prove which PSC/PEX build the
+maintainer installed; restored repository consistency is validated separately.
+
+Final automated verification: TPTests 41575 assertions / 364 cases PASS;
+client/server/launcher debug builds PASS; all 57 relevant structural checks PASS,
+including the previously failing PSC bootstrap test; Papyrus compile 0 errors /
+0 warnings; CK packaging and MQ101 audits PASS; git diff --check PASS.
+Sources/tests/docs and the intentional tracked PEX form the checkpoint scope.
+Ignored audit files, runtime logs and generated build outputs are excluded.
+
+See the [appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_SYNC.md)
+and [test plan](../features/alternate-start/TEST_PLAN.md). The earlier diagnostic
+entries below retain their original, narrower validation context.
+
+## LAB native state veto: DontMove identified and admitted (2026-09-18)
+
+Historical diagnostic entry: the native policy remains; ADR-0023 supersedes its
+optional activation. Current automatic behavior and validation are recorded above.
+
+The subsequent supplied run isolates unsafe-actor-state with flags 01200041 /
+00001008. The only failed state field is life=9; knock, attack, fly, weapon,
+recoil, stagger, sprint and swim are idle. Offline RE of the matching installed
+1.6.1170 image proves Actor.SetDontMove(true) sets life 9: native registration
+9EFCD8/9EFCE6 -> callback 9EA930 -> 6750D0 -> life setter 680740. Creation already
+uses SetDontMove via SetPlayerActorLock. This is movement inhibition, not proof
+of death or ragdoll. The specific writer of the remote's word is not traced.
+
+The non-MASTER, default-off LAB now admits only this additional life value.
+Named read-only predicates replace the combined opaque mask. Every other veto
+and the independent dead/disabled/combat/mount guards remain. Conservative
+fly/weapon/sprint/swim restrictions are identified as LAB limits, not asserted
+to be inherently dangerous. No state mutation or posture condition was added.
+
+Capture logs the tested words' decoded fields, lifeName, stateVeto and every
+predicate result. State rejection retains unsafe-actor-state with its precise
+substate; later old-binding/precommit/post-placement vetoes also log before abort.
+For the reported pair, actor-state-accepted now reports lifeName=dont-move and
+stateVeto=none. The existing gate-accepted -> transaction-reserved ->
+candidate-create-enter sequence follows if all other guards pass. Native success
+is NOT claimed: no Skyrim run or deployment was performed.
+
+Validation: TPTests PASS (41575 assertions / 364 cases), debug client/server/
+launcher builds PASS; structural checks 56/57 PASS with the same pre-existing
+posture-independent PSC bootstrap failure, neither skipped nor weakened.
+Papyrus audit-only compile: 0 errors/warnings; CK packaging and MQ101 audits PASS;
+git diff --check PASS. Tests exhaust the former 14-bit combined mask and admit
+only DontMove, including mixed-hazard rejection and all posture values.
+Natural-join/materializer/projection, network, roster, race handling, Discovery,
+placement and PSC/PEX remain unchanged. No commit, push or installation.
+Policy/evidence: [appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_SYNC.md#lab-actorstate-policy-161170-only).
+Runtime procedure: [test plan](../features/alternate-start/TEST_PLAN.md#lab-dontmove-veto-correction---current-mission).
+
+## Runtime placement and current-binding rejection diagnostics (2026-09-18)
+
+The supplied new run proves two independent failures: placement resolves index 0
+for a two-member roster/alias 1 in cell 080012D1 but rejects move validation; the
+LAB receives serverId 3's final and rejects its current binding. The older
+player-not-standing log is not evidence for this run. No new game run was launched.
+
+Offline analysis of the matching installed 1.6.1170 binary confirms that the
+PlayerCharacter branch of MoveTo (ID 56626, RVA A447F0) copies a destination into
+pending game state through ID 40442 (RVA 7312B0), rather than synchronously setting
+the player coordinates. Native placement now issues one MoveTo and observes real
+cell/position on updates, with a five-second monotonic deadline. No fixed sleep,
+repeated MoveTo, posture logic or ActorState write is added. Orientation is applied
+after arrival so queued movement cannot overwrite it. Identity/anchor/cell,
+campaign/PlayerId, connection, quest and recovery guards cancel a stale wait.
+
+standing-move-observation logs target, pre-move and current coordinates, distance,
+target/current rotation, cells, actor token, sample and elapsed time. The first
+observation is immediate; pending logs are capped at four per second, with final
+success/failure always logged. A final move-validation-failed now has an exact
+detail such as position-timeout, cell-timeout or player-identity-lost.
+
+LAB Capture now reports the first exact failed guard and the same observed
+component/native values used for evaluation. Missing ECS components, assignment,
+WaitingFor3D, cached binding, native/base lookup, actor safety and alias collisions
+are distinct. Recovery/disconnect rejection also names the exact boundary.
+At that diagnostic step, all eligibility predicates were retained without a
+speculative repair. Natural-join materializer/projection, network, roster and ECS
+identity stayed unchanged. The subsequent run isolated life=9; its targeted
+correction and current validation are recorded above.
+
+Validation: TPTests **8386 assertions / 361 cases PASS**; client/server/launcher
+and TPTests debug builds PASS. Python **55/56 PASS**. Papyrus verification compile
+(to audit output only), CK/MQ101 audits and git diff --check PASS. Scope comparison
+confirms 12 intended changed files, with natural-join/network/roster/ECS and
+tracked PSC/PEX unchanged. Evidence: `_audit/runtime-rejection-report.md`.
+The full Python run has
+one pre-existing bootstrap contract failure: the mission-start PSC already contains
+the old seated Fragment_0/4. Its hash is unchanged in this mission; it is recorded
+separately, not repaired as part of these two native rejection diagnostics.
+
+## Posture-independent Character Creation and respawn LAB (2026-09-18)
+
+Implemented locally under ADR-0022; runtime acceptance pending. Native placement
+no longer reads ActorState or rejects player-not-standing. It validates durable
+PlayerId/roster, existing anchor/cell, native player identity and finite position
+within 32 units of the requested target before RaceMenu. The same ten anchors
+and PlayerId rank mapping remain. No WantToStand wait, forced furniture exit,
+activation or ActorState write is introduced.
+
+LAB safety ignores the entire sit/sleep field and no longer rejects furniture
+Interaction extra data. Capture, staging and commit retain independent actor,
+cell, binding, assignment, ownership, generation, recovery and geometry guards.
+The natural-join materializer/projection, transport, roster and ECS identity are
+unchanged. Seating after collective completion remains a separate future phase.
+
+At mission start, the on-disk PSC again contained the old seated Fragment_0/4.
+Both now call BeginCharacterCreation: existing non-furniture marker, player/cell
+validation, movement and position check, then stage 20 without GetSitState.
+The tracked PEX is rebuilt; ESP/aliases/stages are unchanged. Preserve this
+source/compiled pair during later CK exports.
+
+Validation: TPTests **8379 assertions / 360 cases PASS**; **52** Python
+source/model checks PASS. TPTests/client/server/launcher debug builds, Papyrus
+(0 errors, 0 warnings), CK packaging/MQ101 audits and git diff --check PASS.
+All 16 sit/sleep values are covered with independent safety guards retained;
+position tolerance and non-finite coordinates are tested. Baseline hash review
+confirms 19 intended changed/new files and no natural-join/network/roster/ECS/ESP
+changes. Existing C++ warnings remain. Evidence: `_audit/posture-independent-report.md`.
+No game launch, installation/deploy, commit or push. Native runtime remains untested.
+
+## Standing placement by durable PlayerId (2026-09-18, temporary LAB unblock)
+
+Implemented locally; no new game runtime acceptance. Standing placement now
+sorts a local copy of the sealed roster's durable PlayerIds and selects the local
+authenticated PlayerId's rank as creationPositionIndex. Solo uses index 0; two
+players use 0/1; up to ten use 0..9. Existing anchors are selected through quest
+aliases 1..10, with the same coordinate calculation and current-cell validation.
+
+SlotId is not read or validated by this placement step: empty, duplicate or
+malformed SlotId metadata cannot reject its selection. Missing/duplicate PlayerIds
+or a local player absent from the sealed roster still reject. The current sealed
+CharacterCreation/ACTIVE/full-roster checks remain. Admission, wire validation,
+campaign SlotId semantics, ownership, recovery and the respawn/natural-join LAB
+are unchanged; this is only a temporary local visual placement rule.
+
+The source of local identity is CampaignService::GetDurablePlayerIdForAuthentication,
+not the transient numeric transport player number. Success logs now include
+phase=standing-position playerId=... creationPositionIndex=... rosterCount=....
+Native alias/cell diagnostics remain; ADR-0022 removes posture failures;
+identity failures now name PlayerId. No multiplayer identity failure falls back
+to the Solo position.
+
+Validation: TPTests **8025 assertions / 359 cases PASS**; **51** relevant Python
+checks PASS. Create/Join A+B reaches the common selector after seal/authorization;
+empty/duplicate/invalid SlotId metadata preserves ranks, reordered ten-player
+rosters produce 0..9, and missing/duplicate/absent PlayerIds reject. TPTests,
+client/server/launcher debug builds, Papyrus verification compilation (0 errors,
+0 warnings), CK packaging/MQ101 audits and git diff --check PASS. Papyrus was
+compiled into the audit directory; repository PSC/PEX and ESP remain unchanged.
+Existing C++ warnings remain. No launch, installation/deploy, commit or push.
+
+Earlier placement failures and the restored standing bootstrap are documented
+in `_audit/standing-placement-diagnostic-fix.md`; their old SlotId selection is
+superseded for this step. Current evidence: `_audit/standing-player-rank-report.md`.
+
+## Character Creation Slice 3 natural-join correction (2026-09-18)
+
+Historical implementation entry: its activation and absence of runtime evidence
+are superseded by the automatic flow and bounded runtime checkpoint above.
+
+EXPERIMENTAL NON-MASTER LAB IMPLEMENTED, DEFAULT OFF; NO SLICE 3 GAME RUNTIME
+VALIDATION. ADR-0020 and ADR-0021 govern the final-only, race-agnostic local
+representation replacement. All RaceMenu closes remain local; ONE final is
+captured after the matching authoritative Applied build notification seals the
+entire creation. Later manual showracemenu remains out of scope.
+
+The LAB now reuses natural-join private materialization AND shared local
+projection: explicit initial native placement, remote/player flags, actor values,
+root-based WaitingFor3D readiness, inventory/equipment, factions and animation
+variables. The same canonical AppearanceBuffer/ChangeFlags/FaceTints path accepts
+Nord, Orc, Khajiit and Argonian; no race-family gate remains in the LAB. Descriptor
+race/sex resolve and validate the created result. Headpart entries, when present,
+must resolve; a nonzero headpart count is not an eligibility requirement.
+
+The new Actor/private TESNPC starts at the old remote position/cell/worldspace,
+not the observer position. Existing ECS entity/version, serverId, PlayerId,
+Remote.Id, ownership and network animation/interpolation components remain.
+Candidate tints stay isolated until commit, canonical inventory/equipment are
+checked live, and Slice 2A generation/token fences intercept Discovery before
+legacy subscribers. Retirement uses the existing engine-managed Actor Delete.
+No new server lifecycle, assignment, SwitchRace, Reset3D or manual TESNPC free.
+
+The CK stage-10 and stage-11 fragments share placement at the existing
+non-furniture NewGameStartMarker, cell/position check, then stage 20. ADR-0022
+supersedes the initial standing check; posture cannot reject this flow. Before
+RaceMenu, native bootstrap assigns a distinct location from the immutable sealed
+roster PlayerId rank (Solo: first anchor), 96 units behind one of the ten existing seat
+anchors, without targeting/activating furniture. PSC and PEX are updated; ESP,
+aliases and stage numbers are unchanged. These new standing positions and their
+physical clearance have NOT been tested in game. Seating after collective
+completion is a separate future slice, not a respawn requirement.
+
+Automated validation: TPTests 7931 assertions / 356 cases PASS; 46 relevant Python
+source/model checks PASS; TPTests, SkyrimTogetherClient, SkyrimTogetherServer and
+SkyrimImmersiveLauncher debug builds PASS. Papyrus compilation: 0 errors, 0
+warnings. CK packaging, MQ101 structural audits and git diff --check PASS. Existing C++ build
+warnings remain. MASTER exclusion is source-checked, not a separate MASTER build.
+The corrective T1-T14 coverage and human acceptance matrix are in TEST_PLAN.
+
+Runtime limits: world-exposed candidate staging can briefly overlap the old
+representation; native rendering, state/equipment and actual network silence
+need human evidence. Private-base lifetime remains UNKNOWN; a 30-second registry
+observation proves neither destruction nor a leak. Source proves placement
+arguments, not visual spawn atomicity. Provenance remains clearable; capture uses
+fresh binding evidence. Recovery preserves valid old binding and defers candidate
+cleanup while locked. Tombstones survive disconnect (ten server identities per
+process); restart clients between LAB runs. Historical Slice 2B observations do
+not validate this corrected flow. No game launch, installation, commit or push.
+
+Evidence: `_audit/natural-join-correction-baseline.json`, build/test logs prefixed
+`natural-join-`, and
+`_audit/character-creation-natural-join-rematerialization-correction.md` (A-K).
+The previous Slice 3 A-Q report remains historical evidence.
 
 ## World Sync
 
@@ -88,6 +424,383 @@ ownership system remains necessary before declaring a stable third-party API.
 See [`docs/features/item-preview/`](../features/item-preview/).
 
 ## Alternate Start / Character Build
+
+### Final-only same-race appearance application (phase 4E)
+
+The final-only, owner-validated appearance path applies to proven STRE-created
+private player NPCs on 1.6.1170.0. Race/sex eligibility is checked before native
+Deserialize; fifteen identity, provenance, race, sex and marker postconditions
+remain fatal. Weight is compared and logged but is no longer fatal. The applier
+neither owns nor directly writes weight and adds no weight network channel.
+
+The user's phase 4E handoff reports phase 4D runtime evidence: all fifteen fatal
+fields matched; only Weight differed (pre=50, descriptor=75, actual=50), while
+headparts/body/hair color changed. Live remote weight changes during RaceMenu
+are human-observed; their exact runtime propagation path remains unidentified.
+This evidence supports the narrower postcondition policy, not a general native
+serialization contract or proof of successful FaceGen application.
+
+After postcheck success, one guarded QueueUpdate/DoReset3D(true) request starts
+a maximum 120-tick face/head transition and tint-generation cycle. One immutable
+active snapshot plus one latest follow-up is retained. New diagnostics capture
+weight before reset/at transition/at applied; tint count/hash, geometry tokens,
+Generated before/after Setup/Update, body colors and identity observations.
+Generated completion is rejected if Update's geometry changed underneath it.
+
+The user's phase 5A handoff reports human runtime validation of phase 4E for
+Nord/Nord, same sex: full final-only pipeline reaches applied, morphs/headparts,
+hair, body/head colors and weight are correct, actor remains stable and no visible
+state loss occurs. Exact live weight propagation remains unidentified. This is
+human-provided evidence, not an assistant-executed runtime test.
+
+Phase 5A classification and phase 5A.1 passive SwitchRace instrumentation remain
+available. The revised 5A.2 handoff supplies human-captured player RaceMenu and
+loaded non-player setrace evidence on 1.6.1170.0: both pass false, change runtime
+and base race before return, and rebuild 3D/head later. Player completion can
+precede head readiness. These are supplied observations, not new assistant-run
+runtime tests; they do not validate the remote pipeline.
+
+The phase 5A.3 handoff supplies a real multiplayer 5A.2 failure: remote male Nord
+-> High Elf, serverId3, Actor FF000815/base FF000812. SwitchRace and Deserialize
+pass target runtime/base and private identity checks; body/race data converge.
+The Nordic head remains black, with no race-head-ready, FaceGen, applied or
+correlated completion event before the 120-tick timeout. Phase 5A.2 is NOT validated.
+The earlier player/NPC probes observed surrounding engine paths, so they did not
+prove that a direct remote SwitchRace alone schedules the required head rebuild.
+
+Phase 5A.3 adds one existing QueueUpdate/DoReset3D(true) after successful target
+Deserialize/postchecks in RaceChangeSameSex only. ResetRequested is one-shot and
+cannot precede successful Deserialize; reset failure stops. Pre-reset root/face/head
+are captured immediately before the call. Readiness requires all three nonnull and
+a changed root plus a changed face or head, with separate transition logs; completion event is optional.
+The 120-tick wait/FaceGen budget starts at reset. No second reset, retry, respawn or
+shader fallback is added. The mapped Nord/High Elf same-sex skeleton/runtime gates,
+fifteen fatal invariants, diagnostic-only weight, inventory aggregate checks and
+immutable active plus latest follow-up remain. Same-race 4E is unchanged.
+
+TPTests passes 5245 assertions in 293 cases. Tests, server, client and launcher Debug builds pass; git diff --check passes. The 5B.1 handoff reports human runtime validation of controlled male Nord -> male High Elf: correct body/head/ears/hair/tints, no black Nordic head and stable behavior. Reverse direction is not required before continuing, by user decision. This does not validate sex changes. No game deployment, commit, push, PR or issue was performed. Combined race/sex changes, beast/custom race switches, empty-tint clearing and 2 Hz publication stay disabled.
+Native failure can leave a partially mutated private NPC without rollback. Geometry
+and aggregate counts cannot prove rendered or per-item correctness; ownership epoch
+is unavailable in existing logs. Campaign authority/recovery is unchanged.
+Phase 5B.1 passive diagnostics remain available. The 5B.2 handoff supplies human
+S1/S2 Player Nord evidence on 1.6.1170: sex changes first, head becomes null, race
+and overlay remain stable, then DoReset3D(true) at caller RVA95499B renews root/face/head.
+S1 (male->female) reset follows about5 ticks; S2 follows about2 ticks. No Player
+SwitchRace invocation was observed in those windows. Male/female Nord model paths
+differ (character assets/skeleton.nif vs character assets female/skeleton_female.nif).
+Appearance buffer/hash, flags and descriptor sex change. These local observations
+do not prove remote Deserialize behavior. Optional NPC S3 is not required by the user.
+
+Phase 5B.2 implements an experimental dedicated SameRaceSexChange path, restricted
+to mapped Skyrim.esm Nord and nonempty bounded male/female model paths (equality is
+not required). Existing private/identity/runtime/loaded/unmounted/INI guards precede
+one Deserialize into the same private NPC. Actual sex must equal descriptor sex;
+mismatch logs deserialize-did-not-apply-sex nativeReset=false and stops without setter,
+retry or reset. Success permits one existing QueueUpdate/DoReset3D(true), then up to
+120 ticks for new nonnull root AND changed nonnull face/head and existing FaceGen.
+Fifteen fatal postconditions include unchanged target races and target sex; weight
+remains diagnostic. Logical-loss aggregate checks and latest-wins persist. SameRaceSameSex
+4E and RaceChangeSameSex5A.3 retain their existing cycles; combined race+sex is rejected.
+No new packet, SwitchRace sex call, direct sex-bit write or destructive fallback.
+TPTests passes 5623 assertions in 301 cases. Tests/client/server/launcher Debug builds and git diff --check pass.
+At completion of that phase, remote sex runtime evidence was still pending. The later
+generic-domain handoff supplies human validation of remote Nord male -> Nord female
+with the 5B.2 pipeline. This validates that scope only; no new assistant-run game test
+or deployment is claimed.
+
+The generic vanilla humanoid domain now admits the eight audited base Skyrim.esm
+playable races through one resolved-record/model gate. The installed master was read
+without modification to verify EditorIDs, relative IDs, playable flags and both gender
+models. Runtime checks resolve the actual forms, require playable/nonempty bounded
+models and exact 1.6.1170.0. Argonian/Khajiit, custom, vampire/transform and nonplayable
+records remain excluded without a separate algorithm.
+`ApplyAppearanceSnapshots` classifies all four valid race/sex transitions generically.
+The original combined implementation used one SwitchRace, final Deserialize and one
+reset. The supplied R2 handoff reports that it FAILED in multiplayer: final race/sex,
+headparts/hash and colors matched A, but head remained null through120 ticks; FaceGen
+and Applied were never reached. Correct feminine body alone is not acceptance.
+SameRaceSexChange no longer has a Nord gate; race-only no longer has a pair/direction
+or matching-skeleton gate. 4E readiness, 120-tick budgets, nonfatal weight, provenance
+and latest-wins behavior remain. No live publisher or packet/spawn change is introduced.
+Pure sequence tests cover both editing orders and nonhistorical race pairs; these prove
+classification/state-machine closure, not general native rendering convergence.
+TPTests passes 5956 assertions in 309 cases. Tests/client/server/launcher Debug builds
+and git diff --check passed for that prior build. R1 HighElf sex-only and R3 Breton
+female -> Orc female remain unvalidated. R2 now has the supplied failure evidence.
+Live publication stays disabled pending that validation. No deployment/Git publication.
+
+The combined-only adapter now implements an experimental two-phase native cycle:
+SwitchRace -> target race/source-sex checks -> reset1 without Deserialize -> strict
+race/source-sex geometry -> final Deserialize -> target race/target-sex checks -> reset2
+-> strict final geometry -> one final tint cycle. Phase1 failure never applies final bytes.
+Each phase has a120-tick wait budget, phase2 including FaceGen. Active/Latest spans both
+phases; native reentry is guarded. One SwitchRace, one Deserialize, at most two resets
+(combined only), one final Setup; Update can poll material/Generated within that cycle.
+The three existing noncombined pipelines, eight-race domain, transport, capture/spawn,
+nonfatal weight and live-disabled behavior are preserved.
+The handoff supplies A's chronology: target race/source sex after SwitchRace, race reset
+about15 service ticks later; sex change seconds later, sex reset about13 ticks after it.
+These observations justify the experiment, not copied delays or proof that reset1 without
+Deserialize can prepare the remote head. No new remote runtime success is claimed.
+TPTests passes7112 assertions in319 cases. Tests/client/server/launcher Debug builds and git diff --check pass.
+After review, retry R2 first in CharacterCreation RaceMenu on fresh A/B. If phase1 fails,
+retain logs and investigate native preparation separately; no additional workaround.
+Resume R1/R3 only after R2 is validated. No post-creation showracemenu acceptance while
+live publication is disabled. No deployment or Git publication performed.
+
+The R2 provenance handoff reports two identical visual reproductions (feminine target
+body, stale Nordic/male head) but no pertinent hot/combined markers in the supplied B
+log after the two-phase build. The prior executable hash CDA455456896ACCE17A371A9E800C31BB8FBEC04C1ECAD6055BFFDE329EFA734
+was verified locally in both build and distrib before linking this diagnostic build.
+The loaded-process identity is human-supplied evidence; no new process inspection or
+game execution is claimed. This contradiction does not prove that the combined path ran.
+A diagnostics-only AppearanceTrace now records every final publisher attempt/rejection,
+pending/send outcome, server receipt/owner result/actual selected recipient, receiver
+entry/queue/ignore, creation/recreation/assignment paths and detailed combined guards.
+Remote-player-only fingerprints record changed identity/appearance/geometry fields by
+serverId across service ticks and known creation/combined observations. Last valid
+identity is retained across missing-actor samples until disconnect. Native hooks add
+local/remote/NPC category and base pointer without changing their native calls.
+No reset/order/domain/transport/wire/capture semantics or publisher activation changed.
+TPTests passes7145 assertions in321 cases. Tests/server/client/launcher Debug builds and git diff --check pass.
+One clean R2 after review must establish the real mutation path; no final appearance
+fix or new runtime success is claimed. Unknown engine changes can be localized to an
+observation interval; temporal proximity alone cannot identify an uninstrumented writer.
+
+The subsequent 2026-09-08 service-barrier handoff resolves that diagnostic uncertainty
+for R2 on A observing B/serverId3: notify/entity/queue/classification/combined begin
+occur at17:03:40.189-.191 with all preguards passing. Actor FF000835/pointer8F5FD3F0
+and Base FF000833/pointer8F5BEF40 stay stable: IN_PLACE_MUTATION, not recreation.
+SwitchRace(HighElf,false) followed by reset1 without Deserialize yields renewed,
+nonnull race/source-male geometry at17:03:40.215. That remote phase is human-proven
+for this case. The final female Deserialize previously ran immediately in the same
+callback, followed by reset2; head stayed null for120 ticks and stopped at17:03:42.258,
+without FaceGen. Native payload correctness did not validate the stale visible head.
+These are supplied handoff observations, not a new assistant-run game test.
+
+The combined-only adapter now returns immediately after observing RaceStageReady,
+then resumes in a later CharacterService update before the waiting-state filter.
+A saved existing service update identity rejects same-update reentry; no new timer,
+arbitrary delay, native state, third reset or barrier between final Deserialize/reset2.
+Resume rechecks Active, identity/private provenance, cached/server IDs, remote/player
+markers, target race/SOURCE sex, inventory/equipped totals, WaitingFor3D=false and strict
+race geometry before any final write. Existing final target-sex checks and120-tick
+budgets remain. SameRaceSameSex4E, race-only5A.3, sex-only5B.2, domain/transport/spawn,
+nonfatal weight and live-disabled behavior retain their prior source unchanged.
+TPTests passes7380 assertions in323 cases for the barrier, immutable Active/Latest,
+post-barrier invariant/geometry loss and one-shot bounds. TPTests/server/client/launcher
+Debug builds and git diff --check pass. The immediate fallthrough was confirmed in source; its causal
+role in the missing final head remains a hypothesis until one reviewed R2 runtime.
+No deployment or Git publication. If reset2 still leaves head null, stop without fallback.
+
+
+The subsequent native-sex-rebuild handoff reports a failed R2 despite the real service
+barrier: ready at17:36:50.224/update4649, resume .240/update4650, final head still0 after
+reset2 through120 ticks. Local sex rebuild later succeeds after14 observed creation
+updates. This validates the barrier's separation, not the final appearance; no arbitrary
+delay follows from that observation. Existing5B.2 same-race sex success is retained.
+
+Read-only RE of the installed1.6.1170 image now establishes that return0x95499B follows
+CALL0x954996 into40255/DoReset3D from unnamed52391 at0x954960. It uses the global player,
+marks its NPC0x800, then after reset iterates animation graphs and sets byte+0x242
+(meaning unknown). RaceSexMenu vtable callers ProcessMessage/AdvanceMovie precede it
+with menu-specific preparation52409; AdvanceMovie also has conditional state gates.
+Return0x40B115CE matches the STRE ThisCall trampoline in the launcher, not a second
+native Skyrim reset implementation. The loader's shared image/path alias explains why
+callerModule may still say SkyrimSE.exe. Both paths reach the same native reset.
+A complete Actor-generic equivalent of the menu preparation remains unproven;52391
+cannot target a remote argument. No native code, barrier or probes changed. TPTests
+passes7380 assertions/323cases; TPTests/client builds and git diff --check pass.
+No game test, deployment, commit or push. Next work is targeted diagnostic comparison
+of native branch/process/biped state, not a speculative appearance correction.
+
+Passive sex-rebuild differential instrumentation is now implemented for1.6.1170:
+the existing40255 hook records entry/return state; narrow36947 and39395 probes provide
+positive queued-op1C/inline-AIProcess evidence correlated by thread, actor and callSeq.
+The52391 entry/return probe brackets local NPC change flags, with after-reset emitted
+by40255 (no mid-function hook). Globals, validated biped operands, INI, base change
+flags, process fields and creation-probe sex timing are read only; unknown values
+carry availability markers. Diagnostic server IDs use a bounded service-fed registry.
+No appearance application, reset count, timeout, barrier, transport or weight behavior
+changed. TPTests passes7395 assertions/325cases and the client build passes. These are
+helper/build checks, not engine validation. New probe activation and all differential
+A/B values remain runtime-pending. The next reviewed run observes local RaceMenu and
+remote combined together; do not request/repeat5B.2 control C before analyzing A/B.
+No fix, deployment, commit or push is included.
+
+The subsequent user-supplied differential control now reports a fresh successful remote
+Nord male->Nord female5B.2 head/body and failed Nord male->HighElf female combined.
+Both reset entries have baseChangeFlags0, INI0, process level0/byte311=3B and non-global
+biped selection. These values alone therefore do not explain the failure. The supplied
+SwitchRace brackets show ActorState41/1088 ->0/1008; raw new-run logs were not independently
+replayed in this RE mission. This supersedes the earlier pending-control planning above.
+
+Exact-image RE identifies ActorState fields at Actor+C8/+CC (not Actor flags+E8/+204).
+SwitchRace37925 calls38989 at69AF29 with Actor+C0: flags1=0 and
+flags2=(flags2 & FFFF9008)|1008. This exactly explains the observed change and matches
+constructor defaults. The candidate bits belong to movement and the multi-bit weapon
+state, not three independent geometry-ready indicators. Ordinary movement/weapon update
+paths can set them; no safe native head-readiness restoration primitive is established.
+DoReset3D has no direct test of these masks. Its AIProcess helper tests movement400
+and can clear low14 movement bits; inspected load/face/biped paths do not establish
+a requirement for41/80. Indirect dependency through unexpanded calls remains unknown,
+so no blanket causal exclusion or repair is claimed. No C++/probe changes were needed.
+TPTests remains7395 assertions/325cases; tests/client builds, raw-byte verification and
+git diff --check pass. No runtime launch/deployment/commit/push. A separately reviewed
+same-race HighElf male->female control is proposed to separate target-race effects from
+SwitchRace/overlay history; it is not performed or required as an immediate retry here.
+
+Controlled local rematerialization audit (2026-09-17): the supplied human comparison
+reports correct HighElf head after fresh STR TESNPC/Actor creation, with the same
+serverId and changed Actor/Base pointers, while the matching hot payload left head
+null. Raw new-run logs were not independently replayed. This supports a candidate
+architecture, not a validated transactional replacement. The current priority is
+now this lifecycle audit rather than the preceding proposed HighElf sex control.
+
+Source inspection supports keeping the same ECS entity/serverId/player identity
+and reusing a shared private TESNPC + FaceGen + Actor creation path for race changes.
+Functional rematerialization is NOT implemented or enabled. Activation remains
+blocked on staged/retiring discovery handling, private-base/handle lifetime,
+current inventory/equipment and other state reconciliation, seated furniture
+behavior, and a proven remote Character Creation eligibility gate. Actor::Create
+already spawns into the world; current deletion and deferred creation are not a
+transactional replacement API. Same-race hot behavior is unchanged. Existing
+race-changing hot branches remain present and are not considered robust by the
+latest supplied observations; this audit does not reroute them.
+
+The candidate contract and future tests are in the appearance contract/test plan;
+the local detailed source audit is
+`_audit/character-appearance-controlled-rematerialization-audit.md`.
+TPTests passes 7395 assertions in 325 cases; TPTests/client/server/launcher builds
+and git diff --check pass. Only audit/documentation changed in this mission; no
+functional source change, native test, deployment or Git publication.
+
+Slice 1 shared private remote materializer extraction is IMPLEMENTED (2026-09-17).
+OnCharacterSpawn and CreateCharacterForEntity now call one file-local creation
+helper only for custom private players. It preserves TESNPC::Create -> FaceGen
+Setup -> Actor::Create, existing trace order and temporary GamePtr release. The
+callers still bind provenance and own all network/ECS and post-creation setup.
+Existing-NPC, placed-actor and non-player creation paths retain their behavior.
+FaceGen still mutates the supplied entity and empty tints still do not clear it.
+
+NOT IMPLEMENTED: controlled rematerialization, transaction, seating restore or
+native retirement safety. No AppearanceApply routing changed and the prior audit's
+activation blockers remain. Seven source-contract checks pass; TPTests passes
+7395 assertions in 325 cases. TPTests/client/server/launcher builds and git diff
+--check pass. No Skyrim run, runtime acceptance, deployment or Git publication.
+The local review is `_audit/character-appearance-materializer-extraction-report.md`.
+
+Slice 2A lifecycle evidence and a dormant pure contract model are IMPLEMENTED
+(2026-09-17). RemoteMaterializationLifecycle is consumed only by TPTests; production
+client/server/encoding and Slice 1 remain unchanged. The model tests same-identity
+candidate routing, full session/entity/server/generation fences, abort isolation,
+authoritative invalidation and one-shot retirement intents. It has no native
+Completed state: discovery absence does not prove Actor or private-base release.
+
+Source inspection establishes that ActorAdded/Removed carry only FormID, removal
+means loss from the loaded/high-process/root scan, and ActorValueService is another
+removal subscriber. A future router must preserve event-time correlation across
+FormID reuse and protect all affected subscribers. Native pre-discovery registration,
+Delete completion and private TESNPC lifetime remain UNKNOWN. The existing destructor
+hook definition is not installed as a completion observer in inspected source.
+
+NOT IMPLEMENTED: runtime transaction/routing, native candidate staging, retirement
+safety, candidate-local FaceGen, state replay or seating restoration. No replacement
+LAB is approved by the evidence. Recommended Slice 2B is a narrowly scoped passive
+lifetime/correlation observation after verified ABI/observation boundaries; no probe
+was installed or game launched here. Details are in
+`_audit/character-appearance-rematerialization-lifecycle-audit.md`.
+TPTests passes 7645 assertions in 337 cases; two dormant-model source checks and
+Slice 1's seven source checks pass. Required TPTests/client/server/launcher builds
+and git diff --check pass. No deployment, commit, push or PR.
+
+
+Slice 2B passive native lifetime instrumentation is IMPLEMENTED, DEFAULT OFF
+(2026-09-18). One private remote player is recorded: next natural creation via
+F11, or the unique currently bound remote via Shift+F11 (both non-MASTER).
+The existing Debuggers menu exposes both diagnostic controls. No candidate,
+replacement, extra spawn/Delete, network write or retained GamePtr is added.
+The one-pair recorder correlates packed ECS entity/version, serverId, FormIDs,
+address tokens, the existing Spawn handle and a process-local probe session.
+Fresh lookups are throttled to 100 ms, ending at 180 s after observation starts or 30 s
+after the first removal signal, whichever occurs first. Timeout is NOT OBSERVED
+WITHIN WINDOW, never proof of a leak or completed native retirement.
+
+Static 1.6.1170 RE identifies Character and TESNPC scalar deleting destructors
+(AE40288 and AE24888), verifies complete-object/flags/return ABI, and traces
+TESForm registry removal. Diagnostic detours are attempted only on explicit
+enable, with runtime/address/prologue checks. Actual hook entry has NOT been
+observed. Source boundaries record ordinary creation/Delete and unchanged
+Discovery dispatch. GetByHandle's temporary reference is released inside the
+existing helper before the recorder compares its returned address token.
+No later native pointer dereference occurs; destructor entry checks FormID only
+through its valid live argument before forwarding. No read follows destruction.
+
+NOT VALIDATED: natural R1-R4 timelines, destructor hook operation in game,
+Discovery ordering relative to Actor::Create return, private TESNPC release,
+bounded retirement across repetitions, or a terminal replacement fence.
+SetBaseForm and reference cleanup inspection does not prove private-base
+ownership/release. Discovery loss, form absence, handle invalidation and destructor
+entry/return remain distinct facts. Verdict: NO-GO replacement LAB.
+
+TPTests passes 7677 assertions in 343 cases (six new window tests). Nine new
+passive-probe source checks plus the prior seven/two slice checks pass.
+TPTests/client/server/launcher builds and git diff --check pass. Runtime scenarios
+require human execution; no game launch, deployment, commit, push or PR occurred.
+The local static evidence and pending-runtime report is
+`_audit/character-appearance-native-lifetime-observation-report.md`.
+
+Slice 2B keyboard access is IMPLEMENTED (2026-09-18): non-MASTER F11 toggles
+the exact same setter/state as the checkbox, with foreground gating and one
+toggle per sampled key-down edge. Menu visibility and mouse input are not
+required. Probe implementation, logs and native/network behavior are unchanged.
+The added structural check covers shared logic and MASTER exclusion; ten probe
+checks plus seven/two prior slice checks pass. TPTests still passes 7677 assertions
+in 343 cases. Client/server/launcher builds and git diff --check pass.
+In-game keyboard acceptance remains pending; no deployment or game launch.
+
+Slice 2B observe-current mode is IMPLEMENTED (2026-09-18), non-MASTER only.
+Shift+F11 / the new Debuggers action submit one selection attempt on the next
+game update. Zero/multiple remote players, contradictory private provenance,
+incomplete/aliased ECS binding, inconsistent native Actor/Base binding,
+unsupported runtime or an already-enabled
+probe reject the request without arming or waiting for a future creation.
+Successful selection captures packed entity/version, serverId, private FormIDs
+and comparison-only tokens, then uses the SAME Record, polling, destructor
+observers and observation-window policy. The 180 s clock starts at selection;
+the first removal still bounds it to 30 s. Existing published handles can be
+resolved temporarily; no GetHandle, retained GamePtr or synthetic creation log.
+Root/discovery history not observed remains unknown. F11 disables either mode;
+the next-private mode remains available for R1. No native mutation/network change.
+Current-binding fallback is IMPLEMENTED (2026-09-18), passive/non-MASTER only.
+The supplied installed-client log confirms that recovery lock clears appearance
+provenance through ApplyAppearanceSnapshots, even after REMOTE_RECREATED, while
+the native Actor/Base can remain bound. This is the existing intentional appearance
+invalidation contract, not evidence of native deletion. It is left unchanged.
+Current selection now permits an absent marker only with exactly one Remote+Player,
+no Local/WaitingForAssignment/WaitingFor3D, matching FormId/CachedRefId, fresh
+temporary native Actor/TESNPC identities, native remote-player flags, and no known
+ECS actor/server/cache alias or shared bound base. Present contradictory provenance
+still rejects. The evidence log distinguishes durable-provenance (present matching
+allocation marker, NOT a promise of durability) from validated-current-binding-fallback.
+No allocation history, exclusive native ownership or materialization generation is
+inferred; root/face/head presence is not an identity prerequisite for passive capture.
+
+This reveals a REAL BLOCKER for future controlled-rematerialization runtime wiring
+that assumes RemotePlayerAppearanceBaseComponent is a durable materialization
+registry across recovery. Earlier audit rebind proposals did not establish that
+guarantee. Slice 2A's separate pure lifecycle keys/model remain dormant and valid;
+their runtime identity source/retention/invalidation contract is still unimplemented.
+The diagnostic fallback does not resolve that blocker or authorize a replacement LAB.
+Production appearance/lifecycle/network sources retain their pre-task hashes.
+Fourteen probe structural checks plus seven/two prior slice checks pass; TPTests
+passes 7703 assertions in 346 cases. TPTests/client/server/launcher builds and
+git diff --check pass. The earlier current-selection rejection was observed in the
+18 September log; fallback acceptance and natural R1-R4 retirement remain NOT VALIDATED.
+No deployment or game launch. The focused evidence is
+`_audit/character-appearance-current-binding-fallback-report.md`.
+
+See [the appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_SYNC.md).
 
 ### Implemented and smoke-tested
 
