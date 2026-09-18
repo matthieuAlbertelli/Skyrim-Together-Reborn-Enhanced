@@ -1,4 +1,6 @@
 #include <TiltedOnlinePCH.h>
+#include <NativeLifetimeProbe.h>
+#include <Services/RemoteRespawnLab.h>
 
 #include <Games/References.h>
 #include <Games/Overrides.h>
@@ -328,7 +330,11 @@ void TESObjectREFR::Delete() const noexcept
 
     PAPYRUS_FUNCTION(void, ObjectReference, Delete);
 
+    const uint64_t lifetimeSession = NativeLifetimeDeleteEnter(this);
+    if (const auto* actor = Cast<Actor>(this))
+        STRE::RemoteRespawnLab::DeleteRequested(actor);
     s_pDelete(this);
+    NativeLifetimeDeleteReturn(lifetimeSession);
 }
 
 void TESObjectREFR::Disable() const noexcept

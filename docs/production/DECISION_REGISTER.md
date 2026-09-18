@@ -27,6 +27,9 @@ this register allocates numbers and serves only as an index.
 | ADR-0017 | WorldEntity authority with local Havok | Accepted | [ADR-0017](../architecture/ADRs/ADR-0017-world-entity-authority-local-havok.md) |
 | ADR-0018 | Fixed roster and coordinated Skyrim-save checkpoint recovery | Accepted | [ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md) |
 | ADR-0019 | SQLite-backed durable server persistence | Accepted | [ADR-0019](../architecture/ADRs/ADR-0019-sqlite-durable-server-persistence.md) |
+| ADR-0020 | Character Creation final local materialization | Accepted | [ADR-0020](../architecture/ADRs/ADR-0020-character-creation-final-local-materialization.md) |
+| ADR-0021 | Natural-join final representation and standing Character Creation | Accepted | [ADR-0021](../architecture/ADRs/ADR-0021-natural-join-final-representation-standing-creation.md) |
+| ADR-0022 | Posture-independent Character Creation and final rematerialization | Accepted | [ADR-0022](../architecture/ADRs/ADR-0022-posture-independent-character-creation.md) |
 
 `Implemented` is retained for a few historical ADRs. For new decisions, status
 describes the decision (`Proposed`, `Accepted`, `Rejected`, or `Superseded`);

@@ -97,7 +97,23 @@ struct TESFormDeleteEvent
 
 struct TESFurnitureEvent
 {
+    // SKSE64 v2.2.6 GameEvents.h; borrowed pointers, never retained by sinks.
+    enum class State : std::uint32_t
+    {
+        Enter = 0,
+        Exit = 1
+    };
+
+    TESObjectREFR* character;
+    TESObjectREFR* furniture;
+    State state;
+    std::uint32_t pad14;
 };
+
+static_assert(offsetof(TESFurnitureEvent, character) == 0x00);
+static_assert(offsetof(TESFurnitureEvent, furniture) == 0x08);
+static_assert(offsetof(TESFurnitureEvent, state) == 0x10);
+static_assert(sizeof(TESFurnitureEvent) == 0x18);
 
 struct TESGrabReleaseEvent
 {
@@ -269,7 +285,12 @@ struct TESUniqueIDChangeEvent
 
 struct TESSwitchRaceCompleteEvent
 {
+    // SKSE64 v2.2.6 GameEvents.h.
+    Actor* actor;
 };
+
+static_assert(offsetof(TESSwitchRaceCompleteEvent, actor) == 0x00);
+static_assert(sizeof(TESSwitchRaceCompleteEvent) == 0x08);
 
 struct TESFastTravelEndEvent
 {

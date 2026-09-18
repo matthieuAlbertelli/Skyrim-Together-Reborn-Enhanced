@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Messages/CharacterAppearanceUpdate.h>
+
 #include <TiltedCore/Stl.hpp>
 
 #include <Messages/Message.h>
@@ -90,7 +92,7 @@ struct ServerMessageFactory
             CampaignCommandResponse, NotifyCampaignSnapshot, NotifyCampaignLobbyState, NotifyCampaignHelgenState,
             CampaignCheckpointSaveRequest, CampaignRecoveryLoadRequest,
             CampaignRecoverySnapshot, CampaignRecoveryComplete,
-            NotifyCampaignCheckpointState>;
+            NotifyCampaignCheckpointState, NotifyCharacterAppearanceUpdate>;
 
         return s_visitor(std::forward<T>(func));
     }

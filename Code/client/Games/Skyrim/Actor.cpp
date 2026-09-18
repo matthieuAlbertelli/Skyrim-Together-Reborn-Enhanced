@@ -1,3 +1,6 @@
+#include <NativeLifetimeProbe.h>
+#include <Services/RemoteRespawnLab.h>
+#include <Games/ActorSpawnLocation.h>
 #include <Games/References.h>
 #include <Games/Skyrim/EquipManager.h>
 #include <AI/AIProcess.h>
@@ -158,9 +161,24 @@ void Actor::ForcePosition(const NiPoint3& acPosition) noexcept
     SetPosition(acPosition, true);
 }
 
-void Actor::QueueUpdate() noexcept
+bool Actor::SwitchRace(TESRace* aRace, bool aPlayer) noexcept
 {
-    auto* pSetting = INISettingCollection::Get()->GetSetting("bUseFaceGenPreprocessedHeads:General");
+    if (!aRace || aRace->IsTemporary() || VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0" || aPlayer)
+        return false;
+    using TSwitchRace = void(Actor*, TESRace*, bool);
+    auto* function = reinterpret_cast<TSwitchRace*>(VersionDb::Get().FindAddressById(37925));
+    if (!function)
+        return false;
+    function(this, aRace, aPlayer);
+    return true;
+}
+
+bool Actor::QueueUpdate() noexcept
+{
+    auto* settings = INISettingCollection::Get();
+    auto* pSetting = settings ? settings->GetSetting("bUseFaceGenPreprocessedHeads:General") : nullptr;
+    if (!pSetting)
+        return false;
     const auto originalValue = pSetting->data;
     pSetting->data = 0;
 
@@ -170,31 +188,38 @@ void Actor::QueueUpdate() noexcept
     TiltedPhoques::ThisCall(QueueUpdate, this, true);
 
     pSetting->data = originalValue;
+    return true;
 }
 
-GamePtr<Actor> Actor::Create(TESNPC* apBaseForm) noexcept
+GamePtr<Actor> Actor::Create(TESNPC* apBaseForm, const ActorSpawnLocation* apLocation) noexcept
 {
+    NativeLifetimeStage("actor-create-enter");
     auto pActor = New();
+    NativeLifetimeStage("actor-new-return", pActor);
     // Prevent saving
     pActor->SetSkipSaveFlag(true);
     pActor->GetExtension()->SetRemote(true);
 
     const auto pPlayer = static_cast<Actor*>(GetById(0x14));
-    auto pCell = pPlayer->parentCell;
-    const auto pWorldSpace = pPlayer->GetWorldSpace();
+    auto pCell = apLocation ? apLocation->Cell : pPlayer->parentCell;
+    const auto pWorldSpace = apLocation ? apLocation->WorldSpace : pPlayer->GetWorldSpace();
 
     pActor->SetLevelMod(4);
     pActor->MarkChanged(0x40000000);
     pActor->SetParentCell(pCell);
     pActor->SetBaseForm(apBaseForm);
 
-    auto position = pPlayer->position;
-    auto rotation = pPlayer->rotation;
+    NiPoint3 position = apLocation ? apLocation->Position : pPlayer->position;
+    NiPoint3 rotation = apLocation ? apLocation->Rotation : pPlayer->rotation;
 
     if (pCell && !(pCell->cellFlags[0] & 1))
         pCell = nullptr;
 
-    ModManager::Get()->Spawn(position, rotation, pCell, pWorldSpace, pActor);
+    NativeLifetimeStage("pre-spawn", pActor);
+    STRE::RemoteRespawnLab::BeforeSpawn(pActor, apBaseForm);
+    const uint32_t spawnHandle = ModManager::Get()->Spawn(position, rotation, pCell, pWorldSpace, pActor);
+    STRE::RemoteRespawnLab::AfterSpawn(pActor, apBaseForm);
+    NativeLifetimeStage("post-spawn", pActor, false, spawnHandle);
 
     pActor->ForcePosition(position);
 
@@ -204,6 +229,7 @@ GamePtr<Actor> Actor::Create(TESNPC* apBaseForm) noexcept
 
     pActor->flags &= 0xFFDFFFFF;
 
+    NativeLifetimeStage("actor-create-return", pActor);
     return pActor;
 }
 

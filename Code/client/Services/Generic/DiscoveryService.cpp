@@ -1,4 +1,6 @@
 #include <TiltedOnlinePCH.h>
+#include <NativeLifetimeProbe.h>
+#include <Services/RemoteRespawnLab.h>
 
 #include <Services/DiscoveryService.h>
 #include <Games/TES.h>
@@ -186,12 +188,26 @@ void DiscoveryService::VisitForms() noexcept
     const auto visitor = [this](TESObjectREFR* apReference)
     {
         const auto formId = apReference->formID;
+        const auto token = reinterpret_cast<uintptr_t>(apReference);
+        const auto previous = m_formTokens.find(formId);
+        if (previous != m_formTokens.end() && previous->second != token && STRE::RemoteRespawnLab::Tracks(formId, previous->second))
+        {
+            // Observe loss with the OLD source-captured token before processing reuse.
+            if (!STRE::RemoteRespawnLab::Discovery(formId, previous->second, false))
+                m_dispatcher.trigger(ActorRemovedEvent(formId));
+            m_forms.erase(formId);
+            m_formTokens.erase(previous);
+            s_previousForms.erase(formId);
+        }
 
         if (!m_forms.count(formId))
         {
             m_forms.insert(formId);
+            m_formTokens[formId] = reinterpret_cast<uintptr_t>(apReference);
 
-            m_dispatcher.enqueue(ActorAddedEvent(formId));
+            NativeLifetimeDiscovery(formId, true);
+            if (!STRE::RemoteRespawnLab::Discovery(formId, reinterpret_cast<uintptr_t>(apReference), true))
+                m_dispatcher.enqueue(ActorAddedEvent(formId));
         }
         else
             s_previousForms.erase(formId);
@@ -219,7 +235,11 @@ void DiscoveryService::VisitForms() noexcept
     // We dispatch removal events first to prevent needless reallocations
     for (uint32_t formId : s_previousForms)
     {
-        m_dispatcher.trigger(ActorRemovedEvent(formId));
+        NativeLifetimeDiscovery(formId, false);
+        const auto token = m_formTokens.find(formId);
+        if (!STRE::RemoteRespawnLab::Discovery(formId, token == m_formTokens.end() ? 0 : token->second, false))
+            m_dispatcher.trigger(ActorRemovedEvent(formId));
+        m_formTokens.erase(formId);
         m_forms.erase(formId);
     }
 

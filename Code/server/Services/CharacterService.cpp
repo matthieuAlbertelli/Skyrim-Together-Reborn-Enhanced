@@ -1,4 +1,5 @@
 #include <Services/CharacterService.h>
+#include <Services/CharacterAppearanceUpdate.h>
 #include <Components.h>
 #include <GameServer.h>
 #include <World.h>
@@ -62,6 +63,7 @@ CharacterService::CharacterService(World& aWorld, entt::dispatcher& aDispatcher)
     , m_mountConnection(aDispatcher.sink<PacketEvent<MountRequest>>().connect<&CharacterService::OnMountRequest>(this))
     , m_newPackageConnection(aDispatcher.sink<PacketEvent<NewPackageRequest>>().connect<&CharacterService::OnNewPackageRequest>(this))
     , m_requestRespawnConnection(aDispatcher.sink<PacketEvent<RequestRespawn>>().connect<&CharacterService::OnRequestRespawn>(this))
+    , m_appearanceUpdateConnection(aDispatcher.sink<PacketEvent<RequestCharacterAppearanceUpdate>>().connect<&CharacterService::OnCharacterAppearanceUpdate>(this))
     , m_syncExperienceConnection(aDispatcher.sink<PacketEvent<SyncExperienceRequest>>().connect<&CharacterService::OnSyncExperienceRequest>(this))
     , m_dialogueConnection(aDispatcher.sink<PacketEvent<DialogueRequest>>().connect<&CharacterService::OnDialogueRequest>(this))
     , m_subtitleConnection(aDispatcher.sink<PacketEvent<SubtitleRequest>>().connect<&CharacterService::OnSubtitleRequest>(this))
@@ -484,6 +486,42 @@ void CharacterService::OnNewPackageRequest(const PacketEvent<NewPackageRequest>&
     const entt::entity cEntity = static_cast<entt::entity>(message.ActorId);
     if (!GameServer::Get()->SendToPlayersInRange(notify, cEntity, acMessage.GetSender()))
         spdlog::error("{}: SendToPlayersInRange failed", __FUNCTION__);
+}
+
+void CharacterService::OnCharacterAppearanceUpdate(const PacketEvent<RequestCharacterAppearanceUpdate>& acMessage) const noexcept
+{
+    spdlog::info("[STRE][AppearanceTrace][Server] phase=received actorId={} sender={} bytes={} tints={} descriptorRace={:X}:{:X} descriptorSex={}", acMessage.Packet.ActorId, acMessage.pPlayer ? acMessage.pPlayer->GetId() : 0, acMessage.Packet.AppearanceBuffer.size(), acMessage.Packet.FaceTints.Entries.size(), acMessage.Packet.Descriptor.Race.ModId, acMessage.Packet.Descriptor.Race.BaseId, acMessage.Packet.Descriptor.Sex);
+    const auto entity = static_cast<entt::entity>(acMessage.Packet.ActorId);
+    auto view = m_world.view<OwnerComponent, CharacterComponent>();
+    if (!view.contains(entity)) { spdlog::info("[STRE][AppearanceTrace][Server] phase=rejected reason=missing-owner-or-character actorId={}", acMessage.Packet.ActorId); return; }
+
+    auto* build = m_world.try_get<CharacterBuildComponent>(entity);
+    if (!acMessage.Packet.FinalBuildRevision || !build || !build->Applied || build->Revision != acMessage.Packet.FinalBuildRevision)
+    {
+        spdlog::info("[STRE][AppearanceTrace][Server] phase=rejected reason=not-applied-final-build actorId={}", acMessage.Packet.ActorId);
+        return;
+    }
+
+    if (!MatchesAppliedCharacterBuild(acMessage.Packet, build->Applied, build->Revision, build->Build.RaceId, build->FinalAppearance))
+    {
+        spdlog::info("[STRE][AppearanceTrace][Server] phase=rejected reason=conflicting-final-build actorId={}", acMessage.Packet.ActorId);
+        return;
+    }
+
+    const bool accepted = ApplyCharacterAppearanceUpdate(acMessage.Packet, view.get<OwnerComponent>(entity).GetOwner(), acMessage.pPlayer,
+        view.get<CharacterComponent>(entity), [&](const NotifyCharacterAppearanceUpdate& acNotify)
+        {
+            spdlog::info("[STRE][AppearanceTrace][Server] phase=owner-accepted actorId={} sender={}", acNotify.ActorId, acMessage.pPlayer->GetId());
+            spdlog::info("[CharacterService][AppearanceSync] accepted actor={} owner={}", acNotify.ActorId, acMessage.pPlayer->GetId());
+            if (!GameServer::Get()->SendToPlayersInRange(acNotify, entity, acMessage.GetSender()))
+                spdlog::error("{}: SendToPlayersInRange failed", __FUNCTION__);
+        });
+    if (!accepted)
+        spdlog::info("[STRE][AppearanceTrace][Server] phase=rejected actorId={} reason={}", acMessage.Packet.ActorId, !acMessage.pPlayer ? "no-sender" : view.get<OwnerComponent>(entity).GetOwner() != acMessage.pPlayer ? "owner-mismatch" : "payload-invalid");
+    if (accepted)
+        build->FinalAppearance = acMessage.Packet;
+    if (!accepted)
+        spdlog::debug("[CharacterService][AppearanceSync] rejected actor={} reason=owner-or-payload", acMessage.Packet.ActorId);
 }
 
 void CharacterService::OnRequestRespawn(const PacketEvent<RequestRespawn>& acMessage) const noexcept

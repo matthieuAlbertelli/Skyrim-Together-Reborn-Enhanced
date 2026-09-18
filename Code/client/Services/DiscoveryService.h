@@ -88,6 +88,7 @@ private:
 
     //! @brief Cached actor forms detected in the previous frame.
     Set<uint32_t> m_forms;
+    Map<uint32_t, uintptr_t> m_formTokens; // Captured with discovery, preserved for removal; never dereferenced.
     /**
      * The center grid coordinates are the coordinates of the cell in the cell grid
      * where the cells around it in a 5 by 5 grid (by default) are loaded.
