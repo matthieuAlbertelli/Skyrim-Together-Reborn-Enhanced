@@ -248,9 +248,10 @@ version and complete compatibility/evidence gates before publication.
 
 Version-reference classification during preparation: VERSION is advanced;
 UPSTREAM gains the candidate record without rewriting the published identity.
-README's current-public-build line, installation guide, compatibility matrix and
-0.3 changelog remain descriptions of the still-published release; update their
-current-release surfaces in the publication preparation once supported by evidence.
+README's version/current-public-build line, packaged installation guide and
+reference compatibility matrix are prepared for 0.4.0-alpha.1 before tagging.
+This preparation does not assert publication or tagged-package validation.
+The 0.3 changelog and UPSTREAM's last-published identity remain historical.
 The bug-report placeholder and RELEASE_PROCESS tag example are generic examples
 and remain unchanged. Historical tags, SHAs and evidence are immutable.
 

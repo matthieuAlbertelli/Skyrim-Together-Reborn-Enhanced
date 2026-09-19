@@ -8,7 +8,7 @@
 
 <p align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.0--alpha.1-orange)
+![Version](https://img.shields.io/badge/version-0.4.0--alpha.1-orange)
 ![Status](https://img.shields.io/badge/status-Alpha-red)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 
@@ -20,14 +20,14 @@
 
 ## Install and play
 
-The current public build is **STRE `0.3.0-alpha.1`**.
+The current public build is **STRE `0.4.0-alpha.1`**.
 
 - [Download STRE releases](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases)
 - [Player installation guide](docs/user/INSTALLATION.md)
 
 Download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
 
-The current alpha installation target is Steam Skyrim Special Edition runtime `1.6.1170` on Windows x64. Address Library, matching SKSE64 and Better Grabbing are external dependencies; Better Grabbing is not redistributed by STRE.
+The current alpha installation target is Steam Skyrim Special Edition runtime `1.6.1170` on Windows x64. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
 
 ## Current capabilities
 
