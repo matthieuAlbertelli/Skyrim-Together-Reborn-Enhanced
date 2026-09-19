@@ -6,6 +6,89 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 _No unreleased STRE-specific changes documented yet._
 
+## [0.4.0-alpha.1] - 2026-09-19
+
+### Added
+
+- Ilinalta's Vigil headquarters checkpoint: interior shell/circulation, Lake
+  Ilinalta exterior and working load doors, tavern music, initial lighting,
+  interior navmesh and ten stable starting-seat references.
+- Versioned Messire Valen full-body NIF/DDS prototype, with in-game locomotion
+  and general-animation smoke evidence; this is not the completed Valen feature.
+- Ten explicit existing XMarkerHeading creation positions, selected by the
+  lexical rank of sealed durable PlayerIds and paired with Seat01..10.
+- Individual post-build seating: each owning PlayerCharacter, after its own
+  authoritative Applied, uses MarkerXX -> verified arrival -> marker heading ->
+  later engine update -> native SeatXX activation. This local approach remains
+  non-MASTER; no all-Applied barrier or remote MoveTo is introduced.
+- Shared client/server STR replay rules and bounded consumed-action history for
+  animation continuity across a committed native binding replacement.
+
+### Changed
+
+- Official Character Creation keeps intermediate RaceMenu changes local and
+  publishes one canonical final appearance after the build is sealed. Observers
+  automatically reconstruct the final remote Actor/private base through the
+  natural-join materializer, retaining server identity and logical ECS identity.
+  No server respawn, reassignment, hot-apply fallback, SwitchRace or Reset3D is
+  part of this final flow. Later manual showracemenu changes remain out of scope.
+- Creation starts at explicit markers without mandatory seating. Neither creation
+  entry nor final rematerialization depends on sitting/standing/furniture state.
+- Remote seating uses STR actions and AnimationSystem replay, never native
+  Activate(remoteActor). Already-consumed persistent actions are refined before
+  pending actions on the new binding; exits invalidate obsolete history.
+- The v1 headquarters target is an instanced CK interior; a seamless open-world
+  headquarters remains a later enhancement. Physical layout, appearance and
+  seating contracts, diagnostics, tests and ADRs now document these boundaries.
+- Appearance messages and the versioned Character Build notification require
+  matching updated peers. Exact client/server build negotiation remains required;
+  no mixed-release compatibility is claimed.
+
+### Fixed
+
+- Final rematerialization no longer permanently abandons an otherwise admissible
+  actor solely because weapon states 4/5 are transient. A bounded pre-reservation
+  wait rechecks all guards and requires an actually safe state before one
+  transaction; it does not treat WantToSheathe/Sheathing as safe.
+- A chair-enter action consumed on a placeholder before candidate-commit can be
+  reconstructed on the final Actor/token using the existing instant counterpart,
+  without duplicating pending actions or losing their causal order.
+- Local marker approaches resolve the observed native furniture-entry failure;
+  logical furniture/camera state alone is no longer reported as visual success.
+
+### Validated
+
+- Maintainer acceptance in two fresh roster-2 campaigns, both completion orders:
+  reciprocal correct final appearances without the placeholder/black Viking,
+  individual native local seating and visible remote seating in both directions.
+  The A-first trace records weapon 4 -> 0, candidate commit and refined chair
+  replay on the new binding; the reverse order is a human attestation.
+- Functional checkpoint: TPTests 43,905 assertions / 400 cases; seating 1,529 / 16;
+  admission 34,089 / 17; binding replay 340 / 12; 92 structural tests; Windows
+  Debug client/launcher/server builds; six CK/ESP audits and diff checks PASS.
+  These are recorded checkpoint results, not tests of a future tagged package.
+- Headquarters load-door/layout and temporary-NPC navmesh smoke tests, plus
+  Valen prototype locomotion/general animations, as recorded in STATUS.
+
+### Known limitations
+
+- Ranks 2..9 have static mapping coverage, not seating runtime acceptance.
+  MASTER in-game seating, recovery/reconnect for this specific checkpoint and
+  native retirement/lifetime completion are not validated. The producer of
+  transient weapon 4/5 remains unknown; persistent unsafe states still time out.
+- The full race/sex/state-projection matrix and later manual appearance edits
+  are not covered by the reciprocal roster-2 acceptance.
+- Valen, Departure, room ownership/housing, all classes/personal quests and the
+  complete v1 campaign program remain unfinished. Headquarters decoration,
+  rooms, exterior road access and signage remain incomplete.
+- The development EEK fireplace resource still requires redistribution and
+  packaging resolution before publication. Tagged release-mode package checks
+  and clean-install smoke validation have not been performed for this candidate.
+- Unresolved 0.3 alpha limitations remain, including broader recovery UX/live
+  matrices, durable Character Build restoration, WorldEntity persistence and
+  unsupported campaign downgrade. Back up server state and every player's saves;
+  this checkpoint does not establish an old-save upgrade guarantee.
+
 ## [0.3.0-alpha.1] - 2026-08-28
 
 ### Added
