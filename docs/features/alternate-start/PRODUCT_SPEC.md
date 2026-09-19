@@ -12,7 +12,7 @@ Start a campaign in an inn without importing an already-advanced character. Each
    position at one of ten explicit CK XMarkerHeading references by sealed PlayerId
    rank (Solo: PlayerCreationMarker01). Entry and final remote
    rematerialization have no sitting/standing/furniture precondition (ADR-0022).
-   The corrected bootstrap is source/PEX implemented; runtime acceptance is pending.
+   The corrected bootstrap is source/PEX implemented; the two-player creation/seating checkpoint is human-accepted (see STATUS).
 2. Open RaceMenu.
 3. Select Warrior, Mage, or Thief in the Angular UI.
 4. Select available kits.

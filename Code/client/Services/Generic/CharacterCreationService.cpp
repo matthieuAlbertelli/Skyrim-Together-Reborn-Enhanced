@@ -482,6 +482,7 @@ bool CharacterCreationService::IsRaceMenuDiagnosticActive() const noexcept
 
 BSTEventResult CharacterCreationService::OnEvent(const TESFurnitureEvent* apEvent, const EventDispatcher<TESFurnitureEvent>*)
 {
+    STRE::CreationSeating::ObserveFurnitureEvent(apEvent);
     if (!IsRaceMenuDiagnosticActive() || !apEvent || !apEvent->character)
         return BSTEventResult::kOk;
     if (apEvent->character != PlayerCharacter::Get())
@@ -579,7 +580,7 @@ void CharacterCreationService::OnUpdate(
     const UpdateEvent& acEvent) noexcept
 {
     TickSexChangeProbe();
-    STRE::CreationSeating::Tick(m_world);
+    STRE::CreationSeating::OnUpdate(m_world);
     if (IsRaceMenuDiagnosticActive() || m_raceSwitchNextTick)
     {
         ++m_localRaceProbeTick;

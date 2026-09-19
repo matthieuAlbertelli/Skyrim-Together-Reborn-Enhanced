@@ -11,6 +11,9 @@ struct ClientReferencesMoveRequest;
  */
 struct AnimationSystem
 {
+    // A committed native representation changed; no engine call is made here.
+    static void OnBindingChanged(World& aWorld, entt::entity aEntity, const AnimationBindingChange& aChange) noexcept;
+    static void InvalidateReplayContexts(World& aWorld, const char* aReason) noexcept;
     /**
      * @brief Ran periodically to check for new animations to apply.
      * @param aWorld The registry where the actor in question lives.

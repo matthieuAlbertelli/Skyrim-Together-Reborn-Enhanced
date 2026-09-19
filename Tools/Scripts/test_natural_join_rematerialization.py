@@ -69,7 +69,7 @@ class NaturalJoinRematerialization(unittest.TestCase):
         self.assertLess(advance.index("ActorSpawnLocation location{cell, space, aJob.Position, aJob.Rotation}"), advance.index("Materialize("))
         self.assertIn("aJob.Tints, location)", advance)
         self.assertNotIn("PlayerCharacter::Get", LAB)
-        capture = body(LAB, "bool Capture(")
+        capture = body(LAB, "FinalRespawnAdmissionDecision Capture(")
         self.assertIn("aJob.Position = actor->position", capture)
         self.assertIn("aJob.Rotation = actor->rotation", capture)
 
@@ -140,10 +140,11 @@ class NaturalJoinRematerialization(unittest.TestCase):
             transform = struct.unpack("<6f", record["DATA"])
             self.assertTrue(all(math.isfinite(v) for v in transform))
             positions.append(transform[:3])
-        # Geometric separation only: collision/navmesh clearance needs human acceptance.
+        # ADR-0025 reuses these as manually authored chair approaches. Distinct
+        # positions remain required; no arbitrary spacing proves entry clearance.
         for i, first in enumerate(positions):
             for second in positions[:i]:
-                self.assertGreater(math.dist(first, second), 90)
+                self.assertNotEqual(first, second)
 
 
 if __name__ == "__main__":

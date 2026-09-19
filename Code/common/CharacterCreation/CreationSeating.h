@@ -22,7 +22,7 @@ struct SeatProjection
     bool Completed{};
 
     SeatAction Observe(uint32_t aActor, uintptr_t aToken, bool aReady, bool aCorrectFurniture,
-                       bool aSeated, bool aOtherFurniture, bool aOccupied) noexcept
+                       bool aEntryConfirmed, bool aOtherFurniture, bool aOccupied) noexcept
     {
         if (!aReady || !aActor || !aToken)
             return SeatAction::Pending;
@@ -33,7 +33,7 @@ struct SeatProjection
             Issued = false;
             Completed = false;
         }
-        if (Completed || (aCorrectFurniture && aSeated))
+        if (Completed || (aCorrectFurniture && aEntryConfirmed))
         {
             Completed = true;
             return SeatAction::Complete;

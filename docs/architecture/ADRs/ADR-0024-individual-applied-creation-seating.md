@@ -5,6 +5,8 @@
 - **Decision makers:** STRE maintainer, explicit individual Applied seating mission
 - **Supersedes:** ADR-0021/0022/0023 only where seating was deferred until collective completion
 - **References:** #9, #23
+- **Partially superseded by:** [ADR-0025](ADR-0025-existing-ck-markers-local-seat-approach.md) for explicit local marker approach; individual Applied and all authority boundaries remain
+- **Observer activation superseded by:** [ADR-0026](ADR-0026-remote-seating-through-str-actions.md); remote Activate is invalid on 1.6.1170 and is disabled; ADR-0027 provides the accepted binding replay continuity
 
 ## Decision
 

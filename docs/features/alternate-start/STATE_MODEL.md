@@ -42,6 +42,16 @@ Current invariants:
   session Character Build service is not yet bound to a live campaign identity
   or restored from that store.
 
+## Individual post-build presentation
+
+Applied authorizes only that player's local MarkerXX -> SeatXX approach and
+final canonical appearance publication. Observer native rematerialization and
+STR binding replay preserve the logical entity/ownership; posture is presentation,
+not authoritative build completion or collective readiness. The durable sealed
+PlayerId rank selects the existing marker/seat pair. This accepted roster-2
+slice introduces no all-Applied barrier or new campaign phase. STATUS owns its
+human validation; the future collective state below remains separate.
+
 ## Target campaign state
 
 The server-side fixed-roster aggregate, readiness model, exact-roster runtime

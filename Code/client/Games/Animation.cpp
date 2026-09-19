@@ -13,6 +13,7 @@
 #include <Misc/BSFixedString.h>
 
 #include <World.h>
+#include <Services/CreationSeating.h>
 
 TP_THIS_FUNCTION(TPerformAction, uint8_t, ActorMediator, TESActionData* apAction);
 static TPerformAction* RealPerformAction;
@@ -39,6 +40,7 @@ uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData* apActi
         pActor->SaveAnimationVariables(action.Variables);
 
         const auto res = TiltedPhoques::ThisCall(RealPerformAction, apThis, apAction);
+        STRE::CreationSeating::ObserveAnimationAction(apAction, res, false);
 
         // spdlog::debug("Action event name: {}, target name: {}", apAction->eventName.AsAscii(), apAction->targetEventName.AsAscii());
 
@@ -61,6 +63,7 @@ uint8_t TP_MAKE_THISCALL(HookPerformAction, ActorMediator, TESActionData* apActi
         return res;
     }
 
+    STRE::CreationSeating::ObserveAnimationAction(apAction, 0, true);
     return 0;
 }
 

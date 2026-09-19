@@ -1,9 +1,193 @@
 #include <CharacterCreation/FinalRespawn.h>
+#include <CharacterCreation/FinalRespawnAdmission.h>
 #include <CharacterCreation/RemoteMaterializationLifecycle.h>
 #include <catch2/catch.hpp>
 #include <string_view>
 
 using namespace STRE::CharacterCreation;
+
+namespace
+{
+using AdmissionClock = FinalRespawnAdmission::Clock;
+const AdmissionClock::time_point admissionStart{};
+const FinalRespawnAdmissionBinding admissionBinding{7, 0x100003, 3, 2, 0xFF000011, 0xFF000012, 0x1234, 0x5678};
+struct AdmissionTransaction
+{
+    FinalRespawnAdmission Admission;
+    RemoteMaterializationLifecycle Lifecycle;
+    unsigned Reservations{}, Creations{};
+    AdmissionTransaction() { Admission.Begin(admissionStart); }
+    FinalRespawnAdmissionResult Update(int aMilliseconds, uint32_t aWeapon, const char* aGuard = nullptr,
+                                       FinalRespawnAdmissionBinding aBinding = admissionBinding, uint32_t aExtraFlags1 = 0, uint32_t aExtraFlags2 = 0)
+    {
+        auto result = Admission.Observe(admissionStart + std::chrono::milliseconds(aMilliseconds), aBinding,
+            DecodeFinalRespawnActorState(0x41 | aExtraFlags1, 0x1008 | (aWeapon << 5) | aExtraFlags2), aGuard);
+        if (result.Decision == FinalRespawnAdmissionDecision::Ready)
+        {
+            const MaterializationKey key{aBinding.Session, aBinding.Entity, aBinding.Server, 91};
+            REQUIRE(Lifecycle.Reserve(key, {aBinding.Actor, aBinding.Base}));
+            ++Reservations;
+            REQUIRE(Lifecycle.RecordCandidate(key, {0xFF000013, 0xFF000014}));
+            ++Creations;
+        }
+        return result;
+    }
+};
+}
+
+TEST_CASE("Pre-reservation admission preserves the immediate safe path and consumes Ready once", "[final-respawn]")
+{
+    AdmissionTransaction flow;
+    REQUIRE(flow.Update(0, 0).Decision == FinalRespawnAdmissionDecision::Ready);
+    REQUIRE(flow.Reservations == 1);
+    REQUIRE(flow.Creations == 1);
+    REQUIRE(flow.Update(1, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+    REQUIRE(flow.Reservations == 1);
+    REQUIRE(flow.Creations == 1);
+}
+
+TEST_CASE("WantToSheathe waits for actual sheathed state with or without intermediate Sheathing", "[final-respawn]")
+{
+    for (bool intermediate : {false, true})
+    {
+        AdmissionTransaction flow;
+        REQUIRE(flow.Update(0, 4).Decision == FinalRespawnAdmissionDecision::Pending);
+        REQUIRE(flow.Lifecycle.State() == MaterializationState::Idle);
+        REQUIRE_FALSE(FinalRespawnActorStateSafe(0x41, 0x1088));
+        if (intermediate)
+        {
+            REQUIRE(flow.Update(100, 5).Decision == FinalRespawnAdmissionDecision::Pending);
+            REQUIRE_FALSE(FinalRespawnActorStateSafe(0x41, 0x10A8));
+        }
+        REQUIRE(flow.Reservations == 0);
+        REQUIRE(flow.Creations == 0);
+        REQUIRE(flow.Lifecycle.TakeRetirementIntents(flow.Lifecycle.Key()) == 0);
+        REQUIRE(flow.Update(200, 0).Decision == FinalRespawnAdmissionDecision::Ready);
+        REQUIRE(flow.Reservations == 1);
+        REQUIRE(flow.Creations == 1);
+        // Exercise the existing pure lifecycle through commit after admission.
+        // Native projection/readiness and the visible result still require Skyrim.
+        const auto key = flow.Lifecycle.Key();
+        REQUIRE(flow.Lifecycle.BoundActor() == admissionBinding.Actor);
+        REQUIRE_FALSE(flow.Lifecycle.Commit(key)); // Discovery/readiness cannot be skipped.
+        REQUIRE(flow.Lifecycle.Observe(key, 0xFF000013, true) == DiscoveryRoute::CandidateStaged);
+        REQUIRE(flow.Lifecycle.MarkReady(key));
+        REQUIRE(flow.Lifecycle.Commit(key));
+        REQUIRE(flow.Lifecycle.BoundActor() == 0xFF000013);
+        REQUIRE_FALSE(flow.Lifecycle.Commit(key));
+        REQUIRE(flow.Lifecycle.TakeRetirementIntents(key) == 1); // Old only, after commit.
+        REQUIRE(flow.Lifecycle.TakeRetirementIntents(key) == 0);
+        flow.Admission.Begin(admissionStart + std::chrono::seconds(9)); // Duplicate final cannot rearm.
+        REQUIRE(flow.Update(300, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+        REQUIRE(flow.Lifecycle.State() == MaterializationState::Committed);
+        REQUIRE(flow.Reservations == 1);
+        REQUIRE(flow.Creations == 1);
+    }
+}
+
+TEST_CASE("Persistent sheathing and duplicate finals share the original Applied deadline", "[final-respawn]")
+{
+    for (uint32_t weapon : {4u, 5u})
+    {
+        AdmissionTransaction flow;
+        // Nine seconds consumed waiting for matching Applied; no new weapon budget.
+        flow.Admission.Begin(admissionStart + std::chrono::seconds(9));
+        REQUIRE(flow.Update(9000, weapon).Decision == FinalRespawnAdmissionDecision::Pending);
+        REQUIRE(flow.Update(9999, weapon).Decision == FinalRespawnAdmissionDecision::Pending);
+        flow.Admission.Begin(admissionStart + std::chrono::milliseconds(9999));
+        const auto expired = flow.Update(10000, weapon);
+        REQUIRE(expired.Decision == FinalRespawnAdmissionDecision::Rejected);
+        REQUIRE(std::string_view(expired.Reason) == "weapon-sheathing-timeout");
+        REQUIRE(flow.Update(10001, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+        REQUIRE(flow.Reservations == 0);
+        REQUIRE(flow.Creations == 0);
+        REQUIRE(flow.Lifecycle.State() == MaterializationState::Idle);
+        REQUIRE(flow.Lifecycle.TakeRetirementIntents(flow.Lifecycle.Key()) == 0);
+    }
+    AdmissionTransaction lateSafe;
+    REQUIRE(lateSafe.Update(10000, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+    REQUIRE(lateSafe.Creations == 0);
+}
+
+TEST_CASE("Sheathing cannot hide a binding canonical runtime disconnect or recovery failure", "[final-respawn]")
+{
+    for (const auto* guard : {"provenance-mismatch", "unresolvable-final-race", "unsupported-runtime", "canonical-final-changed",
+                             "cachedref-mismatch", "actor-lookup-failed", "assignment-pending", "waiting-for-3d", "transport-disconnected", "recovery-locked"})
+        for (bool alreadyWaiting : {false, true})
+        {
+            CAPTURE(guard, alreadyWaiting);
+            AdmissionTransaction flow;
+            if (alreadyWaiting)
+                REQUIRE(flow.Update(0, 4).Decision == FinalRespawnAdmissionDecision::Pending);
+            const auto result = flow.Update(100, 4, guard);
+            REQUIRE(result.Decision == FinalRespawnAdmissionDecision::Rejected);
+            REQUIRE(std::string_view(result.Reason) == guard);
+            REQUIRE(flow.Update(200, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+            REQUIRE(flow.Reservations == 0);
+            REQUIRE(flow.Creations == 0);
+            REQUIRE(flow.Lifecycle.TakeRetirementIntents(flow.Lifecycle.Key()) == 0);
+        }
+}
+
+TEST_CASE("Every pre-reservation identity and native token is fenced across observations", "[final-respawn]")
+{
+    for (unsigned field = 0; field != 8; ++field)
+    {
+        AdmissionTransaction flow;
+        REQUIRE(flow.Update(0, 4).Decision == FinalRespawnAdmissionDecision::Pending);
+        auto changed = admissionBinding;
+        switch (field)
+        {
+        case 0: ++changed.Session; break;
+        case 1: changed.Entity += 0x100000; break; // EnTT version, same logical index.
+        case 2: ++changed.Server; break;
+        case 3: ++changed.Player; break;
+        case 4: ++changed.Actor; break;
+        case 5: ++changed.Base; break;
+        case 6: ++changed.ActorToken; break;
+        case 7: ++changed.BaseToken; break;
+        }
+        const auto result = flow.Update(100, 0, nullptr, changed);
+        REQUIRE(result.Decision == FinalRespawnAdmissionDecision::Rejected);
+        REQUIRE(std::string_view(result.Reason) == "pre-reservation-binding-changed");
+        REQUIRE(flow.Creations == 0);
+    }
+}
+
+TEST_CASE("Pending weapons do not mask any other ActorState veto", "[final-respawn]")
+{
+    for (uint32_t weapon = 0; weapon != 8; ++weapon)
+    {
+        for (const auto flags : {std::pair{1u << 21, 0u}, {1u << 25, 0u}, {1u << 28, 0u}, {1u << 18, 0u},
+                                {0u, 1u << 10}, {0u, 1u << 13}, {1u << 8, 0u}, {1u << 10, 0u}})
+        {
+            AdmissionTransaction flow;
+            REQUIRE(flow.Update(0, weapon, nullptr, admissionBinding, flags.first, flags.second).Decision == FinalRespawnAdmissionDecision::Rejected);
+            REQUIRE(flow.Creations == 0);
+        }
+        if (weapon != 0 && weapon != 4 && weapon != 5)
+        {
+            AdmissionTransaction flow;
+            REQUIRE(flow.Update(0, weapon).Decision == FinalRespawnAdmissionDecision::Rejected);
+        }
+    }
+}
+
+TEST_CASE("New danger after reservation still aborts instead of readmitting a transaction", "[final-respawn]")
+{
+    for (uint32_t flags2 : {4u << 5, 5u << 5, 1u << 10, 1u << 13})
+    {
+        AdmissionTransaction flow;
+        REQUIRE(flow.Update(0, 0).Decision == FinalRespawnAdmissionDecision::Ready);
+        REQUIRE_FALSE(FinalRespawnActorStateSafe(0x41, 0x1008 | flags2));
+        const auto key = flow.Lifecycle.Key();
+        flow.Lifecycle.Abort(key);
+        REQUIRE_FALSE(flow.Lifecycle.Commit(key));
+        REQUIRE(flow.Lifecycle.TakeRetirementIntents(key) == 2); // Candidate only, never old.
+        REQUIRE(flow.Update(100, 0).Decision == FinalRespawnAdmissionDecision::Rejected);
+        REQUIRE(flow.Creations == 1);
+    }
+}
 
 TEST_CASE("Final rematerialization automatically requires connected official Applied build", "[final-respawn]")
 {

@@ -4,11 +4,14 @@
 #error Include Components.h instead
 #endif
 
+#include <Animation/BindingActionReplay.h>
+
 struct RemoteAnimationComponent
 {
     List<ActionEvent> TimePoints;
     ActionEvent LastRanAction;
     ActionEvent LastProcessedAction;
-    uint32_t ReplayCount;
+    uint32_t ReplayCount{};
     bool ResetAnimationGraphForReplay{false};
+    BindingActionReplay BindingReplay;
 };
