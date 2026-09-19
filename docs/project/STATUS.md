@@ -9,6 +9,42 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
+
+- Product version: `0.4.0-alpha.1`.
+- Tag: `stre-v0.4.0-alpha.1`.
+- Release commit: `6dfba1594e35852d106be0b4785dd5280a58fa8d`.
+- Annotated tag object: `d6c8b8a356838e03007a67ffbd6f74857d451544`.
+- Published: `2026-09-19T10:57:15Z`.
+- [GitHub Release](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases/tag/stre-v0.4.0-alpha.1):
+  prerelease (`prerelease=true`, `draft=false`).
+- [Playable workflow 35437245976](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/35437245976):
+  completed/success on the release commit, triggered by the tag push.
+- Published ZIP: `STRE-v0.4.0-alpha.1-windows-x64.zip`.
+- ZIP SHA256: `57dcc435ab6728782a4e4242e28e7286dff7fc75bbb1e5b7ecc6e4c55f66bf3c`.
+
+**Tagged clean-install human smoke: PASS**, attested by the maintainer on this
+exact published ZIP, identified by the checksum above. The observed checks were:
+
+- clean installation / dedicated profile: PASS;
+- client startup and UI/F2: PASS;
+- New Game / Ilinalta's Vigil: PASS;
+- separately installed external EEK resource without Embers HD: PASS;
+- no missing/purple textures; carvings, embers and wood rendered correctly: PASS;
+- fireplace collision and circulation: PASS;
+- RaceMenu / Character Creation, final appearance and local seating: PASS.
+
+The prior roster-2 acceptance in both completion orders remains separate
+functional evidence, recorded below. It is not claimed to have been repeated
+with this public ZIP. This smoke does not establish ranks 2..9 seating, a complete
+race/sex matrix, MASTER in-game validation, recovery/reconnect or native
+retirement/memory completion. These limits remain unchanged.
+
+The immutable annotated tag and published GitHub Release identify this player
+release. Later documentation commits on main do not change that identity or its
+assets. This entry records publication and human acceptance; it does not claim
+new agent-executed gameplay, TPTests or structural-test runs.
+
 ## EEK Vanilla Textured fireplace runtime checkpoint — PASS (2026-09-19)
 
 The maintainer validated the exact ESP candidate in the development environment:
@@ -34,8 +70,10 @@ The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastle
 and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
 use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
 validation. STRE does not redistribute these files; this acceptance is not
-evidence of standalone redistribution permission. A tagged-package clean-install
-smoke must still verify availability of all external textures.
+evidence of standalone redistribution permission or vanilla origin. The tagged
+`0.4.0-alpha.1` clean-install smoke verified the external EEK configuration and
+complete fireplace rendering without Embers HD for the published package. That
+runtime result does not resolve the two textures' exact original provenance.
 
 Promotion checks rerun: six CK/ESP audits PASS (strict records with
 `--reject-unexpected`, ten marker/seat pairs, packaging of 19 managed files,
@@ -43,7 +81,8 @@ MQ101 structure, generated invariants, 41 catalog references); nine structural
 suites / 92 tests PASS; git diff --check PASS. The 249-record comparison finds
 only the fireplace MODL change; aliases, quests, navmesh, markers/seats, script
 properties and master overrides are unchanged. PSC/PEX are unchanged. No C++
-change, full TPTests rerun, new game launch or clean-install test was performed.
+change, full TPTests rerun, new game launch or clean-install test was performed
+during that promotion. The later tagged-package human smoke is recorded above.
 
 ## Accepted multiplayer seating checkpoint (2026-09-19)
 
@@ -1495,7 +1534,8 @@ The current catalog uses `BuildVersion = 5`.
 - the fireplace uses the separately installed EEK Vanilla Textured resource,
   without EEK/Embers HD redistribution or a direct Embers HD dependency. The two
   carving textures retain the accepted alpha provenance limitation documented
-  above; tagged-package clean-install texture completeness remains unvalidated;
+  above; tagged-package clean-install texture completeness passed for the exact
+  published `0.4.0-alpha.1` ZIP, without resolving those textures' provenance;
 - Messire Valen remains a full-body prototype: the head and body are still one
   mesh rather than a production FaceGen/dialogue head, finger weighting is
   imperfect, the material/shader pass is provisional, and the temporary
