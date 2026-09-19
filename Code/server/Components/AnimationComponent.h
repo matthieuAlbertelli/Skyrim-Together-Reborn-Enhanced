@@ -4,7 +4,7 @@
 #error Include Components.h instead
 #endif
 
-#include <Game/Animation/ActionReplayCache.h>
+#include <Animation/ActionReplayCache.h>
 #include <Structs/ActionEvent.h>
 
 struct AnimationComponent

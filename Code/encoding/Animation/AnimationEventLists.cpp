@@ -1,6 +1,5 @@
 #include "AnimationEventLists.h"
 
-/*
 /* The lists in this file might not contain all relevant animation events, so extend as necessary
 */
 

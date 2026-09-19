@@ -21,4 +21,8 @@ struct NotifyCharacterBuildState final : ServerMessage
     std::uint32_t ServerId{};
     std::uint64_t Revision{};
     CharacterBuildSnapshotData Build{};
+    // Optional versioned seating identity tail; numeric PlayerId above is transport-only.
+    String SeatingCampaignId;
+    String SeatingPlayerId;
+    static constexpr size_t MaxSeatingIdentityBytes = 128;
 };

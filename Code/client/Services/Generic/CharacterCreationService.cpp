@@ -3,6 +3,7 @@
 
 #include <Services/CharacterCreationService.h>
 #include <Services/RemoteRespawnLab.h>
+#include <Services/CreationSeating.h>
 
 #include <Services/CampaignBootstrapService.h>
 #include <Services/CampaignService.h>
@@ -76,7 +77,6 @@ constexpr std::uint16_t kCreationReadyStage = 20;
 constexpr double kRaceMenuOpenTimeoutSeconds = 5.0;
 constexpr double kPresentationDiagnosticSeconds = 0.5;
 constexpr double kRecoveryPollSeconds = 1.0;
-constexpr double kBuildSealSeconds = 1.6;
 constexpr double kBuildApplicationSettleSeconds = 0.25;
 constexpr double kServerBuildTimeoutSeconds = 15.0;
 constexpr std::uint8_t kMaxInventoryWipePasses = 8;
@@ -482,6 +482,7 @@ bool CharacterCreationService::IsRaceMenuDiagnosticActive() const noexcept
 
 BSTEventResult CharacterCreationService::OnEvent(const TESFurnitureEvent* apEvent, const EventDispatcher<TESFurnitureEvent>*)
 {
+    STRE::CreationSeating::ObserveFurnitureEvent(apEvent);
     if (!IsRaceMenuDiagnosticActive() || !apEvent || !apEvent->character)
         return BSTEventResult::kOk;
     if (apEvent->character != PlayerCharacter::Get())
@@ -579,6 +580,7 @@ void CharacterCreationService::OnUpdate(
     const UpdateEvent& acEvent) noexcept
 {
     TickSexChangeProbe();
+    STRE::CreationSeating::OnUpdate(m_world);
     if (IsRaceMenuDiagnosticActive() || m_raceSwitchNextTick)
     {
         ++m_localRaceProbeTick;
@@ -686,8 +688,7 @@ void CharacterCreationService::OnUpdate(
         break;
 
     case CharacterCreationPhase::BuildConfirmed:
-        if (m_phaseElapsed >= kBuildSealSeconds)
-            FinalizeCompletedBuild();
+        FinalizeCompletedBuild();
         break;
 
     default:
@@ -819,6 +820,8 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
         acMessage.Build.CanonicalInventory.Entries.size(),
         acMessage.Build.CanonicalSpells.size());
 
+    STRE::CreationSeating::Receive(m_world, acMessage);
+
     const bool isLocalPlayer =
         acMessage.PlayerId ==
         m_world.GetTransport().GetLocalPlayerId();
@@ -856,6 +859,7 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
 void CharacterCreationService::OnDisconnected(
     const DisconnectedEvent&) noexcept
 {
+    STRE::CreationSeating::Clear();
     if (m_creationPlacement)
     {
         AdvanceCreationPlacement("transport-disconnected");
@@ -903,15 +907,15 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
     const std::string_view playerId = durablePlayerId ? std::string_view(durablePlayerId->data(), durablePlayerId->size()) : std::string_view{};
     const size_t rosterCount = connected ? (snapshot ? snapshot->Roster.size() : 0) : 1;
     size_t creationPositionIndex = 0; // Explicit offline Solo position; never a campaign fallback.
-    int aliasId = -1;
-    uint32_t anchorId{}, playerCellId{}, seatCellId{};
+    uint32_t markerLocalId{};
+    uint32_t anchorId{}, playerCellId{}, markerCellId{};
     const auto reject = [&](const char* reason)
     {
         spdlog::error(
             "[STRE][CharacterCreation] phase=standing-position-rejected reason={} connected={} campaign={} "
-            "playerId={} revision={} sealed={} rosterCount={} aliasId={} anchor={:X} playerCell={:X} seatCell={:X}",
+            "playerId={} revision={} sealed={} rosterCount={} markerLocalId={} anchor={:X} playerCell={:X} markerCell={:X}",
             reason, connected, snapshot ? snapshot->CampaignId.c_str() : "", playerId, snapshot ? snapshot->StateVersion : 0, snapshot && snapshot->RosterSealed,
-            rosterCount, aliasId, anchorId, playerCellId, seatCellId);
+            rosterCount, markerLocalId, anchorId, playerCellId, markerCellId);
         return false;
     };
     if (connected)
@@ -921,40 +925,42 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
             return reject(selection.Reason);
         creationPositionIndex = *selection.Index;
     }
-    if (creationPositionIndex >= 10)
+    const auto marker = STRE::CharacterCreation::CreationMarkerLocalFormId(creationPositionIndex);
+    if (!marker)
         return reject("creation-position-index-out-of-range");
-    aliasId = static_cast<int>(creationPositionIndex + 1);
+    markerLocalId = *marker;
     spdlog::info(
-        "[STRE][CharacterCreation] phase=standing-index-resolved source={} campaign={} playerId={} revision={} creationPositionIndex={} rosterCount={} aliasId={}",
+        "[STRE][CharacterCreation] phase=standing-index-resolved source={} campaign={} playerId={} revision={} creationPositionIndex={} rosterCount={} markerLocalId={}",
         connected ? "sealed-roster-player-id" : "offline-solo", snapshot ? snapshot->CampaignId.c_str() : "",
-        playerId, snapshot ? snapshot->StateVersion : 0, creationPositionIndex, rosterCount, aliasId);
+        playerId, snapshot ? snapshot->StateVersion : 0, creationPositionIndex, rosterCount, markerLocalId);
 
     auto* player = PlayerCharacter::Get();
     if (!player || TESForm::GetById(player->formID) != player)
         return reject("player-missing");
     playerCellId = player->parentCell ? player->parentCell->formID : 0;
     if (!m_pQuest)
-        return reject("seat-quest-missing");
-    // Existing quest aliases 1..10. Never infer a substitute reference/slot.
-    auto* anchor = m_pQuest->GetAliasedRef(static_cast<uint32_t>(aliasId));
+        return reject("creation-quest-missing");
+    auto* anchor = Cast<TESObjectREFR>(TESForm::GetById(ResolvePluginFormId("STRE_AlternateStart.esp", markerLocalId)));
     if (!anchor)
-        return reject("seat-alias-empty"); // GetAliasedRef could not resolve this alias's live reference.
+        return reject("creation-marker-missing");
     anchorId = anchor->formID;
     if (TESForm::GetById(anchorId) != anchor)
-        return reject("seat-reference-missing");
-    // STRE's virtual GetParentCell is native GetSaveParentCell (vslot 0x97).
-    // Placement needs the loaded current cell, not the persistent save owner.
+        return reject("creation-marker-reference-mismatch");
+    // Use the loaded current cell, not the save-parent virtual.
     auto* cell = anchor->parentCell;
-    seatCellId = cell ? cell->formID : 0;
+    markerCellId = cell ? cell->formID : 0;
     if (!cell)
-        return reject("seat-cell-missing");
+        return reject("creation-marker-cell-missing");
+    const auto expectedCellId = ResolvePluginFormId("STRE_AlternateStart.esp", 0x000012D1);
+    if (!expectedCellId || cell->formID != expectedCellId || TESForm::GetById(expectedCellId) != cell)
+        return reject("creation-marker-wrong-cell");
     if (!player->parentCell)
         return reject("player-cell-missing");
     if (player->parentCell != cell)
-        return reject("player-seat-cell-mismatch");
-    const auto position = STRE::CharacterCreation::StandingCreationPosition(anchor->position, anchor->rotation.z);
-    if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z) || !std::isfinite(anchor->rotation.z))
-        return reject("seat-transform-invalid");
+        return reject("player-marker-cell-mismatch");
+    const auto position = anchor->position;
+    if (!STRE::CharacterCreation::CreationMarkerTransformValid(position, anchor->rotation))
+        return reject("creation-marker-transform-invalid");
     PendingCreationPlacement pending;
     pending.Actor = player->formID;
     pending.ActorToken = reinterpret_cast<uintptr_t>(player);
@@ -966,7 +972,7 @@ bool CharacterCreationService::PlaceStandingForCreation() noexcept
     pending.QuestToken = reinterpret_cast<uintptr_t>(m_pQuest);
     pending.Target = position;
     pending.Before = player->position;
-    pending.TargetRotation = {0.f, 0.f, anchor->rotation.z};
+    pending.TargetRotation = anchor->rotation;
     pending.Index = creationPositionIndex;
     pending.RosterCount = rosterCount;
     pending.Connected = connected;
@@ -1089,6 +1095,7 @@ void CharacterCreationService::AdvanceCreationPlacement(const char* apCancelReas
 
 bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
 {
+    STRE::CreationSeating::Clear();
     m_creationPlacement.reset();
     spdlog::info(
         "[STRE][CharacterCreation] Fresh stage 20 bootstrap resetting previous phase={}",
@@ -1590,8 +1597,11 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
     m_phaseElapsed = 0.0;
     m_suppressStageRecovery = true;
     m_error.clear();
+    STRE::CreationSeating::FinalizeLocal(m_world, m_serverCharacterId, m_serverBuildRevision);
     ResetNetworkBuildState();
     PushState(true);
+
+    STRE::CreationSeating::Tick(m_world);
 
     spdlog::info(
         "[STRE][CharacterCreation] Character creation completed and controls unlocked classId={}",

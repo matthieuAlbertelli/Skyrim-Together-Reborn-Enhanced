@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -43,14 +44,20 @@ inline std::optional<size_t> StandingCreationPositionIndex(std::span<const std::
     return ResolveStandingCreationPositionIndex(aPlayerIds, aLocalPlayerId).Index;
 }
 
-// Reuse the ten CK anchors without targeting/activating their furniture. Their
-// backs face away from the table. Physical clearance still needs human acceptance.
-inline glm::vec3 StandingCreationPosition(glm::vec3 aAnchor, float aYaw) noexcept
+// Plugin-local XMarkerHeading references, in PlayerCreationMarker01..10 order.
+// Resolve through the loaded plugin; these are never loaded FormIDs.
+inline std::optional<uint32_t> CreationMarkerLocalFormId(size_t aIndex) noexcept
 {
-    constexpr float distanceBehind = 96.f;
-    aAnchor.x -= std::sin(aYaw) * distanceBehind;
-    aAnchor.y -= std::cos(aYaw) * distanceBehind;
-    return aAnchor;
+    constexpr std::array<uint32_t, 10> markers{
+        0x000D6B08, 0x000D6B09, 0x000D6B13, 0x000D6B12, 0x000D6B0A,
+        0x000D6B11, 0x000D6B0B, 0x000D6B10, 0x000D6B0D, 0x000D6B0F};
+    return aIndex < markers.size() ? std::optional<uint32_t>{markers[aIndex]} : std::nullopt;
+}
+
+inline bool CreationMarkerTransformValid(glm::vec3 aPosition, glm::vec3 aRotation) noexcept
+{
+    return std::isfinite(aPosition.x) && std::isfinite(aPosition.y) && std::isfinite(aPosition.z)
+        && std::isfinite(aRotation.x) && std::isfinite(aRotation.y) && std::isfinite(aRotation.z);
 }
 
 // Validate the move geometrically, without consulting or normalizing posture.

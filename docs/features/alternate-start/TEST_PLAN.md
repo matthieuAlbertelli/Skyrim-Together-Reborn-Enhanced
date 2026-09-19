@@ -197,11 +197,11 @@ logs on any failure, especially standing-position-rejected reason=....
 | campaign-phase-not-character-creation / campaign-runtime-not-active | Canonical phase/runtime is ineligible. |
 | sealed-roster-incomplete | A required member is absent. |
 | creation-position-index-out-of-range | More than ten members or index outside 0..9. |
-| player-missing / seat-quest-missing | Native player or quest unavailable. |
-| seat-alias-empty | GetAliasedRef could not resolve the selected alias's live reference. |
-| seat-reference-missing / seat-cell-missing | Stale reference or missing loaded current cell. |
-| player-cell-missing / player-seat-cell-mismatch | Current player cell missing or different from anchor cell. |
-| seat-transform-invalid | Anchor-derived position/yaw is non-finite. |
+| player-missing / creation-quest-missing | Native player or quest unavailable. |
+| creation-marker-missing | Plugin-local marker could not resolve to a live reference. |
+| creation-marker-reference-mismatch / creation-marker-cell-missing | Stale reference or missing loaded current cell. |
+| player-cell-missing / player-marker-cell-mismatch | Current player cell missing or different from anchor cell. |
+| creation-marker-transform-invalid | Marker position or rotation is non-finite. |
 | move-validation-failed | See detail and standing-move-observation: invalid identity/context, non-finite position, or cell/position timeout after at most five seconds. |
 
 Success is logged only after final validation. The existing ten anchors and
@@ -1207,3 +1207,360 @@ non-temporary or equal Actor/Base IDs and mismatching cache IDs. Structural fenc
 keep this classifier confined to the non-MASTER passive selection and check evidence
 labels, alias guards and unchanged production separation.
 These checks and builds do not substitute for the pending human acceptance.
+
+
+## Explicit creation markers (2026-09-18)
+
+Automated: Solo/two/ten durable PlayerId ranks, exact marker mapping, invalid
+identity/index, missing marker/wrong cell and nonfinite transforms, bounded
+arrival/timeout, full marker orientation, no SlotId or posture dependency.
+The accepted roster-2 checkpoint below covers the tested Marker01/02 flow.
+Ten-player Marker01..10 placement/facing and physical clearance remain unvalidated.
+Source tests do not execute native MoveTo. Papyrus bootstrap is unchanged.
+
+## Individual Applied seating acceptance (2026-09-18)
+
+Automated tests are domain/wire/source tests, not native engine execution.
+Regression cases (roster-2 visual acceptance is recorded below; failure and
+recovery cases are not implied by that acceptance):
+- Solo finishes: controls unlock, quest stops, Seat01 is activated.
+- A Applied while B creates: A seats immediately; B stays at MarkerXX.
+- B then Applied: B seats independently; no Valen/collective transition.
+- Duplicate Applied: no second activation. Wrong identity/revision: reject.
+- Remote absent/WaitingFor3D/final replacement pending: retain intention;
+  observe only the committed matching revision/current binding; project through STR replay, never remote Activate.
+- Occupied by another actor or reserved: no ejection or teleport.
+- Already seated on own SeatXX: success without activation.
+- Rematerialized native token: project only onto the new valid binding.
+- Recovery lock: no activation; disconnect: clear stale session intentions.
+- Native function missing: pending-native-functions, no unsafe fallback.
+- Confirm observer animation/interpolation, facing and furniture approach.
+- Confirm Marker01/02/10 map to Seat01/02/10 and entry stays posture-independent.
+
+Log prefix: [STRE][CreationSeating]; phase activation-issued is an issued request,
+not proof of seating. The Solo failure on 0e421a99 invalidates the old phase
+seated criterion (correct furniture plus GetSitState). Do not use it as visual
+acceptance. pending-entry-timeout-no-reactivation never requests another entry.
+
+Local marker approach (non-MASTER, existing Marker01..10 / Seat01..10):
+- Preserve the existing ten reference IDs. Reposition/orient them manually in CK
+  where necessary; no new SeatApproach records. The same references serve initial
+  creation and seating, so verify both uses. See CK_IMPLEMENTATION/ADR-0025.
+- Run `python -B Tools/Scripts/audit_seat_approach_markers.py`; require all ten
+  existing pairs, persistent/enabled XMarkerHeading references, correct cell,
+  finite upright transforms and exact C++ ID concordance. This is not a physical
+  clearance or visual acceptance test. No fixed spacing threshold is a proof.
+- Record actual executable/ESP/PSC/PEX hashes. First revalidate offline Solo
+  rank 0 and a one-member network campaign, then B's own client in a fresh full
+  roster of two. Determine B's durable sorted rank, not connection/join order.
+  Keep A connected; B may finish first and must not wait for A's Applied.
+- Require sessionConnected=true, localPlayer=true, actorRemote=false, Actor 14,
+  durablePlayerId, creationPositionIndex=1, assignedSeatName=Seat02 and
+  assignedApproachName=Marker02 for B. source=ck-marker must log the exact
+  Marker02 position/rotation/cell saved in CK, never a computed chair offset.
+  All ten ranks use the same pipeline; no rank is reassigned to Seat01.
+- Native order: individual Applied/local finalization -> approach-target ->
+  one MoveTo -> actual same-cell arrival within 2 units -> marker orientation ->
+  later engine UpdateEvent -> one Activate. Require readiness update greater
+  than facingUpdate and rotation within 0.05 radians. The preparation deadline
+  is 5 seconds. Even if already at the marker, the update barriers still apply.
+- Missing/disabled/wrong-cell/wrong-base marker, invalid transform, binding or
+  target-transform drift, timeout, lost position or facing error must stop with
+  an approach-* reason. No second move, fallback activation or unsafe repair.
+- Occupied/reserved seat: wait; no ejection or remote MoveTo. Recovery/identity
+  guards continue to apply. Repeated Applied/Tick must not rearm the operation.
+- Keep all keyboard/mouse input released for at least 45 seconds after build
+  validation (up to 5 s preparation plus 40 s capture), or Enter+5 s if later.
+  Record video beforehand. Require visible native movement/sit animation and a
+  truly seated body plus Furniture Enter. Engine/camera/logical state alone is
+  insufficient. Old Seat01 geometry PASS does not validate the marker flow.
+- Later validate remaining local ranks/markers and initial creation clearance;
+  automated ten-rank support does not claim ten-seat runtime acceptance.
+  Remote observer projection remains a separate validation, not this mission.
+
+Solo and B-local marker runs are accepted by the maintainer; the steps below
+remain a regression procedure, not an outstanding acceptance gate.
+With the diagnostic build:
+1. Start fresh connected creation: B must have durable rank 1 and Marker02.
+   Keep A connected; B may finish first and must not wait for A's Applied.
+   Record binary/asset hashes. Seat01 passes remain regression evidence.
+2. Start video recording BEFORE final validation. Finish the build, release the
+   validation key/button, then provide NO keyboard or mouse input for at least
+   45 seconds including preparation: no movement, look, wheel, interaction,
+   console or debug menu.
+   If Enter occurs late, remain hands-off until five seconds after it, even when
+   that extends beyond 40 seconds. Do not infer a hands-off run from action names.
+   Save the full tp_client.log from before Applied through observation-window-ended
+   (and any later first Enter + 5 seconds), alongside video and the human input
+   attestation. Preserve the ten-second timeout line; capture continues beyond it.
+3. Compare before-activation/after-activation, pending-entry-sample,
+   furniture-enter-immediate and post-enter-sample. Check elapsedMs/sinceEnterMs,
+   distance/orientation, transforms/cells, occupied, sitState, root and graph.
+   The immediate sample is read synchronously inside the native event callback.
+   Periodic samples must continue after entry-animation-observed as well.
+   At Enter +30.750 s capture lasts through +40 s; at Enter +39 s it lasts
+   through +44 s; a first Enter after +40 s reopens five seconds of capture.
+   Check process-sample: current/run-once/effective package, targetIsSeat,
+   procedureIndex/start time, raw path point and furniture idle, plus move/look
+   input vectors and autoMove. Missing native process data must stay unknown.
+   Raw path point/engine input are not navmesh-solver or physical-input proof.
+4. Inspect furniture-event enter/exit and animation-action (event, target, idle,
+   flags, transitionNoAnimation, skipped, result, remoteBlocked), especially the
+   five seconds after Enter. The budget renews at 32 actions/second and resets
+   at first Enter; inspect actionsDropped before interpreting missing actions.
+   No event/action alone proves a pose, pathing failure or user intervention.
+5. furniture-logical-only must not complete the local diagnostic projection.
+   entry-animation-observed additionally requires a matching enter event, root
+   and graph, and valid true isInFurniture/isIdleSitting reads. A -1 graph value
+   is unknown. These observations do not prove the actual rendered pose.
+6. During the hands-off interval, record the visible approach and actual pose.
+   Only AFTER that interval, verify chair camera and exit/control recovery with
+   input. Keep those interventions distinguishable from the passive capture.
+   Save the log even if the pose still fails; do not retry activation in code.
+7. Record manual-chair interaction separately as a baseline. Do not force
+   ActorState, graph flags, teleport or CK changes to manufacture a pass.
+
+The maintainer has runtime-accepted Seat02; the agent did not deploy or launch the game.
+Save the full client `Data/SkyrimTogetherReborn/logs/tp_client.log` and rotated
+`tp_client.1.log` through `tp_client.3.log` if present, plus video and human
+input/pose attestation, after observation-window-ended and any later Enter + 5
+seconds. The rotating logger is limited to 5 MiB per file; preserve the complete
+run promptly before another launch or rotation can overwrite it.
+Require exactly one approach-move-issued and one activation-issued per token;
+an early rejection permits neither a retry nor fallback activation. The success
+criterion is the visible approach, native sitting transition and truly seated
+body with Furniture Enter, not the camera or engine/logical flags alone.
+The accepted roster-2 result does not authorize Seat03..10 runtime claims or publication beyond the local checkpoint.
+
+## Final rematerialization pre-reservation weapon wait (2026-09-19)
+
+This supersedes immediate terminal rejection for WantToSheathe/Sheathing only;
+WeaponSheathed and every actual replacement safety predicate remain unchanged.
+The official flow applies in MASTER too; MarkerXX -> SeatXX remains non-MASTER.
+
+Automated coverage: safe receipt; 4 -> 0 and 4 -> 5 -> 0 with exactly one
+reservation/candidate; persistent 4/5 expiring at ten seconds without mutation;
+duplicates preserving the first-final deadline; other ActorState and binding,
+provenance, canonical-data/runtime failures; changed entity/version/native tokens;
+disconnect/recovery cancellation; and unsafe state after reservation still aborts.
+Tests use a deterministic steady-clock timeline, no sleeping or native emulation.
+Structural checks verify fresh capture only at Ready and unchanged native guards.
+
+Human roster-2 acceptance (not performed by the implementation agent):
+
+1. Start fresh client processes and a new sealed roster of two, using the matching
+   reviewed artifacts. Record exact artifacts, run time, durable PlayerIds/ranks,
+   serverIds and which machine is A/B. Keep full logs from both clients and server.
+2. Run BOTH completion orders in separate fresh client processes/campaigns:
+   run 1: A finishes first while B is still creating, then B finishes;
+   run 2: B finishes first while A is still creating, then A finishes.
+   Observe A-sees-B AND B-sees-A in EACH run (four independent results).
+   Local seating follows each player's own Applied without waiting for everyone.
+   Do not introduce a barrier or force sheathing.
+3. On each observer correlate the remote's Applied revision with
+   final-snapshot-received. If already safe, expect admission-ready directly.
+   Otherwise expect admission-wait-begin, weaponState=4 or 5, safeState=0,
+   bindingGuards=passed and elapsedMs counted from the first final snapshot.
+4. For 4 -> 0 or 4 -> 5 -> 0, expect any admission-weapon-changed lines, then
+   admission-ready with weaponState=0 -> gate-accepted -> transaction-reserved
+   -> candidate-create-enter -> candidate-ready -> candidate-commit -> complete.
+   There must be only one transaction/candidate for this identity/revision and
+   none during Pending. Remote seating must target only the final committed
+   binding. Independently confirm both local players remain visibly seated.
+5. If 4/5 persists, expect admission-expired detail=weapon-sheathing-timeout,
+   no reservation/create/retirement and the old representation retained. Record
+   this as FAIL visual / admission safely timed out, not a fixed black placeholder.
+   Preserve both logs to investigate the upstream state producer/resolution;
+   no forced ActorState, animation, artificial sheathing or hot apply is permitted.
+   Another invalid guard must give its exact terminal reason, never be retried
+   under the weapon wait. Duplicates must not rearm or extend the deadline.
+6. Record A-observes-B and B-observes-A separately: final appearance visually
+   correct (race/sex/face/tints), local seating intact, remote seating if observable.
+   candidate-commit alone is not human visual proof or native memory-release proof.
+7. Save both clients' complete tp_client.log and tp_client.1.log..tp_client.3.log
+   after terminal admission/commit and the seating observation window (40 seconds,
+   or Furniture Enter + 5 seconds if later), before restarting. Server logger uses
+   logs/STServerOut.log relative to its launch working directory, with rotations
+   STServerOut.1.log..STServerOut.3.log; preserve the same run from that directory.
+   On the currently audited installation it is under
+   Data/SkyrimTogetherReborn/logs, but confirm the server launch directory if moved.
+
+No game launch/deployment or visual acceptance is implied by builds or TPTests.
+The maintainer has validated both observers in both completion orders; see the
+accepted animation replay checkpoint below and STATUS for evidence limits.
+## Remote seating through STR actions - observer diagnosis (2026-09-19)
+
+Historical diagnostic procedure; final reciprocal acceptance is recorded in the
+animation replay checkpoint below and in STATUS. Earlier pending statements in
+this section describe the diagnostic candidate before the accepted replay fix.
+
+ADR-0026 replaces remote Activate with passive observation of the existing action
+stream. The only functional change is neutralizing that invalid call. No replay
+or buffering fix is implemented; final appearance is unchanged.
+
+### Established timeline, 19 September 01:18, observer A seeing B
+
+| Time | Evidence |
+|---|---|
+| 01:18:43.309 | Server Applied for B, transport player 2 / serverId 3 / revision 2 |
+| 01:18:43.318 | A receives Applied |
+| 01:18:43.319 | Seating intent awaits CommittedActor |
+| 01:18:43.337 | Server validates owner and invokes final-snapshot send to player 1 |
+| 01:18:43.352 | A receives final snapshot |
+| 01:18:43.751 | Weapon 4 -> 0, admission Ready after 398 ms |
+| 01:18:43.752 | Transaction reserved / candidate-create-enter |
+| 01:18:43.881 | candidate-commit FF000846/9374E2F0, base FF000837; appearance visually correct per maintainer |
+| 01:18:43.881 | Old code calls Activate on that final actor and Seat02 080BF3DC; returns false |
+| 01:18:53.893 | Old activation attempt times out without reactivation |
+| Unknown | B chair action arrival, execution on old/final actor, remote Furniture Enter |
+
+Evidence files: `_audit/remote-seating-diagnostic/runtime-initial/tp_client.1.log`
+and `STServerOut.log`. Unknown is not absent: the old probe only traced A's own
+native actions. A's local chair entry generated IdlePlayer then IdleChairRightEnter
+(action 00013009, idle 0003B070, target 0). This does not establish B's entry event.
+
+### Static route and limits
+
+1. HookPerformAction captures local action IDs, event/idle/target, flags, native
+   state and variables. Its someFlag==1 / g_forceAnimation return does not publish
+   an ActionEvent. The remote guard rejects independent native actions; the
+   network replay route already uses ActorMediator::ForceAction separately.
+2. OnActionEvent appends to LocalAnimationComponent or the existing early buffer.
+   RunLocalUpdates serializes queued actions into ClientReferencesMoveRequest at
+   the existing 100 ms cadence. Serialization clears the batch before Send.
+3. Server OnReferencesMoveRequest requires the owner's entity view; its script
+   HandleCharacterMove veto can skip an action. The movement broadcast excludes
+   the owner and out-of-range recipients, copies the action batch, then clears it.
+   These paths are unchanged. The supplied server log has no per-action evidence.
+4. A receives ServerReferencesMoveRequest. Missing Remote/Interpolation/
+   RemoteAnimation view skips that update; otherwise every action is enqueued.
+5. RunRemoteUpdates resolves the current FormIdComponent. AnimationSystem waits
+   for action tick (existing 300 ms interpolation delay) and graph readiness,
+   calls the existing ForceAction once, then pops even if the result is false.
+   Existing state and variable writes are unchanged.
+6. Final local commit preserves the ECS queue and changes FormId/CachedRefId.
+   It neither requeues LastRanAction nor requests a new server spawn replay.
+   Existing server ActionReplayCache (32 actions) recognizes chair enter events
+   and refines them to IdleChairEnterInstant for spawn replay. This local-only
+   rematerialization does not request it again. Do not add replay without a real
+   loss/application chronology.
+
+### Next human run (no B log collection required)
+
+Use the prepared non-MASTER diagnostic client. Record hash, observer machine,
+start time and completion order. Use the same neutralized implementation on both
+clients for eventual no-remote-Activate acceptance; no protocol/server update is
+needed. No agent deployment or game launch is implied.
+
+1. Fresh processes and new sealed roster 2. A finishes first, then B. Repeat
+   separately with B first. Each local seating follows that player's own Applied.
+2. On A correlate B's serverId/revision and Applied, final-snapshot-received,
+   candidate-create-enter and candidate-commit. Never identify B by FormID alone.
+3. Collect `[CreationSeating][RemoteProbe]` phases: applied-intent-created,
+   awaiting-committed-actor, received-enqueue, received-filtered-missing-remote-animation-view,
+   received-untracked-filtered, action-not-due, graph-not-ready, action-dequeued,
+   force-action-return, queue-reset, committed-binding-selected, queue-at-binding,
+   last-force-action-at-binding, binding-sample, native-action, furniture-event,
+   observation-window-ended and session-cleared.
+4. Match serverId + actionTick + action/idle/event/target/type. Compare actualActor
+   and actualActorToken with LAB old/final identities. committedObserved is the
+   last seating-update observation and can lag the real commit inside an update.
+   Use candidate-commit timestamp and actual target token at this boundary.
+5. action-dequeued precedes existing state/variable application; force-action-return
+   follows the existing call and precedes pop. Result is not visible-pose proof.
+   Samples show root/graph, graph bools (-1 means unknown), raw ActorState, furniture
+   handle, packages/target and transforms/distance. Furniture events, if produced,
+   get immediate read-only snapshots.
+6. Storage is bounded to ten identities. Pre-Applied capture starts on first remote
+   movement packet; Applied and first committed binding each start one 40-second
+   window, no duplicate extension. First matching Enter can extend to Enter+5 s.
+   Samples <=2 Hz; action lines <=32/s and 512/epoch; event/binding logs capped.
+   Counters and droppedDiagnosticLines expose incomplete coverage. Unknown filtered
+   entities have a separate 32-line session cap. No saved engine pointer or action
+   payload retained for replay. Disconnect/fresh creation clears diagnostic state.
+7. Observe at least 45 s after the last commit, and through a later Enter+5 s.
+   Record A-sees-B and B-sees-A appearance/sitting, and both local seatings separately.
+   Save A's full tp_client.log and tp_client.1.log..tp_client.3.log before restart,
+   plus the matching server STServerOut.log and rotations. Current installed log
+   directory: `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\SkyrimTogetherReborn\logs`.
+
+| Evidence on A | Permitted conclusion |
+|---|---|
+| Received and returned on old token before commit, no application on final token | Supports consumed-old-action hypothesis for that action, subject to complete coverage |
+| Received before commit, returned on final token afterward | Queued action survived; no extra replay justified for it |
+| Returned on final token, result false or no visible pose | Application/graph problem remains; loss is not demonstrated |
+| received-filtered... | Exact observer view filter demonstrated |
+| queue-reset between receipt and execution | Queue lifecycle reset observed; correlate reason/identity |
+| No action, packets present, complete window | No matching decoded action observed at A; emission versus relay/transport remains unknown |
+| Dropped lines or expired window | Missing lines cannot prove absence/loss |
+
+Without B logs and without per-action server traces, static code identifies
+emission/relay vetoes but cannot prove which occurred in a run with no action at A.
+Report this limit rather than "never emitted" or "not relayed". If later server
+evidence proves receipt without relay, classify that separate boundary. This
+mission adds observer diagnostics only, no server instrumentation.
+
+Acceptance: visible sitting and final appearance in both directions, local sitting
+preserved, no remote Activate/MoveTo or ad hoc animation. No extra replay, ActorState
+change, materializer/fence change, commit or push before evidence and acceptance.
+
+## Animation replay continuity after final binding (2026-09-19)
+
+**Acceptance recorded:** the maintainer confirms PASS for both roster-2 completion
+orders: final appearances correct in both directions, both local players seated,
+and both remote representations visibly seated after binding replacement. The
+A-first log-backed checkpoint is 19 September 02:48:13; the other order is human
+attestation without a separately identified timestamp. STATUS records the exact
+trace, inspected candidate hash and validation limits. The following steps remain
+the regression procedure, not pending acceptance of this slice. Ranks 2..9,
+MASTER runtime, recovery/reconnect and native lifetime are not covered by that PASS.
+
+This extends the preceding diagnostic-only procedure after old-binding consumption
+was demonstrated. ADR-0027 owns the reconstruction contract; STATUS separates
+earlier evidence, automated checks and the final human acceptance.
+
+Use the prepared replay candidate on both clients, recording its manifest SHA256.
+No automatic deployment, Skyrim/CK launch or server protocol update is performed.
+Restart both client processes between runs because final-rematerialization
+tombstones are process scoped. Run a fresh sealed roster 2 twice:
+
+1. A completes creation first, B second; then B first, A second in a separate run.
+   Each local seating must start after its own Applied, without waiting for the
+   other player. Preserve the same existing markers/SeatXX assignments.
+2. On observer A, correlate B's serverId, versioned entity, final revision,
+   final-snapshot-received, admission Ready and candidate-commit. Final appearance
+   must remain correct. Identify old/new Actor FormIDs and tokens from the logs.
+3. After candidate-commit, require `[STRE][AnimationReplay] phase=binding-reconstructed`
+   with matching session/generation/entity, oldActor/oldToken, newActor/newToken,
+   sourceCount, pendingBefore, injected and pendingAfter. For a consumed chair
+   entry, `cache-source` names the original event and `replay-injected` names the
+   shared `IdleChairEnterInstant` counterpart with action=0/idle=0. No runtime
+   FormID, seat number or source entry direction is hardcoded in the mechanism.
+4. Require `replay-force-action-return` for that refined action on **newActor/newToken**,
+   `matchesNewBinding=true`, after candidate-commit. Record result; do not infer
+   visual pose from result=1. `replay-graph-pending` means the existing graph gate
+   is delaying execution. It logs once per reconstruction, without a new graph
+   mutation or arbitrary timeout. The synthetic prefix must execute before the
+   previously pending move/turn actions, then live received actions continue.
+5. A pending original entry alone must not be duplicated: injected=0 is correct
+   when no consumed history needs reconstruction. An already received exit can
+   report pending-exit-invalidated-history. A newer exit during graph wait reports
+   replay-cancelled/reason=newer-pending-exit. Neither case may resurrect old seating.
+   Disconnect/recovery must discard the synthetic prefix and history, with no
+   stale replay after reconnect. Never remove guards to make a rejected run pass.
+6. Observe at least 45 seconds after the last commit. Record independently:
+   A sees B's final appearance; B sees A's final appearance; A seated locally;
+   B seated locally; A sees B visibly seated on Seat02; B sees A visibly seated
+   on Seat01. Adapt labels to the actual durable ranks rather than transport IDs.
+   Any remote standing/floating/incorrect pose is FAIL even with return=1.
+7. Save A's complete `tp_client.log` and available `.1.log`..`.3.log` rotations
+   before restart, plus the matching `STServerOut.log` and candidate manifest.
+   Files are in `Data/SkyrimTogetherReborn/logs` under the installed game. B logs
+   are not required; reverse visual attestation must not be reported as a proven
+   reverse action chronology. Keep each run and completion order separate.
+
+The new replay logs have independent bounds (<=32 cached/refined/returned actions
+per reconstruction and one graph-wait message). The older RemoteProbe can still
+drop native/action lines; inspect its counters before treating absence as proof.
+No remote Activate or MoveTo is allowed. Reciprocal visual acceptance in both completion orders is recorded above;
+new changes require their own evidence and publication authorization. Native lifetime remains outside this test.

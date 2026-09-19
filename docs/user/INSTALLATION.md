@@ -11,16 +11,36 @@ The current STRE alpha is validated primarily on:
 - Windows x64;
 - Steam `The Elder Scrolls V: Skyrim Special Edition`;
 - Skyrim runtime `1.6.1170`;
-- STRE `0.3.0-alpha.1`;
+- STRE `0.4.0-alpha.1`;
 - Address Library for SKSE Plugins;
 - SKSE64 matching Skyrim `1.6.1170`;
-- Better Grabbing installed separately.
+- Better Grabbing `1.17` installed separately;
+- EEKs Fireplace Resource installed separately.
 
 Other Skyrim runtimes or stores may work in the future, but they are not part of the current STRE support target.
 
 STRE is a fork of Skyrim Together Reborn. **Do not install a separate Skyrim Together Reborn client on top of STRE.** The STRE release already contains the Skyrim Together client, server and game plugin files it needs.
 
 For first-time testing, use a clean Skyrim mod profile with only the dependencies listed below.
+
+## External fireplace prerequisite
+
+For `0.4.0-alpha.1`, install **EEKs Fireplace Resource** separately
+from [EEKs Resource Repository](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files),
+by **EvilEyedKyo / EEK**. The selected model must be available at:
+
+```text
+Data\meshes\EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif
+```
+
+STRE does not redistribute EEK or Embers HD assets. **Embers HD is not required
+by STRE for the Ilinalta fireplace.** The tested development installation passed
+maintainer visual smoke on 2026-09-19. The exact provenance of the two EEK-path
+Whiterun carving textures remains unresolved and accepted for this alpha; no
+additional texture-installation procedure is inferred from that uncertainty.
+The tagged-package clean-install smoke must establish complete external texture
+availability before publication. This guide does not claim that the tagged package has
+already passed that clean-install test.
 
 ## 1. Prepare Skyrim
 
@@ -63,7 +83,7 @@ For an STRE session, **launch `SkyrimTogether.exe`, not `skse64_loader.exe`**. S
 
 STRE does not redistribute Better Grabbing.
 
-Install Better Grabbing separately through your mod manager or manually. For `0.3.0-alpha.1`, this guide targets Better Grabbing `1.17`.
+Install Better Grabbing separately through your mod manager or manually. For `0.4.0-alpha.1`, this guide targets Better Grabbing `1.17`.
 
 Better Grabbing:
 https://www.nexusmods.com/skyrimspecialedition/mods/134769
@@ -91,7 +111,7 @@ STRE-v<version>-windows-x64.zip
 For this release:
 
 ```text
-STRE-v0.3.0-alpha.1-windows-x64.zip
+STRE-v0.4.0-alpha.1-windows-x64.zip
 ```
 
 Do **not** download GitHub's automatically generated:
@@ -111,7 +131,7 @@ Those are source archives, not playable builds.
 2. Select Skyrim Special Edition.
 3. Open **Mods**.
 4. Choose **Install From File**.
-5. Select `STRE-v0.3.0-alpha.1-windows-x64.zip`.
+5. Select `STRE-v0.4.0-alpha.1-windows-x64.zip`.
 6. Enable the mod.
 7. Deploy your mods.
 8. Open the **Plugins** section and make sure these plugins are enabled:
@@ -275,7 +295,7 @@ For an alpha update:
 Avoid mixing files from two STRE releases.
 
 All clients and the server must use the exact same release build. Mixed
-`0.2.0-alpha.1` / `0.3.0-alpha.1` sessions fail the exact-build handshake.
+`0.2.0-alpha.1` / `0.3.0-alpha.1` / `0.4.0-alpha.1` sessions fail the exact-build handshake.
 Campaign database downgrade is not supported: keep the matching executable and
 database backup together if you need to return to an earlier installation.
 

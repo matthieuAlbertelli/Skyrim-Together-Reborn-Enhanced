@@ -31,6 +31,10 @@ this register allocates numbers and serves only as an index.
 | ADR-0021 | Natural-join final representation and standing Character Creation | Accepted | [ADR-0021](../architecture/ADRs/ADR-0021-natural-join-final-representation-standing-creation.md) |
 | ADR-0022 | Posture-independent Character Creation and final rematerialization | Accepted | [ADR-0022](../architecture/ADRs/ADR-0022-posture-independent-character-creation.md) |
 | ADR-0023 | Automatic final Character Creation rematerialization, including MASTER | Accepted | [ADR-0023](../architecture/ADRs/ADR-0023-automatic-final-character-creation-rematerialization.md) |
+| ADR-0024 | Individual seating after completed Character Creation | Accepted | [ADR-0024](../architecture/ADRs/ADR-0024-individual-applied-creation-seating.md) |
+| ADR-0025 | Existing CK markers as local seating approaches | Accepted | [ADR-0025](../architecture/ADRs/ADR-0025-existing-ck-markers-local-seat-approach.md) |
+| ADR-0026 | Remote seating through the existing STR action stream | Accepted | [ADR-0026](../architecture/ADRs/ADR-0026-remote-seating-through-str-actions.md) |
+| ADR-0027 | Animation replay continuity across a committed native binding | Accepted | [ADR-0027](../architecture/ADRs/ADR-0027-animation-replay-native-binding-continuity.md) |
 
 `Implemented` is retained for a few historical ADRs. For new decisions, status
 describes the decision (`Proposed`, `Accepted`, `Rejected`, or `Superseded`);

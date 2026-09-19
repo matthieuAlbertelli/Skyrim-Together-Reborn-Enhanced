@@ -59,7 +59,7 @@ for any additional master-backed record from this prose summary.
 Aliases used:
 
 - `Alias_Player`
-- `Alias_PlayerSeat01` through `Alias_PlayerSeat10` (position anchors; future seating)
+- `Alias_PlayerSeat01` through `Alias_PlayerSeat10` (future seating only; not creation anchors)
 
 Quest stages:
 
@@ -69,7 +69,7 @@ Quest stages:
 
 The quest is intentionally excluded from generic quest synchronization.
 
-## Temporary standing placement by PlayerId (2026-09-18)
+## Explicit creation markers by PlayerId (2026-09-18)
 
 For this local placement step only, use the current sealed roster's stable
 PlayerIds. Sort a copy lexicographically; the authenticated local PlayerId's rank
@@ -83,14 +83,30 @@ It never inspects SlotId validity or uniqueness. Solo uses index 0. Multiplayer
 identity errors reject; they never fall back to Solo. This does not alter campaign
 admission, protocol validation, SlotId persistence/ownership or recovery semantics.
 
-Index 0..9 maps to the existing aliases 1..10. The adapter reads loaded parentCell
-on player/reference, not the inherited GetParentCell save-parent virtual. No new
-reference, loaded FormID, furniture activation or position constant is introduced.
+Index 0..9 maps to the ten distinct CK XMarkerHeading references
+STRE_REFR_PlayerCreationMarker01..10. ResolvePluginFormId uses the loaded
+STRE_AlternateStart.esp and the local IDs below, never a fixed load-order prefix.
+The adapter verifies a live reference, STRE_CELL_AlternateStart (local 0x000012D1),
+and finite position/rotation. It copies the marker position and full orientation;
+there is no chair-derived offset or yaw. The existing quest aliases remain untouched.
+
+| Index | Marker suffix | Local FormID |
+| --- | --- | --- |
+| 0 | 01 | 0x000D6B08 |
+| 1 | 02 | 0x000D6B09 |
+| 2 | 03 | 0x000D6B13 |
+| 3 | 04 | 0x000D6B12 |
+| 4 | 05 | 0x000D6B0A |
+| 5 | 06 | 0x000D6B11 |
+| 6 | 07 | 0x000D6B0B |
+| 7 | 08 | 0x000D6B10 |
+| 8 | 09 | 0x000D6B0D |
+| 9 | 10 | 0x000D6B0F |
 
 Expected progression: standing-index-resolved source=sealed-roster-player-id,
 then standing-position playerId=... creationPositionIndex=... rosterCount=....
 Failures retain standing-position-rejected reason=... with identity, revision,
-alias/reference/current-cell IDs. Missing/duplicate PlayerId
+marker local/reference/current-cell IDs. Missing/duplicate PlayerId
 and absent local membership remain distinct errors; see TEST_PLAN.
 
 ADR-0022 removes every sit/sleep eligibility check from entry and LAB. The
@@ -113,13 +129,11 @@ FormID. Missing player/marker/cell or a wrong-cell/out-of-range move rejects.
 The fixed one-second placement settle is not a posture poll. GetSitState,
 furniture activation and posture normalization are absent. ESP is unchanged.
 
-Distinct creation positions are selected after lobby authorization, when canonical
-roster identity exists: lexical rank of stable sealed PlayerIds selects aliases
-1..10, and coordinates are offset 96 units behind their furniture yaw. MoveTo uses
-cell/coordinates, not the furniture reference. Solo uses the first alias. Geometry
-tests establish ten distinct positions; physical clearance remains human acceptance.
-Pre-lobby entry uses the common start marker. Collective post-creation seating is
-a separate future slice, not a state to restore during final rematerialization.
+Distinct creation positions are selected after lobby authorization: lexical
+rank of stable sealed PlayerIds selects Marker01..10. Solo selects Marker01.
+MoveTo uses the marker's cell/coordinates and orientation is applied on arrival.
+Physical clearance and visual orientation still require in-game acceptance.
+Post-creation collective seating is not implemented by this placement slice.
 
 ```text
 Main menu: New Game
@@ -194,10 +208,25 @@ solution, only if profiling or runtime validation demonstrates a concrete
 visibility or performance problem. Navmesh, NPC pathing, collision, lighting,
 visual readability, and acceptable runtime performance remain required.
 
-The fireplace currently uses the selected EEK fireplace mesh/texture resource
-in the development environment. Redistribution permission and final packaging
-must be resolved before release; the v1 distribution must not require an
-undocumented manual asset dependency.
+`STRE_STAT_IlinaltaFireplace01` (local `0xCAF31`) now uses
+`EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif`
+as its MODL, replacing the HDEmbers variant. EEK remains an external prerequisite,
+installed separately; STRE redistributes no EEK or Embers HD assets. Embers HD
+is no longer required by this fireplace path. Credit: EvilEyedKyo / EEK,
+[EEKs Resource Repository / EEKs Fireplace Resource](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files).
+
+The exact candidate passed maintainer visual smoke on 2026-09-19: no missing or
+purple textures, correct carvings/embers/wood, unchanged apparent size/origin,
+collision and circulation. Geometry/transforms/bounds and five collision blocks
+match the previous model; two shapes have different UVs and shaders/controllers
+differ. This development-environment evidence does not validate a clean install.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
 
 This physical boundary does not change campaign authority: the future seamless
 replacement must preserve the existing server-authoritative campaign contract.
@@ -665,3 +694,228 @@ resetquest STRE_QUEST_AlternateStart
 startquest STRE_QUEST_AlternateStart
 setstage STRE_QUEST_AlternateStart 10
 ```
+
+## Individual Applied seating (ADR-0024, 2026-09-18)
+
+Applied is individual: after authoritative build completion, local finalization
+unlocks controls and stops the creation quest, then requests SeatXX immediately
+on the game update. Solo uses Seat01. No other player's Applied is required.
+An observer keeps an intention pending until the matching final revision has
+committed a current remote native binding (WaitingFor3D/assignment still reject).
+No change is made to the natural-join materializer or its transaction.
+
+The same durable PlayerId rank selects the existing furniture references:
+0=0x000BF3DD, 1=0x000BF3DC, 2=0x000C516E, 3=0x000C516F,
+4=0x000C5173, 5=0x000C5171, 6=0x000C5174,
+7=0x000C5172, 8=0x000C5176, 9=0x000C5178.
+All values are plugin-local to STRE_AlternateStart.esp.
+The manifest and CreationSeatLocalFormId table are tested for exact concordance.
+
+Native boundary: TESObjectREFR::Activate calls RealActivate under the existing
+ScopedActivateOverride, as used by STR ObjectService for remote activation.
+This avoids generating another ActivateRequest. There is no supported dedicated
+Sit adapter in this repository. Before activation, the registered vanilla
+ObjectReference.IsFurnitureInUse(false) includes reservations; Actor.GetSitState
+and occupiedFurniture identify the correct occupant. The occupiedFurniture
+handle is exposed at MiddleHighProcessData offset 0x208, with a static assertion,
+following CommonLibSSE-NG include/RE/M/MiddleHighProcessData.h and
+src/RE/A/AIProcess.cpp:
+https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/M/MiddleHighProcessData.h
+https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/RE/A/AIProcess.cpp
+
+Actor/cell/seat, root, current binding, process, exact runtime and registered
+Papyrus functions must be available. Dead/disabled/combat/mounted or unsafe
+life/knock/attack states wait. Another occupant/reservation is never ejected.
+There is one activation per Actor FormID/token; a pending animation is observed,
+not repeatedly activated. After ten seconds, log pending-entry-timeout-no-reactivation.
+A rejected activation is not retried on that same token. Confirmed seating is
+terminal for that token, so voluntary later movement does not force reseating.
+A new committed Actor token permits a fresh projection.
+
+No PSC/PEX/ESP change is needed. Posture queries exist only here, after completion.
+Collective sequencing, Valen, ready/departure and furniture lifetime are out of scope.
+Runtime acceptance for the current roster-2 marker/replay flow is recorded in STATUS; missing native registrations still fail closed.
+
+### Local approach using existing MarkerXX references (ADR-0025)
+
+Non-MASTER uses the existing rank pair MarkerXX / SeatXX for the native local
+PlayerCharacter, offline or connected. No new SeatApproach reference is needed.
+The complete reference EditorIDs are STRE_REFR_PlayerCreationMarker01..10;
+these remain the initial creation markers as well. Repositioning a marker in
+CK changes both initial creation placement and the final seating approach.
+
+| Rank | Marker local ID | Seat local ID |
+| --- | --- | --- |
+| 0 | D6B08 | BF3DD |
+| 1 | D6B09 | BF3DC |
+| 2 | D6B13 | C516E |
+| 3 | D6B12 | C516F |
+| 4 | D6B0A | C5173 |
+| 5 | D6B11 | C5171 |
+| 6 | D6B0B | C5174 |
+| 7 | D6B10 | C5172 |
+| 8 | D6B0D | C5176 |
+| 9 | D6B0F | C5178 |
+
+All IDs are local to STRE_AlternateStart.esp, resolved through the loaded plugin.
+There is one shared pipeline for ranks 0..9, without furniture-derived offsets,
+heading calculations, table/neighbor models or hard-coded target coordinates.
+The old Seat01/Seat02 geometric profiles are retired, not alternative fallbacks.
+
+#### Accepted layout checkpoint (2026-09-19)
+
+The maintainer accepts local and remote sitting for the two-player slice in both
+completion orders; STATUS owns the runtime evidence and its limits. This does
+not validate physical approach geometry for ranks 2..9. The closure audit finds
+ten existing XMarkerHeading references and ten seats with their exact C++ pair
+mapping. ESP is byte-identical to HEAD: no reference recreation, FormID change,
+quest-alias change, new master override or new SeatApproachXX reference is part
+of this checkpoint. PSC/PEX remain the tracked placement-only bootstrap pair;
+no Papyrus rebuild or CK session is needed. Keep the authoring procedure below
+for later deliberate layout changes, not as an outstanding task for this slice.
+
+#### CK authoring procedure
+
+1. Preserve the current plugin and its existing changes. Edit the references
+   listed above in STRE_CELL_AlternateStart. Do not duplicate/recreate them or
+   change their IDs, names, XMarkerHeading base, persistent flag or seat pairing.
+2. For each MarkerXX, choose a valid entry location for its own SeatXX manually.
+   Keep it on usable floor, clear of furniture/obstacles, enabled, scale 1 and
+   upright (X/Y rotation zero). Orient its heading for the native chair entry.
+   Do not move it to the chair's raw origin. C++ does not repair a bad CK layout.
+3. Check that this location also works as that player's initial creation position:
+   distinct markers, adequate physical room, no forced sitting during creation.
+   There is no fixed 90-unit spacing contract between chair approaches.
+4. Save the ESP without regenerating quest fragments or changing PSC/PEX. No new
+   reference, quest alias, property, script or network field is needed.
+5. Run from the repository root:
+   `python -B Tools/Scripts/audit_seat_approach_markers.py`.
+   It reads the ESP, checks the ten record types/bases/flags/cells/transforms and
+   both C++ ID tables, and reports transforms and the plugin hash. It writes
+   nothing and does not prove physical clearance, pathing or rendered pose.
+6. Follow TEST_PLAN for hands-off Solo and B-local acceptance; record the exact
+   built executable and edited plugin hashes. Do not reuse old geometry PASS
+   evidence as proof for newly positioned markers.
+
+#### Native pipeline and diagnostics
+
+Authoritative individual Applied, local finalization and the existing durable
+identity/session/recovery gates remain prerequisites. No other Applied is needed.
+Only PlayerCharacter::Get(), confirmed as registry Actor 0x14 and non-remote,
+enters PrepareLocalApproach. Observers use STR animation/binding replay; never
+Activate or MoveTo a remote actor. The local approach is not promoted to MASTER.
+
+Reserve one MoveTo to marker.cell / exact marker.position. On a later update,
+prove same actual cell and distance <=2 units, apply marker.rotation, then wait
+for another UpdateEvent. Recheck arrival and orientation (0.05-radian tolerance)
+before the unchanged single SeatXX Activate. The total preparation deadline is
+5 seconds. Repeated Tick calls inside one UpdateEvent cannot satisfy the barrier.
+No sleep, retry move, fallback Activate, ActorState write or forced animation.
+
+Missing marker, wrong base (not Skyrim XMarkerHeading), disabled reference,
+wrong cell, nonfinite/tilted transform or identity/transform change fails closed
+with an explicit approach-* reason. Seat occupancy including reservations and
+existing actor/root/process safety gates still precede each advance. Invisible
+XMarkerHeading references do not need a rendered NiNode.
+
+Logs use [STRE][CreationSeating][LocalProbe]: prototype-triggered or
+prototype-rejected, approach-target source=ck-marker, before-approach-move,
+after-approach-move-request, approach-arrived-before-facing,
+approach-facing-applied, approach-await-next-engine-update,
+approach-ready-after-engine-update, then activation-issued. Context includes
+sessionConnected, localPlayer, durablePlayerId, creationPositionIndex, assigned
+Seat and Marker names/IDs; approach-target includes actorRemote, exact position,
+rotation and cell. Native event callbacks share immutable diagnostic context.
+
+The passive capture still covers Activate +40 s or first Enter +5 s, whichever
+ends later, and snapshots Furniture Enter immediately. Engine entry evidence
+requires the matching event/root/graph and valid true furniture/sitting reads;
+camera or logical furniture state alone is insufficient. Rendered pose still
+requires human confirmation. Historical Seat01 prototype evidence is in STATUS.
+
+#### Earlier observation-only implementation
+
+Historical diagnostic rationale follows; current placement/activation behavior
+is the MarkerXX pipeline above, and current validation is recorded in STATUS.
+
+The Solo runtime reported on 0e421a99 has logical furniture state with a standing
+pose. Manual activation of the same chair works (maintainer report). The old
+`seated` phase therefore is not an acceptance signal.
+
+The Solo observer now requires a matching furniture-enter event, current root
+and graph, correct occupied furniture/GetSitState, and successful true reads of
+`isInFurniture` and `isIdleSitting` before completing as
+`entry-animation-observed`. Unknown graph reads are logged as -1 and remain
+pending. These are engine observations; visible pose and camera behavior still
+require human confirmation. No graph variable is written and no animation is
+forced. The multiplayer native projection is not changed by this diagnostic;
+its log is `furniture-state-confirmed`, with no claim of visual confirmation.
+
+The 22:12:56 Solo run demonstrated Enter at +30.750 seconds, after the initial
+diagnostic had stopped. Diagnostics now sample every 500 ms through the later
+of Activate + 40 seconds and the first matching Enter + 5 seconds. A first Enter
+after the initial window reopens five seconds of capture. Repeated Enter/Exit
+events cannot extend it indefinitely. The existing ten-second request-status
+timeout remains a status log, never a sampling stop or a reactivation trigger.
+Sampling precedes readiness/unsafe-state/completion exits, so completion does
+not hide the five seconds after Enter. Recovery/session/runtime fences remain.
+
+The first matching Enter always logs an immediate synchronous, sequential
+snapshot in the event callback: occupied furniture, registered GetSitState,
+graph values, root, ActorState, transforms and process. This is the callback
+entry observation, not an atomic engine snapshot or a deferred next-tick read.
+Other furniture event snapshots are bounded to eight per attempt.
+Actions have a renewable budget of 32 logs per second, reset at first Enter;
+omitted actions are counted in process snapshots. Early movement spam cannot
+consume a lifetime budget and hide later actions. The window ends with an
+observation-window-ended snapshot, independent of whether the player is seated.
+Action logs include target, action/idle IDs, selected event, result, action flags
+and whether the existing remote-action guard blocked it. Native event callbacks
+use atomic actor/seat tokens, never the intention map or retained engine pointers.
+Fresh creation/disconnect clears those tokens. Polling does not sleep, retry
+activation, teleport, eject an occupant or unblock the camera by force.
+
+Process snapshots read the current and run-once package IDs/tokens, effective
+package source, data token, target handle/resolved FormID, procedure index/start
+time, raw procedure type, process level, furniture idle and raw furniture path
+point. The added members replace padding with offset assertions, preserving
+existing layout. Layout/provenance: [AIProcess](https://raw.githubusercontent.com/CharmedBaryon/CommonLibSSE-NG/main/include/RE/A/AIProcess.h),
+[ActorPackage](https://raw.githubusercontent.com/CharmedBaryon/CommonLibSSE-NG/main/include/RE/A/ActorPackage.h),
+[MiddleHighProcessData](https://raw.githubusercontent.com/CharmedBaryon/CommonLibSSE-NG/main/include/RE/M/MiddleHighProcessData.h),
+and [GetRunningPackage](https://raw.githubusercontent.com/CharmedBaryon/CommonLibSSE-NG/main/src/RE/A/AIProcess.cpp).
+Run-once takes precedence over current package for the effective observation.
+These fields do not expose the navmesh solver or establish whether the raw path
+point is an active world-space destination. Logs explicitly say
+pathSolverStatus=unavailable and pathPointSpace=unverified.
+
+Actor/seat distance and transforms are logged alongside PlayerControls movement,
+look vectors, auto-move/block/handler state. These values are engine observations,
+not raw physical-input provenance. Turn/move action events alone cannot establish
+human intervention. The next Solo acceptance must be strictly hands-off for at
+least 40 seconds and through Enter + 5 seconds. No native behavior was changed.
+
+Static native audit on 1.6.1170: `ActivateRef` AE19796/RVA 0x2EAC20 calls
+TESFurniture's virtual activation at RVA 0x269C00; its ordinary player branch
+calls RVA 0x736B90/AE40486 and installs a native package. The Papyrus
+ObjectReference.Activate callback at RVA 0xA2BC40 calls AE19796 with the same
+0/null/1/defaultProcessing arguments as this adapter. Directly replacing the
+adapter with the nested entry call is not a demonstrated fix. None of these
+additional addresses is called or hooked by the follow-up. The observed
+package/animation divergence still needs the new Solo trace.
+
+### Remote seating correction of primitive (2026-09-19)
+
+[ADR-0026](../../architecture/ADRs/ADR-0026-remote-seating-through-str-actions.md)
+supersedes the observer activation described above. TESFurniture::Activate on
+1.6.1170 rejects any activator other than the native PlayerCharacter singleton.
+CreationSeating now exits the remote path before occupancy handling, local
+approach or activation, observing only the final binding and the existing STR
+network action projection. The local MarkerXX -> SeatXX pipeline is unchanged.
+No CK, marker, chair, PSC, PEX or ESP change is needed for this diagnostic.
+
+Do not repair the observer by calling Activate repeatedly, moving a remote,
+spoofing PlayerCharacter, writing ActorState or forcing a chair animation. The
+actual action receipt/application relative to candidate-commit must first be
+observed. TEST_PLAN owns the observer-only collection procedure; STATUS owns the
+evidence. The subsequent ADR-0027 replay checkpoint is accepted for reciprocal
+roster-2 visible sitting; this earlier diagnostic alone did not establish it.

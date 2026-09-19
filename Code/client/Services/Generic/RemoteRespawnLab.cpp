@@ -2,6 +2,7 @@
 #include <Services/RemoteRespawnLab.h>
 #include <BranchInfo.h>
 #include <CharacterCreation/FinalRespawn.h>
+#include <CharacterCreation/FinalRespawnAdmission.h>
 #include <CharacterCreation/RemoteMaterializationLifecycle.h>
 #include <Services/RemoteActorProjection.h>
 #include <Services/CharacterService.h>
@@ -10,6 +11,7 @@
 #include <Services/TransportService.h>
 #include <Services/InventoryService.h>
 #include <Systems/FaceGenSystem.h>
+#include <Systems/AnimationSystem.h>
 #include <Messages/CharacterAppearanceUpdate.h>
 #include <Messages/NotifyCharacterBuildState.h>
 #include <Components.h>
@@ -25,6 +27,7 @@
 #include <chrono>
 #include <map>
 #include <memory>
+#include <string_view>
 
 namespace STRE::RemoteRespawnLab
 {
@@ -47,6 +50,10 @@ struct Job
     entt::entity Entity{entt::null};
     NotifyCharacterBuildState Build;
     std::optional<NotifyCharacterAppearanceUpdate> Final;
+    FinalRespawnAdmission Admission;
+    int LastAdmissionWeapon{-1};
+    uint32_t AdmissionTraceCount{}, AdmissionTraceSuppressed{};
+    uint64_t AdmissionSession{};
     RemoteMaterializationLifecycle Lifecycle;
     NativePair Old, Candidate;
     uintptr_t ExpectedBase{};
@@ -260,12 +267,38 @@ entt::entity FindDiagnosticEntity(World& aWorld, const Job& aJob)
     return entt::null;
 }
 
-bool Capture(World& aWorld, Job& aJob)
+void LogAdmission(Job& aJob, const BindingObservation& o, const char* aPhase, const char* aReason, bool aBindingGuardsPassed)
+{
+    spdlog::info(
+        "[STRE][RemoteRespawnLAB] phase={} detail={} serverId={} playerId={} entityVersioned={} session={} finalRevision={} "
+        "Actor={:X} Base={:X} ActorToken={:X} BaseToken={:X} elapsedMs={} budgetMs=10000 bindingGuards={} "
+        "WaitingFor3D={} Local={} Assignment={} recoveryLocked={} provenancePresent={} provenanceMatches={} safeState={} "
+        "suppressedTransitions={} upstreamWeaponCause=unresolved {}",
+        aPhase, aReason, aJob.Server, aJob.Build.PlayerId, static_cast<uint32_t>(o.Entity), aJob.AdmissionSession,
+        aJob.Final ? aJob.Final->FinalBuildRevision : 0, o.ActorFormId, o.BaseFormId,
+        reinterpret_cast<uintptr_t>(o.NativeActor), reinterpret_cast<uintptr_t>(o.RawBase),
+        std::chrono::duration_cast<std::chrono::milliseconds>(aJob.Admission.Elapsed(Clock::now())).count(),
+        aBindingGuardsPassed ? "passed" : "failed-see-gate-rejection", o.Waiting3D, o.Local, o.Assignment, o.RecoveryLocked,
+        o.Provenance, o.ProvenanceMatches, o.SafeState, aJob.AdmissionTraceSuppressed,
+        o.NativeActor ? ActorStateDiagnostic(o.Flags1, o.Flags2) : "stateDecode=unavailable");
+}
+FinalRespawnAdmissionDecision RejectAdmission(Job& aJob, const BindingObservation& o, const char* aReason)
+{
+    aJob.Admission.Reject(aReason);
+    LogBindingRejection(aJob, o, "gate-rejected", aReason);
+    LogAdmission(aJob, o, "admission-rejected", aReason, false);
+    return FinalRespawnAdmissionDecision::Rejected;
+}
+void CancelAdmission(World& aWorld, Job& aJob, const char* aReason)
+{
+    RejectAdmission(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob), VersionDb::Get().GetLoadedVersionString() == "1.6.1170.0"), aReason);
+    aJob.Done = true; // No lifecycle reservation, abort or retirement to dispatch.
+}
+FinalRespawnAdmissionDecision Capture(World& aWorld, Job& aJob)
 {
     if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
     {
-        LogBindingRejection(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob), false), "gate-rejected", "unsupported-runtime");
-        return false;
+        return RejectAdmission(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob), false), "unsupported-runtime");
     }
     entt::entity found = entt::null;
     for (auto entity : aWorld.view<RemoteComponent, PlayerComponent>())
@@ -275,31 +308,37 @@ bool Capture(World& aWorld, Job& aJob)
             {
                 auto observed = ObserveBinding(aWorld, found);
                 observed.Collision = entity;
-                LogBindingRejection(aJob, observed, "gate-rejected", "remote-serverid-collision");
-                return false;
+                return RejectAdmission(aJob, observed, "remote-serverid-collision");
             }
             found = entity;
         }
     if (found == entt::null)
     {
         const auto observed = ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob));
-        LogBindingRejection(aJob, observed, "gate-rejected", observed.Remote ? "player-component-missing" : "remote-component-missing");
-        return false;
+        return RejectAdmission(aJob, observed, observed.Remote ? "player-component-missing" : "remote-component-missing");
     }
-    aJob.Entity = found;
     auto observed = ObserveBinding(aWorld, found);
     const auto reject = [&](const char* reason)
     {
-        LogBindingRejection(aJob, observed, "gate-rejected", reason);
-        return false;
+        return RejectAdmission(aJob, observed, reason);
     };
+    if (!aWorld.GetTransport().IsConnected())
+        return reject("transport-disconnected");
+    if (observed.RecoveryLocked)
+        return reject("recovery-locked");
+    if (aJob.AdmissionSession != s_session)
+        return reject("pre-reservation-session-changed");
+    if (!aJob.Final || !aJob.Final->IsValid() || aJob.Final->ActorId != aJob.Server)
+        return reject("invalid-canonical-snapshot");
+    if (!FinalRespawnEligible(true, true, aJob.Build.State == CharacterBuildNetworkState::Applied, aJob.Final->FinalBuildRevision, aJob.Build.Revision) ||
+        aJob.Build.ServerId != aJob.Server || ComputeCharacterBuildInventoryHash(aJob.Build.Build.CanonicalInventory) != aJob.Build.Build.InventoryHash)
+        return reject("invalid-canonical-applied-build");
     if (!observed.Form)
         return reject("formid-missing");
     if (!observed.Player)
         return reject("player-component-missing");
     if (observed.PlayerId != aJob.Build.PlayerId)
         return reject("player-id-mismatch");
-    aJob.Player = observed.PlayerId;
     auto* actor = observed.NativeActor;
     auto* base = observed.Base;
     if (!actor)
@@ -314,8 +353,6 @@ bool Capture(World& aWorld, Job& aJob)
         return reject("combat");
     if (observed.Mounted)
         return reject("mounted");
-    if (!observed.SafeState)
-        return reject("unsafe-actor-state");
     if (!base)
         return reject("base-not-tesnpc");
     if (!observed.ActorTemporary)
@@ -326,7 +363,7 @@ bool Capture(World& aWorld, Job& aJob)
         return reject("actor-base-formid-collision");
     if (observed.BaseLookup != base)
         return reject("base-lookup-mismatch");
-    aJob.Old = {{actor->formID, base->formID}, reinterpret_cast<uintptr_t>(actor), reinterpret_cast<uintptr_t>(base)};
+    const NativePair current{{actor->formID, base->formID}, reinterpret_cast<uintptr_t>(actor), reinterpret_cast<uintptr_t>(base)};
     // Exactly the existing Bound guard, split into independently named predicates.
     if (!observed.Valid)
         return reject("entity-invalid");
@@ -340,11 +377,11 @@ bool Capture(World& aWorld, Job& aJob)
         return reject("remote-component-missing");
     if (observed.Server != aJob.Server)
         return reject("remote-serverid-mismatch");
-    if (observed.CachedRefId != aJob.Old.Forms.Actor)
+    if (observed.CachedRefId != current.Forms.Actor)
         return reject("cachedref-mismatch");
-    if (observed.FormId != aJob.Old.Forms.Actor)
+    if (observed.FormId != current.Forms.Actor)
         return reject("formid-actor-mismatch");
-    if (!Resolve(aJob.Old))
+    if (!Resolve(current))
         return reject("native-binding-token-mismatch");
     if (observed.Provenance && !observed.ProvenanceMatches)
         return reject("provenance-mismatch");
@@ -368,8 +405,48 @@ bool Capture(World& aWorld, Job& aJob)
         return reject("interpolation-missing");
     if (!observed.Animation)
         return reject("remote-animation-missing");
-    aJob.Cell = cell->formID;
     auto* space = actor->GetWorldSpace();
+    // These guards formerly ran after Capture. They must also precede Pending.
+    if (Cast<TESObjectCELL>(TESForm::GetById(cell->formID)) != cell)
+        return reject("cell-lookup-mismatch");
+    if (space && Cast<TESWorldSpace>(TESForm::GetById(space->formID)) != space)
+        return reject("worldspace-lookup-mismatch");
+    if (!Cast<TESRace>(TESForm::GetById(aWorld.GetModSystem().GetGameId(aJob.Final->Descriptor.Race))))
+        return reject("unresolvable-final-race");
+
+    const FinalRespawnAdmissionBinding binding{s_session, static_cast<uint32_t>(found), aJob.Server, observed.PlayerId,
+        current.Forms.Actor, current.Forms.Base, current.ActorToken, current.BaseToken};
+    const auto state = DecodeFinalRespawnActorState(observed.Flags1, observed.Flags2);
+    const bool wasWaiting = aJob.Admission.Waiting();
+    const auto admission = aJob.Admission.Observe(Clock::now(), binding, state);
+    if (admission.Decision == FinalRespawnAdmissionDecision::Pending)
+    {
+        if (aJob.LastAdmissionWeapon != static_cast<int>(state.Weapon))
+        {
+            // At most 32 transition lines per job, plus its unconditional terminal line.
+            if (aJob.AdmissionTraceCount++ < 32)
+                LogAdmission(aJob, observed, wasWaiting ? "admission-weapon-changed" : "admission-wait-begin", admission.Reason, true);
+            else
+                ++aJob.AdmissionTraceSuppressed;
+            aJob.LastAdmissionWeapon = static_cast<int>(state.Weapon);
+        }
+        return admission.Decision;
+    }
+    if (admission.Decision == FinalRespawnAdmissionDecision::Rejected)
+    {
+        const std::string_view reason{admission.Reason};
+        const bool expired = reason == "weapon-sheathing-timeout" || reason == "pre-reservation-timeout";
+        LogAdmission(aJob, observed, expired ? "admission-expired" : "admission-rejected", admission.Reason, reason != "pre-reservation-binding-changed");
+        LogBindingRejection(aJob, observed, "gate-rejected",
+            !observed.SafeState && !expired && reason != "pre-reservation-binding-changed" ? "unsafe-actor-state" : admission.Reason);
+        return admission.Decision;
+    }
+    LogAdmission(aJob, observed, "admission-ready", admission.Reason, true);
+    // No partial native capture survives Pending. Commit only this fresh observation.
+    aJob.Entity = found;
+    aJob.Player = observed.PlayerId;
+    aJob.Old = current;
+    aJob.Cell = cell->formID;
     aJob.Space = space ? space->formID : 0;
     aJob.Position = actor->position;
     aJob.Rotation = actor->rotation;
@@ -378,7 +455,7 @@ bool Capture(World& aWorld, Job& aJob)
         "[STRE][RemoteRespawnLAB] phase=actor-state-accepted serverId={} entityVersioned={} Actor={:X} safeState={} actorStateFlags1={:08X} actorStateFlags2={:08X} {}",
         aJob.Server, static_cast<uint32_t>(aJob.Entity), observed.ActorFormId, observed.SafeState, observed.Flags1, observed.Flags2,
         ActorStateDiagnostic(observed.Flags1, observed.Flags2));
-    return true;
+    return FinalRespawnAdmissionDecision::Ready;
 }
 
 bool Geometry(Job& aJob, Actor* aCandidate)
@@ -397,9 +474,10 @@ void Advance(World& aWorld, Job& aJob)
 {
     if (aJob.Lifecycle.State() == MaterializationState::Idle)
     {
-        if (!Capture(aWorld, aJob))
+        const auto admission = Capture(aWorld, aJob);
+        if (admission != FinalRespawnAdmissionDecision::Ready)
         {
-            aJob.Done = true;
+            aJob.Done = admission == FinalRespawnAdmissionDecision::Rejected;
             return;
         }
         auto* cell = Cast<TESObjectCELL>(TESForm::GetById(aJob.Cell));
@@ -496,13 +574,28 @@ void Advance(World& aWorld, Job& aJob)
     aWorld.remove<RemoteAppearanceProbeComponent>(aJob.Entity);
     aJob.Done = true;
     Log(aJob, "candidate-commit");
+    AnimationSystem::OnBindingChanged(aWorld, aJob.Entity,
+        {aJob.Lifecycle.Key().Session, aJob.Lifecycle.Key().Generation, aJob.Server, static_cast<uint32_t>(aJob.Entity),
+         {aJob.Old.Forms.Actor, aJob.Old.ActorToken}, {aJob.Candidate.Forms.Actor, aJob.Candidate.ActorToken}});
     Log(aJob, "inventory-restore-status", "live-counts-worn-sides-and-magic-equipment-matched");
     DispatchRetirement(aJob);
     Log(aJob, "complete", "natural-join-local-representation-committed-native-retirement-observation-pending");
 }
 } // namespace
 
-void ReceiveBuild(World&, const NotifyCharacterBuildState& aBuild) noexcept
+Actor* CommittedActor(World& aWorld, uint32_t aServerId, uint64_t aRevision) noexcept
+{
+    const auto found = s_jobs.find(aServerId);
+    if (found == s_jobs.end())
+        return nullptr;
+    const auto& job = *found->second;
+    if (!job.Final || job.Final->FinalBuildRevision != aRevision ||
+        job.Lifecycle.State() != MaterializationState::Committed || !Bound(aWorld, job, job.Candidate))
+        return nullptr;
+    return Resolve(job.Candidate);
+}
+
+void ReceiveBuild(World& aWorld, const NotifyCharacterBuildState& aBuild) noexcept
 {
     if (aBuild.State != CharacterBuildNetworkState::Applied || !aBuild.Revision ||
         ComputeCharacterBuildInventoryHash(aBuild.Build.CanonicalInventory) != aBuild.Build.InventoryHash)
@@ -514,6 +607,12 @@ void ReceiveBuild(World&, const NotifyCharacterBuildState& aBuild) noexcept
         job = std::make_unique<Job>();
     if (job->Lifecycle.State() != MaterializationState::Idle || job->Done)
         return;
+    if (job->Final && job->Build.Revision &&
+        (job->Build.PlayerId != aBuild.PlayerId || job->Build.Revision != aBuild.Revision || !(job->Build.Build == aBuild.Build)))
+    {
+        CancelAdmission(aWorld, *job, "canonical-applied-build-changed");
+        return;
+    }
     job->Server = aBuild.ServerId;
     job->Build = aBuild;
 }
@@ -550,8 +649,15 @@ void ReceiveFinal(World& aWorld, const NotifyCharacterAppearanceUpdate& aFinal) 
         return;
     }
     if (!job.Final)
-        job.Started = Clock::now(); // Duplicate delivery cannot extend the pending deadline.
-    job.Final = aFinal;             // Latest valid delivery before reservation; one immutable canonical final.
+    {
+        job.Admission.Begin(Clock::now()); // Shared Applied + weapon wait; never restarted by duplicates.
+        job.AdmissionSession = s_session;
+        job.Final = aFinal; // Freeze the first valid canonical snapshot and revision.
+    }
+    else if (!job.Final->CharacterAppearanceUpdate::operator==(aFinal))
+        CancelAdmission(aWorld, job, "canonical-final-changed");
+    else
+        Log(job, "duplicate-final-ignored", "pre-reservation-deadline-unchanged");
 }
 void BeforeSpawn(Actor* aActor, TESNPC* aBase) noexcept
 {
@@ -646,6 +752,11 @@ void Tick(World& aWorld) noexcept
         {
             if (!job.Done)
             {
+                if (job.Lifecycle.State() == MaterializationState::Idle)
+                {
+                    CancelAdmission(aWorld, job, !aWorld.GetTransport().IsConnected() ? "transport-disconnected" : "recovery-locked");
+                    continue;
+                }
                 // A recovery lock is not authoritative removal of the old actor.
                 job.Lifecycle.Abort(job.Lifecycle.Key());
                 job.Done = true;
@@ -660,12 +771,14 @@ void Tick(World& aWorld) noexcept
         {
             if (!FinalRespawnEligible(true, true, job.Build.State == CharacterBuildNetworkState::Applied, job.Final->FinalBuildRevision, job.Build.Revision))
             {
-                if (Clock::now() - job.Started > std::chrono::seconds(10))
-                    Abort(job, "matching-applied-build-timeout");
+                if (job.Admission.Expired(Clock::now()))
+                    CancelAdmission(aWorld, job, "matching-applied-build-timeout");
             }
             else
                 Advance(aWorld, job);
         }
+        if (job.Lifecycle.State() == MaterializationState::Idle)
+            continue; // Pending/rejected admission owns no native retirement intents.
         DispatchRetirement(job);
 #if (!IS_MASTER)
         if (job.Old.DeleteIssued && !job.RetirementLogged && job.RetirementStarted != Clock::time_point{} && Clock::now() - job.RetirementStarted >= std::chrono::seconds(30))
@@ -687,6 +800,12 @@ void Disconnect(World& aWorld) noexcept
     ++s_session;
     for (auto& [id, ptr] : s_jobs)
     {
+        if (ptr->Lifecycle.State() == MaterializationState::Idle)
+        {
+            if (!ptr->Done)
+                CancelAdmission(aWorld, *ptr, "transport-disconnected");
+            continue;
+        }
         ptr->Lifecycle.Invalidate(ptr->Lifecycle.Key());
         ptr->Done = true;
         DispatchRetirement(*ptr);

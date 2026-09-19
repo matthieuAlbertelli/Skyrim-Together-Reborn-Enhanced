@@ -1,16 +1,16 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: August 27, 2026**
+> **Last updated: September 19, 2026**
 
 ## Reference platform
 
 | Component | Observed version/support | State |
 |---|---|---|
-| Skyrim SE/AE runtime | `1.6.1170` Steam | primary development runtime and `0.3.0-alpha.1` public-alpha target |
+| Skyrim SE/AE runtime | `1.6.1170` Steam | primary development runtime and `0.4.0-alpha.1` public-alpha target |
 | Operating system | Windows x64 | playable client/server target; Linux CI builds shared/server code but does not establish Linux client support |
 | Skyrim Together Reborn upstream | historical baseline in `UPSTREAM.md` | fork integrated into STRE |
-| STRE | `0.3.0-alpha.1` | Campaign Continuity Alpha; Windows native/UI/package gates and two-player live campaign evidence |
+| STRE | `0.4.0-alpha.1` | reciprocal final appearance and individual local/remote seating validated for roster 2 in both completion orders; tagged-package clean install pending |
 | Angular | 16.x | in use |
 | xmake | `3.0.9` in CI (`>= 3.0.0` project) | Windows and Linux CI build toolchain |
 | Creation Kit | environment compatible with `1.6.1170` | current ESP/Papyrus authoring and strict manifest target |
@@ -18,9 +18,40 @@
 | Better Grabbing | `1.17` | external plugin required by default for multiplayer World Sync manipulation |
 | Address Library | all-in-one package containing database `11` for runtime `1.6.1170` | required external dependency; runtime base for STRE/Better Grabbing |
 
-These are the **`0.3.0-alpha.1` release targets**. Other Skyrim runtimes,
+These are the **`0.4.0-alpha.1` release targets**. Other Skyrim runtimes,
 stores, operating systems, SKSE/Address Library combinations, or dependency
 versions are not part of this release's supported matrix.
+
+## Fireplace dependency and evidence
+
+EEKs Fireplace Resource from [EEKs Resource Repository](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files)
+(EvilEyedKyo / EEK) remains a separately installed external prerequisite. The
+selected Vanilla Textured model has no direct Embers HD dependency. STRE
+redistributes neither EEK nor Embers HD assets.
+
+Maintainer runtime smoke **PASS**, 2026-09-19, in the development environment:
+no purple/missing textures; carvings, embers and wood correct; size/origin
+visually unchanged; collision unchanged; circulation unaffected. Exact tested
+ESP SHA256: `299dafea9b6a7fa272b2319daa5c66866194cd6b1963064f57145e8294d5d9de`.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
+
+## Character Creation checkpoint limits
+
+- Ranks 2..9 have static mapping coverage, without seating runtime acceptance.
+- MASTER executable/in-game seating is not validated.
+- Tagged-package clean-install smoke, including external texture availability,
+  remains pending; development-environment visual smoke is not a substitute.
+- The two EEK-path carving textures retain the provenance reservation above.
+- The complete race/sex/state matrix, later manual appearance edits, recovery/
+  reconnect for this seating checkpoint and native retirement/lifetime completion
+  remain unvalidated. Earlier campaign and compatibility limitations below still
+  apply; the roster-2 result does not supersede them.
 
 ## Campaign continuity
 
@@ -44,9 +75,10 @@ player replacement, host authority, or continue-without-player fallback.
 ## Upgrade, persistence, protocol, and saves
 
 - **Client/server mixing:** unsupported and fail-closed. Authentication requires
-  exact `BUILD_COMMIT` equality, so `0.2.0-alpha.1` and `0.3.0-alpha.1` clients
-  and servers cannot be mixed. Use identical artifacts from one release.
-- **Campaign database:** `0.3.0-alpha.1` uses SQLite campaign schema v2. A
+  exact `BUILD_COMMIT` equality, so `0.2.0-alpha.1`, `0.3.0-alpha.1` and
+  `0.4.0-alpha.1` clients and servers cannot be mixed. Use identical artifacts from one release.
+- **Campaign database:** SQLite campaign schema v2 was introduced in
+  `0.3.0-alpha.1`; this release does not establish an old-save upgrade guarantee. A
   schema-v1 STRE campaign database migrates transactionally to v2; malformed,
   failed, or newer-schema stores fail closed without reset. The public
   `0.2.0-alpha.1` release did not expose this campaign-continuity database as a

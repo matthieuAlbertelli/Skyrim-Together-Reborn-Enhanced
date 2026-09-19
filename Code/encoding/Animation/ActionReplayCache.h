@@ -1,5 +1,7 @@
 #pragma once
 
+#include <TiltedCore/Stl.hpp>
+#include <TiltedCore/Buffer.hpp>
 #include <Structs/ActionEvent.h>
 #include <Structs/ActionReplayChain.h>
 #include <optional>
@@ -22,6 +24,10 @@ public:
 
     /// Appends actions to the replay cache
     void AppendAll(const Vector<ActionEvent>& acActions) noexcept;
+    void Append(const ActionEvent& acAction) noexcept;
+
+    // Shared invalidation rule, including exits still pending on an observer.
+    static bool IsExitAction(const ActionEvent& acAction) noexcept;
 
     const Vector<ActionEvent>& GetActions() const noexcept { return m_actions; };
 
@@ -30,7 +36,6 @@ public:
 private:
     // Returns true if clients should reset the animation graph of the Actor before replaying
     bool RefineReplayCache() noexcept;
-    static bool IsExitAction(const ActionEvent& acAction) noexcept;
     static bool ShouldIgnoreAction(const ActionEvent& acAction) noexcept;
     static std::optional<std::string_view> FindInstantCounterpartForAction(std::string_view aAction) noexcept;
 

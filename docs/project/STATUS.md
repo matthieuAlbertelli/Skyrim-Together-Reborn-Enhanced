@@ -1,13 +1,559 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 18, 2026.
+> **Last updated:** September 19, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## EEK Vanilla Textured fireplace runtime checkpoint — PASS (2026-09-19)
+
+The maintainer validated the exact ESP candidate in the development environment:
+no missing/purple textures; carvings, embers and wood rendered correctly; size
+and origin/placement visually unchanged; collision unchanged; circulation
+unaffected. This is human runtime evidence, not an agent-executed runtime test.
+
+Only `STRE_STAT_IlinaltaFireplace01` (local `0xCAF31`) MODL changed from
+`EEKs Fireplace Resources\HDEmbers Textured\EEK_DragonsReach_Firepit_Kitchen_HDEmbers.nif`
+to `EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif`.
+Both models have 106 BSTriShape, matching hierarchy/transforms, vertex positions,
+triangles and bounds, and five byte-identical collision blocks. Two shapes have
+UV differences; shader/controller differences provide the normal fire textures.
+The installed, candidate and imported repository ESP share SHA256
+`299dafea9b6a7fa272b2319daa5c66866194cd6b1963064f57145e8294d5d9de`.
+
+EEK remains a separately installed external prerequisite, credited to EvilEyedKyo
+/ EEK: [resource and files](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files).
+STRE redistributes no EEK or Embers HD assets. Embers HD is no longer a direct
+dependency of the selected fireplace.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
+
+Promotion checks rerun: six CK/ESP audits PASS (strict records with
+`--reject-unexpected`, ten marker/seat pairs, packaging of 19 managed files,
+MQ101 structure, generated invariants, 41 catalog references); nine structural
+suites / 92 tests PASS; git diff --check PASS. The 249-record comparison finds
+only the fireplace MODL change; aliases, quests, navmesh, markers/seats, script
+properties and master overrides are unchanged. PSC/PEX are unchanged. No C++
+change, full TPTests rerun, new game launch or clean-install test was performed.
+
+## Accepted multiplayer seating checkpoint (2026-09-19)
+
+**Maintainer human acceptance: PASS**, for two fresh roster-2 runs in both
+completion orders (A first, then B first). Each player retains correct local
+MarkerXX -> SeatXX sitting after their own Applied; both observers see the
+other's correct final appearance, without the placeholder/black Viking, and
+visible remote sitting after final rematerialization. No all-Applied barrier.
+The native furniture interaction belongs only to the owning PlayerCharacter;
+remote presentation uses STR actions and binding replay, never remote Activate
+or remote MoveTo. This supersedes the pending visual acceptance statements in
+historical preparation entries below, for this tested slice only.
+
+The 19 September A-client log documents A Applied at 02:47:46.615 and local
+activation at .695, before B Applied at 02:48:13.135. B/serverId 3/revision 2
+waits in weapon 4 at 02:48:13.206, returns to safe weapon 0 at .570 (363 ms
+reported), then commits at .655. Old FF000834/token8F590DB0 becomes
+FF00083B/token8FB44500. At .655, one consumed IdleChairRightEnter is refined
+to IdleChairEnterInstant and prepended before two pending actions (queue 2 -> 3).
+At .656, ForceAction returns true on the new token, matchesNewBinding=true.
+The server records B Applied at .129, appearance owner acceptance/relay to A
+at .150. These timestamps establish the A-first trace, not the reverse run.
+The B-first order and reciprocal visual results are the maintainer's explicit
+attestation; no exact second-run timestamp or B-client trace is inferred.
+
+The installed client inspected during closure matches the prepared candidate:
+SHA256 932E650C4B0FD3CB6684E6B707D00AC3A8E54CF28983F8C42B9FF96FD6272A5B.
+This identifies the inspected binary; the logs do not themselves contain a
+cryptographic executable fingerprint for each historical process. Source and
+runtime evidence copies remain local under _audit/seating-final-checkpoint/.
+
+Final closure reruns PASS: full TPTests 43905 assertions / 400 cases; seating
+1529 / 16; final rematerialization/admission 34089 / 17; animation binding replay
+340 / 12; nine structural suites, 92 tests. Windows Debug client/launcher and
+server builds PASS (native targets up to date; Angular rebuilt). Six CK audits
+PASS: ten marker/seat pairs, strict records with reject-unexpected, packaging
+(19 managed files), MQ101 plugin structure, generated source invariants and
+catalog references (41). git diff --check PASS. No CI run or new MASTER build
+was performed during closure; prior isolated MASTER compile evidence below is
+not a full executable/runtime validation. No functional change or Papyrus recompilation is
+part of closure. ESP/PEX are byte-identical to HEAD; PSC is identical after Git
+line-ending normalization. No asset will be added by this checkpoint.
+
+Scope limits remain: no runtime validation of ranks 2..9, complete race/sex
+matrix, MASTER executable, recovery/reconnect or repeated lifetime cycles is
+inferred. All ten existing marker/seat bindings are statically audited, not all
+ten poses tested. The origin of transient weapon 4/5 remains unresolved; the
+bounded wait preserves every safety predicate and requires safe admission.
+Native retirement/memory completion, Valen and collective progression remain
+outside this checkpoint. No agent Skyrim/CK launch or deployment; no push.
+
+## Animation replay continuity at final binding replacement (2026-09-19)
+
+Implemented and accepted for the roster-2 checkpoint above: [ADR-0027](../architecture/ADRs/ADR-0027-animation-replay-native-binding-continuity.md).
+ActionReplayCache and AnimationEventLists now have one shared implementation in
+SkyrimEncoding. Server refinement semantics/mappings and ActionReplayChain wire
+format remain unchanged. Each remote animation component keeps up to 32 consumed
+actions; final binding notification prepends their refined chain before existing
+pending actions. Pending actions are not duplicated. Consumed/pending exits
+invalidate stale history; an exit arriving during graph wait cancels only the
+synthetic prefix. Duplicate generation notifications cannot replay twice. Fresh
+Actor FormID/token comparison, disconnect/new-session/recovery invalidation and
+normal graph readiness remain. No borrowed engine pointer is retained.
+
+RemoteRespawnLab adds only a value-only notification after candidate-commit.
+Its admission, weapon 4/5 wait, transaction, FaceGen and retirement logic are
+unchanged. Appearance publication, natural-join projection, Discovery, individual
+local MarkerXX -> SeatXX seating and ESP/PSC/PEX match the mission baseline hashes.
+No remote Activate/MoveTo, new ActorState assignment, animation primitive, packet,
+schema, collective barrier, race-specific handling or lifetime investigation.
+Functional replay is MASTER/non-MASTER; local seating remains non-MASTER.
+
+Evidence establishing the discontinuity, from the **previous diagnostic candidate**
+SHA256 18177A4540CB46E5B1BE911A50D36A141ED5197D06831CE995A1211C58D65E2C:
+on observer A at 02:12:08.318, B/serverId 3/revision 2 Applied is received. Final
+snapshot arrives at .366, admission becomes Ready at .752, candidate-create .753,
+candidate-commit .843. At .844 the saved real ForceAction result identifies
+IdleChairRightEnter (actionTick 51862521, idle 3B070) returned 1 on old
+FF000826/token9365ADF0, not final FF000831/token930DFE60. Execution is bounded
+between .320 and .820; native diagnostic saturation hides its exact wall time.
+Four actions received/two executed before commit, two pending preserved, followed
+by moveStart/TurnRight/moveStop/turnStop on the final actor. At +40 s the counts are
+six received, zero filtered, six executed; no chair entry was replayed on final.
+Server traces confirm Applied/appearance ownership/relay, not individual action
+timestamps. No B-client chronology is claimed.
+
+The maintainer attests final appearances correct in both directions and local
+sitting correct for both players on that diagnostic run; remote sitting FAIL in
+both directions. This supersedes earlier pending/not-deployed statements for the
+diagnostic candidate below, but is **not** runtime acceptance of the new replay
+correction or proof of both completion orders/native lifetime.
+
+Executed for this correction: targeted TPTests **340 assertions / 12 cases PASS**;
+full TPTests **43905 assertions / 400 cases PASS**; all nine structural suites
+**92 tests PASS**. Windows Debug client/launcher and server builds PASS. Isolated
+MASTER/IS_MASTER=1 compilation of AnimationSystem, CharacterService,
+RemoteRespawnLab and CreationSeating PASS; not a linked MASTER executable or game
+test. git diff --check PASS. Existing compiler narrowing/deprecation warnings and
+ignored -fPIC remain, including the pre-existing AddActionsForReplay narrowing.
+Initial attempts exposed a test-only const mismatch, a structural assertion that
+mistook interpolation TimePoints for animation mutation, an invalid build target
+name, and a missing forced PCH in the isolated compile command; corrected before
+the passing executions. Sandboxed xmake also emitted Git ownership metadata errors;
+final builds ran with the normal Windows build environment and correct branch.
+
+Dedicated [AnimationReplay] logs record source/refined chain, binding/generation,
+bounded graph wait and actual ForceAction token/result independently of the native
+probe budget. The prepared candidate was subsequently installed and tested by the
+maintainer, with final acceptance recorded above. ForceAction return alone remains
+insufficient for visual acceptance. Procedure:
+[TEST_PLAN](../features/alternate-start/TEST_PLAN.md#animation-replay-continuity-after-final-binding-2026-09-19).
+
+## Remote seating action-stream diagnosis (2026-09-19; historical preparation)
+
+Implemented on the existing arrival/seating worktree: CreationSeating no longer
+calls Activate for remote actors, in any build. Only the native local
+PlayerCharacter reaches the existing activation path. The non-MASTER individual
+MarkerXX -> SeatXX approach is unchanged. ADR-0026 supersedes ADR-0024's invalid
+observer primitive; this is neutralization plus diagnostics, NOT a remote pose fix.
+
+Native evidence on 1.6.1170: ActivateRef AE19796 dispatches through TESFurniture's
+vtable slot 0x1B8 to RVA 0x269C00 (RTTI verified). The comparison at 0x269C31 is
+against the PlayerCharacter singleton (AE401069/RVA 0x3137698); a different actor
+returns false at 0x269EAB before that furniture method's package creation.
+This proves a deterministic native veto, not the first executed instruction of
+the outer wrapper in a runtime trace. No hooks or native guards were changed.
+
+Newly analyzed evidence supersedes the old "not yet installed/tested" statement
+in the admission preparation below: the installed client hash matches candidate
+076ADAFCE13808F31A5F3EAD39EE4A36D1D47657464E2E18A3C58FF7DCA4D558.
+On 19 September at 01:18, A receives B's Applied (serverId 3, revision 2), then
+the final snapshot at 01:18:43.352. Weapon 4 -> 0 reaches Ready after 398 ms;
+one transaction commits FF000846/token9374E2F0 at 01:18:43.881. The maintainer
+attests B's correct final appearance on A. Seating then selects this final actor
+and Seat02 080BF3DC, but the old Activate path returns false. The supplied A and
+server logs do NOT trace B's chair action receipt or execution. No B logs are
+requested. This is not a completed reciprocal/two-order appearance test matrix.
+
+Added observer-only non-MASTER RemoteProbe: before/after Applied action receipt,
+missing-view filtering, actual actor/token on dequeue and existing ForceAction
+return, tick/graph wait, queue reset, committed binding selection, queue/last-action
+evidence at binding change, bounded native graph/process/transform samples and
+furniture/action callbacks. Identity metadata is immutable/atomic for callbacks;
+no borrowed engine pointer or action payload is retained for replay. Ten identities,
+40-second phase windows (first Enter +5 s), bounded sampling/action logs and dropped
+line counters prevent missing logs being presented as proof of absence.
+
+Static audit: final commit preserves RemoteAnimationComponent, but an action
+already popped on the old actor is not automatically requeued on the new one.
+STR's existing server spawn replay cache recognizes chair entry events. This is
+an available existing mechanism, not proof that this run lost an action. No new
+replay/buffering, protocol, ActorState write, forced animation, remote movement,
+appearance publication/materializer/fence or server behavior change is implemented.
+
+Executed in this mission: full TPTests PASS, 43565 assertions / 388 cases;
+all eight structural suites PASS, 86 tests (including eight new observer checks).
+Windows debug client/launcher and server builds PASS (server up to date).
+Isolated CreationSeating and RemoteSeatingProbe translation units compile with
+MASTER/IS_MASTER=1; this is not a linked MASTER executable or runtime test.
+Initial build attempts hit Node sandbox EPERM, then a missing include corrected
+before success; one new structural expectation typo was corrected before PASS.
+Build warnings: existing ignored -fPIC and existing ReplayCount size narrowing.
+
+No new Skyrim runtime was executed. No B chair action chronology or remote visible
+sitting is validated yet. The prepared diagnostic client is not deployed; no
+commit/push. The remaining test is observer A action/actor chronology in both
+completion orders, plus human reciprocal final-appearance and local/remote sitting
+acceptance. Missing source/relay evidence remains explicitly unknown, not inferred
+from an empty observer action trace. Native lifetime remains deferred. Procedure:
+[TEST_PLAN](../features/alternate-start/TEST_PLAN.md#remote-seating-through-str-actions---observer-diagnosis-2026-09-19).
+
+## Bounded final-rematerialization admission (2026-09-19; preparation evidence)
+
+Implemented on the existing arrival/seating worktree: official MASTER/non-MASTER
+final rematerialization now separates Ready, Pending and Rejected. Only weapon
+4 (WantToSheathe) / 5 (Sheathing) can wait, with all other guards passing. The
+ActorState safety policy is unchanged: replacement still requires weapon 0 and
+all existing predicates. All identity/provenance/runtime/data/geometry-readiness
+guards formerly after the weapon veto are evaluated before Pending. Current
+binding observations are fresh each update; value-only session/entity/version,
+player/server, Actor/Base IDs and tokens fence the wait. No partial native capture,
+transaction, candidate, retirement or remote seating is initiated while Pending.
+
+The first final snapshot/revision is frozen. Applied matching and weapon settling
+share a ten-second steady-clock deadline, never extended by duplicate delivery.
+Conflict, lost binding, disconnect or recovery terminates admission. Ready captures
+fresh placement/values and uses the existing single transaction. Post-reservation
+and precommit guards, natural-join materializer, Discovery and seating code remain
+unchanged. Diagnostics distinguish wait begin, weapon transitions, Ready, terminal
+rejection and timeout, with a bounded transition count and unconditional outcome.
+
+Evidence preceding this correction: local observer A received B's Applied and
+final revision, but Capture rejected weapon=4 before reservation; Advance then
+made the job terminal. Other guards after that veto had not been executed. The
+origin of WantToSheathe is UNKNOWN; missing B-side logs prevent attribution to
+markers, furniture or an equipment call. The maintainer separately attests visible
+local MarkerXX -> SeatXX seating PASS in Solo, connected roster 1, and on both
+local players of roster 2. That is seating evidence, not final-appearance proof.
+
+Executed for this correction: TPTests targeted 34067 assertions / 17 cases PASS;
+full TPTests 43543 assertions / 388 cases PASS; seven structural suites 78/78 PASS.
+Client/launcher and server debug builds PASS. Isolated RemoteRespawnLab compilation
+with IS_MASTER=1 PASS; this is not a linked MASTER executable or a MASTER game run.
+The unchanged safety helper and native post-reservation checks remain covered.
+The initial structural run found one stale Capture signature in a test, updated
+before the passing run. git diff --check PASS; pre-existing seating sources and
+ESP/PSC/PEX match their pre-mission SHA256 hashes. Existing ignored -fPIC build
+warning remains.
+
+Follow-up preparation extends both 4 -> 0 and 4 -> 5 -> 0 tests through the
+existing pure lifecycle's Discovery/readiness/commit, rejecting premature and
+duplicate commit and checking one old-retirement intent. Rebuilt TPTests and
+reran targeted 34089 assertions / 17 cases and full 43565 assertions / 388 cases:
+PASS. This is model-level commit evidence, not native projection or visual proof.
+No further functional source or guard changes; client/server/launcher/MASTER and
+structural results above were not rerun for this test/documentation-only follow-up.
+A hash-identified copy of the built client is prepared under
+`_audit/final-admission-wait/validation-candidate/`; it is not deployed. The local
+installed client still has the previous hash and local logs still end before this
+correction, so there is no new native admission/timeout/commit result to report.
+
+At preparation time human validation was pending; the accepted checkpoint above now covers both directions: A observing B
+and B observing A in each of two fresh runs (A finishes first, then B finishes
+first). All four observations must reach candidate-commit and visually correct
+final appearance while individual local seating stays correct. Persistent 4/5
+must expire with no replacement and is NOT a fixed placeholder; upstream producer
+and resolution then remain the next diagnostic question. Native memory retirement
+completion remains deferred. No Skyrim/CK launch, deployment, commit or push.
+No ESP/PSC/PEX changes or Papyrus compilation. Existing seating source/assets are
+preserved. Procedure and interpretation: [TEST_PLAN](../features/alternate-start/TEST_PLAN.md#final-rematerialization-pre-reservation-weapon-wait-2026-09-19).
+
+## Existing CK markers for local seating approach (2026-09-19; preparation evidence)
+
+Implemented non-MASTER per the maintainer's corrected instruction: reuse the
+existing STRE_REFR_PlayerCreationMarker01..10 and Seat01..10 by durable PlayerId
+rank. No new SeatApproach CK references. C++ copies the exact marker position and
+orientation; the Seat01/Seat02 furniture-offset and obstacle models are removed.
+All ten local ranks share MoveTo -> measured arrival -> marker facing -> later
+UpdateEvent -> Activate. Individual Applied, native local-player-only scope,
+session/recovery/identity/occupancy fences, one request per token, 2-unit arrival,
+0.05-radian facing and 5-second preparation bounds remain. No remote MoveTo,
+new message, collective barrier, forced animation or ActorState write. Existing
+remote projection and MASTER behavior are unchanged.
+
+The read-only audit confirms all ten existing references, bases, persistent/
+enabled flags, same cell and C++ pair mappings. Their physical validity as chair
+entries is NOT established: the maintainer will reposition/orient markers in CK.
+This also changes initial creation placement because those references are shared.
+Old numeric spacing assumptions are replaced by distinct-reference/position
+checks and human layout acceptance, not another C++ obstacle calculation.
+
+Executed in this mission: targeted TPTests 1529 assertions / 16 cases PASS;
+full TPTests 43160 assertions / 381 cases PASS; seven structural suites 75/75
+PASS. Windows debug client/launcher build PASS; server target PASS (up to date).
+git diff --check PASS. Read-only CK record/pair audit PASS for all ten markers.
+The only build warning is the existing ignored -fPIC flag. No MASTER build/runtime
+claim. Asset audit PASS is record integrity, not human pose/pathing evidence.
+ESP/PSC/PEX preserved; no Papyrus recompilation required, since scripts are
+unchanged. No Skyrim/CK launch, deployment, commit or push. Runtime acceptance
+for this marker-based roster-2 flow is now accepted in the checkpoint above;
+previous Seat01 visual attestations below apply to the superseded prototype only. ADR-0025 owns the revised contract;
+CK_IMPLEMENTATION and TEST_PLAN describe manual placement and acceptance.
+
+## Historical Seat02 geometry experiment (superseded by ADR-0025)
+
+New maintainer runtime attestations: offline Solo rank 0 / Seat01 PASS visually;
+one-member network campaign, own local rank 0 / Seat01 PASS visually; two-member
+campaign A/rank 0 sits while B/rank 1 does not. The last result matches the old
+intentional Seat01-only scope. These are human attestations, not new agent-run
+Skyrim executions or a validation of remote seating projection.
+
+Implemented non-MASTER extension: native local rank 1 now gets its own audited
+Seat02 staging point. Seat01's geometry and the shared preparation state machine
+are unchanged. Individual authoritative Applied, local finalization, durable
+PlayerId/rank, session/recovery and native identity fences still precede work.
+Ranks 2..9 reject. The adapter still has one MoveTo and one Activate site, with
+no remote MoveTo, collective Applied barrier, new packet, ActorState write or
+forced animation. Existing remote projection is untouched.
+
+Seat02 uses the permitted right-side gap to Seat05, which is only a read-only
+obstacle. The two neighboring tables and chair collision were decoded from
+installed BSA NIFs; static floor/architecture collision was checked too. Point:
+midpoint of the two chair X positions, 38 units behind the nearer table's
+conservative Y-min, using Marker02 floor Z. In the unchanged ESP this is
+(-4017.247803, -2568.495850, 0), local (+57.936035, -8.519043), facing -1.424800
+radians. Conservative chair clearance is 34.936 units, table clearance >=38;
+both retain >=32 after the 2-unit arrival tolerance. Model details, assumptions
+and narrower Seat02 layout-alignment guard belong to CK_IMPLEMENTATION.
+
+Executed in this mission: targeted TPTests 1485 assertions / 18 cases PASS;
+full TPTests 43116 assertions / 383 cases PASS; seven structural suites 75/75
+PASS. Windows debug client/launcher build PASS; server target PASS (up to date);
+git diff --check PASS. ESP/PSC/PEX hashes are unchanged, and the installed ESP
+matches the audited repository ESP. Seat01 geometry and the shared preparation
+state machine compare unchanged against the mission baseline. A first client
+compile failed on Windows' `near` macro; the helper was renamed, with subsequent
+compilation successful. Only the existing ignored -fPIC warning remains.
+No MASTER runtime test, Skyrim/CK launch, asset edit, deployment, commit or push.
+The next acceptance is B's own client in a fresh full two-member campaign:
+local rank 1, assigned Seat02, full pipeline, Enter and a visibly seated body.
+Seat02 visual acceptance is pending; its visibility from A is explicitly deferred.
+
+## Earlier local Seat01 extension evidence (2026-09-18)
+
+Human evidence supplied by the maintainer: the approach prototype now produces
+visible approach, facing and true sitting in offline Solo. The old symptom
+persists in a one-player network campaign. This is a visual attestation, not a
+new agent-run test or a trace identifying the original package cancellation.
+Static inspection confirms that the old `intent.Solo` gate bypassed preparation
+for the connected local player and reached Activate directly.
+
+Implemented at the maintainer's request, non-MASTER only: the native local
+PlayerCharacter uses the same Seat01 approach implementation in offline Solo
+and a network session. Authoritative individual Applied and local finalization
+remain prerequisites, with campaign/sealed durable rank, recovery, transport
+PlayerId and authenticated durable PlayerId fences checked before advancing.
+Only rank 0 is supported by the experiment; other ranks reject explicitly,
+without being reassigned Seat01. Remote actors never enter its MoveTo adapter;
+their pre-existing projection is unchanged. There is no all-Applied barrier.
+
+The shared pipeline still reserves one MoveTo, proves real arrival, applies
+facing, waits for a later UpdateEvent and issues the same single Activate per
+token. Geometry, tolerances and timeout are unchanged. Connected local engine
+completion now requires the same furniture-enter/root/graph evidence as Solo;
+logical furniture state alone is insufficient. LocalProbe traces carry session
+connection state, local-player status, durable PlayerId, rank and assigned Seat
+through movement, facing, activation, Furniture Enter and passive pose samples.
+Callback metadata is published immutably; callbacks do not read the intent map.
+
+Executed for this extension: targeted TPTests 1446 assertions / 15 cases PASS;
+full TPTests 43077 assertions / 380 cases PASS; seven structural suites 73/73
+PASS. Windows debug client/launcher build PASS; server build target PASS (up to
+date); git diff --check PASS. ESP/PSC/PEX SHA-256 values are unchanged from this
+mission's baseline. Logs are under `_audit/seating-local-network-*` (local only).
+The final launcher build has no new compiler warning from this extension;
+the existing ignored `-fPIC` warning remains. No MASTER executable/runtime test.
+Network visual acceptance is still pending: use a sealed one-member campaign
+and its own local player, not a partial roster.
+No new network message, ActorState write, forced animation or CK/PSC/PEX change.
+No game launch, deployment, commit or push; no remote or ten-seat generalization.
+
+## Earlier Solo seating diagnostic evidence (2026-09-18)
+
+Earlier evidence: the hands-off 22:50:55.278 Solo activation creates run-once
+FF00081F at +1 ms; it is absent at +43 ms. Through +40.013 s the actor stays
+95.79255 units from Seat01, with no furniture entry/occupation or sitting graph
+state. This was checked in tp_client.log; no-input is the maintainer's attestation.
+The exact cancellation branch remains unisolated. The previous +30.750 s Enter
+is not reproduced in the hands-off run and is not evidence of automatic pathing.
+
+Static comparison confirms ordinary input reaches the same ActivateRef/furniture
+constructor through additional picked-reference interaction code. AI_SYNC hooks
+do not cancel packages in this build. Initial Marker01 is behind CommonChair01,
+whose model entry mask disallows rear entry; straight front approach intersects
+the table. This supports a geometry/context experiment, not a proven root cause.
+
+Implemented at explicit maintainer request: controlled non-MASTER offline Solo
+Seat01 approach, local (-88,+32) relative to the chair at Marker01 floor Z.
+Audited neighboring table/profile and native bindings are checked. One MoveTo,
+measured arrival (2 units), facing, then a later UpdateEvent and fresh position/
+yaw check precede the unchanged single Activate. Preparation timeout is 5 s,
+without retry or fallback. All approach stages use the passive native snapshots;
+the full 40 s / Enter + 5 s window starts again at activation. No multi behavior,
+ActorState/animation forcing, CK, network or authority change. This experiment
+did not isolate the native cancellation cause. Subsequent offline visual
+success is the maintainer's attestation recorded above.
+
+Executed for the approach prototype: targeted TPTests 1424 assertions / 13 cases
+PASS; full TPTests 43055 assertions / 378 cases PASS; seven structural suites
+71/71 PASS. Windows debug client/launcher build PASS; server target PASS (already
+up to date); git diff --check PASS. ESP/PSC/PEX hashes match the start of this
+mission. The PSC/PEX already matched the validated pair at mission start, and
+the installed PEX now matches it too; the previous obsolete-pair failure below
+is historical. No asset edits or Papyrus compile, MASTER runtime test,
+Skyrim/CK launch, commit, push or deployment during that earlier agent mission.
+The later human Solo result is recorded separately above.
+
+Earlier evidence: the instrumented 22:12:56.505 Solo request stays at occupied=0,
+sitState=0 and false furniture graph variables throughout the first ten seconds.
+Actor/seat distance is 95.793 initially, reaches 60.389, then 313.008 at timeout.
+The matching furniture Enter arrives at 22:13:27.255 (+30.750 s). These facts were
+rechecked in tp_client.log; the standing pose after late Enter is the maintainer's
+visual report. Turn/move actions do not identify physical input. The prior trace
+does not isolate why native package/pathing entry takes this long.
+
+The follow-up now captures at 2 Hz through max(Activate + 40 s, first Enter + 5 s),
+including after projection completion and native pending guards. First Enter can
+reopen an expired capture and snapshots state synchronously at callback entry.
+Animation action budgets renew each second; omissions are counted. Read-only
+current/run-once package, target/procedure, raw path point, process, distance,
+transforms and PlayerControls observations were added. Navmesh solver state and
+physical input provenance are explicitly unavailable. Native Activate, ActorState,
+movement, seating authorization and mapping are unchanged. The cause remains
+unisolated pending a strict Solo run with no keyboard/mouse input for 40 seconds
+minimum and until five seconds after entry. No multiplayer work or native fix.
+
+Earlier 40-second observer checks: targeted TPTests 1392 assertions / 10 cases PASS; full TPTests
+43023 assertions / 375 cases PASS. Seating structural tests 11/11 PASS; all seven
+suites 69/70 PASS, with the same pre-existing obsolete PSC bootstrap failure.
+Windows debug client/launcher and server build commands PASS (server already
+up to date); ESP/PSC/PEX SHA-256 match the pre-mission baseline. The final diff
+whitespace check passes. No Papyrus compilation, Skyrim/CK launch, deployment,
+new runtime acceptance, commit or push. A first sandboxed server build could
+not read Git metadata (ownership context); the owner-context rerun passed.
+
+The maintainer's Solo runtime on 0e421a99 invalidates the seating-success
+assumption below: the player remains visibly standing with furniture camera
+constraints although the log says seated. Manual interaction with Seat01 works
+according to the maintainer. This is a human report, not a runtime reproduced
+by the agent. The reference tp_client.log records activation at 21:31:16.846,
+pending-entry at 21:31:16.891, and seated at 21:31:24.846; no animation evidence
+was captured. A later attempt reaches the ten-second timeout.
+
+The local diagnostic follow-up prevents Solo from completing on furniture
+identity/GetSitState alone. It separately observes matching TESFurnitureEvent
+enter/exit, root/graph availability, isInFurniture/isIdleSitting, movement graph
+variables, transforms, and bounded native action results. Entry-animation-observed
+means those engine signals agree, **not** that a rendered seated pose is proven.
+Missing/false graph reads remain pending without another activation. Individual
+Applied authorization and PlayerId-to-SeatXX mapping are preserved. Multiplayer
+native behavior is unchanged and its logical completion log is now explicitly
+furniture-state-confirmed; no multiplayer acceptance work was performed.
+
+Static inspection of the installed 1.6.1170 binary confirms that the vanilla
+Papyrus Activate callback calls the same ActivateRef with the same arguments.
+Its furniture branch already calls the native player entry/package path.
+No replacement primitive, animation forcing, teleport, ActorState write or asset
+change was introduced. The precise cause of the missing pose remains blocked
+on the new Solo runtime observations; this is not a validated visual fix.
+
+Earlier ten-second diagnostic checks: targeted TPTests 46 assertions / 7 cases PASS;
+full TPTests 41677 assertions / 372 cases PASS; Windows debug client, server and
+launcher builds PASS; seating structural suite 9/9 PASS. All seven structural
+suites together: 67/68 PASS, one failure in the pre-existing working-tree PSC
+  bootstrap (GetSitState/seat placement before stage 20 instead of the validated
+BeginCharacterCreation helper). That PSC/PEX pair and the ESP were preserved
+byte-for-byte. No Papyrus compilation, Skyrim/CK launch, deployment, new Solo
+runtime acceptance, commit or push. The failed initial client compile was
+corrected (GamePtr lacks const accessors); an invalid multi-target xmake command
+was replaced by successful separate server/launcher builds.
+
+At the earlier diagnostic mission, the installed Skyrim Data/scripts quest PEX hashed to
+9202ac5c645f5207d74de05375d2a7e04e1d6c4816e5aa550f9cc92f386e3d16,
+the obsolete working-tree pair, rather than the validated committed bootstrap.
+This identifies a current installation mismatch, not proof of which script
+instance ran in the earlier save or of the cause of the missing seated pose.
+The next clean Solo acceptance must record matching binary/asset versions.
+
+## Individual Applied seating implementation (2026-09-18; visual success superseded above)
+
+Implemented individual seating projection after each player's Applied, without
+waiting for another player's build (ADR-0024). Local finalization removes the
+1.6-second confirmation delay, unlocks controls/stops the quest and requests
+seating from game update. Solo uses Seat01. Durable roster rank selects SeatXX,
+matching MarkerXX. Observers wait for a read-only final-revision/current-binding
+fence on the committed remote representation.
+
+NotifyCharacterBuildState carries a version-1 optional seating identity tail
+(campaign/durable PlayerId, each <=128 bytes), populated from server admission.
+Revision/inventory/spell hash checks and appearance opcodes/payloads are unchanged.
+Matching updated peers are required for seating; absent/invalid identity cannot
+authorize it. No new packet type, per-player quest stage or collective phase.
+
+Native projection checks occupancy/reservations before the existing RealActivate
+wrapper. The original completion criterion used furniture/seated state only;
+the Solo runtime above disproves it as visual confirmation. Duplicate notifications
+do not rearm; token changes permit a new projection. Missing actors/functions or
+occupation conflicts remain pending; no teleport/ejection. Recovery lock suspends,
+disconnect clears session intentions. Fresh canonical replay is required after
+reconnection; seat-intention persistence is not claimed.
+
+Executed on Windows debug: targeted TPTests 23 assertions / 5 cases PASS; full
+TPTests 41654 assertions / 370 cases PASS; seven Python structural suites 66
+checks PASS; client and server builds PASS. CK packaging 19 files PASS, strict
+manifest 93 STRE records CONFORME, diff --check PASS. No Skyrim/CK launch or
+deployment. Native seating, approach/animation, observer interpolation, callback
+availability and runtime offset use still require in-game acceptance on 1.6.1170.
+
+ESP unchanged from f5ee7e88. The pre-existing obsolete PSC/PEX pair was backed
+up under _audit/seating-preexisting-papyrus and restored from f5ee7e88 with explicit
+maintainer authorization; both restored hashes match that validated commit.
+No new PSC/PEX compilation or asset change belongs to this implementation.
+Valen, collective ready/departure and native lifetime remain outside this slice.
+
+## Explicit initial creation markers (2026-09-18)
+
+Initial placement now resolves the sealed durable PlayerId's lexical rank to ten
+explicit CK XMarkerHeading references in STRE_CELL_AlternateStart. Solo selects
+Marker01. The adapter resolves plugin-local IDs, validates marker/current cell
+and finite position/rotation, and copies the marker transform without a chair
+offset. Existing bounded MoveTo observation and posture independence remain.
+Papyrus, campaign authority and final rematerialization are unchanged.
+Post-creation collective seating is not implemented.
+
+Validation on Windows debug: targeted TPTests 220 assertions / 9 cases PASS;
+full TPTests 41631 assertions / 365 cases PASS; six Python structural suites
+59 checks PASS; client build PASS (initial
+sandbox attempt failed at Node EPERM, then succeeded outside sandbox).
+Strict CK manifest: 93 expected STRE records, zero anomalies; packaging: 19
+managed files PASS; MQ101 structural audit CONFORME. PSC/PEX hashes are unchanged.
+The supplied ESP is preserved byte-for-byte (SHA256
+3ffb7fb72d67b93518a122f080606132b21da4dde6f615822f572e891072f0b4).
+Its ten added references are XMarkerHeading records in the intended cell.
+Relative to the previous commit it also contains pre-existing CK payload changes
+in 19 records (including TES4 and the start marker), so this is not claimed to
+be a binary delta limited to ten additions. The manifest audit is not an
+exhaustive behavioral validation of those existing CK changes.
+
+No Skyrim/CK launch or deployment. Physical clearance, final facing and
+Solo/two/ten-player runtime acceptance remain to be confirmed.
 
 ## Cumulative Character Creation review validation (2026-09-18)
 
@@ -946,10 +1492,10 @@ The current catalog uses `BuildVersion = 5`.
   performance need. They are conditional optimizations, while acceptable
   runtime performance and the remaining Valen, ready/departure, housing, and
   ten-player validation work are still required;
-- the development fireplace currently uses the selected EEK loose mesh/texture
-  resource; redistribution permission and final packaging must be resolved
-  before release so players are not left with an undocumented manual
-  dependency;
+- the fireplace uses the separately installed EEK Vanilla Textured resource,
+  without EEK/Embers HD redistribution or a direct Embers HD dependency. The two
+  carving textures retain the accepted alpha provenance limitation documented
+  above; tagged-package clean-install texture completeness remains unvalidated;
 - Messire Valen remains a full-body prototype: the head and body are still one
   mesh rather than a production FaceGen/dialogue head, finger weighting is
   imperfect, the material/shader pass is provisional, and the temporary

@@ -168,3 +168,91 @@ Every release states:
 
 A broken release tag remains immutable. Publish a new SemVer patch/pre-release or
 withdraw the GitHub Release with a clear advisory; never repoint the tag.
+
+## 0.4.0-alpha.1 packaging preparation (not publication)
+
+The audited source delta from `stre-v0.3.0-alpha.1` to functional checkpoint
+`1301f7e40de3185777a6f7f2e1c8bd5452b7ec6d` contains seven commits / 159 files:
+previous-release bookkeeping, instanced-headquarters scope, Ilinalta's Vigil and
+Valen prototype, automatic final appearance, explicit markers, individual seating,
+and binding replay/admission fixes. CHANGELOG describes the cumulative outcome.
+
+The previous public ZIP was inspected, not executed. Its SHA256 is
+`cdf9244f64eadf9422a484a5369be84f17be19fe16b5fa3a16e5678bd662f053`, matching its
+published sidecar. It has a Data-root layout: both ESPs, `scripts/`,
+`SkyrimTogetherReborn/` executables/UI/dependencies, VERSION, INSTALLATION.md,
+LICENSE and NOTICE.md. It is a playable distribution, not a Git source archive.
+
+The existing `.github/workflows/windows-playable-build.yml` triggers on `stre-v*`
+tag pushes or manual dispatch. It calls `windows.yml` with `build-mode: release`,
+checks out full history, builds with xmake, installs runtime dependencies, builds
+the production UI, and packages the exact checked-out `GameFiles/Skyrim/` tree.
+It copies VERSION verbatim; build identity/artifact names use `git describe
+--tags`, not VERSION. It uploads an Actions artifact, not a named GitHub Release
+ZIP or checksum. It excludes PDB/LIB/EXP/test executables from playable binaries.
+Release mode must not be confused with the separate MASTER branch macros.
+
+After an independently authorized merge/tag and all release gates, use the
+following procedure in a clean checkout of the final tagged main commit. These
+commands are instructions for that later mission, not evidence of execution:
+
+```powershell
+$repo = 'matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced'
+$tag = 'stre-v0.4.0-alpha.1'
+git fetch origin --tags
+git rev-parse "$tag^{commit}"
+git merge-base --is-ancestor "$tag^{commit}" origin/main
+# Require the exact approved main SHA, VERSION=0.4.0-alpha.1, and clean checkout.
+gh run list --repo $repo --workflow windows-playable-build.yml --branch $tag --json databaseId,headSha,status,conclusion
+# Select the successful tag-triggered run with that exact SHA; do not use PR CI.
+# If no run exists, a separately authorized manual dispatch can use:
+# gh workflow run windows-playable-build.yml --repo $repo --ref $tag
+$runId = Read-Host 'Verified successful tagged playable workflow run ID'
+$out = Join-Path $env:TEMP ('stre-040-release-' + [guid]::NewGuid())
+$pack = Join-Path $out 'package'
+New-Item -ItemType Directory -Path $pack -Force | Out-Null
+gh run download $runId --repo $repo --name "Skyrim Together Build ($tag)" --dir $pack
+if ($LASTEXITCODE) { throw 'Artifact download failed' }
+if ((Get-Content (Join-Path $pack 'VERSION') -Raw).Trim() -ne '0.4.0-alpha.1') { throw 'Wrong package version' }
+# Perform the content/provenance and release smoke gates below before distribution.
+$zip = Join-Path $out 'STRE-v0.4.0-alpha.1-windows-x64.zip'
+Compress-Archive -Path (Join-Path $pack '*') -DestinationPath $zip -CompressionLevel Optimal
+$hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText((Join-Path $out 'STRE-v0.4.0-alpha.1-windows-x64.sha256'),
+    "$hash  STRE-v0.4.0-alpha.1-windows-x64.zip`n", [Text.Encoding]::ASCII)
+```
+
+Verify workflow checkout SHA/tag in logs, exact tagged ESP/PEX/PSC hashes, the
+19 manifest-managed files, both plugins, native executables/dependencies and UI,
+and the versioned Valen NIF/DDS copied by the GameFiles boundary. The manifest
+is an integrity subset, not a whitelist excluding versioned meshes/textures.
+Run `audit_ck_packaging.py`, `audit_seat_approach_markers.py`, and the strict
+record audit with `CK_RECORDS_M7_IMPLEMENTED.json` and `--reject-unexpected` on
+that source. Validate extracted layout/checksum and perform the separately
+approved clean-install/runtime smoke. Never substitute `_audit` or Debug binaries.
+No byte-reproducible-build guarantee is inferred from this source-bound procedure.
+
+Before publication, verify the external EEK dependency and clean-install texture
+completeness. EEKs Fireplace Resource is installed separately; STRE redistributes
+no EEK NIF/DDS/archive or Embers HD asset. The selected Vanilla Textured fireplace
+has no direct Embers HD dependency. Inspect the tagged ZIP for absence of those
+assets and verify the documented external configuration in a tagged-package
+clean-install smoke, including all fireplace textures. The two EEK-path Whiterun
+carving textures retain the maintainer-accepted alpha provenance limitation in
+STATUS; do not infer vanilla origin or redistribution permission.
+
+The 2026-09-19 maintainer visual smoke passed in the development environment; it
+is not clean-install evidence. The CK manifest audit does not prove availability
+of external textures. Review the packaged install guide for the new download and
+version and complete compatibility/evidence gates before publication.
+
+Version-reference classification during preparation: VERSION is advanced;
+UPSTREAM gains the candidate record without rewriting the published identity.
+README's version/current-public-build line, packaged installation guide and
+reference compatibility matrix are prepared for 0.4.0-alpha.1 before tagging.
+This preparation does not assert publication or tagged-package validation.
+The 0.3 changelog and UPSTREAM's last-published identity remain historical.
+The bug-report placeholder and RELEASE_PROCESS tag example are generic examples
+and remain unchanged. Historical tags, SHAs and evidence are immutable.
+
+Do not use GitHub's automatically generated Source code archives as the playable STRE build.

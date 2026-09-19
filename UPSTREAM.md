@@ -50,3 +50,13 @@ alpha tags above are immutable legacy names; TiltedEvolution already owns other
 unprefixed `v*` names in this repository.
 
 Do not duplicate merge/rebase rules here. See [Upstream strategy](docs/architecture/UPSTREAM_STRATEGY.md).
+
+## Prepared 0.4.0-alpha.1 candidate (2026-09-19)
+
+Target product version: `0.4.0-alpha.1`; future tag: `stre-v0.4.0-alpha.1`.
+The carried upstream base remains
+`ca3f32348d3217e766b45afa9cce8a645f3a6444` (no upstream integration in this range).
+Candidate identity/ancestry reviewed on 19 September 2026. The latest-published
+0.3 record above remains historical fact, not the current candidate version.
+No final merged SHA, tag, release package or publication is claimed here.
+The future immutable tag and release must identify the accepted main commit.

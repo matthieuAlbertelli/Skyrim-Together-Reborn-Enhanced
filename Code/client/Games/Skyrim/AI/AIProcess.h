@@ -15,7 +15,12 @@ struct AIProcess
     void* unk8;
     void* packageLock;
     struct TESPackage* package;
-    uint32_t unk10[7];
+    // Read-only seating diagnostics: CommonLibSSE-NG ActorPackage at 0x18.
+    void* packageData;                 // 28
+    uint32_t packageTargetHandle;      // 30
+    int32_t packageProcedureIndex;     // 34
+    float packageStartTime;            // 38
+    uint32_t unk3C[2];
     uint32_t unk34[8];
     float unk54;
     uint32_t unk58[4];
@@ -34,3 +39,8 @@ struct HighProcessData
 };
 
 static_assert(offsetof(AIProcess, movementType) == 0x137);
+static_assert(offsetof(AIProcess, package) == 0x20);
+static_assert(offsetof(AIProcess, packageData) == 0x28);
+static_assert(offsetof(AIProcess, packageTargetHandle) == 0x30);
+static_assert(offsetof(AIProcess, packageProcedureIndex) == 0x34);
+static_assert(offsetof(AIProcess, packageStartTime) == 0x38);

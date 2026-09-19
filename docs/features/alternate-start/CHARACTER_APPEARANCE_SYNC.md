@@ -9,6 +9,17 @@ ADR-0023 makes the official final flow automatic in every build, including MASTE
 
 ## Runtime checkpoint and remaining validation
 
+The 2026-09-19 maintainer checkpoint accepts final appearance in both directions,
+individual local MarkerXX -> SeatXX seating and visible remote seating after
+binding replay, in both roster-2 completion orders. Weapon 4/5 remains unsafe:
+the bounded pre-reservation wait proceeds only after all admission guards pass.
+The log-backed A-first run shows weapon 4 -> 0, one candidate-commit and refined
+IdleChairEnterInstant on the new Actor/token. STATUS owns timestamps, the human
+attestation for the other order, binary identity and the limits of this evidence.
+No remote Activate/MoveTo or all-Applied barrier participates in this contract.
+
+Earlier checkpoints:
+
 The maintainer also confirms automatic final rematerialization without Ctrl+F11
 on the tested multiplayer creation run (2026-09-18 commit handoff). This is bounded
 human acceptance of default activation, not full matrix or native lifetime proof.
@@ -88,11 +99,27 @@ No SwitchRace, Reset3D, live Actor Deserialize, manual TESNPC free or server res
 
 Transaction records are bounded to ten server identities and retained as tombstones through
 disconnect. An attempted final cannot be reset by a debug control. Restart client processes
-between runs. Readiness/build matching each has a bounded ten-second wait; abort
+between runs. Applied matching and pre-reservation admission share one ten-second
+monotonic budget from the first valid final snapshot. Candidate readiness retains
+its separate ten-second budget after reservation; abort
 keeps a still-valid old binding. Recovery defers candidate cleanup while locked.
 Additional non-MASTER retirement diagnostics observe thirty seconds; registry persistence is not leak
 proof. Native rendering is human-validated only for the recorded scenario;
 full state-projection/race/sex/lifetime coverage remains pending (see STATUS).
+
+### Animation continuity at final binding publication
+
+[ADR-0027](../../architecture/ADRs/ADR-0027-animation-replay-native-binding-continuity.md)
+adds one value-only notification from final candidate-commit to AnimationSystem.
+The animation component retains up to 32 consumed actions using the shared STR
+server replay cache. Its refined history is inserted before the existing pending
+queue on the new native binding, once per session/generation. Pending actions are
+not duplicated; newer exits invalidate older persistent history. The existing
+AnimationSystem executes the resulting ActionReplayChain, including shared instant
+counterparts, after its normal tick/graph checks. Recovery/disconnect invalidate
+this transient history. No appearance admission, weapon policy, transaction,
+native materializer, FaceGen, retirement or network behavior is changed. Human
+pose acceptance remains separate from a successful ForceAction return.
 
 Both CK entry fragments use the existing non-furniture marker and validate the
 player, cell and position before stage 20, without GetSitState. After lobby authorization,
@@ -123,6 +150,45 @@ recovery state and raw/safe ActorState results from the tested observation.
 Native fields use -1 when unavailable. Both existing GetParentCell and loaded
 parentCell IDs are logged without changing the LAB's cell guard. A missing
 Player/Remote may be located for logging only; it cannot be selected for a respawn.
+
+### Bounded admission before reservation (2026-09-19)
+
+The observer distinguishes Ready, Pending and Rejected on the official path,
+including MASTER. WantToSheathe (weapon=4) and Sheathing (weapon=5) may remain
+Pending only when every other binding, runtime, canonical-data and ActorState
+guard passes. Neither state satisfies WeaponSheathed or authorizes replacement.
+All ActorState predicates, including the post-reservation and precommit gates,
+remain unchanged. Sit/sleep/furniture never participates.
+
+Every eligible UpdateEvent resolves and validates the current Actor/private base
+again, including guards that previously followed the ActorState veto: provenance
+when present, alias collisions, cell/worldspace, root/components and canonical
+race resolution. A failing independent guard rejects immediately. Pending pins
+only session, versioned entity, server/player identities, FormIDs and allocation
+tokens; a changed binding rejects. No borrowed native pointer or partial gameplay
+capture survives between updates. Only Ready saves a fresh complete capture and
+enters the existing single transaction. Before that point there is no reservation,
+candidate, native mutation, retirement or remote seat activation. Remote seating
+continues to require CommittedActor for the matching final revision.
+
+Freeze the first canonical final and its FinalBuildRevision. Identical deliveries
+cannot restart the deadline or a terminal job; a conflicting final or matching
+Applied payload terminates admission. Applied matching and weapon settling use
+the same ten seconds, not consecutive budgets. Disconnect/recovery cancels pending
+admission without native cleanup; existing post-reservation cleanup rules remain.
+The local MarkerXX -> SeatXX prototype and its non-MASTER scope are unchanged.
+
+Trace `admission-wait-begin`, `admission-weapon-changed`, then `admission-ready`
+or `admission-rejected` / `admission-expired`. Logs include identity/revision,
+elapsed milliseconds from the first final, budget, binding guard results and
+decoded state. At most 32 pending transition lines are emitted per job; terminal
+evidence is unconditional and reports suppressed transitions. Ready followed by
+gate-accepted, transaction-reserved and candidate-create-enter proves admission,
+not commit or visual correctness. Successful 4 -> 0 or 4 -> 5 -> 0 can resume;
+persistent 4/5 ends with `weapon-sheathing-timeout`, leaves the existing binding
+and cannot be reported as a fixed placeholder. The upstream state producer and
+resolution remain unknown until correlated runtime evidence establishes them.
+No forced ActorState, animation, sheathing, protocol change or hot apply is used.
 
 ### LAB ActorState policy (1.6.1170 only)
 

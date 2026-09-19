@@ -1,5 +1,7 @@
 #include "ActionReplayCache.h"
-#include <Game/Animation/AnimationEventLists.h>
+#include <Animation/AnimationEventLists.h>
+#include <algorithm>
+#include <cctype>
 #include <optional>
 
 ActionReplayChain ActionReplayCache::FormRefinedReplayChain() noexcept
@@ -18,11 +20,14 @@ ActionReplayChain ActionReplayCache::FormRefinedReplayChain() noexcept
 void ActionReplayCache::AppendAll(const Vector<ActionEvent>& acActions) noexcept
 {
     for (const auto& action : acActions)
-    {
-        if (ShouldIgnoreAction(action))
-            continue;
-        m_actions.push_back(action);
-    }
+        Append(action);
+}
+
+void ActionReplayCache::Append(const ActionEvent& acAction) noexcept
+{
+    if (ShouldIgnoreAction(acAction))
+        return;
+    m_actions.push_back(acAction);
 
     if (m_actions.size() > kReplayCacheMaxSize)
         m_actions.erase(m_actions.begin(), m_actions.end() - kReplayCacheMaxSize);
@@ -32,7 +37,7 @@ bool ActionReplayCache::RefineReplayCache() noexcept
 {
     int32_t dropAllUpToIndex = -1;
 
-    for (int32_t i = m_actions.size() - 1; i >= 0; --i)
+    for (int32_t i = static_cast<int32_t>(m_actions.size()) - 1; i >= 0; --i)
     {
         ActionEvent& action = m_actions[i];
 

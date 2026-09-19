@@ -1,3 +1,4 @@
+#include <Services/CampaignProtocolService.h>
 #include <Services/CharacterBuildService.h>
 
 #include <CharacterCreation/CharacterBuildCatalog.h>
@@ -356,6 +357,12 @@ void SendState(
     notify.ServerId = aServerId;
     notify.Revision = acComponent.Revision;
     notify.Build = acComponent.Build;
+    const auto* admission = GameServer::Get()->GetWorld().GetCampaignProtocolService().GetAdmission(aPlayer);
+    if (admission && admission->AdmittedIdentity)
+    {
+        notify.SeatingCampaignId = admission->AdmittedIdentity->Campaign.Value.c_str();
+        notify.SeatingPlayerId = admission->AdmittedIdentity->Player.Value.c_str();
+    }
 
     if (aBroadcast)
         GameServer::Get()->SendToPlayers(notify);

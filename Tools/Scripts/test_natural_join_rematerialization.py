@@ -69,7 +69,7 @@ class NaturalJoinRematerialization(unittest.TestCase):
         self.assertLess(advance.index("ActorSpawnLocation location{cell, space, aJob.Position, aJob.Rotation}"), advance.index("Materialize("))
         self.assertIn("aJob.Tints, location)", advance)
         self.assertNotIn("PlayerCharacter::Get", LAB)
-        capture = body(LAB, "bool Capture(")
+        capture = body(LAB, "FinalRespawnAdmissionDecision Capture(")
         self.assertIn("aJob.Position = actor->position", capture)
         self.assertIn("aJob.Rotation = actor->rotation", capture)
 
@@ -116,7 +116,7 @@ class NaturalJoinRematerialization(unittest.TestCase):
         advance = body(CREATION, "void CharacterCreationService::AdvanceCreationPlacement(")
         self.assertLess(advance.index("else if (complete)"), advance.index("OpenRaceMenu()"))
         placement = body(CREATION, "bool CharacterCreationService::PlaceStandingForCreation(")
-        for evidence in ("RosterSealed", "GetDurablePlayerIdForAuthentication()", "playerId", "ResolveCampaignStandingPlacement", "creationPositionIndex + 1", "MoveTo(cell, position)"):
+        for evidence in ("RosterSealed", "GetDurablePlayerIdForAuthentication()", "playerId", "ResolveCampaignStandingPlacement", "CreationMarkerLocalFormId(creationPositionIndex)", "MoveTo(cell, position)"):
             self.assertIn(evidence, placement)
         for forbidden in ("GetLocalPlayerId()", ".Activate(", "->Activate(", ".Send(", "SetStage("):
             self.assertNotIn(forbidden, placement)
@@ -128,24 +128,23 @@ class NaturalJoinRematerialization(unittest.TestCase):
             return list(iter_subrecords(record_payload(data, records[form_id])))
         marker = dict(subs(0x0301B771))
         self.assertEqual(struct.unpack("<I", marker["NAME"])[0], 0x34)  # XMarkerHeading, not furniture.
-        aliases, current = {}, None
-        for sig, payload in subs(0x03001AF9):
-            if sig == "ALST":
-                current = struct.unpack("<I", payload)[0]
-            elif sig == "ALFR" and current is not None:
-                aliases[current] = struct.unpack("<I", payload)[0]
-        anchors = [aliases[index] for index in range(1, 11)]
-        self.assertEqual(len(set(anchors)), 10)
+        local_ids = [0xD6B08, 0xD6B09, 0xD6B13, 0xD6B12, 0xD6B0A,
+                     0xD6B11, 0xD6B0B, 0xD6B10, 0xD6B0D, 0xD6B0F]
         positions = []
-        for anchor in anchors:
+        for index, local_id in enumerate(local_ids):
+            anchor = next(r.form_id for r in records.values() if r.form_id & 0xFFFFFF == local_id)
             record = dict(subs(anchor))
             self.assertEqual(records[anchor].signature, "REFR")
-            x, y, z, _, _, yaw = struct.unpack("<6f", record["DATA"])
-            positions.append((x - math.sin(yaw) * 96, y - math.cos(yaw) * 96, z))
-        # Geometric separation only: collision/navmesh clearance needs human acceptance.
+            self.assertEqual(record["EDID"].rstrip(b"\0").decode(), f"STRE_REFR_PlayerCreationMarker{index+1:02d}")
+            self.assertEqual(struct.unpack("<I", record["NAME"])[0], 0x34)
+            transform = struct.unpack("<6f", record["DATA"])
+            self.assertTrue(all(math.isfinite(v) for v in transform))
+            positions.append(transform[:3])
+        # ADR-0025 reuses these as manually authored chair approaches. Distinct
+        # positions remain required; no arbitrary spacing proves entry clearance.
         for i, first in enumerate(positions):
             for second in positions[:i]:
-                self.assertGreater(math.dist(first, second), 90)
+                self.assertNotEqual(first, second)
 
 
 if __name__ == "__main__":

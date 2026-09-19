@@ -29,6 +29,59 @@ ACTOR = read("Code/client/Games/Skyrim/Actor.cpp")
 
 
 class FinalRespawnContract(unittest.TestCase):
+    def test_pending_admission_is_read_only_and_runs_all_binding_guards_first(self):
+        capture = body(LAB, 'FinalRespawnAdmissionDecision Capture(')
+        decision = capture.index('aJob.Admission.Observe(')
+        for guard in ('provenance-mismatch', 'entity-alias-collision', 'base-alias-collision',
+                      'remote-animation-missing', 'root-not-ready', 'waiting-for-3d',
+                      'assignment-pending', 'cell-lookup-mismatch', 'worldspace-lookup-mismatch',
+                      'unresolvable-final-race', 'invalid-canonical-snapshot', 'invalid-canonical-applied-build',
+                      'pre-reservation-session-changed'):
+            self.assertLess(capture.index('"' + guard + '"'), decision)
+        pending = body(capture, 'if (admission.Decision == FinalRespawnAdmissionDecision::Pending)')
+        self.assertIn('return admission.Decision', pending)
+        for mutation in ('aJob.Old =', 'aJob.Entity =', 'aJob.Values =', 'aJob.Position =', 'aJob.Rotation ='):
+            self.assertGreater(capture.index(mutation), capture.index('"admission-ready"'))
+        for forbidden in ('Materialize(', '.Reserve(', 'MoveTo(', 'Activate(', 'Retire(', 'DispatchRetirement(', 'SetWeaponDrawn'):
+            self.assertNotIn(forbidden, capture)
+        advance = body(LAB, 'void Advance(')
+        check = body(advance, 'if (admission != FinalRespawnAdmissionDecision::Ready)')
+        self.assertIn('aJob.Done = admission == FinalRespawnAdmissionDecision::Rejected', check)
+        self.assertIn('return;', check)
+        self.assertLess(advance.index('Capture(aWorld, aJob)'), advance.index('.Reserve('))
+
+    def test_snapshot_and_deadline_are_frozen_and_cancellation_has_no_native_side_effects(self):
+        receive = body(LAB, 'void ReceiveFinal(')
+        first = body(receive, 'if (!job.Final)')
+        self.assertEqual(receive.count('job.Final = aFinal'), 1)
+        self.assertIn('job.Final = aFinal', first)
+        self.assertIn('job.Admission.Begin(Clock::now())', first)
+        self.assertEqual(LAB.count('Admission.Begin('), 1)
+        self.assertIn('CharacterAppearanceUpdate::operator==(aFinal)', receive)
+        self.assertIn('"canonical-final-changed"', receive)
+        self.assertIn('"canonical-applied-build-changed"', body(LAB, 'void ReceiveBuild('))
+        cancel = body(LAB, 'void CancelAdmission(')
+        for forbidden in ('Lifecycle.', 'Retire(', 'DispatchRetirement(', 'Delete(', 'Materialize('):
+            self.assertNotIn(forbidden, cancel)
+        tick = body(LAB, 'void Tick(')
+        self.assertIn('job.Admission.Expired(Clock::now())', tick)
+        self.assertIn('continue; // Pending/rejected admission owns no native retirement intents.', tick)
+        self.assertIn('CancelAdmission(aWorld, *ptr, "transport-disconnected")', body(LAB, 'void Disconnect('))
+        job = body(LAB, 'struct Job')
+        self.assertNotIn('BindingObservation', job)
+        self.assertNotRegex(job, r'(?:Actor|TESNPC)\s*\*')
+
+    def test_admission_logging_is_bounded_and_master_keeps_the_wait(self):
+        capture = body(LAB, 'FinalRespawnAdmissionDecision Capture(')
+        self.assertIn('aJob.AdmissionTraceCount++ < 32', capture)
+        for phase in ('admission-wait-begin', 'admission-weapon-changed', 'admission-ready', 'admission-expired', 'admission-rejected'):
+            self.assertIn('"' + phase + '"', capture)
+        diagnostic = body(LAB, 'void LogAdmission(')
+        for field in ('elapsedMs=', 'budgetMs=10000', 'bindingGuards=', 'finalRevision=', 'suppressedTransitions=', 'upstreamWeaponCause=unresolved'):
+            self.assertIn(field, diagnostic)
+        master = re.sub(r"#if \(!IS_MASTER\).*?#endif", "", LAB, flags=re.S)
+        self.assertIn('aJob.Admission.Observe(', body(master, 'FinalRespawnAdmissionDecision Capture('))
+
     def test_native_state_diagnostics_share_gate_inputs_at_every_lab_boundary(self):
         observation = body(LAB, 'BindingObservation ObserveBinding(')
         self.assertIn('FinalRespawnActorStateSafe(o.Flags1, o.Flags2)', observation)
@@ -49,14 +102,14 @@ class FinalRespawnContract(unittest.TestCase):
         advance = body(LAB, 'void Advance(')
         for boundary in ('old-binding', 'precommit', 'post-placement'):
             self.assertIn('aJob, "' + boundary + '"', advance)
-        capture = body(LAB, 'bool Capture(')
+        capture = body(LAB, 'FinalRespawnAdmissionDecision Capture(')
         self.assertIn('phase=actor-state-accepted', capture)
         self.assertIn('ActorStateDiagnostic(observed.Flags1, observed.Flags2)', capture)
         self.assertLess(advance.index('"gate-accepted"'), advance.index('"transaction-reserved"'))
         self.assertLess(advance.index('"transaction-reserved"'), advance.index('"candidate-create-enter"'))
 
     def test_current_binding_rejections_name_each_existing_guard(self):
-        capture = body(LAB, 'bool Capture(')
+        capture = body(LAB, 'FinalRespawnAdmissionDecision Capture(')
         for reason in ('unsupported-runtime', 'remote-serverid-collision', 'remote-component-missing', 'player-component-missing',
                        'formid-missing', 'player-id-mismatch', 'actor-lookup-failed', 'actor-not-remote-player', 'actor-dead',
                        'actor-disabled', 'combat', 'mounted', 'unsafe-actor-state', 'base-not-tesnpc', 'actor-not-temporary',
@@ -72,12 +125,12 @@ class FinalRespawnContract(unittest.TestCase):
         self.assertIn('if (found == entt::null)', capture)
         self.assertNotIn('Materialize(', capture)
         self.assertIn('observed.Provenance && !observed.ProvenanceMatches', capture)
-        self.assertIn('if (!Resolve(aJob.Old))', capture)
+        self.assertIn('if (!Resolve(current))', capture)
 
     def test_rejected_binding_log_uses_the_observation_that_was_tested(self):
-        capture = body(LAB, 'bool Capture(')
+        capture = body(LAB, 'FinalRespawnAdmissionDecision Capture(')
         self.assertIn('auto observed = ObserveBinding(aWorld, found);', capture)
-        self.assertIn('LogBindingRejection(aJob, observed, "gate-rejected", reason)', capture)
+        self.assertIn('RejectAdmission(aJob, observed, reason)', capture)
         observation = body(LAB, 'BindingObservation ObserveBinding(')
         for source in ('remote->CachedRefId', 'form->Id', 'actor->actorState.flags1', 'actor->actorState.flags2',
                        'FinalRespawnActorStateSafe(o.Flags1, o.Flags2)', 'actor->GetParentCell()', 'actor->parentCell',
@@ -238,7 +291,7 @@ class FinalRespawnContract(unittest.TestCase):
         # may disappear from the transaction in MASTER.
         master = re.sub(r"#if \(!IS_MASTER\).*?#endif", "", LAB, flags=re.S)
         for signature, operation in (
-            ("bool Capture(", '"unsupported-runtime"'),
+            ("FinalRespawnAdmissionDecision Capture(", '"unsupported-runtime"'),
             ("void Advance(", "Materialize("),
             ("void ReceiveBuild(", "job->Build = aBuild"),
             ("void ReceiveFinal(", "job.Final = aFinal"),

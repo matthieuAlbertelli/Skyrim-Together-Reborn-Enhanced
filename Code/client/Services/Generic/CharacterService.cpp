@@ -1,4 +1,5 @@
 #include <NativeLifetimeProbe.h>
+#include <Services/RemoteSeatingProbe.h>
 #include <Services/RemoteRespawnLab.h>
 #include <Services/RemoteActorProjection.h>
 #include <Services/CampaignRuntimeGateService.h>
@@ -291,6 +292,9 @@ void CharacterService::OnActorRemoved(const ActorRemovedEvent& acEvent) noexcept
 
 void CharacterService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 {
+    const auto* replayGate = CampaignRuntimeGateService::TryGet();
+    if (!m_transport.IsConnected() || (replayGate && replayGate->IsLocked()))
+        AnimationSystem::InvalidateReplayContexts(m_world, "transport-or-recovery");
     ++m_appearanceTraceTick;
     TickNativeLifetimeProbe(m_world, m_appearanceTraceTick);
     STRE::RemoteRespawnLab::Tick(m_world);
@@ -314,6 +318,7 @@ void CharacterService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 
 void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const noexcept
 {
+    AnimationSystem::InvalidateReplayContexts(m_world, "new-session");
     // Go through all the forms that were previously detected
     auto view = m_world.view<FormIdComponent>(entt::exclude<ObjectComponent>);
     Vector<entt::entity> entities(view.begin(), view.end());
@@ -337,6 +342,7 @@ void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const
 
 void CharacterService::OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) noexcept
 {
+    AnimationSystem::InvalidateReplayContexts(m_world, "disconnect");
     NativeLifetimeDisconnect();
     ResetAppearanceTrace(m_world);
     m_appearanceFinal.Reset();
@@ -655,8 +661,14 @@ void CharacterService::OnReferencesMoveRequest(const ServerReferencesMoveRequest
     {
         auto itor = std::find_if(std::begin(view), std::end(view), [serverId = serverId, view](entt::entity entity) { return view.get<RemoteComponent>(entity).Id == serverId; });
 
+        STRE::RemoteSeatingProbe::Packet(m_world, serverId, itor == std::end(view) ? 0xFFFFFFFF : static_cast<uint32_t>(*itor), acMessage.Tick);
+
         if (itor == std::end(view))
+        {
+            for (const auto& action : update.ActionEvents)
+                STRE::RemoteSeatingProbe::Received(m_world, serverId, 0xFFFFFFFF, action, acMessage.Tick, 0, "received-filtered-missing-remote-animation-view");
             continue;
+        }
 
         auto& interpolationComponent = view.get<InterpolationComponent>(*itor);
         auto& animationComponent = view.get<RemoteAnimationComponent>(*itor);
@@ -673,6 +685,8 @@ void CharacterService::OnReferencesMoveRequest(const ServerReferencesMoveRequest
 
         for (const auto& action : update.ActionEvents)
         {
+            STRE::RemoteSeatingProbe::Received(m_world, serverId, static_cast<uint32_t>(*itor), action, acMessage.Tick,
+                                               animationComponent.TimePoints.size(), "received-enqueue");
             animationComponent.TimePoints.push_back(action);
         }
     }
@@ -1649,7 +1663,10 @@ void CharacterService::RunRemoteUpdates() noexcept
         auto* pForm = TESForm::GetById(formIdComponent.Id);
         auto* pActor = Cast<Actor>(pForm);
         if (!pActor)
+        {
+            STRE::RemoteSeatingProbe::MissingUpdateActor(m_world, static_cast<uint32_t>(entity), tick);
             continue;
+        }
 
         AnimationSystem::Update(m_world, pActor, animationComponent, tick);
     }

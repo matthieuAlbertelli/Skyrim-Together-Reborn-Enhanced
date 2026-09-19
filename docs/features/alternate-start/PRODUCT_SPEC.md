@@ -9,9 +9,10 @@ Start a campaign in an inn without importing an already-advanced character. Each
 ## Implemented today
 
 1. Enter the inn through the CK quest; before RaceMenu assign a distinct creation
-   position by sealed PlayerId rank (Solo: first anchor). Entry and final remote
+   position at one of ten explicit CK XMarkerHeading references by sealed PlayerId
+   rank (Solo: PlayerCreationMarker01). Entry and final remote
    rematerialization have no sitting/standing/furniture precondition (ADR-0022).
-   The corrected bootstrap is source/PEX implemented; runtime acceptance is pending.
+   The corrected bootstrap is source/PEX implemented; the two-player creation/seating checkpoint is human-accepted (see STATUS).
 2. Open RaceMenu.
 3. Select Warrior, Mage, or Thief in the Angular UI.
 4. Select available kits.
@@ -55,8 +56,8 @@ Warrior, Mage, and Thief form the first implemented vertical slice. The kits, it
 4. Create appearance at the assigned position, without posture gating; keep all edits local.
 5. Choose class and kits.
 6. Seal every build, publish its single canonical final and locally rematerialize
-   the remote representation as a natural join on observers. After collective
-   completion, seat players at the table in a separate future phase.
+   the remote representation as a natural join on observers. Each completed player
+   seats individually at SeatXX immediately, without waiting for other builds.
 7. Introduce Valen.
 8. Complete the ready check.
 9. Depart for Skyrim together without changing the sealed roster.
@@ -140,3 +141,8 @@ and the [Campaign State model](../../architecture/CAMPAIGN_STATE.md).
 - intentional import of an existing character;
 - complete rewrite of the vanilla campaign;
 - stable third-party SDK before several first-party integrations exist.
+
+Individual Applied seating is implemented as a local projection (ADR-0024),
+with native runtime acceptance pending. Players still creating stay at MarkerXX;
+seated players indicate completed builds. Valen and the collective next phase
+are not implemented by this slice.
