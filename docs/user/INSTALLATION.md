@@ -22,6 +22,25 @@ STRE is a fork of Skyrim Together Reborn. **Do not install a separate Skyrim Tog
 
 For first-time testing, use a clean Skyrim mod profile with only the dependencies listed below.
 
+## 0.4.0-alpha.1 candidate: external fireplace prerequisite
+
+For the `0.4.0-alpha.1` candidate, install **EEKs Fireplace Resource** separately
+from [EEKs Resource Repository](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files),
+by **EvilEyedKyo / EEK**. The selected model must be available at:
+
+```text
+Data\meshes\EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif
+```
+
+STRE does not redistribute EEK or Embers HD assets. **Embers HD is not required
+by STRE for the Ilinalta fireplace.** The tested development installation passed
+maintainer visual smoke on 2026-09-19. The exact provenance of the two EEK-path
+Whiterun carving textures remains unresolved and accepted for this alpha; no
+additional texture-installation procedure is inferred from that uncertainty.
+The tagged-package clean-install smoke must establish complete external texture
+availability before publication. This candidate note does not change the
+published `0.3.0-alpha.1` download instructions below.
+
 ## 1. Prepare Skyrim
 
 1. Install Skyrim Special Edition from Steam.

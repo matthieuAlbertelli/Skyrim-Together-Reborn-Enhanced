@@ -1,7 +1,7 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: August 27, 2026**
+> **Last updated: September 19, 2026**
 
 ## Reference platform
 
@@ -21,6 +21,25 @@
 These are the **`0.3.0-alpha.1` release targets**. Other Skyrim runtimes,
 stores, operating systems, SKSE/Address Library combinations, or dependency
 versions are not part of this release's supported matrix.
+
+## 0.4.0-alpha.1 fireplace candidate
+
+EEKs Fireplace Resource from [EEKs Resource Repository](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files)
+(EvilEyedKyo / EEK) remains a separately installed external prerequisite. The
+selected Vanilla Textured model has no direct Embers HD dependency. STRE
+redistributes neither EEK nor Embers HD assets.
+
+Maintainer runtime smoke **PASS**, 2026-09-19, in the development environment:
+no purple/missing textures; carvings, embers and wood correct; size/origin
+visually unchanged; collision unchanged; circulation unaffected. Exact tested
+ESP SHA256: `299dafea9b6a7fa272b2319daa5c66866194cd6b1963064f57145e8294d5d9de`.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
 
 ## Campaign continuity
 

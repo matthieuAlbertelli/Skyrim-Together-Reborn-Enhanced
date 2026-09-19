@@ -208,10 +208,25 @@ solution, only if profiling or runtime validation demonstrates a concrete
 visibility or performance problem. Navmesh, NPC pathing, collision, lighting,
 visual readability, and acceptable runtime performance remain required.
 
-The fireplace currently uses the selected EEK fireplace mesh/texture resource
-in the development environment. Redistribution permission and final packaging
-must be resolved before release; the v1 distribution must not require an
-undocumented manual asset dependency.
+`STRE_STAT_IlinaltaFireplace01` (local `0xCAF31`) now uses
+`EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif`
+as its MODL, replacing the HDEmbers variant. EEK remains an external prerequisite,
+installed separately; STRE redistributes no EEK or Embers HD assets. Embers HD
+is no longer required by this fireplace path. Credit: EvilEyedKyo / EEK,
+[EEKs Resource Repository / EEKs Fireplace Resource](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files).
+
+The exact candidate passed maintainer visual smoke on 2026-09-19: no missing or
+purple textures, correct carvings/embers/wood, unchanged apparent size/origin,
+collision and circulation. Geometry/transforms/bounds and five collision blocks
+match the previous model; two shapes have different UVs and shaders/controllers
+differ. This development-environment evidence does not validate a clean install.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
 
 This physical boundary does not change campaign authority: the future seamless
 replacement must preserve the existing server-authoritative campaign contract.

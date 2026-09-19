@@ -232,12 +232,19 @@ that source. Validate extracted layout/checksum and perform the separately
 approved clean-install/runtime smoke. Never substitute `_audit` or Debug binaries.
 No byte-reproducible-build guarantee is inferred from this source-bound procedure.
 
-Before publication, resolve the EEK fireplace resource permission/dependency
-and packaging gap documented in STATUS; the workflow only copies tracked assets
-and cannot collect maintainer-local loose files. Also review the packaged install
-guide for the new download/version and complete candidate compatibility/evidence
-gates. Neither package completeness for external EEK resources nor 0.4 clean
-installation is established by the current CK manifest audit.
+Before publication, verify the external EEK dependency and clean-install texture
+completeness. EEKs Fireplace Resource is installed separately; STRE redistributes
+no EEK NIF/DDS/archive or Embers HD asset. The selected Vanilla Textured fireplace
+has no direct Embers HD dependency. Inspect the tagged ZIP for absence of those
+assets and verify the documented external configuration in a tagged-package
+clean-install smoke, including all fireplace textures. The two EEK-path Whiterun
+carving textures retain the maintainer-accepted alpha provenance limitation in
+STATUS; do not infer vanilla origin or redistribution permission.
+
+The 2026-09-19 maintainer visual smoke passed in the development environment; it
+is not clean-install evidence. The CK manifest audit does not prove availability
+of external textures. Review the packaged install guide for the new download and
+version and complete compatibility/evidence gates before publication.
 
 Version-reference classification during preparation: VERSION is advanced;
 UPSTREAM gains the candidate record without rewriting the published identity.

@@ -46,6 +46,10 @@ _No unreleased STRE-specific changes documented yet._
 
 ### Fixed
 
+- Replaced the Ilinalta fireplace HDEmbers model with the EEK Vanilla Textured
+  variant, removing its direct Embers HD dependency. EEKs Fireplace Resource
+  remains separately installed; no EEK or Embers HD assets are redistributed.
+
 - Final rematerialization no longer permanently abandons an otherwise admissible
   actor solely because weapon states 4/5 are transient. A bounded pre-reservation
   wait rechecks all guards and requires an actually safe state before one
@@ -57,6 +61,10 @@ _No unreleased STRE-specific changes documented yet._
   logical furniture/camera state alone is no longer reported as visual success.
 
 ### Validated
+
+- Maintainer fireplace runtime smoke on 2026-09-19: no missing/purple textures,
+  correct carvings/embers/wood, visually unchanged size/origin, unchanged
+  collision and unaffected circulation in the development environment.
 
 - Maintainer acceptance in two fresh roster-2 campaigns, both completion orders:
   reciprocal correct final appearances without the placeholder/black Viking,
@@ -81,9 +89,11 @@ _No unreleased STRE-specific changes documented yet._
 - Valen, Departure, room ownership/housing, all classes/personal quests and the
   complete v1 campaign program remain unfinished. Headquarters decoration,
   rooms, exterior road access and signage remain incomplete.
-- The development EEK fireplace resource still requires redistribution and
-  packaging resolution before publication. Tagged release-mode package checks
-  and clean-install smoke validation have not been performed for this candidate.
+- Two EEK-path textures (`wrcastlecarvings.dds`, `wrcastlecarvings_n.dds`) retain
+  unresolved exact original provenance, accepted by the maintainer for this alpha
+  after visual validation. They are not redistributed and are not claimed to be
+  vanilla or independently redistributable. Tagged release-mode package checks
+  and clean-install smoke, including external texture availability, remain required.
 - Unresolved 0.3 alpha limitations remain, including broader recovery UX/live
   matrices, durable Character Build restoration, WorldEntity persistence and
   unsupported campaign downgrade. Back up server state and every player's saves;

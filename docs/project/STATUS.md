@@ -9,6 +9,42 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## EEK Vanilla Textured fireplace runtime checkpoint — PASS (2026-09-19)
+
+The maintainer validated the exact ESP candidate in the development environment:
+no missing/purple textures; carvings, embers and wood rendered correctly; size
+and origin/placement visually unchanged; collision unchanged; circulation
+unaffected. This is human runtime evidence, not an agent-executed runtime test.
+
+Only `STRE_STAT_IlinaltaFireplace01` (local `0xCAF31`) MODL changed from
+`EEKs Fireplace Resources\HDEmbers Textured\EEK_DragonsReach_Firepit_Kitchen_HDEmbers.nif`
+to `EEKs Fireplace Resources\Vanilla Textured\EEK_DragonsReach_Firepit_Kitchen.nif`.
+Both models have 106 BSTriShape, matching hierarchy/transforms, vertex positions,
+triangles and bounds, and five byte-identical collision blocks. Two shapes have
+UV differences; shader/controller differences provide the normal fire textures.
+The installed, candidate and imported repository ESP share SHA256
+`299dafea9b6a7fa272b2319daa5c66866194cd6b1963064f57145e8294d5d9de`.
+
+EEK remains a separately installed external prerequisite, credited to EvilEyedKyo
+/ EEK: [resource and files](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files).
+STRE redistributes no EEK or Embers HD assets. Embers HD is no longer a direct
+dependency of the selected fireplace.
+
+The exact original provenance of `textures\eeks whiterun interiors\smim\wrcastlecarvings.dds`
+and `wrcastlecarvings_n.dds` has not been independently established. Their runtime
+use was accepted by the maintainer for `0.4.0-alpha.1` after successful visual
+validation. STRE does not redistribute these files; this acceptance is not
+evidence of standalone redistribution permission. A tagged-package clean-install
+smoke must still verify availability of all external textures.
+
+Promotion checks rerun: six CK/ESP audits PASS (strict records with
+`--reject-unexpected`, ten marker/seat pairs, packaging of 19 managed files,
+MQ101 structure, generated invariants, 41 catalog references); nine structural
+suites / 92 tests PASS; git diff --check PASS. The 249-record comparison finds
+only the fireplace MODL change; aliases, quests, navmesh, markers/seats, script
+properties and master overrides are unchanged. PSC/PEX are unchanged. No C++
+change, full TPTests rerun, new game launch or clean-install test was performed.
+
 ## Accepted multiplayer seating checkpoint (2026-09-19)
 
 **Maintainer human acceptance: PASS**, for two fresh roster-2 runs in both
@@ -1456,10 +1492,10 @@ The current catalog uses `BuildVersion = 5`.
   performance need. They are conditional optimizations, while acceptable
   runtime performance and the remaining Valen, ready/departure, housing, and
   ten-player validation work are still required;
-- the development fireplace currently uses the selected EEK loose mesh/texture
-  resource; redistribution permission and final packaging must be resolved
-  before release so players are not left with an undocumented manual
-  dependency;
+- the fireplace uses the separately installed EEK Vanilla Textured resource,
+  without EEK/Embers HD redistribution or a direct Embers HD dependency. The two
+  carving textures retain the accepted alpha provenance limitation documented
+  above; tagged-package clean-install texture completeness remains unvalidated;
 - Messire Valen remains a full-body prototype: the head and body are still one
   mesh rather than a production FaceGen/dialogue head, finger weighting is
   imperfect, the material/shader pass is provisional, and the temporary
