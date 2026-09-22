@@ -28,6 +28,7 @@ STRE/MainMenu/intro.mp4       (optional; rights required)
 STRE/MainMenu/background.mp4  (optional; rights required; no baked branding)
 STRE/MainMenu/Branding/emblem.png
 STRE/MainMenu/Branding/skyrim-wordmark.png
+STRE/MainMenu/branding_backdrop.png
 ```
 
 Use local MP4/H.264 video and, for the intro, Windows-supported audio such as AAC.
@@ -79,7 +80,8 @@ therefore represents the existing binding, without dispatching Cancel/Back.
 
 The background is a silent animated plate with **no logo or text baked in**.
 Optional transparent PNGs and a real localized subtitle form a separate,
-non-interactive group, drawn between the video and the unchanged vanilla menu.
+non-interactive group. Draw order: video → soft dark backdrop → emblem → SKYRIM
+wordmark → native subtitle → unchanged vanilla menu.
 No intro branding is added over the trailer.
 
 On the first Main Menu visit, the first decoded background frame starts a short
@@ -88,13 +90,34 @@ fade from 600–1050 ms, subtitle fade from 1050–1500 ms. These are simple lin
 fades; menu actions are already usable throughout. Loading or a retained intro
 frame never starts the reveal. Every later Main Menu visit displays the final
 branding as soon as the background is available, even if the first visit ended
-before its reveal. No extra timings or layout settings are required.
+before its reveal. Reveal timings and foreground layout remain fixed.
 
-The images retain their proportions in viewport-relative boxes inside a
-centered 16:9 safe area, including 21:9 and window resize. The group sits left of
-center, leaving room for vanilla actions on the right. The subtitle uses
-Skyrim's native `$EverywhereMediumFont` in muted gold, with bounded fitting for
-longer translations. Final visual balance and font coverage require in-game QA.
+The group is anchored at **25% of viewport width**, entirely in the left half.
+Its visual center sits around 51% of viewport height (layout anchor 52.5%).
+Sizes scale proportionally and cap at 16:9 dimensions on ultrawide displays;
+resize updates every layer together. The right-side menu/news area stays clear.
+The subtitle uses Skyrim's `$EverywhereMediumFont` in muted gold, with bounded
+fitting for longer translations. Final balance and font coverage require in-game QA.
+
+The dedicated `branding_backdrop.png` is a static organic black/gray mist with
+broad alpha feathering. It fades with the emblem, using the same existing draw
+pass. Its entire canvas is preserved, avoiding a cut through the soft edge.
+`[Branding]` in `presentation.ini` provides only contrast/placement tuning for
+this backdrop; it never moves the logos or changes their reveal timings:
+
+| Setting | Default | Accepted values |
+|---|---|---|
+| `BackdropEnabled` | `true` | `true` / `false` |
+| `BackdropOpacity` | `0.35` | 0–1, multiplies PNG alpha and emblem fade |
+| `BackdropScale` | `1.0` | 0.5–1.5, uniform scaling |
+| `BackdropOffsetX` | `0` | −0.25–0.25, fraction of viewport width |
+| `BackdropOffsetY` | `0` | −0.25–0.25, fraction of viewport height |
+
+Size and offsets are further fitted inside the viewport's left half, keeping
+all feathering on-screen. Invalid/non-finite values retain defaults; read once
+at startup. Disabled or zero-opacity backdrops are not loaded. Missing/corrupt
+backdrop omits only the shade, without hiding branding or changing video/input.
+There is no particle animation, smoke shader or background-video modification.
 
 `MainMenuSubtitle` uses the same automatic/explicit locale and per-key English
 fallback as the skip action:
@@ -111,7 +134,8 @@ for later visits; restart after replacing them.
 
 PNG limits: 16 MiB compressed, 4096 pixels per dimension and 4,194,304 decoded
 pixels. Straight RGBA alpha is preserved. The loader trims transparent export
-margins in memory using alpha >= 8/255 plus one pixel of padding; it never
+margins of the emblem/wordmark in memory using alpha >= 8/255 plus one pixel of
+padding; the backdrop keeps its complete canvas; it never
 rewrites the originals or merges them with video. Entirely opaque or invisible
 exports are omitted rather than guessing a black-background removal.
 
@@ -168,6 +192,38 @@ unchanged; this authorization does not extend to either MP4.
 | Exact reference identity / source rights / credits / separate asset-license identifier | TBD — maintainer metadata pending | TBD — maintainer metadata pending |
 | Supplied export | 1254 × 1254 RGBA, 773,485 bytes | 1672 × 941 RGBA, 579,294 bytes |
 | SHA256 | `3d9dcb06307c11270b4ba4854fccd3bc0e77bc092d357730690f9a01618d66b3` | `41f3da1539e6220a7df45c4505e41c0d7004a8b108acc660ecc141cbf3918203` |
+
+### Dark backdrop provenance
+
+| Field | branding_backdrop.png |
+|---|---|
+| Responsible party | STRE project; generated in the requested Main Menu UX iteration |
+| Date | 2026-09-22 |
+| Tool | OpenAI built-in image generation; exact model/version not exposed |
+| Source material | Original text instructions below; no external/reference image. Refinement uses only the first generated candidate |
+| License | New STRE contribution under GPL-3.0-or-later, consistent with repository licensing |
+| Output rights check | [OpenAI Europe Terms, Content](https://openai.com/policies/eu-terms-of-use/#content), checked 2026-09-22: output rights assigned to the user as between the user and OpenAI, to the extent permitted by law |
+| Credits / restrictions | Retain STRE provenance and AI-generation disclosure; no third-party input asset or separate asset credit |
+| Export | Original generated PNG copied unchanged to the Data source; 1254×1254 RGBA, 789,257 bytes |
+| SHA256 | `1b52513d510af8769502a2772afcb5508e64816ef3b8aded23561f045639ad6b` |
+
+No source-image editing/export toolchain is required: retain the selected PNG;
+regeneration from the following prompts is stochastic, not byte-reproducible.
+Runtime opacity/layout do not alter its pixels. This provenance is separate from
+the supplied emblem/wordmark and pending MP4 rights.
+
+<details>
+<summary>Generation and refinement prompts</summary>
+
+**Generation:**
+
+Use case: stylized-concept. Asset type: reusable 2D game UI dark mist backdrop, square 1024x1024 PNG with a genuine transparent alpha background. Create ONLY a soft organic black/very dark neutral gray atmospheric cloud, approximately a broad vertical oval, denser and near-opaque around its large central region, gradually fading in opacity across a very broad irregular feathered perimeter to fully transparent. Subtle low-frequency wisps, smooth continuous gradients, restrained texture. This is a darkening matte behind a logo and title, to be composited over a vivid game scene at overall opacity 0.35, so the center should be dark charcoal almost black, not white/bright smoke. Keep every edge of the canvas fully transparent with at least 8 percent empty padding; all wisps must dissolve before the canvas edge. No text, logo, symbols, frame, rectangle, panel, vignette border, checkerboard, scenery, objects, particles, sparks, or lights. No external/reference images; original abstract texture.
+
+**Refinement of that generated candidate:**
+
+Edit this backdrop only. It must be a very soft darkening matte, NOT a visible luminous smoke ring. Remove the light gray outer ring entirely: keep RGB uniformly near-black/dark charcoal throughout the visible cloud, without bright highlights. Make the alpha falloff much broader and smoother, dissolving across the outer third of the silhouette into genuine fully transparent alpha. Preserve subtle organic low-frequency irregularity, not a clean geometric oval. The center may approach opaque black, but there must be no solid-looking perimeter or hard contour. Pull the entire cloud inward so at least 10 percent of the canvas on every side is fully transparent, including the bottom. No text, logos, scenery, particles, frame, checkerboard or added objects. Output a PNG with actual transparency; preserve the square canvas. This will be composited at 35 percent opacity behind menu branding.
+
+</details>
 
 No Main Menu Video upstream media is reused. Before adding approved exports,
 complete this record, check file sizes against repository/hosting constraints,

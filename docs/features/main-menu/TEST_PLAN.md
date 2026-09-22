@@ -36,10 +36,13 @@ English fallback, an added locale, UTF-8/BOM, plain-text markup characters,
 ignored legacy key entries, independent subtitle fallback, invalid UTF-8 and
 unavailable/oversized/malformed labels. Branding tests exercise first/return/early
 exit timing, absent-background gating, deterministic fades, invalid clocks,
-proportions, bounded layout and ultrawide safe-area anchoring. Windows WARP tests
+proportions, vertical centering and left-half anchoring at standard/ultrawide
+aspects. Backdrop coverage includes section isolation, opacity/scale/offset
+bounds, invalid/non-finite values, disabled/missing layers and preserving the
+full feathered canvas at extreme settings. Windows WARP tests
 generate their own PNG fixtures and verify actual straight-alpha texture pixels,
 transparent-margin cropping, missing/corrupt/opaque/empty/oversized files and
-null-device failure. The explicit asset smoke decodes the two supplied PNGs from
+null-device failure. The explicit asset smoke decodes all three PNGs from
 the repository; run it from the repository root. It does not validate native
 Scaleform or visual composition in Skyrim. Structural
 checks verify no translated rendering strings, inert/optional native prompt
@@ -100,9 +103,11 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
 10. With an approved **background without baked logo/text**, observe the first
     background frame, then the emblem, wordmark and localized subtitle reveal
     over 1.5 seconds. Menu actions and vanilla music must already be available.
-    No branding may appear over the trailer or retained transition frame. Check
+    No branding may appear over the trailer or retained transition frame. Verify
+    video → soft backdrop → logos → native subtitle → vanilla draw order. Check
     PNG transparency/edges, native subtitle font, accents/apostrophe, hierarchy,
-    legibility and clearance from vanilla menu actions at 16:9, 21:9, windowed
+    legibility, center-left grouping (around 25% width / 51% height), and clearance
+    from right-side vanilla actions/news at 16:9, 21:9, windowed
     resize and Alt-Tab. Record an approved capture for visual review.
 11. Leave during a partial reveal, load gameplay and return repeatedly: branding
     must be final on the first available background frame, without intro/reveal
@@ -111,6 +116,14 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
     decorations may disappear (English fallback first for text), with background,
     native actions, music, cursor and skip behavior unaffected. Test disabled
     presentation and missing/corrupt background: no orphan branding on vanilla.
+
+12. Check the backdrop against the dragon, fire and blue barrier: background
+    detail must remain visible, with a soft organic edge and no rectangular
+    clipping/halo. Confirm its fade follows the emblem. In separate launches
+    try `BackdropEnabled=false`, opacity 0 / 0.35 / 0.45, scale limits and both
+    offset signs. The entire backdrop stays in the left half; foreground layout,
+    reveal timing and menu interaction stay unchanged. Omit/corrupt only the
+    backdrop PNG: logos/text/video must continue. Restore defaults afterward.
 
 A native render reset may intentionally disable presentation for that process;
 vanilla must remain usable. Unknown runtime testing must never be reported as

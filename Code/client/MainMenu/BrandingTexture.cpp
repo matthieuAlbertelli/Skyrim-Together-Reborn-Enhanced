@@ -8,7 +8,7 @@
 
 namespace STRE::MainMenu
 {
-HRESULT BrandingTexture::Load(ID3D11Device* apDevice, const std::filesystem::path& aPath)
+HRESULT BrandingTexture::Load(ID3D11Device* apDevice, const std::filesystem::path& aPath, bool aTrimMargins)
 {
     View.Reset();
     Width = Height = 0;
@@ -86,6 +86,12 @@ HRESULT BrandingTexture::Load(ID3D11Device* apDevice, const std::filesystem::pat
     top = top ? top - 1 : 0;
     right = std::min(right + 1, width);
     bottom = std::min(bottom + 1, height);
+    if (!aTrimMargins)
+    {
+        left = top = 0;
+        right = width;
+        bottom = height;
+    }
     D3D11_TEXTURE2D_DESC description{};
     description.Width = right - left;
     description.Height = bottom - top;

@@ -9,6 +9,58 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Main Menu center-left branding and backdrop follow-up (2026-09-22)
+
+Implemented, **in-game visual acceptance pending**: the independent emblem,
+SKYRIM wordmark and localized subtitle now share a center-left anchor at 25% of
+viewport width, with a visual center around 51% of height. An optional static
+dark mist PNG draws between the video and emblem, using the existing emblem
+fade. Its default opacity is 0.35; bounded enable/opacity/scale/offset settings
+live in `[Branding]` of `presentation.ini`. The complete feathered canvas stays
+inside the left half. Missing/corrupt/disabled backdrop omits only that layer.
+No video, localization, native UI/input/cursor contract, fade timing, hook,
+context, SWF or dependency was changed by this follow-up.
+
+The new 1254×1254 backdrop was generated with the built-in OpenAI image tool
+from text only, refined from its own first candidate, and copied unchanged.
+[Provenance, licensing, prompts and SHA256](../features/main-menu/README.md#dark-backdrop-provenance)
+are recorded separately from the supplied logo/title and pending MP4 rights.
+Its alpha is genuinely transparent (no fully opaque pixels; maximum edge alpha
+1/255), with a dense center reaching about 0.35 effective opacity at defaults.
+Both local MP4s remain untracked and untouched. Final visual acceptance still
+needs a clean background export without baked branding.
+
+Executed directly in the existing main checkout/branch, starting at
+`23e4d1c1078613f3204843814b6f59a98295dc44`:
+
+- Debug and releasedbg: `xmake build -P . -y -j 6 TPTests` and
+  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including production
+  Angular. Switched with `xmake config -P . -m releasedbg -y`; restored Debug
+  with `xmake config -P . -m debug -y`. Existing compiler/toolchain warnings remain.
+- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`: PASS,
+  1,277 assertions / 27 cases. Full default TPTests: PASS, 45,082 / 417.
+  Added bounded configuration/section isolation and proportional left-half
+  layout coverage across aspect ratios, scales and offsets.
+- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu-branding-assets]"`:
+  PASS, 13 assertions / 1 case; all three actual PNGs decode on WARP DX11.
+  Backdrop retains its full 1254×1254 canvas; existing emblem/wordmark trimming
+  remains 612×1228 / 1586×290. Generated-PNG tests cover the full-canvas option.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 108 tests.
+  `python Tools/Scripts/test_main_menu.py --package
+  _audit/main-menu-backdrop/data-package`: PASS, 16 checks against the assembled
+  Main Menu PNG/INI/GPL payload, without MP4. This is not a full player-package
+  or deployment test.
+- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and no
+  compiled PEX under Scripts/Source. Changed Markdown link targets and
+  `git diff --check`: PASS.
+
+No deploy/import, game launch, new branch/worktree or merge was performed.
+The [human test plan](../features/main-menu/TEST_PLAN.md) now includes contrast
+against dragon/fire/blue barrier, soft edges, configurable backdrop failures,
+and the moved block's interaction with vanilla menu/news at different aspects.
+The earlier trailer smoke does not validate this composition; the complete
+native hint/cursor/focus matrix also remains pending. No 1.7.x claim.
+
 ## Main Menu independent branding follow-up (2026-09-22)
 
 Implemented, **in-game acceptance pending**: the existing background pass now

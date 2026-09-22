@@ -193,11 +193,16 @@ bool Presentation::Render()
             const auto emblemResult = m_emblem.Load(m_renderer.GetDevice(), m_directory / cEmblemFile);
             const auto wordmarkResult = m_wordmark.Load(m_renderer.GetDevice(), m_directory / cWordmarkFile);
             spdlog::info("[STRE][MainMenu] branding emblem={:08X} wordmark={:08X}", static_cast<std::uint32_t>(emblemResult), static_cast<std::uint32_t>(wordmarkResult));
+            if (m_config.Backdrop.Enabled && m_config.Backdrop.Opacity > 0)
+            {
+                const auto backdropResult = m_backdrop.Load(m_renderer.GetDevice(), m_directory / cBackdropFile, false);
+                spdlog::info("[STRE][MainMenu] branding backdrop={:08X}", static_cast<std::uint32_t>(backdropResult));
+            }
         }
         const auto opacity = m_brandingReveal.Sample(now, background);
         if (!m_imgui.RenderMainMenuTexture(
                 texture, retained ? m_transitionWidth : m_video.Width(), retained ? m_transitionHeight : m_video.Height(), m_renderer.GetDeviceContext(), m_emblem, m_wordmark,
-                opacity))
+                opacity, m_backdrop, m_config.Backdrop))
         {
             spdlog::warn("[STRE][MainMenu] fallback reason=render-unavailable");
             Disable();
@@ -236,6 +241,7 @@ void Presentation::Disable()
     m_transitionFrame.Reset();
     m_emblem = {};
     m_wordmark = {};
+    m_backdrop = {};
     m_subtitleOpacity = 0;
     Publish();
 }

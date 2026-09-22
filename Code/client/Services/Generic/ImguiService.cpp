@@ -53,7 +53,8 @@ void ImguiService::Render() const
 
 bool ImguiService::RenderMainMenuTexture(
     ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, const STRE::MainMenu::BrandingTexture& aEmblem,
-    const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity) const
+    const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity, const STRE::MainMenu::BrandingTexture& aBackdrop,
+    const STRE::MainMenu::BackdropConfig& aBackdropConfig) const
 {
     if (!m_ready || !apContext || !ImGui::GetCurrentContext())
         return false;
@@ -97,6 +98,7 @@ bool ImguiService::RenderMainMenuTexture(
                 aImage.View.Get(), ImVec2(origin.x + aRect.X, origin.y + aRect.Y), ImVec2(origin.x + aRect.X + aRect.Width, origin.y + aRect.Y + aRect.Height), ImVec2(0, 0),
                 ImVec2(1, 1), IM_COL32(255, 255, 255, static_cast<int>(aAlpha * 255)));
     };
+    drawBranding(aBackdrop, STRE::MainMenu::LayoutBackdrop(size.x, size.y, aBackdrop.Aspect(), aBackdropConfig), aOpacity.Emblem * aBackdropConfig.Opacity);
     drawBranding(aEmblem, layout.Emblem, aOpacity.Emblem);
     drawBranding(aWordmark, layout.Wordmark, aOpacity.Wordmark);
     list.PopClipRect();

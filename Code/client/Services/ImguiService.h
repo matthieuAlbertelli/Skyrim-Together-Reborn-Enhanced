@@ -11,6 +11,7 @@ namespace STRE::MainMenu
 {
 struct BrandingTexture;
 struct BrandingOpacity;
+struct BackdropConfig;
 } // namespace STRE::MainMenu
 
 /**
@@ -34,7 +35,8 @@ struct ImguiService
     // ImGui context/NewFrame or swapchain. Null texture draws an opaque cover.
     [[nodiscard]] bool RenderMainMenuTexture(
         ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, const STRE::MainMenu::BrandingTexture& aEmblem,
-        const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity) const;
+        const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity, const STRE::MainMenu::BrandingTexture& aBackdrop,
+        const STRE::MainMenu::BackdropConfig& aBackdropConfig) const;
 
     LRESULT WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     void RawInputHandler(RAWINPUT& aRawinput);

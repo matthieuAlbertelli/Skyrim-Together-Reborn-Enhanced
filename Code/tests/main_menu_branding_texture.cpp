@@ -102,6 +102,9 @@ TEST_CASE("Optional branding PNG preserves straight alpha and fits its visible c
     CHECK(pixel[2] == 100);
     CHECK(pixel[3] == 128);
     context->Unmap(readback.Get(), 0);
+    REQUIRE(SUCCEEDED(branding.Load(device.Get(), fixture.Path, false)));
+    REQUIRE(branding.Width == 64); // backdrop canvas/feather must not be trimmed
+    REQUIRE(branding.Height == 32);
     // A later failure releases the old texture rather than exposing stale art.
     REQUIRE(FAILED(branding.Load(device.Get(), fixture.Path.wstring() + L".missing")));
     REQUIRE_FALSE(branding.View);
@@ -151,16 +154,16 @@ TEST_CASE("Missing corrupt opaque empty and oversized branding fails independent
 TEST_CASE("Shipped branding assets decode on the existing device", "[.][main-menu-branding-assets]")
 {
     auto device = Device();
-    for (auto name : {"emblem.png", "skyrim-wordmark.png"})
+    for (const std::string_view name : {"Branding/emblem.png", "Branding/skyrim-wordmark.png", "branding_backdrop.png"})
     {
         BrandingTexture texture;
-        const auto file = std::filesystem::path("GameFiles/Skyrim/STRE/MainMenu/Branding") / name;
+        const auto file = std::filesystem::path("GameFiles/Skyrim/STRE/MainMenu") / name;
         INFO(file.string());
-        REQUIRE(SUCCEEDED(texture.Load(device.Get(), file)));
+        REQUIRE(SUCCEEDED(texture.Load(device.Get(), file, name != "branding_backdrop.png")));
         REQUIRE(texture.View);
         REQUIRE(texture.Width > 0);
         REQUIRE(texture.Height > 0);
-        WARN(name << " cropped texture: " << texture.Width << "x" << texture.Height);
+        WARN(name << " texture: " << texture.Width << "x" << texture.Height);
     }
 }
 #endif

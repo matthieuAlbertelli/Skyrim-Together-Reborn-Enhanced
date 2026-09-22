@@ -109,9 +109,9 @@ class MainMenuStructure(unittest.TestCase):
     def test_branding_package_has_optional_independent_png_assets(self):
         import struct
         header = read("Code/client/MainMenu/Branding.h")
-        for name in ("emblem.png", "skyrim-wordmark.png"):
-            self.assertIn(f'"Branding/{name}"', header)
-            path = PACKAGE / "STRE/MainMenu/Branding" / name
+        for name in ("Branding/emblem.png", "Branding/skyrim-wordmark.png", "branding_backdrop.png"):
+            self.assertIn(f'"{name}"', header)
+            path = PACKAGE / "STRE/MainMenu" / name
             if path.exists():  # omission remains a supported player package
                 data = path.read_bytes()
                 self.assertLessEqual(len(data), 16 * 1024 * 1024)
@@ -124,6 +124,21 @@ class MainMenuStructure(unittest.TestCase):
         for token in ("GUID_ContainerFormatPng", "GUID_WICPixelFormat32bppRGBA", "D3D11_USAGE_IMMUTABLE"):
             self.assertIn(token, texture)
         self.assertNotIn("GENERIC_WRITE", texture)
+
+    def test_backdrop_uses_existing_pass_and_emblem_fade(self):
+        config = configparser.ConfigParser()
+        config.read(PACKAGE / "STRE/MainMenu/presentation.ini", encoding="utf-8-sig")
+        self.assertTrue(config["Branding"].getboolean("BackdropEnabled"))
+        self.assertEqual(config["Branding"].getfloat("BackdropOpacity"), 0.35)
+        renderer = read("Code/client/Services/Generic/ImguiService.cpp")
+        order = [renderer.index(token) for token in (
+            "list.AddImage(apTexture", "drawBranding(aBackdrop", "drawBranding(aEmblem", "drawBranding(aWordmark")]
+        self.assertEqual(order, sorted(order))
+        self.assertIn("aOpacity.Emblem * aBackdropConfig.Opacity", renderer)
+        presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
+        self.assertIn("m_config.Backdrop.Enabled && m_config.Backdrop.Opacity > 0", presentation)
+        self.assertIn("m_directory / cBackdropFile, false", presentation)
+        self.assertIn("m_backdrop = {}", presentation)
 
     def test_cursor_draw_gate_keeps_native_and_overlay_ownership(self):
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")

@@ -209,8 +209,8 @@ and focus transitions still require the feature's human acceptance matrix.
 
 ## Branding composition
 
-`Presentation` owns two optional `BrandingTexture` objects and a portable
-`BrandingReveal`. The existing PostDisplay pass draws video, emblem and wordmark
+`Presentation` owns three optional `BrandingTexture` objects and a portable
+`BrandingReveal`. The existing PostDisplay pass draws video, backdrop, emblem and wordmark
 through one local ImGui draw list/backend; `MainMenuRuntime` then draws the
 native subtitle and finally invokes the unchanged vanilla Main Menu display.
 There is no new hook, context, device, input surface or registered native menu.
@@ -220,17 +220,34 @@ Missing components do not feed errors into the video controller.
 `BrandingReveal` starts only on an actual background texture, excluding the
 retained intro frame. The existing menu-close epoch distinguishes the first
 visit from every return, including a close/reopen between render frames or an
-exit during the intro/reveal. Timings and viewport-relative safe-area layout are
+exit during the intro/reveal. Timings and viewport-relative left-half layout are
 pure functions tested independently. The product contract owns their values.
 Resize recomputes layout without restarting the animation. Assets and the inert
 subtitle movie remain cached across gameplay and are released on reset/destruction;
 failed loads are not retried in a frame loop.
 
+The shared layout anchors every foreground layer at one quarter of viewport
+width and an approximately centered vertical group. A 16:9 size cap preserves
+proportions on ultrawide without dragging the group toward the screen center.
+`LayoutBackdrop` fits the complete texture into the left half and preserves its
+aspect ratio, including bounded scale/offset adjustments. The existing bounded
+INI parser reads `[Branding]` independently from `[Presentation]`; non-finite,
+out-of-range or malformed values retain defaults. These knobs tune a replacement
+background's contrast without exposing general logo layout or reveal settings.
+
+Backdrop alpha multiplies the PNG's alpha, configured opacity and **existing
+emblem fade**. No additional clock/state or input policy is introduced. The
+texture is attempted once with the other branding resources, only when enabled
+and opacity is positive. Failure affects only the shade. No texture load occurs
+in the per-frame draw list; no particle system, shader or new dependency is added.
+
 Image-loader audit: TiltedUI already uses Windows WIC through DirectXTK for its
 cursor PNG. That helper produces a GPU texture but does not expose pixels for
 alpha bounds. This feature uses the same OS codec directly, with a bounded
 in-memory PNG snapshot, dimension checks before RGBA allocation, alpha-bound
-measurement and one immutable DX11 upload. No external decoder package or
+measurement and one immutable DX11 upload. Emblem/wordmark loads trim export
+margins; the backdrop opts out of trimming to preserve the full feathered
+canvas, including sub-threshold alpha at its perimeter. No external decoder package or
 DirectXTK upgrade is needed. `windowscodecs` is a Windows-only system link.
 [WIC format conversion](https://learn.microsoft.com/en-us/windows/win32/api/wincodec/nf-wincodec-iwicformatconverter-initialize)
 produces straight RGBA for the existing ImGui alpha blend; no premultiplied-alpha

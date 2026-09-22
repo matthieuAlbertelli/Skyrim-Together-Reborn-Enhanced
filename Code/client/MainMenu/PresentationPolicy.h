@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Branding.h"
+
 #include <bitset>
 #include <cstdint>
 #include <string_view>
@@ -17,6 +19,7 @@ struct Config
     bool IntroAudio{true};
     std::uint32_t SkipKeyboard{1};     // Skyrim keyboard scan code: Escape.
     std::uint32_t SkipGamepad{0x2000}; // Skyrim/XInput button mask: B.
+    BackdropConfig Backdrop;
 };
 
 // Bounded, non-throwing parser; invalid values retain defaults. Asset paths are

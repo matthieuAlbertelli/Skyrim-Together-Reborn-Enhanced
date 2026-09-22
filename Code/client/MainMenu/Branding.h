@@ -6,6 +6,15 @@ namespace STRE::MainMenu
 {
 inline constexpr std::string_view cEmblemFile = "Branding/emblem.png";
 inline constexpr std::string_view cWordmarkFile = "Branding/skyrim-wordmark.png";
+inline constexpr std::string_view cBackdropFile = "branding_backdrop.png";
+
+struct BackdropConfig
+{
+    bool Enabled{true};
+    float Opacity{0.35f};
+    float Scale{1.0f};
+    float OffsetX{}, OffsetY{}; // Fractions of viewport width/height.
+};
 
 struct BrandingOpacity
 {
@@ -33,10 +42,11 @@ struct BrandingRect
 struct BrandingLayout
 {
     BrandingRect Emblem, Wordmark;
-    float CenterX{}, SubtitleY{}, SubtitleMaxWidth{}, FontSize{};
+    float CenterX{}, CenterY{}, SubtitleY{}, SubtitleMaxWidth{}, FontSize{};
 };
 
-// Coordinates relative to the viewport. A centered 16:9 safe area prevents
-// ultrawide stretching and leaves the vanilla actions on the right unobscured.
+// Coordinates relative to the viewport. Anchor in the left half; cap size at
+// 16:9 proportions rather than stretching the group on ultrawide displays.
 [[nodiscard]] BrandingLayout LayoutBranding(float aWidth, float aHeight, float aEmblemAspect, float aWordmarkAspect) noexcept;
+[[nodiscard]] BrandingRect LayoutBackdrop(float aWidth, float aHeight, float aAspect, const BackdropConfig& aConfig) noexcept;
 } // namespace STRE::MainMenu

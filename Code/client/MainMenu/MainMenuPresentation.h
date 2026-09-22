@@ -49,6 +49,7 @@ private:
     BrandingReveal m_brandingReveal;
     BrandingTexture m_emblem;
     BrandingTexture m_wordmark;
+    BrandingTexture m_backdrop;
     bool m_brandingAttempted{};
     float m_subtitleOpacity{};
     InputLatch m_inputLatch;

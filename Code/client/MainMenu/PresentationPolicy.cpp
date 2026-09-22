@@ -1,6 +1,7 @@
 #include "PresentationPolicy.h"
 
 #include <charconv>
+#include <cmath>
 
 namespace STRE::MainMenu
 {
@@ -22,6 +23,7 @@ Config ParseConfig(std::string_view aText) noexcept
     if (aText.size() > 4096)
         return result;
     bool settings = false;
+    bool branding = false;
     while (!aText.empty())
     {
         const auto end = aText.find('\n');
@@ -33,13 +35,34 @@ Config ParseConfig(std::string_view aText) noexcept
         if (line.front() == '[')
         {
             settings = line == "[Presentation]";
+            branding = line == "[Branding]";
             continue;
         }
         const auto equal = line.find('=');
-        if (!settings || equal == std::string_view::npos)
+        if ((!settings && !branding) || equal == std::string_view::npos)
             continue;
         const auto key = Trim(line.substr(0, equal));
         const auto value = Trim(line.substr(equal + 1));
+        if (branding)
+        {
+            if (key == "BackdropEnabled")
+            {
+                if (value == "true" || value == "false")
+                    result.Backdrop.Enabled = value == "true";
+                continue;
+            }
+            float number{};
+            const auto parsed = std::from_chars(value.data(), value.data() + value.size(), number);
+            if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() || !std::isfinite(number))
+                continue;
+            if (key == "BackdropOpacity" && number >= 0 && number <= 1)
+                result.Backdrop.Opacity = number;
+            else if (key == "BackdropScale" && number >= 0.5f && number <= 1.5f)
+                result.Backdrop.Scale = number;
+            else if ((key == "BackdropOffsetX" || key == "BackdropOffsetY") && number >= -0.25f && number <= 0.25f)
+                (key == "BackdropOffsetX" ? result.Backdrop.OffsetX : result.Backdrop.OffsetY) = number;
+            continue;
+        }
         if (key == "Enabled" || key == "IntroAudio")
         {
             if (value == "true" || value == "false")
