@@ -102,6 +102,43 @@ The existing CampaignMainMenuEnteredEvent, Continue interception and
 RequestSkyrimMainMenu remain their owners' contracts. There is no server,
 network, save, Papyrus, ESP or shared authority in this feature.
 
+## Intro hint and cursor ownership
+
+Localization audit: the Angular UI uses Transloco with `assets/i18n/*.json`,
+an English fallback, and a selected locale stored in CEF localStorage. Native
+notifications send translation keys to that browser. There is no synchronous
+native translation service available before the first menu. Reading browser
+storage or starting a CEF surface for this hint would couple startup to that UI.
+
+Use a small feature-local UTF-8 `localization.ini` catalog, with the native
+console's existing bundled SimpleIni parser (char-only, no additional conversion
+library). Reuse the established locale/key/fallback pattern. `Language=auto`
+matches the catalog's `SkyrimLanguage` aliases against the existing native
+INISettingCollection; explicit `Language` selects a catalog section. Both files
+are read once with bounds. Key and action are resolved separately and composed
+outside the renderer. An unavailable hint does not alter presentation state.
+ImGui receives only resolved text and opacity, uses the existing font/atlas,
+and draws a shadowed bottom-right label even while the intro frame is loading.
+
+Cursor audit: `UiSurfaceService::ApplyInputCapture` owns the CEF texture cursor
+and existing Win32 hiding for interactive overlay surfaces. Its focus handling
+lives in InputService. The native Main Menu has a separate Scaleform
+[CursorMenu](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/C/CursorMenu.h),
+rendered through inherited
+[IMenu::PostDisplay](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/RE/I/IMenu.cpp).
+The native MenuCursor Win32 visibility counter is another mechanism; it must
+not be borrowed to hide this movie.
+
+The 1.6.1170 adapter now also preflights CursorMenu's primary vtable (AE ID
+215246), slot 6, before any presentation patch. Its hook skips only that draw
+while the published state is PlayingIntro and the existing input/render lease
+is live. Close, skip, EOS, fallback, disable/reset and lease expiry therefore
+chain to the original draw without restoring a cached visibility value.
+No ShowCursor/SetCursor call, UI message, cursor flag mutation or CEF cursor
+override is added. Alt-Tab cannot unbalance a counter owned by this feature;
+native/overlay focus and lifecycle handling continue normally. The visual result
+and focus transitions still require the feature's human acceptance matrix.
+
 ## Provenance and licensing
 
 Audited upstream:

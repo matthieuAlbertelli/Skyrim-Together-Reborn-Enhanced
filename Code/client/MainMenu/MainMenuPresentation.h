@@ -17,12 +17,13 @@ namespace STRE::MainMenu
 class Presentation
 {
 public:
-    Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig);
+    Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig, std::string aSkipHint);
     // Native menu/input thread: atomics + input-thread-owned latch only.
     void MenuChanged(bool aOpen) noexcept;
     [[nodiscard]] bool ConsumeInput(const InputEvent* apEvent) noexcept;
     [[nodiscard]] bool CapturesInput() const noexcept;
     [[nodiscard]] bool SuppressesMusic() const noexcept;
+    [[nodiscard]] bool HidesCursor() const noexcept;
 
     // Rendering thread only. True means the intro covered the vanilla menu.
     [[nodiscard]] bool Render();
@@ -37,6 +38,7 @@ private:
     ImguiService& m_imgui;
     const std::filesystem::path m_directory;
     const Config m_config;
+    const std::string m_skipHint;
     const bool m_introAvailable;
     const bool m_backgroundAvailable;
     Controller m_controller;
@@ -47,6 +49,7 @@ private:
     std::atomic<bool> m_skip{};
     std::atomic<bool> m_muteMenu{};
     std::atomic<bool> m_disabled{};
+    std::atomic<bool> m_playingIntro{};
     std::atomic<std::uint64_t> m_captureUntil{};
     std::atomic<std::uint64_t> m_closedEpoch{};
     std::uint64_t m_observedEpoch{};
@@ -57,5 +60,6 @@ private:
     bool m_audioRetry{};
     bool m_audioFailureLogged{};
     double m_lastRender{};
+    double m_introStarted{};
 };
 } // namespace STRE::MainMenu

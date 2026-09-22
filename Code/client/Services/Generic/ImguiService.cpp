@@ -49,7 +49,8 @@ void ImguiService::Render() const
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool ImguiService::RenderMainMenuTexture(ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext) const
+bool ImguiService::RenderMainMenuTexture(
+    ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, std::string_view aHint, float aHintAlpha) const
 {
     if (!m_ready || !apContext || !ImGui::GetCurrentContext())
         return false;
@@ -66,22 +67,51 @@ bool ImguiService::RenderMainMenuTexture(ID3D11ShaderResourceView* apTexture, un
     {
         const float black[4]{0, 0, 0, 1};
         apContext->ClearRenderTargetView(target, black);
-        target->Release();
-        return true;
     }
     target->Release();
-    if (!aWidth || !aHeight)
+    if (apTexture && (!aWidth || !aHeight))
         return false;
+    if (!apTexture && aHint.empty())
+        return true;
     ImGui_ImplDX11_NewFrame();
     const ImVec2 origin(viewport.TopLeftX, viewport.TopLeftY);
     const ImVec2 size(viewport.Width, viewport.Height);
-    const float scale = std::max(size.x / aWidth, size.y / aHeight);
-    const ImVec2 imageSize(aWidth * scale, aHeight * scale);
-    const ImVec2 imageMin(origin.x + (size.x - imageSize.x) * 0.5f, origin.y + (size.y - imageSize.y) * 0.5f);
     ImDrawList list(ImGui::GetDrawListSharedData());
     list._ResetForNewFrame();
     list.PushClipRect(origin, ImVec2(origin.x + size.x, origin.y + size.y));
-    list.AddImage(apTexture, imageMin, ImVec2(imageMin.x + imageSize.x, imageMin.y + imageSize.y));
+    if (apTexture)
+    {
+        const float scale = std::max(size.x / aWidth, size.y / aHeight);
+        const ImVec2 imageSize(aWidth * scale, aHeight * scale);
+        const ImVec2 imageMin(origin.x + (size.x - imageSize.x) * 0.5f, origin.y + (size.y - imageSize.y) * 0.5f);
+        list.AddImage(apTexture, imageMin, ImVec2(imageMin.x + imageSize.x, imageMin.y + imageSize.y));
+    }
+    if (!aHint.empty() && aHintAlpha > 0.0f)
+    {
+        // Text is resolved by the feature's localization catalog, never here.
+        // Explicit font/atlas also works before ImGui's first full UI frame.
+        const auto& io = ImGui::GetIO();
+        auto* font = io.FontDefault ? io.FontDefault : (io.Fonts->Fonts.empty() ? nullptr : io.Fonts->Fonts[0]);
+        if (font && font->IsLoaded())
+        {
+            float fontSize = std::clamp(size.y / 54.0f, 14.0f, 32.0f);
+            const auto* begin = aHint.data();
+            const auto* end = begin + aHint.size();
+            auto textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, begin, end);
+            if (textSize.x > size.x * 0.8f)
+            {
+                fontSize *= size.x * 0.8f / textSize.x;
+                textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, begin, end);
+            }
+            const float margin = std::clamp(size.y / 30.0f, 16.0f, 64.0f);
+            const ImVec2 position(origin.x + size.x - margin - textSize.x, origin.y + size.y - margin - textSize.y);
+            const auto alpha = static_cast<int>(std::clamp(aHintAlpha, 0.0f, 1.0f) * 220.0f);
+            list.PushTextureID(font->ContainerAtlas->TexID);
+            list.AddText(font, fontSize, ImVec2(position.x + 1, position.y + 1), IM_COL32(0, 0, 0, alpha), begin, end);
+            list.AddText(font, fontSize, position, IM_COL32(240, 240, 240, alpha), begin, end);
+            list.PopTextureID();
+        }
+    }
     list.PopClipRect();
     ImDrawList* lists[]{&list};
     ImDrawData data;

@@ -4,6 +4,8 @@
 #include <Interface/IMenu.h>
 #include <Interface/UI.h>
 #include <MainMenu/MainMenuPresentation.h>
+#include <MainMenu/Localization.h>
+#include <Games/TES.h>
 #include "../../../immersive_launcher/Launcher.h"
 
 #include <array>
@@ -66,6 +68,7 @@ using PostDisplay = void (*)(IMenu*);
 using MusicPredicate = bool (*)();
 ProcessMessage s_processMessage{};
 PostDisplay s_postDisplay{};
+PostDisplay s_cursorPostDisplay{};
 MusicPredicate s_musicAtCreate{};
 MusicPredicate s_musicAtUpdate{};
 bool s_hooksReady{};
@@ -94,6 +97,16 @@ void PostDisplayHook(IMenu* apMenu)
     if (presentation && presentation->Render())
         return;
     s_postDisplay(apMenu);
+}
+
+void CursorPostDisplayHook(IMenu* apMenu)
+{
+    // CursorMenu is a separate native Scaleform movie, above MainMenu. Only
+    // omit its draw: preserve lifecycle, position, visibility flags and all OS
+    // / CEF cursor ownership. Every exit automatically chains to vanilla again.
+    auto* presentation = s_presentation.load();
+    if (!presentation || !presentation->HidesCursor())
+        s_cursorPostDisplay(apMenu);
 }
 
 bool MusicAtCreateHook()
@@ -129,11 +142,15 @@ bool InstallHooks()
     }
     // CommonLibSSE-NG VTABLE_MainMenu[0]. Slots 4/6 are ProcessMessage/PostDisplay.
     auto** table = static_cast<void**>(database.FindAddressById(215698));
+    // CommonLibSSE-NG VTABLE_CursorMenu[0], inherited IMenu::PostDisplay (6).
+    auto** cursorTable = static_cast<void**>(database.FindAddressById(215246));
     constexpr std::array<std::uint32_t, 2> ids{52110, 52137};
     constexpr std::array<std::size_t, 2> offsets{0x2A, 0x2DD};
     std::array<std::uint8_t*, 2> calls{};
     const std::array<MusicPredicate, 2> hooks{MusicAtCreateHook, MusicAtUpdateHook};
     if (!Readable(table, 7 * sizeof(void*)) || !Readable(table[4], 1, true) || !Readable(table[6], 1, true))
+        return false;
+    if (!Readable(cursorTable, 7 * sizeof(void*)) || !Readable(cursorTable[6], 1, true))
         return false;
     for (std::size_t i = 0; i < calls.size(); ++i)
     {
@@ -153,9 +170,9 @@ bool InstallHooks()
     }
     // Establish all write permissions before changing any byte. Failure leaves
     // the original menu/music intact; no half-installed presentation is enabled.
-    const std::array<void*, 3> addresses{table + 4, calls[0], calls[1]};
-    constexpr std::array<std::size_t, 3> sizes{3 * sizeof(void*), 5, 5};
-    std::array<DWORD, 3> protections{};
+    const std::array<void*, 4> addresses{table + 4, calls[0], calls[1], cursorTable + 6};
+    constexpr std::array<std::size_t, 4> sizes{3 * sizeof(void*), 5, 5, sizeof(void*)};
+    std::array<DWORD, 4> protections{};
     std::size_t writable{};
     for (; writable < addresses.size(); ++writable)
     {
@@ -167,10 +184,12 @@ bool InstallHooks()
     {
         s_processMessage = reinterpret_cast<ProcessMessage>(table[4]);
         s_postDisplay = reinterpret_cast<PostDisplay>(table[6]);
+        s_cursorPostDisplay = reinterpret_cast<PostDisplay>(cursorTable[6]);
         TiltedPhoques::SwapCall(mem::pointer(calls[0]), s_musicAtCreate, &MusicAtCreateHook);
         TiltedPhoques::SwapCall(mem::pointer(calls[1]), s_musicAtUpdate, &MusicAtUpdateHook);
         table[4] = reinterpret_cast<void*>(&ProcessMessageHook);
         table[6] = reinterpret_cast<void*>(&PostDisplayHook);
+        cursorTable[6] = reinterpret_cast<void*>(&CursorPostDisplayHook);
         FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
     }
     while (writable)
@@ -180,6 +199,24 @@ bool InstallHooks()
         VirtualProtect(addresses[writable], sizes[writable], protections[writable], &ignored);
     }
     return ready;
+}
+
+template <std::size_t MaxBytes> std::string ReadBoundedText(const std::filesystem::path& aFile)
+{
+    std::ifstream file(aFile, std::ios::binary);
+    std::array<char, MaxBytes + 1> text{};
+    file.read(text.data(), text.size());
+    return std::string(text.data(), static_cast<std::size_t>(file.gcount()));
+}
+
+std::string_view SkyrimLanguage()
+{
+    auto* settings = INISettingCollection::Get();
+    // Read the existing native settings boundary; no CEF/localStorage access
+    // or dependency on browser startup is needed for the first menu.
+    auto* setting = settings ? settings->GetSetting("sLanguage:General") : nullptr;
+    const auto* value = setting ? reinterpret_cast<const char*>(setting->data) : nullptr;
+    return Readable(value, 64) ? std::string_view(value, strnlen_s(value, 64)) : std::string_view{};
 }
 
 static TiltedPhoques::Initializer s_installPresentation(
@@ -198,11 +235,10 @@ void InitializePresentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui)
     if (!context)
         return;
     const auto directory = context->gamePath / "Data" / STRE::MainMenu::cAssetDirectory;
-    std::ifstream file(directory / STRE::MainMenu::cConfigFile, std::ios::binary);
-    std::array<char, 4097> text{};
-    file.read(text.data(), text.size());
-    const auto config = STRE::MainMenu::ParseConfig(std::string_view(text.data(), static_cast<std::size_t>(file.gcount())));
-    s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config);
+    const auto text = ReadBoundedText<4096>(directory / STRE::MainMenu::cConfigFile);
+    const auto config = STRE::MainMenu::ParseConfig(text);
+    const auto hint = STRE::MainMenu::ResolveSkipHint(ReadBoundedText<16384>(directory / STRE::MainMenu::cHintCatalogFile), text, SkyrimLanguage(), config.SkipKeyboard);
+    s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config, hint.Text());
     s_presentation.store(s_owner.get());
 }
 

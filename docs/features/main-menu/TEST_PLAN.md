@@ -30,6 +30,13 @@ It does not prove audio audibility, Skyrim render order or native input routing.
 The portable suite covers first entry, natural end/skip, return/reopen, missing
 media, repeated errors, stalled/endless media, disabling, malformed config,
 canonical paths, and held keyboard/mouse/gamepad input.
+Localization tests cover French/English auto selection, explicit override,
+English fallback, an added locale, rebound keys, UTF-8/BOM and unavailable,
+oversized or malformed labels. Structural checks verify that the renderer owns
+no translated strings and that CursorMenu's draw gate chains to vanilla without
+changing Win32/CEF cursor ownership. Default source checks inspect committed
+media for redistribution; `--package` checks all media actually assembled.
+Maintainer-owned staged/untracked QA clips must remain excluded from commits.
 
 Structural checks cover Windows-only dependencies, shared renderer/input use,
 absence of network/persistence and SWF changes, CK isolation, GPL notice, and
@@ -62,6 +69,16 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
 7. Test unavailable/muted audio endpoint, unsupported codec, a stalled media
    source and disabled presentation. Audio problems must not hold the menu.
    Review bounded fallback logs and check no runaway retries.
+8. With Skyrim in French then English (and with explicit `Language=fr/en`),
+   verify `[ÉCHAP] Passer` / `[ESC] Skip`, correct accented glyph, discreet
+   bottom-right alignment and fade. No gamepad hint, no hint on the background.
+   Rebind the keyboard skip to 57 and verify the displayed Space label; an
+   unmapped key or missing catalog must omit the hint without disabling skip.
+9. Keep the mouse stationary at the center, then move it during the intro:
+   no native cursor may be drawn. Check immediate normal cursor behavior after
+   Escape, gamepad skip, natural EOS, failure/disable and return from gameplay,
+   without requiring mouse motion. Alt-Tab both during and after the intro;
+   the desktop cursor and later CEF/vanilla interaction must behave normally.
 
 A native render reset may intentionally disable presentation for that process;
 vanilla must remain usable. Unknown runtime testing must never be reported as

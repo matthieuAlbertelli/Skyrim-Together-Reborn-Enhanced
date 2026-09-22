@@ -9,6 +9,46 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Main Menu first human smoke and intro UX follow-up (2026-09-22)
+
+The maintainer reports a successful first in-game smoke of PR #87: trailer,
+audio, Escape skip, transition to Main Menu/background, and general behavior
+after the intro are PASS. This is human attestation; exact media/binary hashes,
+resolution and a trace were not supplied with that report. It does not establish
+the full controller, fallback, focus/resolution or return-from-gameplay matrix.
+
+The same smoke found the native cursor visible at the center during the trailer.
+The follow-up adds intro-only CursorMenu draw suppression, without touching
+Win32 ShowCursor counters, native visibility flags or UiSurfaceService's CEF
+cursor ownership. Normal rendering chains through on every intro exit.
+It also adds a bottom-right keyboard hint with a short fade, external UTF-8
+French/English translations, Skyrim-language auto selection/explicit override,
+and separate key/action labels. No gamepad hint is displayed. Existing skip,
+once-per-process policy, video/audio and vanilla-menu behavior are retained.
+
+New UX in-game acceptance is pending; the earlier human PASS must not be
+reported as validation of this cursor/hint change. Local QA videos remain
+outside the PR; redistribution provenance is still pending.
+
+Follow-up checks in the maintainer's existing main checkout on
+`feat/main-menu-remaster`, starting at `5a6e4038fbf6171fdc063bb79a6070bd457778a0`:
+
+- `xmake config -P . -m debug -y` and `xmake build -P . -y -j 6 TPTests`: PASS.
+- `xmake build -P . -y -j 6 -r SkyrimImmersiveLauncher`: PASS, forced native
+  client/launcher rebuild plus production UI; existing compiler warnings remain.
+- `./build/windows/x64/debug/TPTests.exe "[main-menu]"`: PASS, 309 assertions /
+  19 cases; `./build/windows/x64/debug/TPTests.exe`: PASS, 44,114 / 409.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 104 tests.
+- `python Tools/Scripts/test_main_menu.py --package _audit/main-menu-ux/data-package`:
+  PASS, 12 checks of the INI/catalog/GPL Data payload, without local QA media.
+- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and zero
+  PEX under Scripts/Source. Changed-document link targets: 35 PASS.
+  `git diff --check`: PASS.
+
+No deployment/import or agent-operated game test was performed for this UX
+iteration. The earlier PR head's Windows and Linux CI succeeded; those runs do
+not validate the later UX diff. Its CI is tracked by PR #87.
+
 ## Startup trailer and animated Main Menu preparation (2026-09-22)
 
 Implemented in the proposed change for
@@ -82,7 +122,9 @@ Steam CEG encoded (the existing launcher decodes it at load). Its opcode asserti
 did not pass; no live hook validation is inferred. Production preflight checks
 the loaded executable before patching.
 
-**In-game acceptance remains pending.** Native menu render order and input
+At this original preparation checkpoint, **in-game acceptance was pending**;
+the later first human smoke and its limits are recorded above. Remaining checks
+include native menu render order and input
 routing, actual trailer audio/synchronization, menu music recovery, no transition
 flash, all vanilla menu actions, campaign Continue/Resume, gameplay return,
 controller, focus/window/resolution changes and 16:9/21:9 require the human

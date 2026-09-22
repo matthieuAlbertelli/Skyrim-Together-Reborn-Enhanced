@@ -1,14 +1,17 @@
 """Structural/packaging checks complementing TPTests and human Skyrim acceptance."""
 
 import argparse
+import configparser
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "GameFiles/Skyrim"
 PACKAGE = DATA
+ASSEMBLED_PACKAGE = False
 
 
 def read(path):
@@ -37,7 +40,39 @@ class MainMenuStructure(unittest.TestCase):
     def test_pending_media_rights_prevent_distribution(self):
         contract = read("docs/features/main-menu/README.md")
         if "Pending; do not distribute" in contract:
-            self.assertEqual(list((PACKAGE / "STRE/MainMenu").glob("*.mp4")), [])
+            if ASSEMBLED_PACKAGE:
+                self.assertEqual(list((PACKAGE / "STRE/MainMenu").glob("*.mp4")), [])
+            else:
+                # Maintainer-owned local/staged clips are allowed for gameplay
+                # QA. Check the committed distribution source, never mutate or
+                # accidentally publish that unrelated work in a UX commit.
+                names = subprocess.check_output(
+                    ["git", "-c", f"safe.directory={ROOT.as_posix()}", "ls-tree", "-r", "--name-only",
+                     "HEAD", "--", "GameFiles/Skyrim/STRE/MainMenu"], cwd=ROOT, text=True)
+                self.assertFalse(any(name.lower().endswith(".mp4") for name in names.splitlines()))
+
+    def test_localized_hint_catalog_and_renderer_boundary(self):
+        catalog = configparser.ConfigParser()
+        catalog.read(PACKAGE / "STRE/MainMenu/localization.ini", encoding="utf-8-sig")
+        self.assertEqual((catalog["fr"]["Key.1"], catalog["fr"]["SkipAction"]), ("ÉCHAP", "Passer"))
+        self.assertEqual((catalog["en"]["Key.1"], catalog["en"]["SkipAction"]), ("ESC", "Skip"))
+        renderer = read("Code/client/Services/Generic/ImguiService.cpp")
+        for literal in ('"ÉCHAP"', '"Passer"', '"ESC"', '"Skip"', '"fr"', '"en"'):
+            self.assertNotIn(literal, renderer)
+        presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
+        self.assertIn("intro ? std::string_view(m_skipHint) : std::string_view{}", presentation)
+
+    def test_cursor_draw_gate_keeps_native_and_overlay_ownership(self):
+        runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
+        self.assertIn("FindAddressById(215246)", runtime)
+        hook = runtime[runtime.index("void CursorPostDisplayHook"):runtime.index("bool MusicAtCreateHook")]
+        self.assertIn("!presentation || !presentation->HidesCursor()", hook)
+        self.assertIn("s_cursorPostDisplay(apMenu)", hook)
+        presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
+        self.assertIn("return m_playingIntro && CapturesInput();", presentation)
+        for text in (runtime, presentation):
+            for call in ("ShowCursor(", "SetCursor(", "SetCursorVisibility(", "SetCursorVisible("):
+                self.assertNotIn(call, text)
 
     def test_no_scaleform_replacement(self):
         self.assertEqual(list(DATA.rglob("startmenu.swf")), [])
@@ -99,4 +134,5 @@ if __name__ == "__main__":
     args, remaining = parser.parse_known_args()
     if args.package:
         PACKAGE = args.package.resolve(strict=True)
+        ASSEMBLED_PACKAGE = True
     unittest.main(argv=[__file__, *remaining])

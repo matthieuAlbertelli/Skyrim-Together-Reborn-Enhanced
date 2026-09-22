@@ -23,6 +23,7 @@ The repository's Data source is `GameFiles/Skyrim/`:
 
 ```text
 STRE/MainMenu/presentation.ini
+STRE/MainMenu/localization.ini
 STRE/MainMenu/intro.mp4       (optional; rights required)
 STRE/MainMenu/background.mp4  (optional; rights required)
 ```
@@ -38,6 +39,25 @@ scan code (1–255, default Escape = 1), and `SkipGamepad` as one decimal
 Skyrim/XInput button bit (1–32768, default B = 8192). Background audio is always
 disabled in this slice. Invalid values retain safe defaults; files over 4096 bytes
 use defaults. Paths and network URLs are not configurable.
+
+The intro alone displays a small keyboard skip hint at the bottom right, with
+a 350 ms fade-in and a shadow for contrast. No gamepad hint is displayed; the
+configured gamepad skip remains active. The native Skyrim cursor draw is omitted
+only while the intro is active; normal cursor rendering resumes on every exit.
+
+`Language = auto` in `[Presentation]` follows Skyrim's `sLanguage:General`.
+An explicit locale such as `fr` or `en` overrides it for this boot presentation;
+it does not change the CEF overlay's language setting. UTF-8 `localization.ini`
+contains locale sections with `SkyrimLanguage`, `SkipAction` and independent
+`Key.<decimal scan code>` labels. Defaults produce `[ÉCHAP] Passer` in French and
+`[ESC] Skip` in English. Add a section and labels to add a locale without changing
+render code. The existing font covers Latin and Cyrillic; other scripts may
+require extending the shared font assets, outside the renderer's text logic.
+
+Missing/invalid labels fall back to the `en` section. If either label is still
+unavailable (including an unmapped custom key), omit the hint rather than show
+the wrong binding. Missing or malformed localization never blocks playback or
+skip. The catalog is limited to 16 KiB and labels to 128 UTF-8 bytes on one line.
 
 ## Failure behavior
 
