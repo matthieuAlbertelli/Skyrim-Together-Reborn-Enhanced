@@ -54,13 +54,37 @@ class MainMenuStructure(unittest.TestCase):
     def test_localized_hint_catalog_and_renderer_boundary(self):
         catalog = configparser.ConfigParser()
         catalog.read(PACKAGE / "STRE/MainMenu/localization.ini", encoding="utf-8-sig")
-        self.assertEqual((catalog["fr"]["Key.1"], catalog["fr"]["SkipAction"]), ("ÉCHAP", "Passer"))
-        self.assertEqual((catalog["en"]["Key.1"], catalog["en"]["SkipAction"]), ("ESC", "Skip"))
-        renderer = read("Code/client/Services/Generic/ImguiService.cpp")
+        self.assertEqual(catalog["fr"]["SkipAction"], "Passer")
+        self.assertEqual(catalog["en"]["SkipAction"], "Skip")
+        self.assertFalse(any(key.startswith("key.") for section in catalog.values() for key in section))
+        renderer = read("Code/client/Games/Skyrim/MainMenuPrompt.cpp")
         for literal in ('"ÉCHAP"', '"Passer"', '"ESC"', '"Skip"', '"fr"', '"en"'):
             self.assertNotIn(literal, renderer)
-        presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
-        self.assertIn("intro ? std::string_view(m_skipHint) : std::string_view{}", presentation)
+        self.assertIn('Action.text", Value(m_action.c_str())', renderer)
+        self.assertNotIn("htmlText", renderer)
+        imgui = read("Code/client/Services/Generic/ImguiService.cpp")
+        video_draw = imgui[imgui.index("bool ImguiService::RenderMainMenuTexture"):imgui.index("void ImguiService::Reset")]
+        self.assertNotIn("AddText", video_draw)
+
+    def test_native_prompt_is_inert_optional_and_uses_installed_resources(self):
+        prompt = read("Code/client/Games/Skyrim/MainMenuPrompt.cpp")
+        header = read("Code/client/Games/Skyrim/MainMenuPrompt.h")
+        for forbidden in ("QueueMessage(", "RegisterMenu(", "ShowCursor(", "HandleEvent(", '"startmenu"'):
+            self.assertNotIn(forbidden, prompt)
+        self.assertIn('"sharedcomponents"', prompt)
+        self.assertIn('"$EverywhereMediumFont"', prompt)
+        self.assertIn("keyboard, m_scanCode, art", prompt)
+        self.assertIn("children.Names.empty()", prompt)
+        self.assertIn("m_attempted = true", prompt)
+        self.assertIn('GetLoadedVersionString() != "1.6.1170.0"', prompt)
+        self.assertIn("UI_MESSAGE_RESULTS::kIgnore", header)
+        self.assertIn("void RefreshPlatform() override {}", header)
+        runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
+        draw = runtime[runtime.index("void PostDisplayHook"):runtime.index("void CursorPostDisplayHook")]
+        self.assertIn("presentation && presentation->Render()", draw)
+        self.assertIn("s_prompt && presentation->HidesCursor()", draw)
+        self.assertIn("s_prompt->ReleaseMovie()", draw)
+        self.assertFalse(list(PACKAGE.rglob("sharedcomponents.swf")))
 
     def test_cursor_draw_gate_keeps_native_and_overlay_ownership(self):
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")

@@ -9,7 +9,53 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Main Menu native skip prompt follow-up (2026-09-22)
+
+The maintainer requested vanilla UI styling for the intro hint after the first
+trailer smoke. The native-resource adapter replaces the ImGui hint from
+`df45487bbe5eed398374b8a583b0509a9fe20120`: a private, display-only Scaleform
+view uses installed Skyrim key art and font, with only the action translated by
+STRE. Native keyboard lookup removes catalog key-name duplication. No SWF or
+Bethesda asset is distributed. The existing cursor fix, Escape/gamepad bindings,
+input gate, audio/video transitions and once-per-process policy are retained.
+The ButtonBar/semantic Cancel audit and choice of resource reuse (preference 2)
+are recorded in [the technical design](../features/main-menu/TECHNICAL_DESIGN.md).
+
+Native prompt rendering is **implemented, in-game acceptance pending**. The
+maintainer's earlier trailer smoke below does not validate this new Scaleform
+view, font/layout, resource fallback or cursor/focus behavior. The independent
+movie has no native menu actions and is released on intro exit/reset; unavailable
+prompt resources omit only the hint. These lifecycle paths still need the
+[human matrix](../features/main-menu/TEST_PLAN.md).
+
+Automated/static evidence in the existing main checkout, same branch:
+
+- Debug and releasedbg: `xmake config -P . -m <mode> -y`,
+  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`, and
+  `xmake build -P . -y -j 6 TPTests`: PASS. Native client/launcher and production
+  Angular built; existing compiler/toolchain warnings remain. Debug restored.
+- In each mode, `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`:
+  PASS, 310 assertions / 19 cases; full default TPTests: PASS, 44,115 / 409.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
+  PASS, 105 tests, including 13 Main Menu structural checks.
+- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
+  zero compiled PEX under Scripts/Source. Changed Markdown links and
+  `git diff --check`: PASS.
+- Read-only installed BSA audit: `sharedcomponents.swf` exports `Esc`, `Space`,
+  `Enter` and other key art; French/English keyboard tables and PC control-map
+  contexts inspected. BSA SHA256:
+  `5c8d5275eeaaa87eec84c893da8dc3bf977e0197eba86560bb0d1dc651432957`.
+  Six new adapter address/vtable checks pass against the installed 1.6.1170 PE
+  and Address Library. This is static evidence, not a live Scaleform smoke.
+
+No deploy/import, game launch or merge was performed. Both maintainer-owned MP4s
+remain untracked and excluded from the PR; redistribution rights remain pending.
+No new branch/worktree was created. Live CI results remain on PR #87.
+
 ## Main Menu first human smoke and intro UX follow-up (2026-09-22)
+
+Historical evidence for the first UX iteration; its ImGui hint is superseded
+by the native-resource implementation above. The cursor fix remains current.
 
 The maintainer reports a successful first in-game smoke of PR #87: trailer,
 audio, Escape skip, transition to Main Menu/background, and general behavior

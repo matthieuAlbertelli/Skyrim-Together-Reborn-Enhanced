@@ -77,9 +77,9 @@ feature's product contract, not copied into configuration. No retry can reset
 the intro's original deadline. Close/reopen edges are recorded even between
 render frames, so a menu refresh cannot replay the intro.
 
-`MainMenuRuntime.cpp` contains all feature-specific version checks, relocation
-IDs, call-site offsets and virtual slots. It accepts exactly `1.6.1170.0`.
-It validates readable/executable memory, direct-call opcodes and rel32 range
+`MainMenuRuntime.cpp` and its `MainMenuPrompt.cpp` adapter contain feature-specific
+version checks, relocation IDs, call-site offsets and virtual slots. Both accept
+exactly `1.6.1170.0`. The hook adapter validates readable/executable memory, direct-call opcodes and rel32 range
 before changing the MainMenu virtual entries or either music call site. All
 write permissions are acquired before any patch; failure keeps originals.
 Each music call site retains its own original.
@@ -115,10 +115,77 @@ console's existing bundled SimpleIni parser (char-only, no additional conversion
 library). Reuse the established locale/key/fallback pattern. `Language=auto`
 matches the catalog's `SkyrimLanguage` aliases against the existing native
 INISettingCollection; explicit `Language` selects a catalog section. Both files
-are read once with bounds. Key and action are resolved separately and composed
-outside the renderer. An unavailable hint does not alter presentation state.
-ImGui receives only resolved text and opacity, uses the existing font/atlas,
-and draws a shadowed bottom-right label even while the intro frame is loading.
+are read once with bounds. Only the action is translated; an unavailable hint
+does not alter presentation state.
+
+### Native prompt audit and choice
+
+The installed 1.6.1170 `Skyrim - Interface.bsa` was inspected read-only. Its
+`startmenu.swf` embeds `Components.CrossPlatformButtons` and its own key exports;
+menu ActionScript chooses art through `SetPlatform`/`PCArt` and composes the
+control and label. `Shared.ButtonTextArtHolder` uses the delegate callback
+`GetButtonFromUserEvent` for semantic prompts. These are movie components, not a
+standalone native `ShowPrompt` service. `IMenu::kHasButtonBar` and
+`kIsTopButtonBar` describe menu-stack/button-bar participation; setting them
+neither creates a movie nor supplies its controls. A menu-independent invocation
+of the complete vanilla button bar is not established by the exposed STRE ABI.
+The stock `sharedcomponents.swf` also exports key cartouches and a generic
+`Button`; its older CrossPlatformButtons table does not cover Escape. Reusing a
+full interactive menu/control would require unwanted context/callback behavior
+or adapting its internal script contract.
+
+Choose preference **2: installed Skyrim resources rendered by Scaleform**.
+`IntroPrompt` loads a private `sharedcomponents` movie through the same
+BSScaleformManager API already used by TradePreviewHostMenu. It hides the
+library's existing root display children (including quantity-menu samples), then
+attaches only the native key symbol and a plain text field using
+`$EverywhereMediumFont` with embedded fonts enabled. No new SWF, Flash compiler,
+asset extraction at runtime, plugin, hook or replacement menu is required.
+The existing ImGui path now draws only video/black cover, without hint text.
+
+The host has no menu flags, registration, input handling or delegate actions;
+`RefreshPlatform` is deliberately inert. It never renders or modifies the Main
+Menu movie; that movie is consulted only for the current viewport. The existing
+PostDisplay seam draws the prompt after a successful intro video pass, guarded
+by the same live intro lease as cursor suppression. Skip/EOS/fallback, menu
+close, disabled/reset presentation and a lost render lease cease drawing and
+release the private movie/delegate on the render path. Loading is attempted at
+most once per process. Resource/API/layout failure disables only the hint and
+logs once; it never changes the presentation controller or input latch.
+Viewport changes relayout the key and action without stretching the glyphs.
+Long labels that cannot fit safely omit the hint.
+
+The active keyboard's `BSInputDevice::GetKeyMapping` resolves the configured
+`SkipKeyboard` scan code to the native export name. The installed English and
+French keyboard definitions both resolve scan code 1 to `Esc`, and 57 to `Space`;
+letter mappings differ with keyboard layout. The catalog therefore contains no
+key labels. Missing exports are detected by the attached clip's dimensions;
+there is no guessed substitute or custom ImGui fallback.
+
+Retain scan-code skip. The installed PC `controlmap.txt` maps Menu Mode `Cancel`
+through both gameplay `Tween Menu` and `Pause`, while `Back` is also the name of
+a gameplay movement action. A semantic replacement would depend on the active
+context, potentially add Tab or follow gameplay remaps, and change the validated
+Escape/configured-binding contract. No improvement justifies that change here.
+The native device lookup improves display correctness without dispatching input.
+
+ABI references, used for interface verification rather than copied components:
+[BSScaleformManager](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/RE/B/BSScaleformManager.cpp),
+[GFxMovie](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/G/GFxMovie.h),
+[GFxMovieView](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/G/GFxMovieView.h),
+[GFxValue](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/G/GFxValue.h),
+[BSInputDevice](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BSInputDevice.h).
+The optional adapter checks exact runtime, native pointers and required methods
+before using these APIs. It shares the presentation hook memory preflight.
+All acquired managed GFx values, the movie and its delegate are released.
+No CommonLib binary dependency or new native patch is introduced.
+
+Resource provenance: cartouches and fonts remain Bethesda resources owned by the
+installed game and are read through its loader. STRE redistributes none of them,
+no extracted/recompiled SWF, and no decompiled ActionScript. New adapter code is
+STRE GPL code; the existing Main Menu Video attribution is unchanged.
+
+### Cursor ownership
 
 Cursor audit: `UiSurfaceService::ApplyInputCapture` owns the CEF texture cursor
 and existing Win32 hiding for interactive overlay surfaces. Its focus handling

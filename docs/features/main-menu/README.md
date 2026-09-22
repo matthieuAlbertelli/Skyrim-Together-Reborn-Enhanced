@@ -40,24 +40,37 @@ Skyrim/XInput button bit (1–32768, default B = 8192). Background audio is alwa
 disabled in this slice. Invalid values retain safe defaults; files over 4096 bytes
 use defaults. Paths and network URLs are not configurable.
 
-The intro alone displays a small keyboard skip hint at the bottom right, with
-a 350 ms fade-in and a shadow for contrast. No gamepad hint is displayed; the
-configured gamepad skip remains active. The native Skyrim cursor draw is omitted
-only while the intro is active; normal cursor rendering resumes on every exit.
+The intro alone displays a native Skyrim key cartouche followed by the localized
+skip action at the bottom right, with a 350 ms fade-in. No gamepad hint is
+shown; configured gamepad skip remains active. The prompt uses an independent,
+display-only Scaleform view with the installed `sharedcomponents.swf` key art
+and Skyrim's `$EverywhereMediumFont`. It never opens another vanilla menu,
+changes `startmenu.swf`, or enables menu actions. The native cursor draw is
+omitted only while the intro is active; normal rendering resumes on every exit.
 
 `Language = auto` in `[Presentation]` follows Skyrim's `sLanguage:General`.
 An explicit locale such as `fr` or `en` overrides it for this boot presentation;
 it does not change the CEF overlay's language setting. UTF-8 `localization.ini`
-contains locale sections with `SkyrimLanguage`, `SkipAction` and independent
-`Key.<decimal scan code>` labels. Defaults produce `[ÉCHAP] Passer` in French and
-`[ESC] Skip` in English. Add a section and labels to add a locale without changing
-render code. The existing font covers Latin and Cyrillic; other scripts may
-require extending the shared font assets, outside the renderer's text logic.
+contains locale sections with `SkyrimLanguage` and `SkipAction`: `Passer` in
+French, `Skip` in English. Add a section to add a locale without renderer edits.
+The game supplies the key art for the configured scan code through its active
+keyboard device, including keyboard-layout naming. No `Key.*` translations or
+second binding table are maintained; old catalog key entries are ignored.
+The native key resource owns its appearance (including the `Esc` cartouche),
+so the earlier literal `[ÉCHAP]` / `[ESC]` text contract is superseded.
 
-Missing/invalid labels fall back to the `en` section. If either label is still
-unavailable (including an unmapped custom key), omit the hint rather than show
-the wrong binding. Missing or malformed localization never blocks playback or
-skip. The catalog is limited to 16 KiB and labels to 128 UTF-8 bytes on one line.
+Missing/invalid action labels fall back to `en`. If the label, keyboard mapping,
+key art or optional Scaleform view is unavailable, omit the hint without changing
+video, skip, cursor or vanilla fallback. Unknown art never displays another key.
+The catalog is limited to 16 KiB and action labels to 128 UTF-8 bytes on one line.
+They are assigned as plain text, not HTML. Native font coverage comes from the
+player's installed Skyrim font configuration.
+
+Skip remains the configured keyboard scan code (default Escape) and gamepad
+button. Native `Cancel` can resolve to several context-dependent controls,
+including Tab and Escape; replacing the validated binding with that action would
+broaden/change it without a demonstrated robustness gain. The native prompt
+therefore represents the existing binding, without dispatching Cancel/Back.
 
 ## Failure behavior
 

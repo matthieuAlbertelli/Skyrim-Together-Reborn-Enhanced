@@ -5,7 +5,6 @@
 #include <BSInput/InputEvent.h>
 #include <Services/ImguiService.h>
 #include <Systems/RenderSystemD3D11.h>
-#include <algorithm>
 
 namespace STRE::MainMenu
 {
@@ -23,12 +22,11 @@ bool HasFile(const std::filesystem::path& aFile)
 }
 } // namespace
 
-Presentation::Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig, std::string aSkipHint)
+Presentation::Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig)
     : m_renderer(aRenderer)
     , m_imgui(aImgui)
     , m_directory(std::move(aDirectory))
     , m_config(aConfig)
-    , m_skipHint(std::move(aSkipHint))
     , m_introAvailable(HasFile(m_directory / cIntroFile))
     , m_backgroundAvailable(HasFile(m_directory / cBackgroundFile))
     , m_controller(aConfig.Enabled)
@@ -136,7 +134,6 @@ bool Presentation::Render()
     {
         m_opened = true;
         m_controller.Enter(now, m_introAvailable && !m_introAttempted, m_backgroundAvailable);
-        m_introStarted = now;
         m_introAttempted = m_controller.IntroAttempted();
         OpenCurrent();
     }
@@ -188,8 +185,7 @@ bool Presentation::Render()
     if (intro || (state == State::PlayingBackground && texture))
     {
         if (!m_imgui.RenderMainMenuTexture(
-                texture, retained ? m_transitionWidth : m_video.Width(), retained ? m_transitionHeight : m_video.Height(), m_renderer.GetDeviceContext(),
-                intro ? std::string_view(m_skipHint) : std::string_view{}, static_cast<float>(std::clamp((now - m_introStarted) / 0.35, 0.0, 1.0))))
+                texture, retained ? m_transitionWidth : m_video.Width(), retained ? m_transitionHeight : m_video.Height(), m_renderer.GetDeviceContext()))
         {
             spdlog::warn("[STRE][MainMenu] fallback reason=render-unavailable");
             Disable();

@@ -1,6 +1,7 @@
 #include <TiltedOnlinePCH.h>
 
 #include <Games/Skyrim/MainMenuRuntime.h>
+#include <Games/Skyrim/MainMenuPrompt.h>
 #include <Interface/IMenu.h>
 #include <Interface/UI.h>
 #include <MainMenu/MainMenuPresentation.h>
@@ -60,8 +61,19 @@ bool RequestSkyrimMainMenu() noexcept
 // See NOTICE.md and GameFiles/Skyrim/STRE/Licenses/MainMenuVideo-GPL-3.0.txt.
 namespace MainMenuRuntime
 {
+bool Detail::Readable(const void* apAddress, std::size_t aSize, bool aExecutable)
+{
+    MEMORY_BASIC_INFORMATION info{};
+    if (!apAddress || !VirtualQuery(apAddress, &info, sizeof(info)) || info.State != MEM_COMMIT || (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0)
+        return false;
+    const auto offset = reinterpret_cast<std::uintptr_t>(apAddress) - reinterpret_cast<std::uintptr_t>(info.BaseAddress);
+    return offset < info.RegionSize && aSize <= info.RegionSize - offset &&
+           (!aExecutable || (info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0);
+}
+
 namespace
 {
+using Detail::Readable;
 using STRE::MainMenu::Presentation;
 using ProcessMessage = UI_MESSAGE_RESULTS (*)(IMenu*, UIMessage&);
 using PostDisplay = void (*)(IMenu*);
@@ -73,6 +85,7 @@ MusicPredicate s_musicAtCreate{};
 MusicPredicate s_musicAtUpdate{};
 bool s_hooksReady{};
 std::unique_ptr<Presentation> s_owner;
+std::unique_ptr<IntroPrompt> s_prompt;
 std::atomic<Presentation*> s_presentation{};
 
 UI_MESSAGE_RESULTS ProcessMessageHook(IMenu* apMenu, UIMessage& aMessage)
@@ -95,7 +108,13 @@ void PostDisplayHook(IMenu* apMenu)
     auto* presentation = s_presentation.load();
     // Background is drawn BEFORE vanilla; intro alone suppresses its display.
     if (presentation && presentation->Render())
+    {
+        if (s_prompt && presentation->HidesCursor())
+            s_prompt->Render(apMenu->uiMovie);
         return;
+    }
+    if (s_prompt)
+        s_prompt->ReleaseMovie();
     s_postDisplay(apMenu);
 }
 
@@ -121,17 +140,8 @@ bool MusicAtUpdateHook()
     return (presentation && presentation->SuppressesMusic()) || s_musicAtUpdate();
 }
 
-bool Readable(const void* apAddress, std::size_t aSize, bool aExecutable = false)
-{
-    MEMORY_BASIC_INFORMATION info{};
-    if (!apAddress || !VirtualQuery(apAddress, &info, sizeof(info)) || info.State != MEM_COMMIT || (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0)
-        return false;
-    const auto offset = reinterpret_cast<std::uintptr_t>(apAddress) - reinterpret_cast<std::uintptr_t>(info.BaseAddress);
-    return offset < info.RegionSize && aSize <= info.RegionSize - offset &&
-           (!aExecutable || (info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0);
-}
-
-// All runtime-sensitive values for this feature stay here. There is no 1.7 map.
+// Presentation patch addresses stay here; optional movie ABIs are isolated in
+// MainMenuPrompt. Both adapters reject unknown runtimes. There is no 1.7 map.
 bool InstallHooks()
 {
     auto& database = VersionDb::Get();
@@ -237,8 +247,9 @@ void InitializePresentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui)
     const auto directory = context->gamePath / "Data" / STRE::MainMenu::cAssetDirectory;
     const auto text = ReadBoundedText<4096>(directory / STRE::MainMenu::cConfigFile);
     const auto config = STRE::MainMenu::ParseConfig(text);
-    const auto hint = STRE::MainMenu::ResolveSkipHint(ReadBoundedText<16384>(directory / STRE::MainMenu::cHintCatalogFile), text, SkyrimLanguage(), config.SkipKeyboard);
-    s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config, hint.Text());
+    auto action = STRE::MainMenu::ResolveSkipAction(ReadBoundedText<16384>(directory / STRE::MainMenu::cHintCatalogFile), text, SkyrimLanguage());
+    s_prompt = std::make_unique<IntroPrompt>(config.SkipKeyboard, std::move(action));
+    s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config);
     s_presentation.store(s_owner.get());
 }
 
@@ -255,6 +266,8 @@ void EndPresentationFrame()
         if (GetModuleHandleW(L"po3_MainMenuVideo.dll"))
             s_owner->Disable();
         s_owner->EndFrame();
+        if (s_prompt && !s_owner->HidesCursor())
+            s_prompt->ReleaseMovie();
     }
 }
 
@@ -262,5 +275,7 @@ void ResetPresentation()
 {
     if (s_owner)
         s_owner->Disable();
+    if (s_prompt)
+        s_prompt->ReleaseMovie();
 }
 } // namespace MainMenuRuntime

@@ -32,14 +32,7 @@ std::string Label(const CSimpleIniCaseA& aCatalog, const char* apSection, const 
 }
 } // namespace
 
-std::string SkipHint::Text() const
-{
-    if (Key.empty() || Action.empty())
-        return {};
-    return "[" + Key + "] " + Action;
-}
-
-SkipHint ResolveSkipHint(std::string_view aCatalog, std::string_view aConfig, std::string_view aGameLanguage, std::uint32_t aScanCode)
+std::string ResolveSkipAction(std::string_view aCatalog, std::string_view aConfig, std::string_view aGameLanguage)
 {
     if (aCatalog.empty() || aCatalog.size() > 16384 || aCatalog.find('\0') != std::string_view::npos)
         return {};
@@ -69,13 +62,9 @@ SkipHint ResolveSkipHint(std::string_view aCatalog, std::string_view aConfig, st
     else
         section = requested;
 
-    const auto keyName = "Key." + std::to_string(aScanCode);
-    auto key = Label(catalog, section.c_str(), keyName.c_str());
     auto action = Label(catalog, section.c_str(), "SkipAction");
-    if (key.empty())
-        key = Label(catalog, "en", keyName.c_str());
     if (action.empty())
         action = Label(catalog, "en", "SkipAction");
-    return {std::move(key), std::move(action)};
+    return action;
 }
 } // namespace STRE::MainMenu

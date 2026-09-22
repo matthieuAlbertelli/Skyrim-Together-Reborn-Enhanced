@@ -17,7 +17,7 @@ namespace STRE::MainMenu
 class Presentation
 {
 public:
-    Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig, std::string aSkipHint);
+    Presentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui, std::filesystem::path aDirectory, Config aConfig);
     // Native menu/input thread: atomics + input-thread-owned latch only.
     void MenuChanged(bool aOpen) noexcept;
     [[nodiscard]] bool ConsumeInput(const InputEvent* apEvent) noexcept;
@@ -38,7 +38,6 @@ private:
     ImguiService& m_imgui;
     const std::filesystem::path m_directory;
     const Config m_config;
-    const std::string m_skipHint;
     const bool m_introAvailable;
     const bool m_backgroundAvailable;
     Controller m_controller;
@@ -60,6 +59,5 @@ private:
     bool m_audioRetry{};
     bool m_audioFailureLogged{};
     double m_lastRender{};
-    double m_introStarted{};
 };
 } // namespace STRE::MainMenu
