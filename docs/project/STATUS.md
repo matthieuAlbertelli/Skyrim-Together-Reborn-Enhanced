@@ -1,13 +1,94 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 19, 2026.
+> **Last updated:** September 22, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Startup trailer and animated Main Menu preparation (2026-09-22)
+
+Implemented in the proposed change for
+[#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86),
+from baseline `7dee263cac2aa994f16990b537ae4351e979c977`.
+Contract/design/acceptance belong to [Main Menu](../features/main-menu/README.md).
+
+- Presentation runs inside the existing native client/MainMenuRuntime and
+  ImGui/DX11 infrastructure, with a Windows Media Foundation frame-server
+  decoder. No new SKSE plugin, SWF, CEF screen, server message, campaign state,
+  ESP or Papyrus change.
+- Process-local intro-attempt policy, configurable keyboard/gamepad skip,
+  held-button suppression, native display/input gating, silent background loop,
+  retained transition frame and bounded fallback are implemented. The media
+  component is optional at process load. Runtime-sensitive presentation hooks
+  are fenced to `1.6.1170.0`; other versions disable this feature.
+- Local executable version inspection found Skyrim `1.6.1170.0` and SKSE DLL
+  `0, 2, 2, 6`. This identifies the installation, not in-game validation.
+- Video files are absent by design. Author, sources/tools and redistribution
+  rights remain pending maintainer confirmation. The staged prototype and local
+  po3 INI in the original checkout were preserved outside this worktree/PR.
+- Main Menu Video hook/order derivation is attributed to powerofthree at commit
+  `ec692f0745972ba3b381e2b1df5c4c56218ee8e0`, GPL-3.0-or-later. NOTICE and the
+  packaged GPL text record this separately from video provenance.
+
+Executed automated evidence on Windows:
+
+- `xmake config -P . -m debug -y` and
+  `xmake build -P . -y -j 6 TPTests`: PASS.
+- `./build/windows/x64/debug/TPTests.exe "[main-menu]"`: PASS,
+  289 assertions / 16 cases, including existing campaign Main Menu policy cases.
+- `./build/windows/x64/debug/TPTests.exe`: PASS, 44,094 assertions / 406 cases.
+- `./build/windows/x64/debug/TPTests.exe "[main-menu-media]"`: PASS,
+  748 assertions / 2 cases. Generated silent H.264, WARP DX11 frame transfer,
+  EOS, loop, missing/corrupt media and pending-load cancellation were exercised.
+  Polling makes this smoke's assertion count timing-dependent.
+- `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including the
+  client and production Angular UI. Repeated after final C++ formatting and the
+  pre-menu music-lease fail-open correction.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS,
+  102 tests; `python Tools/Scripts/test_main_menu.py`: PASS, 10 checks.
+- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
+  no compiled PEX in Scripts/Source.
+- `xmake config -P . -m releasedbg -y`, `xmake build -P . -y -j 6`:
+  PASS for all Windows targets, including launcher/client, server and tests.
+  Existing native narrowing/deprecation and Angular budget warnings remain;
+  no warning-free build is claimed.
+- Releasedbg TPTests: `[main-menu]` PASS, 289 / 16; full default suite PASS,
+  44,094 / 406; `[main-menu-media]` PASS, 754 / 2.
+- `xmake install -P . -o ../install-releasedbg`: PASS. Local review package
+  assembled with the existing playable workflow layout, using installed binaries
+  under `SkyrimTogetherReborn`, repository Data, LICENSE/NOTICE/VERSION and
+  installation instructions. Symbols/build libraries/test executables excluded.
+- `python Tools/Scripts/test_main_menu.py --package ../package-releasedbg`:
+  PASS, 10 checks. INI and GPL text are present; no video, po3 prototype/plugin
+  or startmenu.swf is included. `dumpbin /dependents SkyrimTogether.exe` confirms
+  no mandatory `mfplat.dll`/`mfreadwrite.dll` import on the client.
+- Changed-document relative Markdown targets: PASS, 74 links.
+  `git diff --check`: PASS. The frontend install's incidental lockfile rewrite
+  was reverted; no dependency/lockfile change is proposed.
+
+Deployment preflight was read-only: the existing deploy script's enumeration and
+auto-import filter found 11 eligible live CK outputs, all byte-identical to the
+worktree. The legacy PEX in live Scripts/Source was correctly ignored. Neither
+CK import nor deployment was run. The local deploy script hardcodes the original
+checkout, which contains the prototype with unconfirmed rights; running it would
+not deploy this isolated branch safely. Script paths/filters/manifests are unchanged.
+
+An additional raw-PE call-opcode audit was inconclusive: on-disk Skyrim code is
+Steam CEG encoded (the existing launcher decodes it at load). Its opcode assertion
+did not pass; no live hook validation is inferred. Production preflight checks
+the loaded executable before patching.
+
+**In-game acceptance remains pending.** Native menu render order and input
+routing, actual trailer audio/synchronization, menu music recovery, no transition
+flash, all vanilla menu actions, campaign Continue/Resume, gameplay return,
+controller, focus/window/resolution changes and 16:9/21:9 require the human
+matrix in the feature test plan using separately approved local assets.
+No screenshots/runtime trace or 1.7.x support is claimed. The issue stays open
+until those acceptance and asset-provenance gates are met.
 
 ## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
 

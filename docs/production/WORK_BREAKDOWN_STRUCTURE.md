@@ -127,6 +127,8 @@ cross-cutting layers already represented by the concrete domain,
 - 9.4 First-party adapters
 - 9.5 Capability and version negotiation
 - 9.6 Third-party SDK only after sufficient first-party validation
+- 9.7 [Startup and Main Menu presentation](../features/main-menu/README.md):
+  native video/input/audio, optional licensed media and vanilla fallback
 
 ## 10. Project operations
 

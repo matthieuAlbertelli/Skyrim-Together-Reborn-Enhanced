@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 2 September 2026.
+> **Last updated:** 22 September 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -30,6 +30,10 @@ STRE v1.0.0 is the first version suitable for starting and playing a real cooper
     progression, and coordinated recovery from one committed checkpoint shared
     by the server revision and every roster member's native Skyrim save.
 12. No known P0 multiplayer campaign blocker.
+13. STRE startup and Main Menu presentation: a skippable intro trailer once per
+    process followed by an animated background, preserving vanilla menu actions
+    and failing open to vanilla when presentation is unavailable. Contract:
+    [Main Menu](docs/features/main-menu/README.md).
 
 Advanced housing customization can ship after v1.0.0. The v1.0 requirement is the housing foundation: rooms, ownership/assignment and persistence.
 
@@ -98,6 +102,14 @@ Continue hardening the first-party verticals already described in `STATUS.md`:
 - **Release engineering:** clean-machine prerequisites, broader native/UI CI, one canonical automated test entry point and a release-grade supported-version matrix.
 
 These scopes remain visible product/engineering direction. Their current implementation state belongs only in `STATUS.md`; their actionable units and ordering belong in GitHub.
+
+### Startup and Main Menu presentation
+
+Deliver the [Main Menu contract](docs/features/main-menu/README.md) through the
+existing native client, with optional rights-cleared media, keyboard/controller
+skip, clean return-from-gameplay behavior and bounded vanilla fallback. Keep
+rendering, audio, runtime compatibility and packaging independently reviewable
+within the feature; acceptance belongs to its [test plan](docs/features/main-menu/TEST_PLAN.md).
 
 ### Mod-integration platform
 

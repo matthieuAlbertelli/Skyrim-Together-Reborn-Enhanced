@@ -4,7 +4,17 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 ## [Unreleased]
 
-_No unreleased STRE-specific changes documented yet._
+### Added
+
+- Optional native STRE startup trailer and silent looping Main Menu background,
+  integrated into the existing client renderer. The intro is attempted once per
+  process, accepts configurable keyboard/controller skip, and suppresses vanilla
+  display/input while active. Missing, failed or stalled media returns control
+  to vanilla. Steam Skyrim 1.6.1170 / SKSE 2.2.6 is the implementation target;
+  in-game acceptance is pending and 1.7.x is not supported by this feature.
+- Process-local policy tests, a Windows Media Foundation smoke using generated
+  silent media, packaging checks and Main Menu Video GPL attribution. No trailer
+  or background video is redistributed while asset rights remain unconfirmed.
 
 ## [0.4.0-alpha.1] - 2026-09-19
 

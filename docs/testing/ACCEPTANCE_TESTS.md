@@ -9,6 +9,7 @@ This file does not duplicate test cases. It points to the detailed acceptance cr
 | World Sync | [`../features/world-sync/TEST_PLAN.md`](../features/world-sync/TEST_PLAN.md) |
 | Trading | [`../features/trading/TEST_PLAN.md`](../features/trading/TEST_PLAN.md) |
 | Item Preview | [`../features/item-preview/TEST_PLAN.md`](../features/item-preview/TEST_PLAN.md) |
+| Startup and Main Menu | [`../features/main-menu/TEST_PLAN.md`](../features/main-menu/TEST_PLAN.md) |
 | Alternate Start / Character Build | [`../features/alternate-start/TEST_PLAN.md`](../features/alternate-start/TEST_PLAN.md) |
 | Downed State | document the plan under `../features/downed-state/` when implementation begins |
 

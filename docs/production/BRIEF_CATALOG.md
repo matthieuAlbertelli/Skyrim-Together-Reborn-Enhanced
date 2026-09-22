@@ -18,3 +18,4 @@
 | Trading | [`Trading Technical Design`](../features/trading/TECHNICAL_DESIGN.md) | STRE Core |
 | Preview API | [`Item Preview Platform`](../architecture/ITEM_PREVIEW_PLATFORM.md) | Client Architecture |
 | QA | [`Test Strategy`](../testing/TEST_STRATEGY.md) | QA Lead |
+| Startup and Main Menu | [Main Menu contract](../features/main-menu/README.md) | Native client + UI + QA |

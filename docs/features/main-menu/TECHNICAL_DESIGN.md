@@ -1,0 +1,145 @@
+# Main Menu technical design
+
+> **Status:** feature-local design for [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86).
+> Owner: native client / UI. Actual evidence lives in [STATUS](../../project/STATUS.md).
+
+## Integration audit and choice
+
+`SkyrimTogetherClient` is already a static library linked into
+`SkyrimTogether.exe` by `SkyrimImmersiveLauncher`. The launcher loads Skyrim
+and supplies a stable game directory. `MainMenuRuntime` already owns the
+native top-level return-to-menu boundary. That operation remains unchanged.
+
+`BSGraphicsRenderer` already creates the renderer and calls
+`RenderSystemD3D11::OnRender` at renderer End. `ImGuiImpl` owns the existing
+context and the DX11 backend restores native render state. `TiltedUi` owns CEF;
+the CEF overlay requires a loaded player/NiNode and is therefore unsuitable for
+this boot menu without broad changes. The older `D3D11Hook/Present` helpers are
+unused in this client; installing another swapchain hook would duplicate work.
+
+Use a small process-local `MainMenuPresentation` plus `VideoPlayer` inside
+the existing client. A local ImDrawList renders through the existing backend at
+MainMenu PostDisplay, before the original movie. It does not create a context,
+start a second ImGui UI frame, replace a swapchain or modify `startmenu.swf`.
+The current D3D viewport determines the cover/crop each frame, including resize.
+The intro suppresses the original PostDisplay; background always chains to it.
+The last intro texture is retained during asynchronous background preparation
+to avoid exposing the native background between clips.
+
+A standalone SKSE plugin is unnecessary: STRE already has the device, native
+hooks, input and packaging. No SKSE messaging dependency is added. XMake already
+includes client sources recursively and excludes the client from Linux targets.
+Only portable policy is compiled into Linux TPTests.
+
+## Decoder and ownership
+
+Use Windows Media Foundation Media Engine in frame-server mode. It schedules
+decode and audio internally, exposes EOS/error notifications and transfers
+frames to a BGRA DX11 texture using the existing device. This avoids OpenCV's
+additional build/package/dependency surface, duplicated decode/audio threads,
+and a separate codec DLL distribution. No OpenCV, FFmpeg, CommonLib or new
+package version is introduced. Windows SDK import GUIDs/COM libraries are used;
+`mfplat.dll` is loaded explicitly from System32, so its absence fails open
+instead of preventing the executable from loading.
+
+The runtime adapter owns one presentation object for the process. Controller and
+media mutations occur on the render path. Native menu/input callbacks exchange
+atomic values; the input latch belongs only to MenuControls' input thread.
+Media callbacks own a separate reference-counted atomic notification object and
+never call Skyrim, ImGui or the immediate D3D context. Shutdown releases the
+engine/texture and notification ownership, with no detached STRE decode thread.
+The DXGI manager shares the existing device with Media Foundation and enables
+the device's multithread protection for that use.
+
+Microsoft API contracts:
+[frame transfer](https://learn.microsoft.com/en-us/windows/win32/api/mfmediaengine/nf-mfmediaengine-imfmediaengine-transfervideoframe),
+[events](https://learn.microsoft.com/en-us/windows/win32/api/mfmediaengine/ne-mfmediaengine-mf_media_engine_event).
+Stream-rendering error parameters are unspecified: mute audio and rely on the
+bounded video watchdog rather than guessing a stream ID.
+
+## Policy and native boundary
+
+`PresentationPolicy` owns portable configuration, held-button suppression and:
+
+```text
+WaitingForMainMenu -> PlayingIntro -> TransitionToMenu -> PlayingBackground
+                            |                                  |
+                         skip/EOS/error                      error/stall
+                            |                                  |
+                            +-> background attempt       VanillaFallback
+menu close -> WaitingForMainMenu (intro-attempt flag retained)
+unsupported/renderer failure -> Disabled
+```
+
+Missing intro begins directly at background/fallback. Missing background never
+delays menu interaction. Timeouts and resource bounds are declared in the
+feature's product contract, not copied into configuration. No retry can reset
+the intro's original deadline. Close/reopen edges are recorded even between
+render frames, so a menu refresh cannot replay the intro.
+
+`MainMenuRuntime.cpp` contains all feature-specific version checks, relocation
+IDs, call-site offsets and virtual slots. It accepts exactly `1.6.1170.0`.
+It validates readable/executable memory, direct-call opcodes and rel32 range
+before changing the MainMenu virtual entries or either music call site. All
+write permissions are acquired before any patch; failure keeps originals.
+Each music call site retains its own original.
+
+Main Menu Show/Hide messages delimit presentation. Intro input is consumed at
+the existing MenuControls ProcessEvent hook before native dispatch; the public
+InputEvent ABI was extracted from CampaignSaveTrace into a shared header. No
+second hook is stacked on that function. Scaleform/user input messages to the
+Main Menu are also suppressed during capture. Held buttons are swallowed through
+their release; native menu actions resume with fresh presses.
+
+The music hooks return the upstream predicate's “already playing” result only
+while intro audio owns presentation. The normal native predicate is restored
+afterward; no user volume, music setting or campaign lock is modified.
+A short renewable render lease prevents stale input/music capture. End-of-frame
+maintenance stops media after menu close or lost rendering. Device reset
+disables this optional presentation rather than attempting unsafe device recovery.
+
+The existing CampaignMainMenuEnteredEvent, Continue interception and
+RequestSkyrimMainMenu remain their owners' contracts. There is no server,
+network, save, Papyrus, ESP or shared authority in this feature.
+
+## Provenance and licensing
+
+Audited upstream:
+[powerof3/MainMenuVideo](https://github.com/powerof3/MainMenuVideo/tree/ec692f0745972ba3b381e2b1df5c4c56218ee8e0),
+commit `ec692f0745972ba3b381e2b1df5c4c56218ee8e0` (master rechecked 2026-09-22),
+powerofthree, GPL-3.0-or-later per its vcpkg manifest.
+
+Reviewed Manager, VideoPlayer, Hooks, ImGui Renderer and CMake/vcpkg inputs.
+The adaptation is confined to the before-menu PostDisplay ordering and the two
+menu-music predicate interception points in MainMenuRuntime, with attribution in
+that source. STRE supplies version/preflight checks, separate originals,
+process-local policy, input suppression and existing-renderer integration.
+The decoder, config and controller are new STRE code; upstream OpenCV decoding,
+threading, whole Manager, separate ImGui renderer, DLL and assets are not copied.
+
+[NOTICE](../../../NOTICE.md) records the attribution. The upstream GPL text is
+retained at
+[MainMenuVideo-GPL-3.0.txt](../../../GameFiles/Skyrim/STRE/Licenses/MainMenuVideo-GPL-3.0.txt)
+and travels with Data in the existing package flow. STRE remains GPL-3.0-or-later.
+Video provenance is separate and belongs to the [product contract](README.md).
+
+## Build, packaging and ADR
+
+Client Windows links add only `mfuuid`, `ole32` and `oleaut32`. The hidden
+Windows media smoke in TPTests additionally uses the OS encoder to generate a
+temporary H.264 fixture; it is not a runtime dependency or a shipped video.
+No executable/DLL is added to Data/SKSE/Plugins. The existing playable workflow
+copies GameFiles/Skyrim to Data and binaries to SkyrimTogetherReborn. The existing
+XMake install and dev staging flow therefore need no new deploy script.
+
+Repo-authored INI/media never belong in the Alternate Start CK manifest or its
+auto-import filter. Explicit CK import is only for files actually authored in
+live Data. Never delete another mod's po3 files; any future prototype cleanup
+must be restricted to verified STRE-owned staging roots.
+
+No ADR is proposed: this feature extends the existing MainMenuRuntime boundary
+and rendering/input infrastructure without a new plugin, global pipeline,
+third-party decoder dependency, authority or persistent contract. Under the
+[ADR policy](../../architecture/ADRs/README.md), these reversible local choices
+belong here. A future runtime port edits this adapter and validates its hooks,
+not the state machine or decoder. 1.7.x is explicitly unvalidated.
