@@ -5,6 +5,11 @@ target("TPTests")
         ".", "../encoding")
     add_headerfiles("**.h")
     add_files("*.cpp")
+    add_files("../client/MainMenu/PresentationPolicy.cpp")
+    if is_plat("windows") then
+        add_files("../client/MainMenu/VideoPlayer.cpp")
+        add_syslinks("d3d11", "mfuuid", "mfplat", "mfreadwrite", "ole32", "oleaut32")
+    end
     add_deps(
         "SkyrimEncoding",
         "CommonLib",

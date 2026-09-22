@@ -1,6 +1,14 @@
 #include <TiltedOnlinePCH.h>
 
 #include <Games/Skyrim/MainMenuRuntime.h>
+#include <Interface/IMenu.h>
+#include <Interface/UI.h>
+#include <MainMenu/MainMenuPresentation.h>
+#include "../../../immersive_launcher/Launcher.h"
+
+#include <array>
+#include <atomic>
+#include <limits>
 
 namespace
 {
@@ -16,7 +24,7 @@ struct SkyrimMainResetBoundary
 
 static_assert(offsetof(SkyrimMainResetBoundary, ResetGame) == 0x11);
 static_assert(offsetof(SkyrimMainResetBoundary, FullReset) == 0x12);
-}
+} // namespace
 
 bool RequestSkyrimMainMenu() noexcept
 {
@@ -25,23 +33,198 @@ bool RequestSkyrimMainMenu() noexcept
     SkyrimMainResetBoundary** const ppMain = s_pMain.Get();
     if (!ppMain)
     {
-        spdlog::error(
-            "[STRE][MainMenuRuntime] REQUEST_FAILED reason=singleton-address-unavailable");
+        spdlog::error("[STRE][MainMenuRuntime] REQUEST_FAILED reason=singleton-address-unavailable");
         return false;
     }
 
     SkyrimMainResetBoundary* const pMain = *ppMain;
     if (!pMain)
     {
-        spdlog::error(
-            "[STRE][MainMenuRuntime] REQUEST_FAILED reason=singleton-unavailable");
+        spdlog::error("[STRE][MainMenuRuntime] REQUEST_FAILED reason=singleton-unavailable");
         return false;
     }
 
     const bool alreadyRequested = pMain->ResetGame;
-    spdlog::info(
-        "[STRE][MainMenuRuntime] REQUEST resetGameBefore={} fullResetBefore={} action=set-reset-game-only",
-        alreadyRequested, pMain->FullReset);
+    spdlog::info("[STRE][MainMenuRuntime] REQUEST resetGameBefore={} fullResetBefore={} action=set-reset-game-only", alreadyRequested, pMain->FullReset);
     pMain->ResetGame = true;
     return true;
 }
+
+// Main Menu render ordering and the two music-predicate call sites are adapted
+// from powerofthree's MainMenuVideo (GPL-3.0-or-later), commit
+// ec692f0745972ba3b381e2b1df5c4c56218ee8e0, src/ImGui/Renderer.h and src/Hooks.cpp.
+// STRE changes: reuse existing renderer/context/input seam, exact runtime gate,
+// preflight all patches, independent originals, process-local fail-open policy.
+// See NOTICE.md and GameFiles/Skyrim/STRE/Licenses/MainMenuVideo-GPL-3.0.txt.
+namespace MainMenuRuntime
+{
+namespace
+{
+using STRE::MainMenu::Presentation;
+using ProcessMessage = UI_MESSAGE_RESULTS (*)(IMenu*, UIMessage&);
+using PostDisplay = void (*)(IMenu*);
+using MusicPredicate = bool (*)();
+ProcessMessage s_processMessage{};
+PostDisplay s_postDisplay{};
+MusicPredicate s_musicAtCreate{};
+MusicPredicate s_musicAtUpdate{};
+bool s_hooksReady{};
+std::unique_ptr<Presentation> s_owner;
+std::atomic<Presentation*> s_presentation{};
+
+UI_MESSAGE_RESULTS ProcessMessageHook(IMenu* apMenu, UIMessage& aMessage)
+{
+    auto* presentation = s_presentation.load();
+    if (presentation)
+    {
+        if (aMessage.eType == UIMessage::kShow || aMessage.eType == UIMessage::kReshow)
+            presentation->MenuChanged(true);
+        else if (aMessage.eType == UIMessage::kHide || aMessage.eType == UIMessage::kForceHide)
+            presentation->MenuChanged(false);
+        else if ((aMessage.eType == UIMessage::kScaleformEvent || aMessage.eType == UIMessage::kUserEvent) && presentation->CapturesInput())
+            return UI_MESSAGE_RESULTS::kHandled;
+    }
+    return s_processMessage(apMenu, aMessage);
+}
+
+void PostDisplayHook(IMenu* apMenu)
+{
+    auto* presentation = s_presentation.load();
+    // Background is drawn BEFORE vanilla; intro alone suppresses its display.
+    if (presentation && presentation->Render())
+        return;
+    s_postDisplay(apMenu);
+}
+
+bool MusicAtCreateHook()
+{
+    auto* presentation = s_presentation.load();
+    return (presentation && presentation->SuppressesMusic()) || s_musicAtCreate();
+}
+
+bool MusicAtUpdateHook()
+{
+    auto* presentation = s_presentation.load();
+    return (presentation && presentation->SuppressesMusic()) || s_musicAtUpdate();
+}
+
+bool Readable(const void* apAddress, std::size_t aSize, bool aExecutable = false)
+{
+    MEMORY_BASIC_INFORMATION info{};
+    if (!apAddress || !VirtualQuery(apAddress, &info, sizeof(info)) || info.State != MEM_COMMIT || (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0)
+        return false;
+    const auto offset = reinterpret_cast<std::uintptr_t>(apAddress) - reinterpret_cast<std::uintptr_t>(info.BaseAddress);
+    return offset < info.RegionSize && aSize <= info.RegionSize - offset &&
+           (!aExecutable || (info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0);
+}
+
+// All runtime-sensitive values for this feature stay here. There is no 1.7 map.
+bool InstallHooks()
+{
+    auto& database = VersionDb::Get();
+    if (database.GetLoadedVersionString() != "1.6.1170.0")
+    {
+        spdlog::warn("[STRE][MainMenu] disabled unsupported-runtime={}", database.GetLoadedVersionString());
+        return false;
+    }
+    // CommonLibSSE-NG VTABLE_MainMenu[0]. Slots 4/6 are ProcessMessage/PostDisplay.
+    auto** table = static_cast<void**>(database.FindAddressById(215698));
+    constexpr std::array<std::uint32_t, 2> ids{52110, 52137};
+    constexpr std::array<std::size_t, 2> offsets{0x2A, 0x2DD};
+    std::array<std::uint8_t*, 2> calls{};
+    const std::array<MusicPredicate, 2> hooks{MusicAtCreateHook, MusicAtUpdateHook};
+    if (!Readable(table, 7 * sizeof(void*)) || !Readable(table[4], 1, true) || !Readable(table[6], 1, true))
+        return false;
+    for (std::size_t i = 0; i < calls.size(); ++i)
+    {
+        auto* base = static_cast<std::uint8_t*>(database.FindAddressById(ids[i]));
+        if (!base)
+            return false;
+        calls[i] = base + offsets[i];
+        if (!Readable(calls[i], 5, true) || calls[i][0] != 0xE8)
+            return false;
+        std::int32_t displacement{};
+        std::memcpy(&displacement, calls[i] + 1, sizeof(displacement));
+        if (!Readable(calls[i] + 5 + displacement, 1, true))
+            return false;
+        const auto distance = reinterpret_cast<std::intptr_t>(hooks[i]) - reinterpret_cast<std::intptr_t>(calls[i] + 5);
+        if (distance < std::numeric_limits<std::int32_t>::min() || distance > std::numeric_limits<std::int32_t>::max())
+            return false;
+    }
+    // Establish all write permissions before changing any byte. Failure leaves
+    // the original menu/music intact; no half-installed presentation is enabled.
+    const std::array<void*, 3> addresses{table + 4, calls[0], calls[1]};
+    constexpr std::array<std::size_t, 3> sizes{3 * sizeof(void*), 5, 5};
+    std::array<DWORD, 3> protections{};
+    std::size_t writable{};
+    for (; writable < addresses.size(); ++writable)
+    {
+        if (!VirtualProtect(addresses[writable], sizes[writable], PAGE_EXECUTE_READWRITE, &protections[writable]))
+            break;
+    }
+    const bool ready = writable == addresses.size();
+    if (ready)
+    {
+        s_processMessage = reinterpret_cast<ProcessMessage>(table[4]);
+        s_postDisplay = reinterpret_cast<PostDisplay>(table[6]);
+        TiltedPhoques::SwapCall(mem::pointer(calls[0]), s_musicAtCreate, &MusicAtCreateHook);
+        TiltedPhoques::SwapCall(mem::pointer(calls[1]), s_musicAtUpdate, &MusicAtUpdateHook);
+        table[4] = reinterpret_cast<void*>(&ProcessMessageHook);
+        table[6] = reinterpret_cast<void*>(&PostDisplayHook);
+        FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
+    }
+    while (writable)
+    {
+        --writable;
+        DWORD ignored{};
+        VirtualProtect(addresses[writable], sizes[writable], protections[writable], &ignored);
+    }
+    return ready;
+}
+
+static TiltedPhoques::Initializer s_installPresentation(
+    []()
+    {
+        s_hooksReady = InstallHooks();
+        spdlog::info("[STRE][MainMenu] hooks={} target=1.6.1170.0", s_hooksReady);
+    });
+} // namespace
+
+void InitializePresentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui)
+{
+    if (!s_hooksReady || s_owner || GetModuleHandleW(L"po3_MainMenuVideo.dll"))
+        return;
+    const auto* context = launcher::GetLaunchContext();
+    if (!context)
+        return;
+    const auto directory = context->gamePath / "Data" / STRE::MainMenu::cAssetDirectory;
+    std::ifstream file(directory / STRE::MainMenu::cConfigFile, std::ios::binary);
+    std::array<char, 4097> text{};
+    file.read(text.data(), text.size());
+    const auto config = STRE::MainMenu::ParseConfig(std::string_view(text.data(), static_cast<std::size_t>(file.gcount())));
+    s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config);
+    s_presentation.store(s_owner.get());
+}
+
+bool ConsumePresentationInput(const InputEvent* apEvents) noexcept
+{
+    auto* presentation = s_presentation.load();
+    return presentation && presentation->ConsumeInput(apEvents);
+}
+
+void EndPresentationFrame()
+{
+    if (s_owner)
+    {
+        if (GetModuleHandleW(L"po3_MainMenuVideo.dll"))
+            s_owner->Disable();
+        s_owner->EndFrame();
+    }
+}
+
+void ResetPresentation()
+{
+    if (s_owner)
+        s_owner->Disable();
+}
+} // namespace MainMenuRuntime

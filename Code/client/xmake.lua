@@ -100,6 +100,9 @@ target(name)
     end
 
     add_syslinks(
+        "mfuuid",
+        "ole32",
+        "oleaut32",
         "version",
         "dbghelp",
         "kernel32")

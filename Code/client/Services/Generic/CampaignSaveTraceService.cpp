@@ -17,6 +17,8 @@
 #include <Services/CampaignResumeService.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <World.h>
+#include <BSInput/InputEvent.h>
+#include <Games/Skyrim/MainMenuRuntime.h>
 
 #include <array>
 #include <cstddef>
@@ -30,28 +32,6 @@ using namespace STRE::Campaign;
 
 // These declarations mirror only public CommonLibSSE-NG event boundaries.
 // The opaque save/load event payloads deliberately remain uninterpreted.
-struct InputEvent
-{
-    virtual ~InputEvent();
-    [[nodiscard]] virtual bool HasIDCode() const;
-    [[nodiscard]] virtual const BSFixedString& QUserEvent() const;
-
-    std::uint32_t Device;
-    std::uint32_t EventType;
-    InputEvent* pNext;
-};
-static_assert(sizeof(InputEvent) == 0x18);
-
-struct ButtonInputEvent : InputEvent
-{
-    BSFixedString UserEvent;
-    std::uint32_t IdCode;
-    std::uint32_t Pad24;
-    float Value;
-    float HeldDownSeconds;
-};
-static_assert(sizeof(ButtonInputEvent) == 0x30);
-
 struct BSSaveDataEvent
 {
 };
@@ -402,6 +382,8 @@ BSTEventResult TP_MAKE_THISCALL(
     InputEvent* const* appEvent,
     EventDispatcher<InputEvent*>* apEventSource)
 {
+    if (MainMenuRuntime::ConsumePresentationInput(appEvent ? *appEvent : nullptr))
+        return BSTEventResult::kOk;
     const char* const pAction = FindSaveAction(appEvent);
     if (pAction)
         LogMenuControlsAction(pAction, "Enter");
