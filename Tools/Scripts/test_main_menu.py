@@ -60,7 +60,8 @@ class MainMenuStructure(unittest.TestCase):
         renderer = read("Code/client/Games/Skyrim/MainMenuPrompt.cpp")
         for literal in ('"ÉCHAP"', '"Passer"', '"ESC"', '"Skip"', '"fr"', '"en"'):
             self.assertNotIn(literal, renderer)
-        self.assertIn('Action.text", Value(m_action.c_str())', renderer)
+        self.assertIn('FormatText(uiMovie, "_root.STREIntroPrompt.Action", m_action.c_str()', renderer)
+        self.assertIn('".text").c_str(), Value(apText)', renderer)
         self.assertNotIn("htmlText", renderer)
         imgui = read("Code/client/Services/Generic/ImguiService.cpp")
         video_draw = imgui[imgui.index("bool ImguiService::RenderMainMenuTexture"):imgui.index("void ImguiService::Reset")]
@@ -85,6 +86,44 @@ class MainMenuStructure(unittest.TestCase):
         self.assertIn("s_prompt && presentation->HidesCursor()", draw)
         self.assertIn("s_prompt->ReleaseMovie()", draw)
         self.assertFalse(list(PACKAGE.rglob("sharedcomponents.swf")))
+
+    def test_branding_localization_and_inert_draw_order(self):
+        catalog = configparser.ConfigParser()
+        catalog.read(PACKAGE / "STRE/MainMenu/localization.ini", encoding="utf-8-sig")
+        self.assertEqual(catalog["fr"]["MainMenuSubtitle"], "La Compagnie de l’Enfant de Dragon")
+        self.assertEqual(catalog["en"]["MainMenuSubtitle"], "Fellowship of the Dragonborn")
+        prompt = read("Code/client/Games/Skyrim/MainMenuPrompt.cpp")
+        for section in ("fr", "en"):
+            self.assertNotIn(catalog[section]["MainMenuSubtitle"], prompt)
+        self.assertIn('FormatText(uiMovie, path, m_text.c_str()', prompt)
+        runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
+        draw = runtime[runtime.index("void PostDisplayHook"):runtime.index("void CursorPostDisplayHook")]
+        self.assertLess(draw.index("presentation->Render()"), draw.index("s_subtitle->Render"))
+        self.assertLess(draw.index("s_subtitle->Render"), draw.index("s_postDisplay(apMenu)"))
+        presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
+        input_code = presentation[presentation.index("bool Presentation::CapturesInput"):presentation.index("void Presentation::OpenCurrent")]
+        self.assertNotIn("branding", input_code.lower())
+        self.assertIn("m_brandingReveal.Enter(m_observedEpoch != 0)", presentation)
+        self.assertIn("const bool background = !intro && !retained", presentation)
+
+    def test_branding_package_has_optional_independent_png_assets(self):
+        import struct
+        header = read("Code/client/MainMenu/Branding.h")
+        for name in ("emblem.png", "skyrim-wordmark.png"):
+            self.assertIn(f'"Branding/{name}"', header)
+            path = PACKAGE / "STRE/MainMenu/Branding" / name
+            if path.exists():  # omission remains a supported player package
+                data = path.read_bytes()
+                self.assertLessEqual(len(data), 16 * 1024 * 1024)
+                self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+                width, height, depth, color = struct.unpack(">IIBB", data[16:26])
+                self.assertEqual((depth, color), (8, 6))
+                self.assertLessEqual(max(width, height), 4096)
+                self.assertLessEqual(width * height, 4194304)
+        texture = read("Code/client/MainMenu/BrandingTexture.cpp")
+        for token in ("GUID_ContainerFormatPng", "GUID_WICPixelFormat32bppRGBA", "D3D11_USAGE_IMMUTABLE"):
+            self.assertIn(token, texture)
+        self.assertNotIn("GENERIC_WRITE", texture)
 
     def test_cursor_draw_gate_keeps_native_and_overlay_ownership(self):
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")

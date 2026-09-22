@@ -2,6 +2,8 @@
 
 #include "PresentationPolicy.h"
 #include "VideoPlayer.h"
+#include "Branding.h"
+#include "BrandingTexture.h"
 
 #include <atomic>
 #include <filesystem>
@@ -29,6 +31,8 @@ public:
     [[nodiscard]] bool Render();
     void EndFrame();
     void Disable();
+    // Render-thread result of this frame only, never an input/cursor lease.
+    [[nodiscard]] float SubtitleOpacity() const noexcept { return m_subtitleOpacity; }
 
 private:
     void OpenCurrent();
@@ -42,6 +46,11 @@ private:
     const bool m_backgroundAvailable;
     Controller m_controller;
     VideoPlayer m_video;
+    BrandingReveal m_brandingReveal;
+    BrandingTexture m_emblem;
+    BrandingTexture m_wordmark;
+    bool m_brandingAttempted{};
+    float m_subtitleOpacity{};
     InputLatch m_inputLatch;
     std::atomic<bool> m_open{};
     std::atomic<bool> m_introAttempted{};

@@ -2,6 +2,7 @@
 
 #include "MainMenuPrompt.h"
 #include "MainMenuRuntime.h"
+#include <MainMenu/Branding.h>
 
 #include <algorithm>
 #include <array>
@@ -102,6 +103,18 @@ double Number(void* apMovie, const char* apPath)
     return result;
 }
 
+bool FormatText(void* apMovie, const char* apPath, const char* apText, double aSize, double aColor)
+{
+    const std::array<Value, 3> formatArgs{Value("$EverywhereMediumFont"), Value(aSize), Value(aColor)};
+    Value format;
+    Method<void (*)(void*, Value*, const char*, const Value*, std::uint32_t)>(apMovie, 0x0d)(
+        apMovie, &format, "TextFormat", formatArgs.data(), static_cast<std::uint32_t>(formatArgs.size()));
+    const bool formatted = (format.Type & 0x0f) == 6 && Invoke(apMovie, (std::string(apPath) + ".setNewTextFormat").c_str(), {format}) &&
+                           Set(apMovie, (std::string(apPath) + ".text").c_str(), Value(apText)) && Invoke(apMovie, (std::string(apPath) + ".setTextFormat").c_str(), {format});
+    Release(format);
+    return formatted;
+}
+
 struct Viewport
 {
     std::int32_t BufferWidth, BufferHeight, Left, Top, Width, Height;
@@ -139,20 +152,18 @@ struct RootChildren
 };
 } // namespace
 
-IntroPrompt::IntroPrompt(std::uint32_t aScanCode, std::string aAction)
-    : m_scanCode(aScanCode)
-    , m_action(std::move(aAction))
+PresentationMovie::PresentationMovie()
 {
     uiMenuFlags = kNone;
     eInputContext = 0;
 }
 
-IntroPrompt::~IntroPrompt()
+PresentationMovie::~PresentationMovie()
 {
     ReleaseMovie();
 }
 
-void IntroPrompt::ReleaseMovie()
+void PresentationMovie::ReleaseMovie()
 {
     if (uiMovie)
     {
@@ -176,26 +187,18 @@ void IntroPrompt::Fail()
     ReleaseMovie();
 }
 
-bool IntroPrompt::Initialize()
+bool PresentationMovie::LoadLibrary()
 {
     auto& db = VersionDb::Get();
-    if (m_action.empty() || db.GetLoadedVersionString() != "1.6.1170.0")
+    if (db.GetLoadedVersionString() != "1.6.1170.0")
         return false;
     auto** manager = static_cast<void**>(db.FindAddressById(402775));
-    auto** input = static_cast<void**>(db.FindAddressById(402776));
     using LoadMovie = bool (*)(void*, IMenu*, void**, const char*, std::uint32_t, float);
     auto load = reinterpret_cast<LoadMovie>(db.FindAddressById(82325));
     s_releaseValue = reinterpret_cast<ReleaseValue>(db.FindAddressById(82270));
     s_visitMembers = reinterpret_cast<VisitMembers>(db.FindAddressById(82302));
-    if (!Readable(manager, sizeof(void*)) || !Readable(*manager, 0x40) || !Readable(input, sizeof(void*)) || !Readable(*input, 0x68) ||
-        !Readable(reinterpret_cast<const void*>(load), 1, true) || !Readable(reinterpret_cast<const void*>(s_releaseValue), 1, true) ||
-        !Readable(reinterpret_cast<const void*>(s_visitMembers), 1, true))
-        return false;
-    void* keyboard = *reinterpret_cast<void**>(static_cast<std::byte*>(*input) + 0x60);
-    if (!HasMethods(keyboard, {4}))
-        return false;
-    BSFixedString art;
-    if (!Method<bool (*)(void*, std::uint32_t, BSFixedString&)>(keyboard, 4)(keyboard, m_scanCode, art) || !art.data || !Readable(art.data, 128) || strnlen_s(art.data, 128) == 128)
+    if (!Readable(manager, sizeof(void*)) || !Readable(*manager, 0x40) || !Readable(reinterpret_cast<const void*>(load), 1, true) ||
+        !Readable(reinterpret_cast<const void*>(s_releaseValue), 1, true) || !Readable(reinterpret_cast<const void*>(s_visitMembers), 1, true))
         return false;
     // Load the player's installed library, not a copied Bethesda asset. No
     // StartMenu instance, menu registration, control context or callback action.
@@ -217,6 +220,30 @@ bool IntroPrompt::Initialize()
             return false;
 
     Method<void (*)(void*, std::uint32_t)>(uiMovie, 0x1d)(uiMovie, 5); // top-left, no scale
+    return true;
+}
+
+IntroPrompt::IntroPrompt(std::uint32_t aScanCode, std::string aAction)
+    : m_scanCode(aScanCode)
+    , m_action(std::move(aAction))
+{
+}
+
+bool IntroPrompt::Initialize()
+{
+    if (m_action.empty() || VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+        return false;
+    auto** input = static_cast<void**>(VersionDb::Get().FindAddressById(402776));
+    if (!Readable(input, sizeof(void*)) || !Readable(*input, 0x68))
+        return false;
+    void* keyboard = *reinterpret_cast<void**>(static_cast<std::byte*>(*input) + 0x60);
+    if (!HasMethods(keyboard, {4}))
+        return false;
+    BSFixedString art;
+    if (!Method<bool (*)(void*, std::uint32_t, BSFixedString&)>(keyboard, 4)(keyboard, m_scanCode, art) || !art.data || !Readable(art.data, 128) || strnlen_s(art.data, 128) == 128)
+        return false;
+    if (!LoadLibrary())
+        return false;
     if (!Invoke(uiMovie, "_root.createEmptyMovieClip", {Value("STREIntroPrompt"), Value(16384.0)}) ||
         !Invoke(uiMovie, "_root.STREIntroPrompt.attachMovie", {Value(art.data), Value("Key"), Value(1.0)}) ||
         !Invoke(uiMovie, "_root.STREIntroPrompt.createTextField", {Value("Action"), Value(2.0), Value(0.0), Value(0.0), Value(1.0), Value(1.0)}))
@@ -238,14 +265,7 @@ bool IntroPrompt::Layout(int aWidth, int aHeight)
     // TextFormat uses Skyrim's font mapping; localized content is plain text,
     // never HTML/ActionScript. A native key sprite supplies its own cartouche.
     const double scale = std::clamp(aHeight / 1080.0, 0.5, 3.0);
-    const std::array<Value, 3> formatArgs{Value("$EverywhereMediumFont"), Value(24.0 * scale), Value(0xffffff * 1.0)};
-    Value format;
-    Method<void (*)(void*, Value*, const char*, const Value*, std::uint32_t)>(uiMovie, 0x0d)(
-        uiMovie, &format, "TextFormat", formatArgs.data(), static_cast<std::uint32_t>(formatArgs.size()));
-    const bool formatted = (format.Type & 0x0f) == 6 && Invoke(uiMovie, "_root.STREIntroPrompt.Action.setNewTextFormat", {format}) &&
-                           Set(uiMovie, "_root.STREIntroPrompt.Action.text", Value(m_action.c_str())) && Invoke(uiMovie, "_root.STREIntroPrompt.Action.setTextFormat", {format});
-    Release(format);
-    if (!formatted)
+    if (!FormatText(uiMovie, "_root.STREIntroPrompt.Action", m_action.c_str(), 24.0 * scale, 0xffffff))
         return false;
     if (!Set(uiMovie, "_root.STREIntroPrompt.Key._xscale", Value(2400.0 * scale / m_keyHeight)) ||
         !Set(uiMovie, "_root.STREIntroPrompt.Key._yscale", Value(2400.0 * scale / m_keyHeight)))
@@ -274,24 +294,97 @@ void IntroPrompt::Render(void* apMainMenuMovie)
     }
     if (!uiMovie)
         return;
-    if (!HasMethods(apMainMenuMovie, {0x1a}))
+    int width{}, height{};
+    if (!CopyViewport(apMainMenuMovie, width, height))
+        return;
+    if ((m_width != width || m_height != height) && !Layout(width, height))
     {
         Fail();
         return;
     }
+    m_width = width;
+    m_height = height;
+    if (!Set(uiMovie, "_root.STREIntroPrompt._alpha", Value(std::min((GetTickCount64() - m_started) / 350.0, 1.0) * 85.0)))
+    {
+        Fail();
+        return;
+    }
+    Method<void (*)(void*)>(uiMovie, 0x26)(uiMovie);
+}
+bool PresentationMovie::CopyViewport(void* apMainMenuMovie, int& aWidth, int& aHeight)
+{
+    if (!HasMethods(apMainMenuMovie, {0x1a}))
+        return false;
     Viewport viewport{};
     Method<void (*)(void*, Viewport*)>(apMainMenuMovie, 0x1a)(apMainMenuMovie, &viewport);
-    if (viewport.Width <= 0 || viewport.Height <= 0)
-        return;
+    if (viewport.Width <= 0 || viewport.Height <= 0 || viewport.Width > 16384 || viewport.Height > 16384)
+        return false;
     Method<void (*)(void*, const Viewport&)>(uiMovie, 0x19)(uiMovie, viewport);
-    if ((m_width != viewport.Width || m_height != viewport.Height) && !Layout(viewport.Width, viewport.Height))
+    aWidth = viewport.Width;
+    aHeight = viewport.Height;
+    return true;
+}
+
+MenuSubtitle::MenuSubtitle(std::string aText)
+    : m_text(std::move(aText))
+{
+}
+
+void MenuSubtitle::Fail()
+{
+    spdlog::warn("[STRE][MainMenu] subtitle unavailable; background and vanilla remain active");
+    ReleaseMovie();
+}
+
+bool MenuSubtitle::Layout(int aWidth, int aHeight)
+{
+    const auto layout = STRE::MainMenu::LayoutBranding(static_cast<float>(aWidth), static_cast<float>(aHeight), 0, 0);
+    constexpr auto path = "_root.STRESubtitle";
+    if (!FormatText(uiMovie, path, m_text.c_str(), layout.FontSize, 0xdfce9b))
+        return false;
+    double width = Number(uiMovie, "_root.STRESubtitle._width");
+    if (width > layout.SubtitleMaxWidth)
+    {
+        // Fit longer translations without stretching the font or wrapping.
+        if (!FormatText(uiMovie, path, m_text.c_str(), layout.FontSize * layout.SubtitleMaxWidth / width * 0.95, 0xdfce9b))
+            return false;
+        width = Number(uiMovie, "_root.STRESubtitle._width");
+    }
+    const double height = Number(uiMovie, "_root.STRESubtitle._height");
+    if (width <= 0 || width > layout.SubtitleMaxWidth || height <= 0 || height > aHeight * 0.10)
+        return false;
+    return Set(uiMovie, "_root.STRESubtitle._x", Value(layout.CenterX - width * 0.5)) && Set(uiMovie, "_root.STRESubtitle._y", Value(double(layout.SubtitleY)));
+}
+
+void MenuSubtitle::Render(void* apMainMenuMovie, float aOpacity)
+{
+    if (m_text.empty() || !std::isfinite(aOpacity) || aOpacity <= 0)
+        return;
+    if (!m_attempted)
+    {
+        m_attempted = true;
+        if (!LoadLibrary() || !Invoke(uiMovie, "_root.createTextField", {Value("STRESubtitle"), Value(16384.0), Value(0.0), Value(0.0), Value(1.0), Value(1.0)}) ||
+            !Set(uiMovie, "_root.STRESubtitle.selectable", Value(false)) || !Set(uiMovie, "_root.STRESubtitle.embedFonts", Value(true)) ||
+            !Set(uiMovie, "_root.STRESubtitle.autoSize", Value("left")) || !Set(uiMovie, "_root.STRESubtitle.noTranslate", Value(true)))
+        {
+            Fail();
+            return;
+        }
+        Method<float (*)(void*, float, std::uint32_t)>(uiMovie, 0x25)(uiMovie, 0.0f, 0);
+    }
+    if (!uiMovie)
+        return;
+    int width{}, height{};
+    if (!CopyViewport(apMainMenuMovie, width, height))
+        return;
+    if ((m_width != width || m_height != height) && !Layout(width, height))
     {
         Fail();
         return;
     }
-    m_width = viewport.Width;
-    m_height = viewport.Height;
-    if (!Set(uiMovie, "_root.STREIntroPrompt._alpha", Value(std::min((GetTickCount64() - m_started) / 350.0, 1.0) * 85.0)))
+    m_width = width;
+    m_height = height;
+    if (!Set(uiMovie, "_root.STRESubtitle._alpha", Value(std::min(aOpacity, 1.0f) * 100.0)))
     {
         Fail();
         return;

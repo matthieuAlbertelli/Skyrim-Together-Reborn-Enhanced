@@ -115,7 +115,7 @@ console's existing bundled SimpleIni parser (char-only, no additional conversion
 library). Reuse the established locale/key/fallback pattern. `Language=auto`
 matches the catalog's `SkyrimLanguage` aliases against the existing native
 INISettingCollection; explicit `Language` selects a catalog section. Both files
-are read once with bounds. Only the action is translated; an unavailable hint
+are read once with bounds. Presentation labels share this resolver with independent per-key fallback; an unavailable hint
 does not alter presentation state.
 
 ### Native prompt audit and choice
@@ -141,7 +141,8 @@ library's existing root display children (including quantity-menu samples), then
 attaches only the native key symbol and a plain text field using
 `$EverywhereMediumFont` with embedded fonts enabled. No new SWF, Flash compiler,
 asset extraction at runtime, plugin, hook or replacement menu is required.
-The existing ImGui path now draws only video/black cover, without hint text.
+The existing ImGui path draws video/black cover and optional branding images,
+without text.
 
 The host has no menu flags, registration, input handling or delegate actions;
 `RefreshPlatform` is deliberately inert. It never renders or modifies the Main
@@ -206,6 +207,55 @@ override is added. Alt-Tab cannot unbalance a counter owned by this feature;
 native/overlay focus and lifecycle handling continue normally. The visual result
 and focus transitions still require the feature's human acceptance matrix.
 
+## Branding composition
+
+`Presentation` owns two optional `BrandingTexture` objects and a portable
+`BrandingReveal`. The existing PostDisplay pass draws video, emblem and wordmark
+through one local ImGui draw list/backend; `MainMenuRuntime` then draws the
+native subtitle and finally invokes the unchanged vanilla Main Menu display.
+There is no new hook, context, device, input surface or registered native menu.
+`SubtitleOpacity()` is a render-thread frame result, never a capture lease.
+Missing components do not feed errors into the video controller.
+
+`BrandingReveal` starts only on an actual background texture, excluding the
+retained intro frame. The existing menu-close epoch distinguishes the first
+visit from every return, including a close/reopen between render frames or an
+exit during the intro/reveal. Timings and viewport-relative safe-area layout are
+pure functions tested independently. The product contract owns their values.
+Resize recomputes layout without restarting the animation. Assets and the inert
+subtitle movie remain cached across gameplay and are released on reset/destruction;
+failed loads are not retried in a frame loop.
+
+Image-loader audit: TiltedUI already uses Windows WIC through DirectXTK for its
+cursor PNG. That helper produces a GPU texture but does not expose pixels for
+alpha bounds. This feature uses the same OS codec directly, with a bounded
+in-memory PNG snapshot, dimension checks before RGBA allocation, alpha-bound
+measurement and one immutable DX11 upload. No external decoder package or
+DirectXTK upgrade is needed. `windowscodecs` is a Windows-only system link.
+[WIC format conversion](https://learn.microsoft.com/en-us/windows/win32/api/wincodec/nf-wincodec-iwicformatconverter-initialize)
+produces straight RGBA for the existing ImGui alpha blend; no premultiplied-alpha
+mismatch, GPU readback, file rewrite or runtime asset extraction is involved.
+COM initialization balances only its own successful call and accepts an existing
+STA. HRESULTs are logged once per image. File/pixel budgets cap normal decode
+work; as with other in-process OS decoders, there is no hard CPU preemption.
+
+`PresentationMovie` factors the existing private library load, child hiding,
+viewport copy and movie/delegate release from `IntroPrompt`. `MenuSubtitle`
+reuses that inert host plus the same plain-text formatter/native font. It needs
+no keyboard mapping, so missing keyboard art cannot suppress the subtitle.
+The intro prompt still releases at intro exit and retains its own once-only
+initialization guard. Both hosts stay behind the same 1.6.1170 adapter and use
+only previously audited native methods. No new native relocation is introduced.
+A library/font/text-layout failure affects only its own display component.
+
+`ResolveText` parses the catalog once for both labels. Locale selection is shared;
+each key independently falls back to English, then empty. The same size,
+single-line and valid UTF-8 checks apply to both. Native labels use `.text`, never
+HTML or script evaluation. Translations and images remain separate from video.
+PNG provenance and the unbranded-background requirement belong to
+[the asset record](README.md#asset-provenance-gate); the Main Menu Video
+attribution below is unchanged.
+
 ## Provenance and licensing
 
 Audited upstream:
@@ -229,7 +279,7 @@ Video provenance is separate and belongs to the [product contract](README.md).
 
 ## Build, packaging and ADR
 
-Client Windows links add only `mfuuid`, `ole32` and `oleaut32`. The hidden
+Client Windows links add `mfuuid`, `ole32`, `oleaut32` and `windowscodecs`. The hidden
 Windows media smoke in TPTests additionally uses the OS encoder to generate a
 temporary H.264 fixture; it is not a runtime dependency or a shipped video.
 No executable/DLL is added to Data/SKSE/Plugins. The existing playable workflow

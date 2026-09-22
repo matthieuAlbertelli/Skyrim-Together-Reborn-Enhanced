@@ -9,6 +9,57 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Main Menu independent branding follow-up (2026-09-22)
+
+Implemented, **in-game acceptance pending**: the existing background pass now
+composes optional transparent emblem/wordmark textures and a real localized
+subtitle, before the unchanged vanilla Main Menu. The first background frame
+starts a 1.5-second reveal; later visits show final branding immediately.
+The existing native hint's inert Scaleform loader/formatter/ownership is shared
+with the subtitle. No new hook, context, SWF, input surface, plugin, shared-state
+contract or ADR was introduced. Intro, skip, cursor and video-controller/input
+logic retain their contracts. The maintainer's earlier trailer smoke does not
+validate this new composition or the complete native hint/cursor matrix.
+
+The two PNGs supplied locally have usable alpha and remain byte-identical.
+The maintainer explicitly authorized their commit/redistribution and supplied
+STRE/ChatGPT image-generation provenance, recorded in
+[the feature asset record](../features/main-menu/README.md#asset-provenance-gate).
+Windows WIC decoding produces useful cropped textures of 612×1228 and 1586×290;
+only GPU image bounds change, not the source files. Both MP4s remain local and
+untracked, with redistribution permission pending. The current background still
+contains baked branding; an approved clean export is needed for final visual QA.
+Main Menu Video attribution/licensing is unchanged.
+
+Executed in the main checkout on `feat/main-menu-remaster`, starting at
+`2b8d9201935722c92c621489e29b97ec647089f8`:
+
+- Debug and releasedbg: `xmake config -P . -m <mode> -y`,
+  `xmake build -P . -y -j 6 TPTests`,
+  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including production
+  Angular. Existing compiler/toolchain warnings remain; no new feature warning
+  was observed. Debug configuration restored after validation.
+- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`: PASS,
+  530 assertions / 25 cases. Full default TPTests: PASS, 44,335 / 415.
+- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu-branding-assets]"`:
+  PASS, 9 assertions / 1 case, decoding the actual supplied PNGs on WARP DX11.
+  Generated-PNG tests also read back straight RGBA pixels and exercise invalid
+  alpha, absent/corrupt/oversized images, invalid device and stale-texture release.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 107 tests.
+  `python Tools/Scripts/test_main_menu.py --package
+  _audit/main-menu-branding/data-package`: PASS, 15 checks of the assembled
+  Main Menu Data payload (PNG/INI/GPL; no MP4). This is not a full player-package
+  or deployment validation.
+- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and no
+  compiled PEX under Scripts/Source. Changed Markdown link targets and
+  `git diff --check`: PASS.
+
+No deploy/import, game launch, new branch/worktree or merge was performed.
+The native font, fade composition, clear-background appearance, aspect/resize,
+focus, return-from-gameplay and optional-resource failure matrix remain human
+acceptance work in [TEST_PLAN](../features/main-menu/TEST_PLAN.md). No 1.7.x
+validation is claimed. Live CI evidence remains on PR #87.
+
 ## Main Menu native skip prompt follow-up (2026-09-22)
 
 The maintainer requested vanilla UI styling for the intro hint after the first

@@ -7,6 +7,8 @@
 #include <imgui/imgui_impl_win32.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <MainMenu/Branding.h>
+#include <MainMenu/BrandingTexture.h>
 
 // According to imgui documentation we have to do it this way in order to avoid link conflicts with windows.h
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -49,7 +51,9 @@ void ImguiService::Render() const
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool ImguiService::RenderMainMenuTexture(ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext) const
+bool ImguiService::RenderMainMenuTexture(
+    ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, const STRE::MainMenu::BrandingTexture& aEmblem,
+    const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity) const
 {
     if (!m_ready || !apContext || !ImGui::GetCurrentContext())
         return false;
@@ -85,6 +89,16 @@ bool ImguiService::RenderMainMenuTexture(ID3D11ShaderResourceView* apTexture, un
         const ImVec2 imageMin(origin.x + (size.x - imageSize.x) * 0.5f, origin.y + (size.y - imageSize.y) * 0.5f);
         list.AddImage(apTexture, imageMin, ImVec2(imageMin.x + imageSize.x, imageMin.y + imageSize.y));
     }
+    const auto layout = STRE::MainMenu::LayoutBranding(size.x, size.y, aEmblem.Aspect(), aWordmark.Aspect());
+    const auto drawBranding = [&](const STRE::MainMenu::BrandingTexture& aImage, const STRE::MainMenu::BrandingRect& aRect, float aAlpha)
+    {
+        if (aImage.View && aAlpha > 0 && aRect.Width > 0 && aRect.Height > 0)
+            list.AddImage(
+                aImage.View.Get(), ImVec2(origin.x + aRect.X, origin.y + aRect.Y), ImVec2(origin.x + aRect.X + aRect.Width, origin.y + aRect.Y + aRect.Height), ImVec2(0, 0),
+                ImVec2(1, 1), IM_COL32(255, 255, 255, static_cast<int>(aAlpha * 255)));
+    };
+    drawBranding(aEmblem, layout.Emblem, aOpacity.Emblem);
+    drawBranding(aWordmark, layout.Wordmark, aOpacity.Wordmark);
     list.PopClipRect();
     ImDrawList* lists[]{&list};
     ImDrawData data;

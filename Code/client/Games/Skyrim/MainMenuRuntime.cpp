@@ -86,6 +86,7 @@ MusicPredicate s_musicAtUpdate{};
 bool s_hooksReady{};
 std::unique_ptr<Presentation> s_owner;
 std::unique_ptr<IntroPrompt> s_prompt;
+std::unique_ptr<MenuSubtitle> s_subtitle;
 std::atomic<Presentation*> s_presentation{};
 
 UI_MESSAGE_RESULTS ProcessMessageHook(IMenu* apMenu, UIMessage& aMessage)
@@ -115,6 +116,8 @@ void PostDisplayHook(IMenu* apMenu)
     }
     if (s_prompt)
         s_prompt->ReleaseMovie();
+    if (s_subtitle && presentation)
+        s_subtitle->Render(apMenu->uiMovie, presentation->SubtitleOpacity());
     s_postDisplay(apMenu);
 }
 
@@ -247,8 +250,9 @@ void InitializePresentation(RenderSystemD3D11& aRenderer, ImguiService& aImgui)
     const auto directory = context->gamePath / "Data" / STRE::MainMenu::cAssetDirectory;
     const auto text = ReadBoundedText<4096>(directory / STRE::MainMenu::cConfigFile);
     const auto config = STRE::MainMenu::ParseConfig(text);
-    auto action = STRE::MainMenu::ResolveSkipAction(ReadBoundedText<16384>(directory / STRE::MainMenu::cHintCatalogFile), text, SkyrimLanguage());
-    s_prompt = std::make_unique<IntroPrompt>(config.SkipKeyboard, std::move(action));
+    auto labels = STRE::MainMenu::ResolveText(ReadBoundedText<16384>(directory / STRE::MainMenu::cCatalogFile), text, SkyrimLanguage());
+    s_prompt = std::make_unique<IntroPrompt>(config.SkipKeyboard, std::move(labels.SkipAction));
+    s_subtitle = std::make_unique<MenuSubtitle>(std::move(labels.MainMenuSubtitle));
     s_owner = std::make_unique<Presentation>(aRenderer, aImgui, directory, config);
     s_presentation.store(s_owner.get());
 }
@@ -277,5 +281,7 @@ void ResetPresentation()
         s_owner->Disable();
     if (s_prompt)
         s_prompt->ReleaseMovie();
+    if (s_subtitle)
+        s_subtitle->ReleaseMovie();
 }
 } // namespace MainMenuRuntime

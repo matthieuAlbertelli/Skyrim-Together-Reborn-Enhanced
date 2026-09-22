@@ -16,6 +16,7 @@ xmake build -P . -y -j 6 TPTests
 ./build/windows/x64/debug/TPTests.exe "[main-menu]"
 ./build/windows/x64/debug/TPTests.exe
 ./build/windows/x64/debug/TPTests.exe "[main-menu-media]"
+./build/windows/x64/debug/TPTests.exe "[main-menu-branding-assets]"
 xmake build -P . -y -j 6 SkyrimImmersiveLauncher
 python Tools/Scripts/test_main_menu.py
 python Tools/Scripts/audit_ck_packaging.py
@@ -32,7 +33,15 @@ media, repeated errors, stalled/endless media, disabling, malformed config,
 canonical paths, and held keyboard/mouse/gamepad input.
 Localization tests cover French/English auto selection, explicit override,
 English fallback, an added locale, UTF-8/BOM, plain-text markup characters,
-ignored legacy key entries and unavailable/oversized/malformed labels. Structural
+ignored legacy key entries, independent subtitle fallback, invalid UTF-8 and
+unavailable/oversized/malformed labels. Branding tests exercise first/return/early
+exit timing, absent-background gating, deterministic fades, invalid clocks,
+proportions, bounded layout and ultrawide safe-area anchoring. Windows WARP tests
+generate their own PNG fixtures and verify actual straight-alpha texture pixels,
+transparent-margin cropping, missing/corrupt/opaque/empty/oversized files and
+null-device failure. The explicit asset smoke decodes the two supplied PNGs from
+the repository; run it from the repository root. It does not validate native
+Scaleform or visual composition in Skyrim. Structural
 checks verify no translated rendering strings, inert/optional native prompt
 ownership, no redistributed native movie and that CursorMenu's draw gate chains to vanilla without
 changing Win32/CEF cursor ownership. Default source checks inspect committed
@@ -87,6 +96,21 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
    Escape, gamepad skip, natural EOS, failure/disable and return from gameplay,
    without requiring mouse motion. Alt-Tab both during and after the intro;
    the desktop cursor and later CEF/vanilla interaction must behave normally.
+
+10. With an approved **background without baked logo/text**, observe the first
+    background frame, then the emblem, wordmark and localized subtitle reveal
+    over 1.5 seconds. Menu actions and vanilla music must already be available.
+    No branding may appear over the trailer or retained transition frame. Check
+    PNG transparency/edges, native subtitle font, accents/apostrophe, hierarchy,
+    legibility and clearance from vanilla menu actions at 16:9, 21:9, windowed
+    resize and Alt-Tab. Record an approved capture for visual review.
+11. Leave during a partial reveal, load gameplay and return repeatedly: branding
+    must be final on the first available background frame, without intro/reveal
+    replay. In fresh processes omit each PNG, both PNGs, or the subtitle key;
+    test corrupt/opaque images and a missing/invalid catalog. Only affected
+    decorations may disappear (English fallback first for text), with background,
+    native actions, music, cursor and skip behavior unaffected. Test disabled
+    presentation and missing/corrupt background: no orphan branding on vanilla.
 
 A native render reset may intentionally disable presentation for that process;
 vanilla must remain usable. Unknown runtime testing must never be reported as

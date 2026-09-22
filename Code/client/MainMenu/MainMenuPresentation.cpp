@@ -117,6 +117,7 @@ void Presentation::Publish()
 
 bool Presentation::Render()
 {
+    m_subtitleOpacity = 0;
     if (m_disabled || !m_open)
         return false;
     const double now = Now();
@@ -133,6 +134,7 @@ bool Presentation::Render()
     if (!m_opened)
     {
         m_opened = true;
+        m_brandingReveal.Enter(m_observedEpoch != 0);
         m_controller.Enter(now, m_introAvailable && !m_introAttempted, m_backgroundAvailable);
         m_introAttempted = m_controller.IntroAttempted();
         OpenCurrent();
@@ -184,13 +186,24 @@ bool Presentation::Render()
         texture = m_transitionFrame.Get();
     if (intro || (state == State::PlayingBackground && texture))
     {
+        const bool background = !intro && !retained;
+        if (background && !m_brandingAttempted)
+        {
+            m_brandingAttempted = true;
+            const auto emblemResult = m_emblem.Load(m_renderer.GetDevice(), m_directory / cEmblemFile);
+            const auto wordmarkResult = m_wordmark.Load(m_renderer.GetDevice(), m_directory / cWordmarkFile);
+            spdlog::info("[STRE][MainMenu] branding emblem={:08X} wordmark={:08X}", static_cast<std::uint32_t>(emblemResult), static_cast<std::uint32_t>(wordmarkResult));
+        }
+        const auto opacity = m_brandingReveal.Sample(now, background);
         if (!m_imgui.RenderMainMenuTexture(
-                texture, retained ? m_transitionWidth : m_video.Width(), retained ? m_transitionHeight : m_video.Height(), m_renderer.GetDeviceContext()))
+                texture, retained ? m_transitionWidth : m_video.Width(), retained ? m_transitionHeight : m_video.Height(), m_renderer.GetDeviceContext(), m_emblem, m_wordmark,
+                opacity))
         {
             spdlog::warn("[STRE][MainMenu] fallback reason=render-unavailable");
             Disable();
             return false;
         }
+        m_subtitleOpacity = opacity.Subtitle;
     }
     return intro;
 }
@@ -204,6 +217,7 @@ void Presentation::EndFrame()
         m_transitionFrame.Reset();
         m_opened = false;
         m_skip = false;
+        m_subtitleOpacity = 0;
         Publish();
     }
     // A lost/replaced PostDisplay hook must not leave audio/input captured.
@@ -220,6 +234,9 @@ void Presentation::Disable()
     m_controller.Disable();
     m_video.Stop();
     m_transitionFrame.Reset();
+    m_emblem = {};
+    m_wordmark = {};
+    m_subtitleOpacity = 0;
     Publish();
 }
 } // namespace STRE::MainMenu

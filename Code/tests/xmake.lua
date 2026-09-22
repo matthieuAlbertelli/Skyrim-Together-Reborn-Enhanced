@@ -7,9 +7,11 @@ target("TPTests")
     add_files("*.cpp")
     add_files("../client/MainMenu/PresentationPolicy.cpp")
     add_files("../client/MainMenu/Localization.cpp")
+    add_files("../client/MainMenu/Branding.cpp")
     if is_plat("windows") then
         add_files("../client/MainMenu/VideoPlayer.cpp")
-        add_syslinks("d3d11", "mfuuid", "mfplat", "mfreadwrite", "ole32", "oleaut32")
+        add_files("../client/MainMenu/BrandingTexture.cpp")
+        add_syslinks("d3d11", "mfuuid", "mfplat", "mfreadwrite", "ole32", "oleaut32", "windowscodecs")
     end
     add_deps(
         "SkyrimEncoding",

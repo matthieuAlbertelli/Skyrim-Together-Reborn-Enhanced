@@ -7,12 +7,11 @@ namespace MainMenuRuntime
 {
 // Private, display-only Scaleform host. Never registered on Skyrim's menu
 // stack, never receives input and never changes the Main Menu movie.
-class IntroPrompt final : public IMenu
+class PresentationMovie : public IMenu
 {
 public:
-    IntroPrompt(std::uint32_t aScanCode, std::string aAction);
-    ~IntroPrompt() override;
-    void Render(void* apMainMenuMovie);
+    PresentationMovie();
+    ~PresentationMovie() override;
     void ReleaseMovie();
 
     void PostCreate() override {}
@@ -22,6 +21,17 @@ public:
     void PostDisplay() override {}
     void PreDisplay() override {}
     void RefreshPlatform() override {}
+
+protected:
+    bool LoadLibrary();
+    bool CopyViewport(void* apMainMenuMovie, int& aWidth, int& aHeight);
+};
+
+class IntroPrompt final : public PresentationMovie
+{
+public:
+    IntroPrompt(std::uint32_t aScanCode, std::string aAction);
+    void Render(void* apMainMenuMovie);
 
 private:
     bool Initialize();
@@ -35,5 +45,19 @@ private:
     int m_width{};
     int m_height{};
     double m_keyHeight{};
+};
+
+class MenuSubtitle final : public PresentationMovie
+{
+public:
+    explicit MenuSubtitle(std::string aText);
+    void Render(void* apMainMenuMovie, float aOpacity);
+
+private:
+    bool Layout(int aWidth, int aHeight);
+    void Fail();
+    const std::string m_text;
+    bool m_attempted{};
+    int m_width{}, m_height{};
 };
 } // namespace MainMenuRuntime

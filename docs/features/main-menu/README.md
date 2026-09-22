@@ -25,7 +25,9 @@ The repository's Data source is `GameFiles/Skyrim/`:
 STRE/MainMenu/presentation.ini
 STRE/MainMenu/localization.ini
 STRE/MainMenu/intro.mp4       (optional; rights required)
-STRE/MainMenu/background.mp4  (optional; rights required)
+STRE/MainMenu/background.mp4  (optional; rights required; no baked branding)
+STRE/MainMenu/Branding/emblem.png
+STRE/MainMenu/Branding/skyrim-wordmark.png
 ```
 
 Use local MP4/H.264 video and, for the intro, Windows-supported audio such as AAC.
@@ -51,7 +53,8 @@ omitted only while the intro is active; normal rendering resumes on every exit.
 `Language = auto` in `[Presentation]` follows Skyrim's `sLanguage:General`.
 An explicit locale such as `fr` or `en` overrides it for this boot presentation;
 it does not change the CEF overlay's language setting. UTF-8 `localization.ini`
-contains locale sections with `SkyrimLanguage` and `SkipAction`: `Passer` in
+contains locale sections with `SkyrimLanguage`, `SkipAction` and
+`MainMenuSubtitle`. The skip action is `Passer` in
 French, `Skip` in English. Add a section to add a locale without renderer edits.
 The game supplies the key art for the configured scan code through its active
 keyboard device, including keyboard-layout naming. No `Key.*` translations or
@@ -62,7 +65,7 @@ so the earlier literal `[ÉCHAP]` / `[ESC]` text contract is superseded.
 Missing/invalid action labels fall back to `en`. If the label, keyboard mapping,
 key art or optional Scaleform view is unavailable, omit the hint without changing
 video, skip, cursor or vanilla fallback. Unknown art never displays another key.
-The catalog is limited to 16 KiB and action labels to 128 UTF-8 bytes on one line.
+The catalog is limited to 16 KiB and each label to 128 valid UTF-8 bytes on one line.
 They are assigned as plain text, not HTML. Native font coverage comes from the
 player's installed Skyrim font configuration.
 
@@ -71,6 +74,46 @@ button. Native `Cancel` can resolve to several context-dependent controls,
 including Tab and Escape; replacing the validated binding with that action would
 broaden/change it without a demonstrated robustness gain. The native prompt
 therefore represents the existing binding, without dispatching Cancel/Back.
+
+## Independent branding
+
+The background is a silent animated plate with **no logo or text baked in**.
+Optional transparent PNGs and a real localized subtitle form a separate,
+non-interactive group, drawn between the video and the unchanged vanilla menu.
+No intro branding is added over the trailer.
+
+On the first Main Menu visit, the first decoded background frame starts a short
+sequence: 150 ms with background alone, emblem fade from 150–600 ms, wordmark
+fade from 600–1050 ms, subtitle fade from 1050–1500 ms. These are simple linear
+fades; menu actions are already usable throughout. Loading or a retained intro
+frame never starts the reveal. Every later Main Menu visit displays the final
+branding as soon as the background is available, even if the first visit ended
+before its reveal. No extra timings or layout settings are required.
+
+The images retain their proportions in viewport-relative boxes inside a
+centered 16:9 safe area, including 21:9 and window resize. The group sits left of
+center, leaving room for vanilla actions on the right. The subtitle uses
+Skyrim's native `$EverywhereMediumFont` in muted gold, with bounded fitting for
+longer translations. Final visual balance and font coverage require in-game QA.
+
+`MainMenuSubtitle` uses the same automatic/explicit locale and per-key English
+fallback as the skip action:
+
+- French: `La Compagnie de l’Enfant de Dragon`.
+- English: `Fellowship of the Dragonborn`.
+
+Each PNG is optional independently; a missing/corrupt/opaque/empty image or GPU
+failure omits that image. A missing/invalid subtitle omits text after attempting
+English fallback. None of these failures changes video, audio, input, cursor or
+vanilla-menu state. Branding is absent when presentation is disabled or no
+background frame is available. Assets are attempted once per process and cached
+for later visits; restart after replacing them.
+
+PNG limits: 16 MiB compressed, 4096 pixels per dimension and 4,194,304 decoded
+pixels. Straight RGBA alpha is preserved. The loader trims transparent export
+margins in memory using alpha >= 8/255 plus one pixel of padding; it never
+rewrites the originals or merges them with video. Entirely opaque or invisible
+exports are omitted rather than guessing a black-background removal.
 
 ## Failure behavior
 
@@ -94,10 +137,11 @@ that external renderer disables this feature without deleting another mod.
 
 ## Asset provenance gate
 
-No video is included in the initial implementation. The maintainer confirmed
-on 2026-09-22 that the trailer is not supplied and the existing
-`MainMenuVideo/STRE_Menu_Background2.mp4` is a local prototype.
-Its original path/index state is preserved; it is not a distribution source.
+Video redistribution remains pending; local QA copies are not distribution
+sources. The original `MainMenuVideo/STRE_Menu_Background2.mp4` prototype does
+not define the final paths. The current local background still contains baked
+branding and must be replaced by an approved clean export for final visual QA;
+it must not be edited or renamed automatically.
 
 | Required provenance | intro.mp4 | background.mp4 |
 |---|---|---|
@@ -108,7 +152,22 @@ Its original path/index state is preserved; it is not a distribution source.
 | License / redistribution permission | Pending; do not distribute | Pending; do not distribute |
 | Third-party visuals/music/material | TBD | TBD |
 | Restrictions and credits | TBD | TBD |
-| Approved export hash and size | Pending asset delivery | Pending asset delivery |
+| Approved export hash and size | Pending approved export | Pending clean export |
+
+The maintainer authorized committing and redistributing both PNGs with STRE on
+2026-09-22. They are independent STRE Main Menu UI/branding assets, supplied
+unchanged; this authorization does not extend to either MP4.
+
+| Provenance | emblem.png | skyrim-wordmark.png |
+|---|---|---|
+| Author / responsible party | STRE project under maintainer editorial direction | Same |
+| Tool | ChatGPT / OpenAI image generation | Same |
+| Source / process, as reported by maintainer | Generated from the supplied replacement-logo reference, requesting the new emblem alone | Generated separately from the corresponding art direction/reference, requesting the isolated SKYRIM wordmark |
+| Redistribution | Explicitly authorized by maintainer for STRE | Same |
+| Creation date / model / tool version | TBD — not supplied | TBD — not supplied |
+| Exact reference identity / source rights / credits / separate asset-license identifier | TBD — maintainer metadata pending | TBD — maintainer metadata pending |
+| Supplied export | 1254 × 1254 RGBA, 773,485 bytes | 1672 × 941 RGBA, 579,294 bytes |
+| SHA256 | `3d9dcb06307c11270b4ba4854fccd3bc0e77bc092d357730690f9a01618d66b3` | `41f3da1539e6220a7df45c4505e41c0d7004a8b108acc660ecc141cbf3918203` |
 
 No Main Menu Video upstream media is reused. Before adding approved exports,
 complete this record, check file sizes against repository/hosting constraints,
