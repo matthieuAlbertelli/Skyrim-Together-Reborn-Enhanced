@@ -2,6 +2,7 @@
 
 import argparse
 import configparser
+import hashlib
 from pathlib import Path
 import re
 import subprocess
@@ -36,20 +37,32 @@ class MainMenuStructure(unittest.TestCase):
             relative = path.relative_to(PACKAGE).as_posix().lower()
             self.assertNotIn("po3_mainmenuvideo", name)
             self.assertFalse(relative.startswith("mainmenuvideo/"), relative)
+            if relative.startswith("stre/mainmenu/") and path.suffix.lower() == ".mp4":
+                self.assertIn(relative, ("stre/mainmenu/intro.mp4", "stre/mainmenu/background.mp4"))
 
-    def test_pending_media_rights_prevent_distribution(self):
+    def test_distribution_media_match_approved_exports(self):
         contract = read("docs/features/main-menu/README.md")
-        if "Pending; do not distribute" in contract:
-            if ASSEMBLED_PACKAGE:
-                self.assertEqual(list((PACKAGE / "STRE/MainMenu").glob("*.mp4")), [])
-            else:
-                # Maintainer-owned local/staged clips are allowed for gameplay
-                # QA. Check the committed distribution source, never mutate or
-                # accidentally publish that unrelated work in a UX commit.
-                names = subprocess.check_output(
-                    ["git", "-c", f"safe.directory={ROOT.as_posix()}", "ls-tree", "-r", "--name-only",
-                     "HEAD", "--", "GameFiles/Skyrim/STRE/MainMenu"], cwd=ROOT, text=True)
-                self.assertFalse(any(name.lower().endswith(".mp4") for name in names.splitlines()))
+        if ASSEMBLED_PACKAGE:
+            clips = list((PACKAGE / "STRE/MainMenu").rglob("*.mp4"))
+        else:
+            # Include staged distribution changes in pre-commit checks, while
+            # leaving the maintainer's untracked, uncleared intro private.
+            names = subprocess.check_output(
+                ["git", "-c", f"safe.directory={ROOT.as_posix()}", "ls-files", "--",
+                 "GameFiles/Skyrim/STRE/MainMenu"], cwd=ROOT, text=True)
+            clips = [ROOT / name for name in names.splitlines() if name.lower().endswith(".mp4")]
+        for clip in clips:
+            self.assertEqual(clip.name, "background.mp4", "Intro music permission is pending; never package it")
+            self.assertGreater(clip.stat().st_size, 0)
+            self.assertLessEqual(clip.stat().st_size, 100 * 1024 * 1024)
+            with clip.open("rb") as media:
+                self.assertEqual(media.read(8)[4:], b"ftyp")
+                media.seek(0)
+                digest = hashlib.sha256()
+                for chunk in iter(lambda: media.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            self.assertIn(digest.hexdigest(), contract, "Update the canonical provenance record for a changed export")
+            self.assertIn(f"{clip.stat().st_size:,}", contract)
 
     def test_localized_hint_catalog_and_renderer_boundary(self):
         catalog = configparser.ConfigParser()
@@ -129,7 +142,7 @@ class MainMenuStructure(unittest.TestCase):
         config = configparser.ConfigParser()
         config.read(PACKAGE / "STRE/MainMenu/presentation.ini", encoding="utf-8-sig")
         self.assertTrue(config["Branding"].getboolean("BackdropEnabled"))
-        self.assertEqual(config["Branding"].getfloat("BackdropOpacity"), 0.35)
+        self.assertEqual(config["Branding"].getfloat("BackdropOpacity"), 1.0)
         renderer = read("Code/client/Services/Generic/ImguiService.cpp")
         order = [renderer.index(token) for token in (
             "list.AddImage(apTexture", "drawBranding(aBackdrop", "drawBranding(aEmblem", "drawBranding(aWordmark")]

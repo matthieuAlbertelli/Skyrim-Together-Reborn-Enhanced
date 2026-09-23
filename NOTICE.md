@@ -27,6 +27,8 @@ runtime checks and process-local failure handling; it does not redistribute the
 upstream plugin, decoder implementation, OpenCV or any upstream media.
 See docs/features/main-menu/TECHNICAL_DESIGN.md for the exact derivation.
 
-STRE video assets require separate provenance and redistribution approval.
-No video is licensed for distribution by this code notice; the asset record is
-docs/features/main-menu/README.md.
+STRE Main Menu background and supplied branding visuals: Matthieu Albertelli /
+STRE, contributed under the repository's GPL-3.0-or-later terms. Their canonical
+provenance and export record is docs/features/main-menu/README.md.
+The local intro is excluded from distribution: its Lawrence James music awaits
+permission and is not licensed by this code/visual-contribution notice.

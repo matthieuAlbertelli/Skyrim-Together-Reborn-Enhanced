@@ -38,7 +38,9 @@ decode and audio internally, exposes EOS/error notifications and transfers
 frames to a BGRA DX11 texture using the existing device. This avoids OpenCV's
 additional build/package/dependency surface, duplicated decode/audio threads,
 and a separate codec DLL distribution. No OpenCV, FFmpeg, CommonLib or new
-package version is introduced. Windows SDK import GUIDs/COM libraries are used;
+package version is introduced as a runtime dependency. Offline asset export and
+inspection tools are recorded in the [asset provenance](README.md#asset-provenance-gate).
+Windows SDK import GUIDs/COM libraries are used;
 `mfplat.dll` is loaded explicitly from System32, so its absence fails open
 instead of preventing the executable from loading.
 
@@ -269,7 +271,7 @@ A library/font/text-layout failure affects only its own display component.
 each key independently falls back to English, then empty. The same size,
 single-line and valid UTF-8 checks apply to both. Native labels use `.text`, never
 HTML or script evaluation. Translations and images remain separate from video.
-PNG provenance and the unbranded-background requirement belong to
+Media provenance and export procedures belong to
 [the asset record](README.md#asset-provenance-gate); the Main Menu Video
 attribution below is unchanged.
 

@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 22, 2026.
+> **Last updated:** September 23, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -9,277 +9,92 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Main Menu center-left branding and backdrop follow-up (2026-09-22)
+## Startup and Main Menu presentation (2026-09-23)
 
-Implemented, **in-game visual acceptance pending**: the independent emblem,
-SKYRIM wordmark and localized subtitle now share a center-left anchor at 25% of
-viewport width, with a visual center around 51% of height. An optional static
-dark mist PNG draws between the video and emblem, using the existing emblem
-fade. Its default opacity is 0.35; bounded enable/opacity/scale/offset settings
-live in `[Branding]` of `presentation.ini`. The complete feathered canvas stays
-inside the left half. Missing/corrupt/disabled backdrop omits only that layer.
-No video, localization, native UI/input/cursor contract, fade timing, hook,
-context, SWF or dependency was changed by this follow-up.
+Implemented for [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86).
+The [feature contract](../features/main-menu/README.md) owns behavior and asset
+provenance; its [test plan](../features/main-menu/TEST_PLAN.md) owns acceptance.
+This consolidated checkpoint replaces the earlier preparation/UX snapshots;
+their exact intermediate diffs and evidence remain in Git history.
 
-The new 1254×1254 backdrop was generated with the built-in OpenAI image tool
-from text only, refined from its own first candidate, and copied unchanged.
-[Provenance, licensing, prompts and SHA256](../features/main-menu/README.md#dark-backdrop-provenance)
-are recorded separately from the supplied logo/title and pending MP4 rights.
-Its alpha is genuinely transparent (no fully opaque pixels; maximum edge alpha
-1/255), with a dense center reaching about 0.35 effective opacity at defaults.
-Both local MP4s remain untracked and untouched. Final visual acceptance still
-needs a clean background export without baked branding.
+The existing native client, MainMenuRuntime, ImGui/DX11 pass and Windows Media
+Foundation decoder implement once-per-process intro, configurable keyboard/gamepad
+skip, held-input suppression, intro-only cursor/music gating and bounded vanilla
+fallback. Installed Skyrim key art/font are rendered by an inert Scaleform host;
+the hint is not ImGui text. Independent center-left PNG branding and localized
+subtitle retain their staggered reveal; the backdrop follows the emblem fade.
+No new SKSE plugin, SWF, runtime decoder dependency, campaign state or ADR.
+Runtime-sensitive hooks remain fenced to exactly 1.6.1170.0 / SKSE 2.2.6 target;
+no 1.7.x support is claimed.
 
-Executed directly in the existing main checkout/branch, starting at
-`23e4d1c1078613f3204843814b6f59a98295dc44`:
+The distribution source now contains the maintainer's silent **forward + reverse**
+background export and three independent PNGs. The maintainer selected shipped
+`BackdropOpacity=1.0`; compiled fallback remains 0.35. Background visual authorship
+is confirmed as Matthieu Albertelli. The final source/export identities and rights
+record live only in [asset provenance](../features/main-menu/README.md#asset-provenance-gate).
+The maintainer withdrew the local intro from distribution while awaiting Lawrence
+James's music permission. Its original bytes remain untouched and untracked.
+The package therefore opens directly on background/branding when no separately
+supplied intro exists. Useful forward/ping-pong intermediates were preserved
+outside GameFiles in the ignored local audit source directory, not distributed.
 
-- Debug and releasedbg: `xmake build -P . -y -j 6 TPTests` and
-  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including production
-  Angular. Switched with `xmake config -P . -m releasedbg -y`; restored Debug
-  with `xmake config -P . -m debug -y`. Existing compiler/toolchain warnings remain.
-- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`: PASS,
-  1,277 assertions / 27 cases. Full default TPTests: PASS, 45,082 / 417.
-  Added bounded configuration/section isolation and proportional left-half
-  layout coverage across aspect ratios, scales and offsets.
-- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu-branding-assets]"`:
-  PASS, 13 assertions / 1 case; all three actual PNGs decode on WARP DX11.
-  Backdrop retains its full 1254×1254 canvas; existing emblem/wordmark trimming
-  remains 612×1228 / 1586×290. Generated-PNG tests cover the full-canvas option.
-- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 108 tests.
-  `python Tools/Scripts/test_main_menu.py --package
-  _audit/main-menu-backdrop/data-package`: PASS, 16 checks against the assembled
-  Main Menu PNG/INI/GPL payload, without MP4. This is not a full player-package
-  or deployment test.
-- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and no
-  compiled PEX under Scripts/Source. Changed Markdown link targets and
-  `git diff --check`: PASS.
+**Human evidence (maintainer attestation):**
 
-No deploy/import, game launch, new branch/worktree or merge was performed.
-The [human test plan](../features/main-menu/TEST_PLAN.md) now includes contrast
-against dragon/fire/blue barrier, soft edges, configurable backdrop failures,
-and the moved block's interaction with vanilla menu/news at different aspects.
-The earlier trailer smoke does not validate this composition; the complete
-native hint/cursor/focus matrix also remains pending. No 1.7.x claim.
+- 2026-09-22 first smoke: trailer, audio, Escape skip, transition to Main Menu /
+  background, and general behavior after intro: PASS.
+- 2026-09-23: current in-game behavior described as satisfactory, specifically
+  including the continuous ping-pong background: PASS at the reported scope.
+  The maintainer also explicitly selected backdrop opacity 1.0 for distribution.
 
-## Main Menu independent branding follow-up (2026-09-22)
+These reports do not identify exact executable hashes, resolution/aspect,
+controller model or logs/captures. They do not independently validate every
+native hint/cursor exit, Alt-Tab, all vanilla/campaign actions, gameplay return,
+all failures, 21:9, all resolutions/languages/controllers, or 1.7.x. Those remain
+pending in the feature matrix. No agent-operated in-game run is claimed.
 
-Implemented, **in-game acceptance pending**: the existing background pass now
-composes optional transparent emblem/wordmark textures and a real localized
-subtitle, before the unchanged vanilla Main Menu. The first background frame
-starts a 1.5-second reveal; later visits show final branding immediately.
-The existing native hint's inert Scaleform loader/formatter/ownership is shared
-with the subtitle. No new hook, context, SWF, input surface, plugin, shared-state
-contract or ADR was introduced. Intro, skip, cursor and video-controller/input
-logic retain their contracts. The maintainer's earlier trailer smoke does not
-validate this new composition or the complete native hint/cursor matrix.
+**Automated evidence:** native code is unchanged since validated head
+`5da99f8aeebe56074080270d24927d5726ee672d`; no redundant native rebuild was run for
+this media/configuration/documentation consolidation and Python packaging checks.
 
-The two PNGs supplied locally have usable alpha and remain byte-identical.
-The maintainer explicitly authorized their commit/redistribution and supplied
-STRE/ChatGPT image-generation provenance, recorded in
-[the feature asset record](../features/main-menu/README.md#asset-provenance-gate).
-Windows WIC decoding produces useful cropped textures of 612×1228 and 1586×290;
-only GPU image bounds change, not the source files. Both MP4s remain local and
-untracked, with redistribution permission pending. The current background still
-contains baked branding; an approved clean export is needed for final visual QA.
-Main Menu Video attribution/licensing is unchanged.
+- At that head, Debug and releasedbg builds of TPTests and
+  SkyrimImmersiveLauncher (including production Angular): PASS. Per mode,
+  `TPTests.exe "[main-menu]"`: 1,277 assertions / 27 cases; default suite:
+  45,082 / 417; `TPTests.exe "[main-menu-branding-assets]"`: 13 / 1, all PASS.
+  Windows and Linux CI for that head also passed. Debug configuration retained.
+- Earlier unchanged-decoder smoke: generated H.264, WARP frame transfer, EOS,
+  loop, missing/corrupt media and cancellation during load: PASS in Debug and
+  releasedbg. The native-resource address audit is static evidence only.
+- Current `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
+  PASS, 108 tests. `python Tools/Scripts/test_main_menu.py --package
+  _audit/main-menu-final/package/Data`: PASS, 16 checks. New checks reject
+  intermediate exports, excluded intro distribution, oversized files and a
+  background hash/size differing from the canonical provenance.
+- Current `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
+  zero compiled PEX under Scripts/Source. Full tracked Data payload assembled
+  from the Git index, matching clean-checkout CI inputs: 236 files,
+  107,721,486 bytes; every copied file hash verified. Expected MainMenu PNG/INI
+  and background are present; intro, po3 DLL/INI and MainMenuVideo prototype
+  directory are absent. This checks Data, not a new complete binary release.
+- Both local MP4s inspected with `ffprobe -v error -show_format -show_streams
+  -of json <file>`: H.264/MP4, 1080p60; intro has AAC stereo, final background
+  has no audio stream. `ffmpeg -v error -xerror -i <background> -f null NUL`:
+  full decode PASS. Frame-sequence comparison confirms 186 forward frames plus
+  186 reversed frames (372 total); sampled low-resolution luminance differences
+  remain below 0.37/255 per-frame mean against that expected order. This supports
+  the transformation, not a universal visual-quality claim.
+- Targeted code review found no required native change: input/cursor/music leases,
+  close/reset/skip/EOS/error exits, DX11/MF/Scaleform ownership, fixed Data paths,
+  bounded localization, runtime fence and po3 independence retain their contracts.
+  `dumpbin /dependents build/windows/x64/releasedbg/SkyrimTogether.exe` has no
+  Main Menu Video or mandatory mfplat/mfreadwrite import.
+- Changed Markdown targets and `git diff --check`: PASS. ROADMAP, acceptance index,
+  WBS, Dependency Map and Brief Catalog were reviewed and retain their canonical
+  links without duplicated status. GPL attribution remains in NOTICE and Data.
 
-Executed in the main checkout on `feat/main-menu-remaster`, starting at
-`2b8d9201935722c92c621489e29b97ec647089f8`:
-
-- Debug and releasedbg: `xmake config -P . -m <mode> -y`,
-  `xmake build -P . -y -j 6 TPTests`,
-  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including production
-  Angular. Existing compiler/toolchain warnings remain; no new feature warning
-  was observed. Debug configuration restored after validation.
-- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`: PASS,
-  530 assertions / 25 cases. Full default TPTests: PASS, 44,335 / 415.
-- Each mode: `./build/windows/x64/<mode>/TPTests.exe "[main-menu-branding-assets]"`:
-  PASS, 9 assertions / 1 case, decoding the actual supplied PNGs on WARP DX11.
-  Generated-PNG tests also read back straight RGBA pixels and exercise invalid
-  alpha, absent/corrupt/oversized images, invalid device and stale-texture release.
-- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 107 tests.
-  `python Tools/Scripts/test_main_menu.py --package
-  _audit/main-menu-branding/data-package`: PASS, 15 checks of the assembled
-  Main Menu Data payload (PNG/INI/GPL; no MP4). This is not a full player-package
-  or deployment validation.
-- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and no
-  compiled PEX under Scripts/Source. Changed Markdown link targets and
-  `git diff --check`: PASS.
-
-No deploy/import, game launch, new branch/worktree or merge was performed.
-The native font, fade composition, clear-background appearance, aspect/resize,
-focus, return-from-gameplay and optional-resource failure matrix remain human
-acceptance work in [TEST_PLAN](../features/main-menu/TEST_PLAN.md). No 1.7.x
-validation is claimed. Live CI evidence remains on PR #87.
-
-## Main Menu native skip prompt follow-up (2026-09-22)
-
-The maintainer requested vanilla UI styling for the intro hint after the first
-trailer smoke. The native-resource adapter replaces the ImGui hint from
-`df45487bbe5eed398374b8a583b0509a9fe20120`: a private, display-only Scaleform
-view uses installed Skyrim key art and font, with only the action translated by
-STRE. Native keyboard lookup removes catalog key-name duplication. No SWF or
-Bethesda asset is distributed. The existing cursor fix, Escape/gamepad bindings,
-input gate, audio/video transitions and once-per-process policy are retained.
-The ButtonBar/semantic Cancel audit and choice of resource reuse (preference 2)
-are recorded in [the technical design](../features/main-menu/TECHNICAL_DESIGN.md).
-
-Native prompt rendering is **implemented, in-game acceptance pending**. The
-maintainer's earlier trailer smoke below does not validate this new Scaleform
-view, font/layout, resource fallback or cursor/focus behavior. The independent
-movie has no native menu actions and is released on intro exit/reset; unavailable
-prompt resources omit only the hint. These lifecycle paths still need the
-[human matrix](../features/main-menu/TEST_PLAN.md).
-
-Automated/static evidence in the existing main checkout, same branch:
-
-- Debug and releasedbg: `xmake config -P . -m <mode> -y`,
-  `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`, and
-  `xmake build -P . -y -j 6 TPTests`: PASS. Native client/launcher and production
-  Angular built; existing compiler/toolchain warnings remain. Debug restored.
-- In each mode, `./build/windows/x64/<mode>/TPTests.exe "[main-menu]"`:
-  PASS, 310 assertions / 19 cases; full default TPTests: PASS, 44,115 / 409.
-- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
-  PASS, 105 tests, including 13 Main Menu structural checks.
-- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
-  zero compiled PEX under Scripts/Source. Changed Markdown links and
-  `git diff --check`: PASS.
-- Read-only installed BSA audit: `sharedcomponents.swf` exports `Esc`, `Space`,
-  `Enter` and other key art; French/English keyboard tables and PC control-map
-  contexts inspected. BSA SHA256:
-  `5c8d5275eeaaa87eec84c893da8dc3bf977e0197eba86560bb0d1dc651432957`.
-  Six new adapter address/vtable checks pass against the installed 1.6.1170 PE
-  and Address Library. This is static evidence, not a live Scaleform smoke.
-
-No deploy/import, game launch or merge was performed. Both maintainer-owned MP4s
-remain untracked and excluded from the PR; redistribution rights remain pending.
-No new branch/worktree was created. Live CI results remain on PR #87.
-
-## Main Menu first human smoke and intro UX follow-up (2026-09-22)
-
-Historical evidence for the first UX iteration; its ImGui hint is superseded
-by the native-resource implementation above. The cursor fix remains current.
-
-The maintainer reports a successful first in-game smoke of PR #87: trailer,
-audio, Escape skip, transition to Main Menu/background, and general behavior
-after the intro are PASS. This is human attestation; exact media/binary hashes,
-resolution and a trace were not supplied with that report. It does not establish
-the full controller, fallback, focus/resolution or return-from-gameplay matrix.
-
-The same smoke found the native cursor visible at the center during the trailer.
-The follow-up adds intro-only CursorMenu draw suppression, without touching
-Win32 ShowCursor counters, native visibility flags or UiSurfaceService's CEF
-cursor ownership. Normal rendering chains through on every intro exit.
-It also adds a bottom-right keyboard hint with a short fade, external UTF-8
-French/English translations, Skyrim-language auto selection/explicit override,
-and separate key/action labels. No gamepad hint is displayed. Existing skip,
-once-per-process policy, video/audio and vanilla-menu behavior are retained.
-
-New UX in-game acceptance is pending; the earlier human PASS must not be
-reported as validation of this cursor/hint change. Local QA videos remain
-outside the PR; redistribution provenance is still pending.
-
-Follow-up checks in the maintainer's existing main checkout on
-`feat/main-menu-remaster`, starting at `5a6e4038fbf6171fdc063bb79a6070bd457778a0`:
-
-- `xmake config -P . -m debug -y` and `xmake build -P . -y -j 6 TPTests`: PASS.
-- `xmake build -P . -y -j 6 -r SkyrimImmersiveLauncher`: PASS, forced native
-  client/launcher rebuild plus production UI; existing compiler warnings remain.
-- `./build/windows/x64/debug/TPTests.exe "[main-menu]"`: PASS, 309 assertions /
-  19 cases; `./build/windows/x64/debug/TPTests.exe`: PASS, 44,114 / 409.
-- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS, 104 tests.
-- `python Tools/Scripts/test_main_menu.py --package _audit/main-menu-ux/data-package`:
-  PASS, 12 checks of the INI/catalog/GPL Data payload, without local QA media.
-- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files and zero
-  PEX under Scripts/Source. Changed-document link targets: 35 PASS.
-  `git diff --check`: PASS.
-
-No deployment/import or agent-operated game test was performed for this UX
-iteration. The earlier PR head's Windows and Linux CI succeeded; those runs do
-not validate the later UX diff. Its CI is tracked by PR #87.
-
-## Startup trailer and animated Main Menu preparation (2026-09-22)
-
-Implemented in the proposed change for
-[#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86),
-from baseline `7dee263cac2aa994f16990b537ae4351e979c977`.
-Contract/design/acceptance belong to [Main Menu](../features/main-menu/README.md).
-
-- Presentation runs inside the existing native client/MainMenuRuntime and
-  ImGui/DX11 infrastructure, with a Windows Media Foundation frame-server
-  decoder. No new SKSE plugin, SWF, CEF screen, server message, campaign state,
-  ESP or Papyrus change.
-- Process-local intro-attempt policy, configurable keyboard/gamepad skip,
-  held-button suppression, native display/input gating, silent background loop,
-  retained transition frame and bounded fallback are implemented. The media
-  component is optional at process load. Runtime-sensitive presentation hooks
-  are fenced to `1.6.1170.0`; other versions disable this feature.
-- Local executable version inspection found Skyrim `1.6.1170.0` and SKSE DLL
-  `0, 2, 2, 6`. This identifies the installation, not in-game validation.
-- Video files are absent by design. Author, sources/tools and redistribution
-  rights remain pending maintainer confirmation. The staged prototype and local
-  po3 INI in the original checkout were preserved outside this worktree/PR.
-- Main Menu Video hook/order derivation is attributed to powerofthree at commit
-  `ec692f0745972ba3b381e2b1df5c4c56218ee8e0`, GPL-3.0-or-later. NOTICE and the
-  packaged GPL text record this separately from video provenance.
-
-Executed automated evidence on Windows:
-
-- `xmake config -P . -m debug -y` and
-  `xmake build -P . -y -j 6 TPTests`: PASS.
-- `./build/windows/x64/debug/TPTests.exe "[main-menu]"`: PASS,
-  289 assertions / 16 cases, including existing campaign Main Menu policy cases.
-- `./build/windows/x64/debug/TPTests.exe`: PASS, 44,094 assertions / 406 cases.
-- `./build/windows/x64/debug/TPTests.exe "[main-menu-media]"`: PASS,
-  748 assertions / 2 cases. Generated silent H.264, WARP DX11 frame transfer,
-  EOS, loop, missing/corrupt media and pending-load cancellation were exercised.
-  Polling makes this smoke's assertion count timing-dependent.
-- `xmake build -P . -y -j 6 SkyrimImmersiveLauncher`: PASS, including the
-  client and production Angular UI. Repeated after final C++ formatting and the
-  pre-menu music-lease fail-open correction.
-- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`: PASS,
-  102 tests; `python Tools/Scripts/test_main_menu.py`: PASS, 10 checks.
-- `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
-  no compiled PEX in Scripts/Source.
-- `xmake config -P . -m releasedbg -y`, `xmake build -P . -y -j 6`:
-  PASS for all Windows targets, including launcher/client, server and tests.
-  Existing native narrowing/deprecation and Angular budget warnings remain;
-  no warning-free build is claimed.
-- Releasedbg TPTests: `[main-menu]` PASS, 289 / 16; full default suite PASS,
-  44,094 / 406; `[main-menu-media]` PASS, 754 / 2.
-- `xmake install -P . -o ../install-releasedbg`: PASS. Local review package
-  assembled with the existing playable workflow layout, using installed binaries
-  under `SkyrimTogetherReborn`, repository Data, LICENSE/NOTICE/VERSION and
-  installation instructions. Symbols/build libraries/test executables excluded.
-- `python Tools/Scripts/test_main_menu.py --package ../package-releasedbg`:
-  PASS, 10 checks. INI and GPL text are present; no video, po3 prototype/plugin
-  or startmenu.swf is included. `dumpbin /dependents SkyrimTogether.exe` confirms
-  no mandatory `mfplat.dll`/`mfreadwrite.dll` import on the client.
-- Changed-document relative Markdown targets: PASS, 74 links.
-  `git diff --check`: PASS. The frontend install's incidental lockfile rewrite
-  was reverted; no dependency/lockfile change is proposed.
-
-Deployment preflight was read-only: the existing deploy script's enumeration and
-auto-import filter found 11 eligible live CK outputs, all byte-identical to the
-worktree. The legacy PEX in live Scripts/Source was correctly ignored. Neither
-CK import nor deployment was run. The local deploy script hardcodes the original
-checkout, which contains the prototype with unconfirmed rights; running it would
-not deploy this isolated branch safely. Script paths/filters/manifests are unchanged.
-
-An additional raw-PE call-opcode audit was inconclusive: on-disk Skyrim code is
-Steam CEG encoded (the existing launcher decodes it at load). Its opcode assertion
-did not pass; no live hook validation is inferred. Production preflight checks
-the loaded executable before patching.
-
-At this original preparation checkpoint, **in-game acceptance was pending**;
-the later first human smoke and its limits are recorded above. Remaining checks
-include native menu render order and input
-routing, actual trailer audio/synchronization, menu music recovery, no transition
-flash, all vanilla menu actions, campaign Continue/Resume, gameplay return,
-controller, focus/window/resolution changes and 16:9/21:9 require the human
-matrix in the feature test plan using separately approved local assets.
-No screenshots/runtime trace or 1.7.x support is claimed. The issue stays open
-until those acceptance and asset-provenance gates are met.
+No build/deploy/import script or CK manifest was changed. No deployment, new
+branch/worktree or merge was performed during consolidation. Current-head CI
+results belong to PR #87. Intro music permission, final-package gameplay evidence
+and the unconfirmed human matrix remain acceptance limits.
 
 ## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
 

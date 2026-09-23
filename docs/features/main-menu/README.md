@@ -24,14 +24,18 @@ The repository's Data source is `GameFiles/Skyrim/`:
 ```text
 STRE/MainMenu/presentation.ini
 STRE/MainMenu/localization.ini
-STRE/MainMenu/intro.mp4       (optional; rights required)
-STRE/MainMenu/background.mp4  (optional; rights required; no baked branding)
+STRE/MainMenu/intro.mp4       (optional local QA only; not distributed)
+STRE/MainMenu/background.mp4  (distributed silent ping-pong; no baked branding)
 STRE/MainMenu/Branding/emblem.png
 STRE/MainMenu/Branding/skyrim-wordmark.png
 STRE/MainMenu/branding_backdrop.png
 ```
 
 Use local MP4/H.264 video and, for the intro, Windows-supported audio such as AAC.
+The product payload includes the background and branding assets. The intro is
+excluded while its music permission is pending; without it, the process goes
+directly to background/branding and the usable vanilla menu. Its eventual
+approved export must keep the same path; no runtime path change is needed.
 The current resource bound is 4096 pixels per dimension and 8,847,360 pixels per
 frame. The image fills the active render viewport while preserving aspect ratio;
 edges may be cropped on a different aspect ratio.
@@ -105,17 +109,20 @@ pass. Its entire canvas is preserved, avoiding a cut through the soft edge.
 `[Branding]` in `presentation.ini` provides only contrast/placement tuning for
 this backdrop; it never moves the logos or changes their reveal timings:
 
-| Setting | Default | Accepted values |
+| Setting | Shipped value | Accepted values |
 |---|---|---|
 | `BackdropEnabled` | `true` | `true` / `false` |
-| `BackdropOpacity` | `0.35` | 0–1, multiplies PNG alpha and emblem fade |
+| `BackdropOpacity` | `1.0` | 0–1, multiplies PNG alpha and emblem fade |
 | `BackdropScale` | `1.0` | 0.5–1.5, uniform scaling |
 | `BackdropOffsetX` | `0` | −0.25–0.25, fraction of viewport width |
 | `BackdropOffsetY` | `0` | −0.25–0.25, fraction of viewport height |
 
 Size and offsets are further fitted inside the viewport's left half, keeping
 all feathering on-screen. Invalid/non-finite values retain defaults; read once
-at startup. Disabled or zero-opacity backdrops are not loaded. Missing/corrupt
+at startup. The shipped opacity is the maintainer-selected `1.0`; the compiled
+fallback remains `0.35` when that setting is absent or invalid. The PNG's own
+feathered alpha is preserved at either value. Disabled or zero-opacity backdrops
+are not loaded. Missing/corrupt
 backdrop omits only the shade, without hiding branding or changing video/input.
 There is no particle animation, smoke shader or background-video modification.
 
@@ -161,35 +168,65 @@ that external renderer disables this feature without deleting another mod.
 
 ## Asset provenance gate
 
-Video redistribution remains pending; local QA copies are not distribution
-sources. The original `MainMenuVideo/STRE_Menu_Background2.mp4` prototype does
-not define the final paths. The current local background still contains baked
-branding and must be replaced by an approved clean export for final visual QA;
-it must not be edited or renamed automatically.
+The maintainer identifies **Matthieu Albertelli** as creator of the visual assets
+and directs integration of the final background and branding in STRE. The supplied
+emblem and wordmark redistribution was explicitly authorized on 2026-09-22;
+visual authorship was confirmed on 2026-09-23. These STRE visual contributions
+follow the repository's GPL-3.0-or-later licensing. Credit Matthieu Albertelli / STRE;
+no additional visual-asset restriction or third-party source was reported.
+The intro music is a separate third-party work and is **not covered** by that
+visual-asset permission or the repository code license.
 
-| Required provenance | intro.mp4 | background.mp4 |
-|---|---|---|
-| Author / rights holder | TBD — maintainer confirmation | TBD — maintainer confirmation |
-| Creation date | TBD | TBD |
-| Tools and versions | TBD | TBD |
-| Source/master/export procedure | TBD | TBD |
-| License / redistribution permission | Pending; do not distribute | Pending; do not distribute |
-| Third-party visuals/music/material | TBD | TBD |
-| Restrictions and credits | TBD | TBD |
-| Approved export hash and size | Pending approved export | Pending clean export |
+### Distributed background
 
-The maintainer authorized committing and redistributing both PNGs with STRE on
-2026-09-22. They are independent STRE Main Menu UI/branding assets, supplied
-unchanged; this authorization does not extend to either MP4.
+| Provenance | background.mp4 |
+|---|---|
+| Author / responsible party | Matthieu Albertelli / STRE |
+| Integration authorization | Maintainer's final-consolidation request, 2026-09-23 |
+| Source | Maintainer-created unbranded background, preserved locally as `background_forward.mp4`; source SHA256 `1c6718d966a90ecb6fbe2d736c7feb58f0eacbb450514f24ba1ecd89e3ea1ea4` |
+| Transformation | Forward source frames followed by the same frames in reverse order; audio removed; exported as one MP4 for ordinary forward playback in a loop |
+| License / credit | GPL-3.0-or-later STRE visual contribution; Matthieu Albertelli / STRE |
+| Final export | MP4 / H.264, 1920×1080, 60 fps, 372 frames / 6.2 seconds, no audio stream; 10,407,500 bytes |
+| SHA256 | `c1fe5091952871665a21813422874aa6c695b3a99c944b700bbf8c88da2e7e68` |
+
+The source has 186 video frames. The written export procedure is: decode that
+source, concatenate its original frame sequence with the reversed sequence,
+retain 60 fps / 1920×1080, omit all audio, and encode a single H.264 MP4. Each
+runtime loop therefore presents **forward → reverse → forward**; the decoder
+itself never plays backward. Direction-change endpoint frames are retained.
+Regeneration may differ bytewise; any replacement requires a new hash and review.
+Creation-software metadata is intentionally omitted at the maintainer's request.
+
+The distributed file contains the scene only. Emblem, SKYRIM, subtitle and dark
+backdrop remain independent layers. Intermediate `background_forward.mp4`,
+`background_reverse.mp4` and `background_pingpong.mp4` must stay outside
+`GameFiles/Skyrim`; no prototype `MainMenuVideo` directory is part of this payload.
+
+### Excluded local intro
+
+The maintainer explicitly withdrew `intro.mp4` from this commit and distribution
+on 2026-09-23 while awaiting music permission. Visuals: Matthieu Albertelli.
+Music, as identified by the maintainer: **Lawrence James — "Opening Theme"**, from
+*Dragonborn (Unofficial Motion Picture Soundtrack)*. Naming/crediting the composer
+does not establish permission to redistribute the recording. Do not commit,
+package or attach this local clip until that permission and its terms are recorded.
+
+The reviewed local file is MP4 / H.264, 1920×1080 at 60 fps, 224.467302 seconds,
+with AAC stereo at 44.1 kHz; 410,859,556 bytes, SHA256
+`64dd8211f3da016c3e17fc6cc3d2e56eb0c514b8392f40c849dca0b206835313`.
+This is an identification of the excluded QA source, not an approved export.
+It also exceeds GitHub's ordinary Git file limit; an approved future distribution
+needs a suitable export/storage decision. No Git LFS migration is introduced here.
+
+### Supplied emblem and wordmark
 
 | Provenance | emblem.png | skyrim-wordmark.png |
 |---|---|---|
-| Author / responsible party | STRE project under maintainer editorial direction | Same |
+| Author / responsible party | Matthieu Albertelli / STRE | Same |
 | Tool | ChatGPT / OpenAI image generation | Same |
 | Source / process, as reported by maintainer | Generated from the supplied replacement-logo reference, requesting the new emblem alone | Generated separately from the corresponding art direction/reference, requesting the isolated SKYRIM wordmark |
-| Redistribution | Explicitly authorized by maintainer for STRE | Same |
-| Creation date / model / tool version | TBD — not supplied | TBD — not supplied |
-| Exact reference identity / source rights / credits / separate asset-license identifier | TBD — maintainer metadata pending | TBD — maintainer metadata pending |
+| License / credit | Authorized STRE contribution under repository GPL-3.0-or-later; Matthieu Albertelli / STRE | Same |
+| Supply / authorization date | 2026-09-22; supplied source references and visuals identified as the maintainer's creations on 2026-09-23 | Same |
 | Supplied export | 1254 × 1254 RGBA, 773,485 bytes | 1672 × 941 RGBA, 579,294 bytes |
 | SHA256 | `3d9dcb06307c11270b4ba4854fccd3bc0e77bc092d357730690f9a01618d66b3` | `41f3da1539e6220a7df45c4505e41c0d7004a8b108acc660ecc141cbf3918203` |
 
@@ -210,7 +247,7 @@ unchanged; this authorization does not extend to either MP4.
 No source-image editing/export toolchain is required: retain the selected PNG;
 regeneration from the following prompts is stochastic, not byte-reproducible.
 Runtime opacity/layout do not alter its pixels. This provenance is separate from
-the supplied emblem/wordmark and pending MP4 rights.
+the supplied emblem/wordmark, distributed background and excluded intro music.
 
 <details>
 <summary>Generation and refinement prompts</summary>
@@ -225,9 +262,9 @@ Edit this backdrop only. It must be a very soft darkening matte, NOT a visible l
 
 </details>
 
-No Main Menu Video upstream media is reused. Before adding approved exports,
-complete this record, check file sizes against repository/hosting constraints,
-and review packaging. No implicit Git LFS migration is authorized.
+No Main Menu Video upstream media is reused. Before replacing a distributed
+export or adding the intro, update this record, check rights and repository/hosting
+size limits, and review packaging. No implicit Git LFS migration is authorized.
 
 Architecture and code provenance: [Technical design](TECHNICAL_DESIGN.md).
 All acceptance scenarios: [Test plan](TEST_PLAN.md).

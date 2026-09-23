@@ -48,8 +48,10 @@ Scaleform or visual composition in Skyrim. Structural
 checks verify no translated rendering strings, inert/optional native prompt
 ownership, no redistributed native movie and that CursorMenu's draw gate chains to vanilla without
 changing Win32/CEF cursor ownership. Default source checks inspect committed
-media for redistribution; `--package` checks all media actually assembled.
-Maintainer-owned staged/untracked QA clips must remain excluded from commits.
+media in the Git index (including staged additions); `--package` checks all media
+actually assembled. The approved background must match the canonical export
+hash/size. Intermediate MP4s and po3 media are rejected. The uncleared local intro
+must remain untracked and outside assembled distribution packages.
 
 Structural checks cover Windows-only dependencies, shared renderer/input use,
 absence of network/persistence and SWF changes, CK isolation, GPL notice, and
@@ -61,8 +63,10 @@ relative links with the available documentation tooling.
 Target the [reference platform](../../testing/COMPATIBILITY_MATRIX.md): Steam
 Skyrim 1.6.1170 / SKSE 2.2.6. Record source commit, binary hash, exact video hashes,
 configuration, resolution/aspect, controller and relevant MainMenu logs.
-Use separately approved local media; never publish prototype captures/assets
-whose rights are still pending. Keep po3 Main Menu Video inactive.
+Use the distributed background and separately approved local intro for private
+QA; do not distribute the intro while music permission is pending. Keep po3
+Main Menu Video inactive. The distributed package without intro must open
+directly on background/branding and the usable vanilla menu.
 
 1. Start a fresh process. Confirm fullscreen intro, audible/synchronized trailer
    audio, no vanilla menu/buttons/cursor interaction and no competing menu music.
@@ -70,7 +74,8 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
    again with controller skip. Hold skip/Enter/A through transition; nothing may
    activate invisibly. Test mouse clicks, thumbsticks and unrelated buttons too.
 3. Confirm transition without native-background flash, menu entries unchanged,
-   silent background looping and normal vanilla menu music.
+   silent background looping and normal vanilla menu music. Observe several
+   complete forward → reverse → forward cycles and both direction changes.
 4. Exercise Continue/New/Load/Settings/Credits/Quit as available, including the
    campaign-aware Continue/Resume path. Load gameplay, return to Main Menu and
    confirm direct background with no trailer replay. Repeat the round trip.
@@ -120,7 +125,7 @@ whose rights are still pending. Keep po3 Main Menu Video inactive.
 12. Check the backdrop against the dragon, fire and blue barrier: background
     detail must remain visible, with a soft organic edge and no rectangular
     clipping/halo. Confirm its fade follows the emblem. In separate launches
-    try `BackdropEnabled=false`, opacity 0 / 0.35 / 0.45, scale limits and both
+    try `BackdropEnabled=false`, opacity 0 / 0.35 / 1.0, scale limits and both
     offset signs. The entire backdrop stays in the left half; foreground layout,
     reveal timing and menu interaction stay unchanged. Omit/corrupt only the
     backdrop PNG: logos/text/video must continue. Restore defaults afterward.
@@ -139,5 +144,12 @@ paths: a worktree build alone does not make it deploy the worktree.
 Use existing XMake/install and playable-package commands for a reviewable local
 package. Verify binaries under SkyrimTogetherReborn and Data content under
 STRE/MainMenu plus STRE/Licenses. No main-menu path enters the CK manifest.
-Optional videos can be absent. No po3 DLL/prototype config may enter the STRE
-package. No deployment or in-game PASS may be inferred from a successful build.
+Optional videos can be absent. The product payload currently includes only
+`background.mp4`; `intro.mp4` awaits music permission. Assemble from the tracked
+distribution source, as a clean CI checkout does, rather than copying private
+untracked QA media from the maintainer's Data tree. Verify the final MP4's size,
+SHA256, H.264/MP4 format and absence of audio with `ffprobe -v error -show_format
+-show_streams -of json <file>`; fully decode with `ffmpeg -v error -xerror -i
+<file> -f null NUL` on Windows. These are offline checks, not runtime dependencies.
+No po3 DLL/prototype config or intermediate forward/reverse/pingpong export may
+enter the package. No deployment or in-game PASS may be inferred from a build.
