@@ -49,12 +49,20 @@ outside GameFiles in the ignored local audit source directory, not distributed.
   PASS, explicitly confirmed by the maintainer on Skyrim 1.6.1170 / SKSE 2.2.6.
   This closes the final-package smoke requirement at that reported scope;
   intro music permission and the remaining human matrix are not covered.
+- 2026-09-23 return from gameplay: PASS; the intro did not replay, and the
+  background and branding were correct.
+- 2026-09-23 Alt-Tab / focus loss and regain during both intro and Main Menu:
+  PASS; cursor, input and menu behavior were correct.
+- 2026-09-23 temporary absence of `background.mp4`: PASS; clean fallback to
+  the vanilla menu, without crash or blocked interaction.
 
 These reports do not identify exact executable hashes, resolution/aspect,
-controller model or logs/captures. They do not independently validate every
-native hint/cursor exit, Alt-Tab, all vanilla/campaign actions, gameplay return,
-all failures, 21:9, all resolutions/languages/controllers, or 1.7.x. Those remain
-pending in the feature matrix. No agent-operated in-game run is claimed.
+controller model or logs/captures. The three final checks validate only the
+reported scenarios, not the entirety of their combined test-plan cases. They
+do not establish exhaustive native hint/cursor-exit or vanilla/campaign-action
+coverage. Repeated round trips, exit during partial branding reveal, remaining
+failure modes (including corrupt media), 21:9, all resolutions/languages/controllers
+and 1.7.x remain unconfirmed. No agent-operated in-game run is claimed.
 
 **Automated evidence:** native code is unchanged since validated head
 `5da99f8aeebe56074080270d24927d5726ee672d`; no redundant native rebuild was run for
@@ -95,9 +103,9 @@ this media/configuration/documentation consolidation and Python packaging checks
   WBS, Dependency Map and Brief Catalog were reviewed and retain their canonical
   links without duplicated status. GPL attribution remains in NOTICE and Data.
 
-No build/deploy/import script or CK manifest was changed. No deployment, new
-branch/worktree or merge was performed during consolidation. Current-head CI
-results belong to PR #87. Intro music permission and the unconfirmed human matrix
+No build/deploy/import script or CK manifest was changed. No deployment or new
+branch/worktree was performed during consolidation. CI and merge history belong
+to PR #87. Intro music permission and the unconfirmed human matrix
 remain acceptance limits; the intro stays excluded from distribution.
 
 ## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
