@@ -45,6 +45,10 @@ outside GameFiles in the ignored local audit source directory, not distributed.
 - 2026-09-23: current in-game behavior described as satisfactory, specifically
   including the continuous ping-pong background: PASS at the reported scope.
   The maintainer also explicitly selected backdrop opacity 1.0 for distribution.
+- 2026-09-23 final smoke of the distributed package **without `intro.mp4`**:
+  PASS, explicitly confirmed by the maintainer on Skyrim 1.6.1170 / SKSE 2.2.6.
+  This closes the final-package smoke requirement at that reported scope;
+  intro music permission and the remaining human matrix are not covered.
 
 These reports do not identify exact executable hashes, resolution/aspect,
 controller model or logs/captures. They do not independently validate every
@@ -93,8 +97,8 @@ this media/configuration/documentation consolidation and Python packaging checks
 
 No build/deploy/import script or CK manifest was changed. No deployment, new
 branch/worktree or merge was performed during consolidation. Current-head CI
-results belong to PR #87. Intro music permission, final-package gameplay evidence
-and the unconfirmed human matrix remain acceptance limits.
+results belong to PR #87. Intro music permission and the unconfirmed human matrix
+remain acceptance limits; the intro stays excluded from distribution.
 
 ## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
 
