@@ -4,7 +4,19 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 ## [Unreleased]
 
-_No unreleased STRE-specific changes documented yet._
+### Added
+
+- Native startup/Main Menu presentation for Skyrim 1.6.1170 / SKSE 2.2.6:
+  once-per-process optional trailer, configurable keyboard/controller skip,
+  native Scaleform keyboard prompt, intro-only cursor/input suppression and
+  bounded vanilla fallback. No 1.7.x support is claimed.
+- Distributed silent forward/reverse ping-pong background, independent
+  center-left emblem/SKYRIM assets, localized subtitle and feathered backdrop.
+  The local intro is excluded while its music permission is pending; packages
+  without it open directly on the background and unchanged vanilla menu.
+  Contract and asset provenance: [Main Menu](docs/features/main-menu/README.md).
+- Policy, decoder and packaging coverage, with Main Menu Video GPL attribution.
+  Actual automated and human validation: [STATUS](docs/project/STATUS.md).
 
 ## [0.4.0-alpha.1] - 2026-09-19
 

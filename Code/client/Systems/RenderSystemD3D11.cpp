@@ -5,6 +5,7 @@
 #include <Services/DebugService.h>
 #include <Services/OverlayService.h>
 #include <Services/ImguiService.h>
+#include <Games/Skyrim/MainMenuRuntime.h>
 
 #include <d3d11.h>
 
@@ -41,18 +42,21 @@ void RenderSystemD3D11::OnDeviceCreation(IDXGISwapChain* apSwapChain, ID3D11Devi
     m_pDeviceContext = apContext;
 
     m_imguiService.Create(this, GetWindow());
+    MainMenuRuntime::InitializePresentation(*this, m_imguiService);
     m_overlay.Create(this);
     DebugService::ArrangeGameWindows(GetWindow());
 }
 
 void RenderSystemD3D11::OnRender()
 {
+    MainMenuRuntime::EndPresentationFrame();
     m_imguiService.Render();
     m_overlay.Render();
 }
 
 void RenderSystemD3D11::OnReset(IDXGISwapChain* apSwapChain)
 {
+    MainMenuRuntime::ResetPresentation();
     m_pSwapChain = apSwapChain;
 
     m_overlay.Reset();

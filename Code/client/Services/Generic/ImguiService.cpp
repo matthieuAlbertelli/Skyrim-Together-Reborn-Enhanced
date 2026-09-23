@@ -6,6 +6,9 @@
 #include <imgui/imgui_impl_dx11.h>
 #include <imgui/imgui_impl_win32.h>
 #include <imgui.h>
+#include <imgui_internal.h>
+#include <MainMenu/Branding.h>
+#include <MainMenu/BrandingTexture.h>
 
 // According to imgui documentation we have to do it this way in order to avoid link conflicts with windows.h
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -25,13 +28,18 @@ void ImguiService::Create(RenderSystemD3D11* apRenderSystem, HWND aHwnd)
 
     // init platform
     if (!ImGui_ImplWin32_Init(aHwnd))
+    {
         spdlog::error("Failed to initialize Imgui-Win32");
+        return;
+    }
 
-    ImGui_ImplDX11_Init(apRenderSystem->GetDevice(), apRenderSystem->GetDeviceContext());
+    m_ready = ImGui_ImplDX11_Init(apRenderSystem->GetDevice(), apRenderSystem->GetDeviceContext());
 }
 
 void ImguiService::Render() const
 {
+    if (!m_ready)
+        return;
     ImGui_ImplDX11_NewFrame();
 
     ImGui_ImplWin32_NewFrame();
@@ -41,6 +49,72 @@ void ImguiService::Render() const
     ImGui::Render();
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+bool ImguiService::RenderMainMenuTexture(
+    ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, const STRE::MainMenu::BrandingTexture& aEmblem,
+    const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity, const STRE::MainMenu::BrandingTexture& aBackdrop,
+    const STRE::MainMenu::BackdropConfig& aBackdropConfig) const
+{
+    if (!m_ready || !apContext || !ImGui::GetCurrentContext())
+        return false;
+    D3D11_VIEWPORT viewport{};
+    UINT count = 1;
+    apContext->RSGetViewports(&count, &viewport);
+    if (!count || viewport.Width <= 0 || viewport.Height <= 0)
+        return false;
+    ID3D11RenderTargetView* target{};
+    apContext->OMGetRenderTargets(1, &target, nullptr);
+    if (!target)
+        return false;
+    if (!apTexture)
+    {
+        const float black[4]{0, 0, 0, 1};
+        apContext->ClearRenderTargetView(target, black);
+    }
+    target->Release();
+    if (apTexture && (!aWidth || !aHeight))
+        return false;
+    if (!apTexture)
+        return true;
+    ImGui_ImplDX11_NewFrame();
+    const ImVec2 origin(viewport.TopLeftX, viewport.TopLeftY);
+    const ImVec2 size(viewport.Width, viewport.Height);
+    ImDrawList list(ImGui::GetDrawListSharedData());
+    list._ResetForNewFrame();
+    list.PushClipRect(origin, ImVec2(origin.x + size.x, origin.y + size.y));
+    if (apTexture)
+    {
+        const float scale = std::max(size.x / aWidth, size.y / aHeight);
+        const ImVec2 imageSize(aWidth * scale, aHeight * scale);
+        const ImVec2 imageMin(origin.x + (size.x - imageSize.x) * 0.5f, origin.y + (size.y - imageSize.y) * 0.5f);
+        list.AddImage(apTexture, imageMin, ImVec2(imageMin.x + imageSize.x, imageMin.y + imageSize.y));
+    }
+    const auto layout = STRE::MainMenu::LayoutBranding(size.x, size.y, aEmblem.Aspect(), aWordmark.Aspect());
+    const auto drawBranding = [&](const STRE::MainMenu::BrandingTexture& aImage, const STRE::MainMenu::BrandingRect& aRect, float aAlpha)
+    {
+        if (aImage.View && aAlpha > 0 && aRect.Width > 0 && aRect.Height > 0)
+            list.AddImage(
+                aImage.View.Get(), ImVec2(origin.x + aRect.X, origin.y + aRect.Y), ImVec2(origin.x + aRect.X + aRect.Width, origin.y + aRect.Y + aRect.Height), ImVec2(0, 0),
+                ImVec2(1, 1), IM_COL32(255, 255, 255, static_cast<int>(aAlpha * 255)));
+    };
+    drawBranding(aBackdrop, STRE::MainMenu::LayoutBackdrop(size.x, size.y, aBackdrop.Aspect(), aBackdropConfig), aOpacity.Emblem * aBackdropConfig.Opacity);
+    drawBranding(aEmblem, layout.Emblem, aOpacity.Emblem);
+    drawBranding(aWordmark, layout.Wordmark, aOpacity.Wordmark);
+    list.PopClipRect();
+    ImDrawList* lists[]{&list};
+    ImDrawData data;
+    data.Valid = true;
+    data.CmdListsCount = 1;
+    data.TotalIdxCount = list.IdxBuffer.Size;
+    data.TotalVtxCount = list.VtxBuffer.Size;
+    data.CmdLists = lists;
+    data.DisplayPos = origin;
+    data.DisplaySize = size;
+    data.FramebufferScale = ImVec2(1, 1);
+    // The existing backend restores the engine's D3D state after this pass.
+    ImGui_ImplDX11_RenderDrawData(&data);
+    return true;
 }
 
 void ImguiService::Reset() const

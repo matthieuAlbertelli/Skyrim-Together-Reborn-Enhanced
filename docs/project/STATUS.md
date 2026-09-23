@@ -1,13 +1,112 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 19, 2026.
+> **Last updated:** September 23, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Startup and Main Menu presentation (2026-09-23)
+
+Implemented for [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86).
+The [feature contract](../features/main-menu/README.md) owns behavior and asset
+provenance; its [test plan](../features/main-menu/TEST_PLAN.md) owns acceptance.
+This consolidated checkpoint replaces the earlier preparation/UX snapshots;
+their exact intermediate diffs and evidence remain in Git history.
+
+The existing native client, MainMenuRuntime, ImGui/DX11 pass and Windows Media
+Foundation decoder implement once-per-process intro, configurable keyboard/gamepad
+skip, held-input suppression, intro-only cursor/music gating and bounded vanilla
+fallback. Installed Skyrim key art/font are rendered by an inert Scaleform host;
+the hint is not ImGui text. Independent center-left PNG branding and localized
+subtitle retain their staggered reveal; the backdrop follows the emblem fade.
+No new SKSE plugin, SWF, runtime decoder dependency, campaign state or ADR.
+Runtime-sensitive hooks remain fenced to exactly 1.6.1170.0 / SKSE 2.2.6 target;
+no 1.7.x support is claimed.
+
+The distribution source now contains the maintainer's silent **forward + reverse**
+background export and three independent PNGs. The maintainer selected shipped
+`BackdropOpacity=1.0`; compiled fallback remains 0.35. Background visual authorship
+is confirmed as Matthieu Albertelli. The final source/export identities and rights
+record live only in [asset provenance](../features/main-menu/README.md#asset-provenance-gate).
+The maintainer withdrew the local intro from distribution while awaiting Lawrence
+James's music permission. Its original bytes remain untouched and untracked.
+The package therefore opens directly on background/branding when no separately
+supplied intro exists. Useful forward/ping-pong intermediates were preserved
+outside GameFiles in the ignored local audit source directory, not distributed.
+
+**Human evidence (maintainer attestation):**
+
+- 2026-09-22 first smoke: trailer, audio, Escape skip, transition to Main Menu /
+  background, and general behavior after intro: PASS.
+- 2026-09-23: current in-game behavior described as satisfactory, specifically
+  including the continuous ping-pong background: PASS at the reported scope.
+  The maintainer also explicitly selected backdrop opacity 1.0 for distribution.
+- 2026-09-23 final smoke of the distributed package **without `intro.mp4`**:
+  PASS, explicitly confirmed by the maintainer on Skyrim 1.6.1170 / SKSE 2.2.6.
+  This closes the final-package smoke requirement at that reported scope;
+  intro music permission and the remaining human matrix are not covered.
+- 2026-09-23 return from gameplay: PASS; the intro did not replay, and the
+  background and branding were correct.
+- 2026-09-23 Alt-Tab / focus loss and regain during both intro and Main Menu:
+  PASS; cursor, input and menu behavior were correct.
+- 2026-09-23 temporary absence of `background.mp4`: PASS; clean fallback to
+  the vanilla menu, without crash or blocked interaction.
+
+These reports do not identify exact executable hashes, resolution/aspect,
+controller model or logs/captures. The three final checks validate only the
+reported scenarios, not the entirety of their combined test-plan cases. They
+do not establish exhaustive native hint/cursor-exit or vanilla/campaign-action
+coverage. Repeated round trips, exit during partial branding reveal, remaining
+failure modes (including corrupt media), 21:9, all resolutions/languages/controllers
+and 1.7.x remain unconfirmed. No agent-operated in-game run is claimed.
+
+**Automated evidence:** native code is unchanged since validated head
+`5da99f8aeebe56074080270d24927d5726ee672d`; no redundant native rebuild was run for
+this media/configuration/documentation consolidation and Python packaging checks.
+
+- At that head, Debug and releasedbg builds of TPTests and
+  SkyrimImmersiveLauncher (including production Angular): PASS. Per mode,
+  `TPTests.exe "[main-menu]"`: 1,277 assertions / 27 cases; default suite:
+  45,082 / 417; `TPTests.exe "[main-menu-branding-assets]"`: 13 / 1, all PASS.
+  Windows and Linux CI for that head also passed. Debug configuration retained.
+- Earlier unchanged-decoder smoke: generated H.264, WARP frame transfer, EOS,
+  loop, missing/corrupt media and cancellation during load: PASS in Debug and
+  releasedbg. The native-resource address audit is static evidence only.
+- Current `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
+  PASS, 108 tests. `python Tools/Scripts/test_main_menu.py --package
+  _audit/main-menu-final/package/Data`: PASS, 16 checks. New checks reject
+  intermediate exports, excluded intro distribution, oversized files and a
+  background hash/size differing from the canonical provenance.
+- Current `python Tools/Scripts/audit_ck_packaging.py`: PASS, 19 managed files,
+  zero compiled PEX under Scripts/Source. Full tracked Data payload assembled
+  from the Git index, matching clean-checkout CI inputs: 236 files,
+  107,721,486 bytes; every copied file hash verified. Expected MainMenu PNG/INI
+  and background are present; intro, po3 DLL/INI and MainMenuVideo prototype
+  directory are absent. This checks Data, not a new complete binary release.
+- Both local MP4s inspected with `ffprobe -v error -show_format -show_streams
+  -of json <file>`: H.264/MP4, 1080p60; intro has AAC stereo, final background
+  has no audio stream. `ffmpeg -v error -xerror -i <background> -f null NUL`:
+  full decode PASS. Frame-sequence comparison confirms 186 forward frames plus
+  186 reversed frames (372 total); sampled low-resolution luminance differences
+  remain below 0.37/255 per-frame mean against that expected order. This supports
+  the transformation, not a universal visual-quality claim.
+- Targeted code review found no required native change: input/cursor/music leases,
+  close/reset/skip/EOS/error exits, DX11/MF/Scaleform ownership, fixed Data paths,
+  bounded localization, runtime fence and po3 independence retain their contracts.
+  `dumpbin /dependents build/windows/x64/releasedbg/SkyrimTogether.exe` has no
+  Main Menu Video or mandatory mfplat/mfreadwrite import.
+- Changed Markdown targets and `git diff --check`: PASS. ROADMAP, acceptance index,
+  WBS, Dependency Map and Brief Catalog were reviewed and retain their canonical
+  links without duplicated status. GPL attribution remains in NOTICE and Data.
+
+No build/deploy/import script or CK manifest was changed. No deployment or new
+branch/worktree was performed during consolidation. CI and merge history belong
+to PR #87. Intro music permission and the unconfirmed human matrix
+remain acceptance limits; the intro stays excluded from distribution.
 
 ## STRE 0.4.0-alpha.1 published release checkpoint — PASS (2026-09-19)
 

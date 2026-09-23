@@ -4,6 +4,15 @@
 
 struct RenderSystemD3D9;
 struct RenderSystemD3D11;
+struct ID3D11ShaderResourceView;
+struct ID3D11DeviceContext;
+
+namespace STRE::MainMenu
+{
+struct BrandingTexture;
+struct BrandingOpacity;
+struct BackdropConfig;
+} // namespace STRE::MainMenu
 
 /**
  * @brief Draws the ImGui UI.
@@ -22,6 +31,13 @@ struct ImguiService
     void Render() const;
     void Reset() const;
 
+    // Feature-local draw list through the existing backend, without another
+    // ImGui context/NewFrame or swapchain. Null texture draws an opaque cover.
+    [[nodiscard]] bool RenderMainMenuTexture(
+        ID3D11ShaderResourceView* apTexture, unsigned aWidth, unsigned aHeight, ID3D11DeviceContext* apContext, const STRE::MainMenu::BrandingTexture& aEmblem,
+        const STRE::MainMenu::BrandingTexture& aWordmark, const STRE::MainMenu::BrandingOpacity& aOpacity, const STRE::MainMenu::BrandingTexture& aBackdrop,
+        const STRE::MainMenu::BackdropConfig& aBackdropConfig) const;
+
     LRESULT WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     void RawInputHandler(RAWINPUT& aRawinput);
 
@@ -30,4 +46,5 @@ struct ImguiService
 private:
     ImGuiImpl::ImGuiDriver m_imDriver;
     entt::sigh<TCallback> m_drawSignal;
+    bool m_ready{};
 };

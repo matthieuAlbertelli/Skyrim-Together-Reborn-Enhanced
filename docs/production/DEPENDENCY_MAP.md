@@ -48,6 +48,18 @@ Trade domain
 
 Inventory metadata limits feed the trade eligibility policy; unsupported instance metadata must fail closed.
 
+## Main Menu presentation
+
+```text
+existing native client + MainMenuRuntime + ImGui/DX11/input
+  + Windows media services + optional rights-cleared STRE videos
+  → startup/Main Menu presentation
+  → feature acceptance and v1 release evidence
+```
+
+[Main Menu](../features/main-menu/README.md) has no server, campaign persistence
+or CK-content dependency. Missing media/services must expose vanilla.
+
 ## Item Preview
 
 ```text
@@ -125,6 +137,7 @@ does not mirror status; the Project and Milestone own live state.
 | Campaign continuity needed by Alternate Start | [#26](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/26) with persistence #27, fixed roster #28, coordinated checkpoints [#55](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/55), collective recovery [#56](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/56), and recovery UX [#57](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/57) |
 | End-to-end release evidence | [#30](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/30) |
 | No known P0 multiplayer campaign blocker | [#51](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/51), grouping inherited symptoms #2–#6 without pre-assigning priority |
+| Startup and animated Main Menu | [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86), with the [feature contract](../features/main-menu/README.md) |
 
 No extra issue is needed for kits or cooperative abilities: each is an explicit
 acceptance dimension of every class contract. Personal quests remain one program
