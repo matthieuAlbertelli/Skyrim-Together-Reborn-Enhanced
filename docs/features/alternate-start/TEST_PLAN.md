@@ -1564,3 +1564,157 @@ per reconstruction and one graph-wait message). The older RemoteProbe can still
 drop native/action lines; inspect its counters before treating absence as proof.
 No remote Activate or MoveTo is allowed. Reciprocal visual acceptance in both completion orders is recorded above;
 new changes require their own evidence and publication authorization. Native lifetime remains outside this test.
+
+## Automatic Helgen after collective Character Build (7 October 2026)
+
+This is a new runtime acceptance matrix; earlier manual stage-10/continuity
+passes do not validate the new automatic cleanup-controller boundary. Do not deploy
+or launch Skyrim/CK automatically. The maintainer prepares matching client,
+server and three rebuilt PEX files on both PCs. Preserve build/ESP/PEX hashes,
+configuration (especially SyncPlayerCalendar/TimeScale), campaign ID, sealed
+identities, Skyrim/SKSE versions and machine labels for each run.
+
+1. **A-first:** create a fresh sealed roster of two. A completes creation while B
+   deliberately waits in it. A's own Applied, appearance and MarkerXX -> SeatXX
+   flow must remain available immediately. No Helgen authorization, MQ101
+   post-attack projection or investigation T0 may occur yet. B then completes;
+   require server `applied=2/2`, exactly one collective start authorization, and
+   one local projection request on each client without console `setstage`.
+2. **B-first:** restart client processes and repeat in a fresh campaign with the
+   inverse completion order. Check seating separately from Helgen readiness in
+   both orders, including remote visible pose and appearance.
+3. On each client check AlternateStart remains stopped and stage 20 is not
+   re-entered; no second RaceMenu/bootstrap. MQ101 reaches its neutral post-Helgen
+   boundary (1000/stopped), MQ102/A/B untouched. Check exterior destruction and
+   Keep cleanup/collapse. Hadvar/Ralof are WoundedInCave; no occupation bandits.
+4. Record server authorization wall time, each native projection request, and
+   each Papyrus `Investigation started at game time` / `Collective investigation
+   T+4 start armed` value. T0 follows post-attack completion on each PC, never
+   the first player's Applied. Compare elapsed times, not raw GameDaysPassed
+   equality. Report the actual difference and any latency that materially shifts
+   occupation; do not claim a synchronized timestamp from a build pass.
+5. **<4 days:** no occupation. **T+4/all outside:** BanditOccupied, existing
+   bandits and CapturedInKeep projection. **T+4/A inside:** Pending, no physical
+   change; B's exit alone has no effect, A's later exit permits occupation.
+   Repeat inverse roles and with the remaining player inside HelgenKeep01.
+   Keep this game's usual synchronized time progression; direct edits of only
+   GameHour/GameDaysPassed on one PC are not a multiplayer timer test.
+6. Repeat readiness notifications and diagnostic investigation entry on a test
+   save after initialization: no second MQ101 sequence, survivor reset or T0
+   assignment. Repeated native requests for an already completed stage are no-ops.
+   Exercise nearly simultaneous completion and compare the one authorization
+   against duplicates. Do not reset AlternateStart or call its stopped stage 30.
+7. Disconnect before the last Applied, and separately between authorization and
+   projection on a disposable run if reproducible. No autonomous solo start or
+   occupation is allowed. Use only existing collective checkpoint recovery;
+   without a committed checkpoint, record the unsupported recovery boundary.
+   For an eligible initialized checkpoint after server restart, all members must
+   restore their own `.ess`; full-roster readiness may reconstruct the latch,
+   while saved T0/survivors remain unchanged. Never catch up an absent member.
+8. **Solo regression:** fresh offline creation starts projection/investigation
+   automatically after finalization, keeps individual seating, and retains the
+   existing local T+4/presence rules. Loading an ordinary save and a same-process
+   fresh New Game must not reuse the previous native request latch.
+
+Archive full logs before another run, with rotations and separate A/B directories:
+
+- server: `logs/STServerOut.log` relative to the server launch working directory,
+  plus rotations; preserve `[STRE][CharacterBuild][Server] Build applied`,
+  `[STRE][Helgen] build barrier` and `collective investigation start authorized`
+  (`source=all-builds-applied` or `checkpoint-readiness`), admission/recovery and
+  cell/presence evidence;
+- each client: `<Skyrim>/Data/SkyrimTogetherReborn/logs/tp_client.log` and
+  `tp_client.1.log` through available rotations; preserve authoritative build
+  finalization, `[STRE][CreationSeating]`, `Helgen investigation authorization
+  received`, `[STRE][HelgenStart][Client] local projection requested`, recovery;
+- each client's enabled Papyrus trace: the active profile's
+  `Documents/My Games/Skyrim Special Edition/Logs/Script/Papyrus.0.log` and
+  rotations. Preserve `[STRE][HelgenContinuity]` projection start/completion,
+  `[STRE][HelgenStart]` errors/wait, `[STRE][HelgenInvestigation]` T0,
+  Pending/Occupied and survivor projection lines. A mod manager may redirect
+  Documents/profile paths: identify the actual file, not an empty nominal path.
+
+Automated gates (not native gameplay acceptance):
+
+```powershell
+xmake build TPTests
+.\build\windows\x64\debug\TPTests.exe '[helgen]' --reporter compact
+.\build\windows\x64\debug\TPTests.exe --reporter compact
+python -m unittest discover -s Tools/Scripts -p 'test_*.py'
+xmake build -j 2 SkyrimTogetherClient
+xmake build -j 2 SkyrimTogetherServer
+xmake build -j 2 SkyrimImmersiveLauncher
+git diff --check
+```
+
+The new C++ barrier tests cover both completion orders, one broadcast intent,
+individual seating eligibility before the final build, duplicates, missing/non-
+sealed/non-ACTIVE admission, wrong campaign, invalid character/owner/binding
+proof, N=1 and restricted readiness. Client tests cover finalization/auth ordering,
+repeated authorization, unavailable native state, disconnect and new session.
+The Python gate reads actual ESP VMAD/INDX and checks stopped-quest avoidance,
+the existing cleanup controller attachment, startup-before-cast, the sole MQ101
+sequence and exact cleanup order, retry before mutation, no replay afterward,
+T0/duplicate guards, seating independence and quest-sync exclusions. Run the
+existing CK packaging, record-manifest, MQ101 structure and
+generated-fragment, character-build catalog and ten-marker audits too.
+
+Compile the modified AlternateStart QF, continuity controller and investigation
+controller with the installed PapyrusCompiler, repository script imports,
+installed SKSE `Data/scripts/source` **before** Bethesda `Data/Source/Scripts`,
+and `TESV_Papyrus_Flags.flg`. The latter alone lacks existing `Quest.GetQuest`.
+Output to a repository audit directory, verify, then package only the three PEX;
+do not use build-and-deploy-dev.ps1 for this validation.
+
+### Corrective cleanup-owner candidate: repeat the failed Solo smoke
+
+The previous candidate's first real Solo smoke is diagnostic **FAIL**, not a
+pending pass: MQ101=0, InvestigationState=0, T0=-1.0, HadvarState=RalofState=1,
+and vanilla pre-attack Helgen after `coc HelgenExterior`, without manual
+`setstage`. `STATUS.md` owns that evidence. This correction needs a new run;
+automated checks cannot supersede the failure.
+
+1. The maintainer prepares the candidate's matching client/launcher and these
+   three freshly compiled PEX files, with the unchanged checked-in ESP:
+   `QF_STRE_QUEST_AlternateStart_02001AF9.pex`,
+   `STRE_HelgenContinuityController.pex`,
+   `STRE_HelgenInvestigationController.pex`. Check the effective profile/loose
+   files for overrides and record the commit, ESP/PEX hashes and actual paths.
+   This preparation and launch are manual; this mission performs no deployment.
+2. Fully exit Skyrim, then launch a fresh process, choose Solo and **New Game**.
+   Do not reuse the failed save, connect to a server, or issue `setstage`,
+   `startquest`, `stopquest` or `resetquest`. Complete normal Character Creation
+   and wait for local finalization/seating and the projection completion trace.
+   No second RaceMenu or Character Creation bootstrap is allowed.
+3. Before teleporting or advancing time, capture the following read-only console
+   queries and the corresponding full client/Papyrus logs:
+
+   ```text
+   getstage MQ101
+   getstage STRE_QUEST_HelgenNPCCleanup
+   sqv STRE_QUEST_AlternateStart
+   sqv STRE_QUEST_HelgenNPCCleanup
+   sqv STRE_QUEST_HelgenInvestigation
+   ```
+
+   Require MQ101=1000, cleanup=40, AlternateStart still stopped with no new
+   bootstrap, continuity Started/Completed=True, InvestigationState=1 and
+   InvestigationStartGameTime>=0. HadvarState/RalofState must be WoundedInCave=1.
+   The `[STRE][HelgenContinuity] ... completed; cleanup stage 40` trace must
+   precede `[STRE][HelgenInvestigation] Investigation started at game time ...`.
+   T0 must appear once; no HelgenStart ERROR, missing controller or None call.
+4. Issue `coc HelgenExterior`, matching the failed smoke. Require destroyed
+   post-attack Helgen and the intended NPC cleanup, with no occupation bandits.
+   Optionally inspect `coc HelgenKeep01` for collapsed rubble, traversal and both
+   wounded survivors. Record game time so these checks occur before T0+4 days.
+   Re-run `sqv STRE_QUEST_HelgenInvestigation`: T0 must be unchanged.
+5. Before four elapsed game days, occupation must remain absent. For the separate
+   deadline regression, use normal waiting/time progression while outside Helgen
+   until at least T0+4, then return: occupation and CapturedInKeep may now apply.
+   Repeat the existing presence-gate case on a separate run: remain inside at
+   T+4, observe Pending with no physical switch, then leave to permit occupation.
+6. Archive full `tp_client.log` and Papyrus logs/rotations, console evidence,
+   screenshots, candidate hashes and elapsed-time observations before another
+   run. If projection or T0 fails, preserve the failing save/logs without manual
+   quest repair. Report FAIL with the first missing transition. Only a successful
+   real run can add new PASS evidence to STATUS; retain the earlier diagnostic.

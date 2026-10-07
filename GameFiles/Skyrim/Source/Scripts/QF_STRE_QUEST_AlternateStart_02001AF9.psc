@@ -76,42 +76,27 @@ EndFunction
 ;BEGIN FRAGMENT Fragment_6
 Function Fragment_6()
 ;BEGIN CODE
-Debug.Trace("[STRE][AlternateStart] Starting MQ101 continuity cleanup prototype")
-
-STREHelgenNPCCleanup.Start()
-
-MQ101.SetStage(20)
-MQ101.SetStage(25)
-MQ101.SetStage(26)
-MQ101.SetStage(28)
-MQ101.SetStage(30)
-MQ101.SetStage(40)
-MQ101.SetStage(70)
-MQ101.SetStage(100)
-MQ101.SetStage(145)
-MQ101.SetStage(150)
-MQ101.SetStage(180)
-MQ101.SetStage(200)
-MQ101.SetStage(250)
-MQ101.SetStage(500)
-MQ101.SetStage(800)
-MQ101.SetStage(900)
-
-STREHelgenNPCCleanup.SetStage(10)
-STREHelgenNPCCleanup.SetStage(20)
-STREHelgenNPCCleanup.SetStage(30)
-
-STRE_HelgenContinuityController helgenContinuity = STREHelgenNPCCleanup as STRE_HelgenContinuityController
-
-If helgenContinuity
-    helgenContinuity.ApplyPostAttackProjection()
-Else
-    Debug.Trace("[STRE][Helgen] ERROR: continuity controller unavailable")
+; Diagnostic/compatibility entry only. The automatic path starts Investigation.
+Quest cleanupQuest = Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup")
+If cleanupQuest == None
+    Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest unavailable at AlternateStart stage 30")
+    Return
 EndIf
-
-STREHelgenNPCCleanup.SetStage(40)
-
-Debug.Trace("[STRE][AlternateStart] MQ101 continuity cleanup prototype completed")
+If !cleanupQuest.IsRunning()
+    ; Start is latent and returns after startup; cast only afterward.
+    If !cleanupQuest.Start()
+        Debug.Trace("[STRE][HelgenStart] ERROR: cleanup startup failed at AlternateStart stage 30")
+        Return
+    EndIf
+EndIf
+STRE_HelgenContinuityController continuity = cleanupQuest as STRE_HelgenContinuityController
+If continuity == None
+    Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller unavailable at AlternateStart stage 30")
+    Return
+EndIf
+If !continuity.EnsurePostHelgenProjection()
+    Debug.Trace("[STRE][HelgenStart] ERROR: stage 30 post-Helgen consequence incomplete")
+EndIf
 ;END CODE
 EndFunction
 ;END FRAGMENT

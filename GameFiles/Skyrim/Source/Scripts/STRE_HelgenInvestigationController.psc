@@ -55,6 +55,8 @@ Int InvestigationState = 0
 Float InvestigationStartGameTime = -1.0
 Bool MultiplayerCampaignObserved = False
 Bool MultiplayerDeadlineArmed = False
+Bool InvestigationStartPending = False
+Bool InvestigationStartInProgress = False
 
 Int Property HadvarState = 0 Auto Conditional
 Int Property RalofState = 0 Auto Conditional
@@ -67,31 +69,81 @@ Int MainQuestPath = 0
 ; ============================================================================
 
 Function BeginInvestigation()
+    If InvestigationState != 0
+        Debug.Trace("[STRE][HelgenInvestigation] BeginInvestigation: already initialized, no state reset")
+        ArmStandaloneBanditOccupationDeadline()
+        Return
+    EndIf
+    If InvestigationStartInProgress
+        Return
+    EndIf
+    If SkyrimTogetherUtils.IsConnected() || SkyrimTogetherUtils.IsHelgenCampaignRequired()
+        MultiplayerCampaignObserved = True
+    EndIf
+    If MultiplayerCampaignObserved && !SkyrimTogetherUtils.IsHelgenInvestigationStartAuthorized()
+        If !InvestigationStartPending
+            Debug.Trace("[STRE][HelgenStart] Waiting for collective authorization before projection/T0")
+        EndIf
+        InvestigationStartPending = True
+        ArmStandalonePendingPresenceCheck()
+        Return
+    EndIf
+
+    InvestigationStartInProgress = True
+    InvestigationStartPending = False
+    Quest cleanupQuest = Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup")
+    If cleanupQuest == None
+        Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest unavailable; T0 withheld")
+        InvestigationStartInProgress = False
+        Return
+    EndIf
+    If !cleanupQuest.IsRunning()
+        ; Bethesda Quest.Start is latent: wait for startup before script lookup.
+        If !cleanupQuest.Start()
+            Debug.Trace("[STRE][HelgenStart] ERROR: cleanup startup failed; T0 withheld")
+            InvestigationStartInProgress = False
+            Return
+        EndIf
+    EndIf
+    STRE_HelgenContinuityController continuity = cleanupQuest as STRE_HelgenContinuityController
+    If continuity == None
+        Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller unavailable after startup; T0 withheld")
+        InvestigationStartInProgress = False
+        Return
+    EndIf
+    If !continuity.EnsurePostHelgenProjection()
+        Debug.Trace("[STRE][HelgenStart] ERROR: post-Helgen consequence incomplete; T0 withheld")
+        InvestigationStartInProgress = False
+        Return
+    EndIf
+    ; The CK consequence contains latent calls. Recheck the campaign fence.
+    If MultiplayerCampaignObserved && !SkyrimTogetherUtils.IsHelgenInvestigationStartAuthorized()
+        InvestigationStartInProgress = False
+        InvestigationStartPending = True
+        ArmStandalonePendingPresenceCheck()
+        Return
+    EndIf
 
     If InvestigationState == 0
         InvestigationState = 1
         InvestigationStartGameTime = Utility.GetCurrentGameTime()
-
+        ; Arm at this boundary, not on the first 1s/5s scheduler callback.
+        MultiplayerDeadlineArmed = MultiplayerCampaignObserved
         Debug.Trace("[STRE][HelgenInvestigation] Investigation started at game time " + InvestigationStartGameTime)
-    Else
-        Debug.Trace("[STRE][HelgenInvestigation] BeginInvestigation: already initialized, no state reset")
+        If MultiplayerDeadlineArmed
+            Debug.Trace("[STRE][HelgenInvestigation] Collective investigation T+4 start armed at game time " + InvestigationStartGameTime)
+        EndIf
+        If HadvarState == 0
+            HadvarState = 1
+        EndIf
+        If RalofState == 0
+            RalofState = 1
+        EndIf
+        ProjectHadvarState()
+        ProjectRalofState()
     EndIf
-
-    If HadvarState == 0
-        HadvarState = 1
-    EndIf
-
-    If RalofState == 0
-        RalofState = 1
-    EndIf
-
-    ProjectHadvarState()
-    ProjectRalofState()
-
-    ; Standalone uses the local start immediately. Connected campaigns first
-    ; wait for the exact sealed roster to cross the ephemeral start barrier.
+    InvestigationStartInProgress = False
     ArmStandaloneBanditOccupationDeadline()
-
 EndFunction
 
 ; ============================================================================
@@ -109,7 +161,7 @@ Function ArmStandaloneBanditOccupationDeadline()
         Return
     EndIf
 
-    If SkyrimTogetherUtils.IsConnected()
+    If SkyrimTogetherUtils.IsConnected() || MultiplayerCampaignObserved || SkyrimTogetherUtils.IsHelgenCampaignRequired()
         ArmConnectedBanditOccupationDeadline()
         Return
     EndIf
@@ -163,7 +215,7 @@ Function EvaluateStandaloneBanditOccupationDeadline()
         Return
     EndIf
 
-    If SkyrimTogetherUtils.IsConnected()
+    If SkyrimTogetherUtils.IsConnected() || MultiplayerCampaignObserved || SkyrimTogetherUtils.IsHelgenCampaignRequired()
         Return
     EndIf
 
@@ -214,6 +266,11 @@ EndFunction
 
 Event OnUpdate()
 
+    If InvestigationStartPending
+        BeginInvestigation()
+        Return
+    EndIf
+
     If InvestigationState != 1 || HelgenWorldPhase == 2
         Return
     EndIf
@@ -225,7 +282,7 @@ Event OnUpdate()
 
     ; A campaign save cannot become standalone authority during a disconnect.
     ; Campaign v1 fences progression until collective checkpoint recovery.
-    If MultiplayerCampaignObserved
+    If MultiplayerCampaignObserved || SkyrimTogetherUtils.IsHelgenCampaignRequired()
         ArmStandalonePendingPresenceCheck()
         Return
     EndIf

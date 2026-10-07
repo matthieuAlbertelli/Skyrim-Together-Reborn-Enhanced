@@ -7,6 +7,8 @@
 
 #include <Services/CampaignBootstrapService.h>
 #include <Services/CampaignService.h>
+#include <Events/HelgenStartAuthorizedEvent.h>
+#include <Events/CampaignMainMenuEnteredEvent.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <CharacterCreation/StandingCreation.h>
 #include <CampaignStandingPlacement.h>
@@ -454,6 +456,10 @@ CharacterCreationService::CharacterCreationService(
     , m_bootstrapAuthorizedConnection(
           aDispatcher.sink<CampaignBootstrapAuthorizedEvent>().connect<
               &CharacterCreationService::OnCampaignBootstrapAuthorized>(this))
+    , m_helgenAuthorizedConnection(aDispatcher.sink<HelgenStartAuthorizedEvent>().connect<
+          &CharacterCreationService::OnHelgenStartAuthorized>(this))
+    , m_mainMenuConnection(aDispatcher.sink<CampaignMainMenuEnteredEvent>().connect<
+          &CharacterCreationService::OnMainMenuEntered>(this))
 {
     if (auto* const pEvents = EventDispatcherManager::Get())
     {
@@ -695,6 +701,8 @@ void CharacterCreationService::OnUpdate(
         break;
     }
 
+    ProjectHelgenStart();
+
     if (m_phase == CharacterCreationPhase::RaceReview ||
         m_phase == CharacterCreationPhase::ClassSelection ||
         m_phase == CharacterCreationPhase::LoadoutSelection ||
@@ -859,6 +867,7 @@ void CharacterCreationService::OnNotifyCharacterBuildState(
 void CharacterCreationService::OnDisconnected(
     const DisconnectedEvent&) noexcept
 {
+    m_helgenProjection.Reset();
     STRE::CreationSeating::Clear();
     if (m_creationPlacement)
     {
@@ -890,6 +899,13 @@ void CharacterCreationService::OnCampaignBootstrapAuthorized(
 
     spdlog::info(
         "[STRE][CharacterCreation] campaign bootstrap authorized; validating standing placement");
+    const auto admission = m_world.GetCampaignService().GetAdmission();
+    if (m_world.GetTransport().IsConnected() && !admission)
+    {
+        Fail("STRE : admission de campagne indisponible.");
+        return;
+    }
+    m_helgenProjection.Begin(admission ? admission->CampaignId : "");
     if (!PlaceStandingForCreation())
     {
         Fail("STRE : emplacement de creation debout indisponible.");
@@ -1095,6 +1111,7 @@ void CharacterCreationService::AdvanceCreationPlacement(const char* apCancelReas
 
 bool CharacterCreationService::ResetForFreshCharacterCreation() noexcept
 {
+    m_helgenProjection.Reset();
     STRE::CreationSeating::Clear();
     m_creationPlacement.reset();
     spdlog::info(
@@ -1166,6 +1183,8 @@ void CharacterCreationService::BeginFromStage20(
     }
 
     m_suppressStageRecovery = true;
+    m_helgenProjection.Reset();
+    m_world.GetCampaignService().ResetHelgenForFreshGame();
     m_campaignBootstrapService.BeginFreshGame();
 }
 
@@ -1598,6 +1617,7 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
     m_suppressStageRecovery = true;
     m_error.clear();
     STRE::CreationSeating::FinalizeLocal(m_world, m_serverCharacterId, m_serverBuildRevision);
+    m_helgenProjection.Finalize();
     ResetNetworkBuildState();
     PushState(true);
 
@@ -1608,6 +1628,48 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
         m_selectedClassId);
 }
 
+
+void CharacterCreationService::OnHelgenStartAuthorized(const HelgenStartAuthorizedEvent& acEvent) noexcept
+{
+    m_helgenProjection.Authorize(acEvent.CampaignId);
+}
+
+void CharacterCreationService::OnMainMenuEntered(const CampaignMainMenuEnteredEvent&) noexcept
+{
+    m_helgenProjection.Reset();
+}
+
+void CharacterCreationService::ProjectHelgenStart() noexcept
+{
+    if (!m_helgenProjection.Pending())
+        return;
+    const auto& campaign = m_world.GetCampaignService();
+    const auto admission = campaign.GetAdmission();
+    const bool authorized = admission && admission->CampaignId == m_helgenProjection.Campaign() &&
+        campaign.IsHelgenInvestigationStartAuthorized();
+    const bool connected = m_world.GetTransport().IsConnected();
+    if (m_helgenProjection.Campaign().empty() ? connected : (!connected || !authorized))
+        return;
+    const auto* gate = CampaignRuntimeGateService::TryGet();
+    auto* player = PlayerCharacter::Get();
+    auto* mods = ModManager::Get();
+    if ((gate && gate->IsLocked()) || !player || !player->parentCell || !mods ||
+        !m_world.ctx().at<PapyrusService>().Get("Quest", "SetCurrentStageID"))
+        return;
+    for (auto* quest : mods->quests)
+    {
+        if (!quest || std::strcmp(quest->idName.AsAscii(), "STRE_QUEST_HelgenInvestigation") != 0)
+            continue;
+        if (!m_helgenProjection.Consume(connected, authorized, true))
+            return;
+        // Never restart the stopped AlternateStart quest. Investigation's CK
+        // controller reuses Fragment_6's alias-free consequence before its T0.
+        spdlog::info("[STRE][HelgenStart][Client] local projection requested campaign={} stage=10 alreadyDone={}",
+            m_helgenProjection.Campaign(), quest->IsStageDone(10));
+        quest->ScriptSetStage(10);
+        return;
+    }
+}
 
 bool CharacterCreationService::SendAuthoritativeBuildRequest() noexcept
 {

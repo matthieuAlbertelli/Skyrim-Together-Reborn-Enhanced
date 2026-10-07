@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CampaignAdmissionService.h>
+#include <CampaignHelgenStartBarrier.h>
 #include <CampaignLobbyDirectory.h>
 #include <Events/PacketEvent.h>
 
@@ -37,6 +38,7 @@ public:
 
     [[nodiscard]] const STRE::Campaign::CampaignAdmissionRecord* GetAdmission(const Player& acPlayer) const noexcept;
     void OnPlayerLocationChanged(const Player& acPlayer) noexcept;
+    void OnCharacterBuildApplied(const Player& acPlayer) noexcept;
     [[nodiscard]] bool BeginCheckpointDevelopment(
         const std::string& acCampaignId) noexcept;
     [[nodiscard]] bool ResendCheckpointDevelopment(
@@ -100,6 +102,8 @@ private:
         const PacketEvent<CampaignRecoverySnapshotApplied>& acPacket) noexcept;
 
     void BroadcastHelgenState(const STRE::Campaign::CampaignId& acCampaign, Player* apOnlyPlayer = nullptr) noexcept;
+    [[nodiscard]] STRE::Campaign::HelgenBuildEvidence ReadHelgenBuild(
+        const STRE::Campaign::CampaignAdmissionRecord& acAdmission) const noexcept;
 
     World& m_world;
     STRE::Campaign::CampaignAdmissionService m_admission;
@@ -115,8 +119,7 @@ private:
         STRE::Campaign::CampaignConnectionHandle,
         PendingResumeAlignment> m_pendingResumeAlignments;
     std::unordered_set<std::string> m_pendingCampaignLoads;
-    std::unordered_map<std::string, std::unordered_set<STRE::Campaign::CampaignConnectionHandle>> m_helgenReadyConnections;
-    std::unordered_set<std::string> m_helgenStartedCampaigns;
+    STRE::Campaign::CampaignHelgenStartBarrier m_helgenStartBarrier;
 
     entt::scoped_connection m_createConnection;
     entt::scoped_connection m_joinConnection;

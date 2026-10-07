@@ -2,6 +2,7 @@
 
 #include <Games/ActorExtension.h>
 #include <Services/TransportService.h>
+#include <Services/CampaignRuntimeGateService.h>
 #include <World.h>
 
 namespace PapyrusFunctions
@@ -41,12 +42,18 @@ bool SignalHelgenInvestigationReady()
 
 bool IsHelgenInvestigationStartAuthorized()
 {
-    return World::Get().GetCampaignService().IsHelgenInvestigationStartAuthorized();
+    const auto* gate = CampaignRuntimeGateService::TryGet();
+    return (!gate || !gate->IsLocked()) && World::Get().GetCampaignService().IsHelgenInvestigationStartAuthorized();
+}
+
+bool IsHelgenCampaignRequired()
+{
+    return World::Get().GetCampaignService().IsHelgenCampaignRequired();
 }
 
 bool AreAllRequiredPlayersOutsideHelgen()
 {
-    return World::Get().GetCampaignService().AreAllRequiredPlayersOutsideHelgen();
+    return IsHelgenInvestigationStartAuthorized() && World::Get().GetCampaignService().AreAllRequiredPlayersOutsideHelgen();
 }
 
 } // namespace PapyrusFunctions

@@ -1518,7 +1518,7 @@ See [the appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_S
 - the post-Helgen projection was runtime-smoke-tested after xEdit Quick Auto
   Clean, including Helgen exterior and `HelgenKeep01`;
 - `STRE_QUEST_HelgenInvestigation` provides the local Helgen-investigation and
-  standalone T+4 projection path, with a diagnostic stage-10 bootstrap and
+  standalone T+4 projection path, with a local stage-10 entry and
   persistent investigation/survivor/world-phase/path state owned by
   `STRE_HelgenInvestigationController`;
 - Hadvar and Ralof are independently projected to STRE-owned wounded positions
@@ -1541,6 +1541,55 @@ See [the appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_S
   squeeze traversal, preserves the collapsed bridge/debris projection, and moves
   survivors still in `WoundedInCave` to independent locked `CapturedInKeep`
   jail projections;
+- the automatic Helgen increment (7 October 2026) connects validated Character
+  Build Applied to the existing server start latch for the exact sealed ACTIVE
+  roster. Individual seating remains immediate. Client authorization dispatches
+  a local event; after local finalization, investigation stage 10 starts the
+  cleanup quest, then obtains its `STRE_HelgenContinuityController` and calls
+  `EnsurePostHelgenProjection()` before initializing T0 once. This running owner
+  holds projection idempotence, the sole MQ101 sequence, cleanup 10/20/30,
+  physical projection and cleanup 40. AlternateStart stage 30/Fragment_6 is only
+  a compatibility adapter; the normal path never obtains/calls its generated
+  script. Stage 0 has no fragment, and the stopped quest is never restarted by
+  this adapter (startup stage 10 would re-enter creation). The existing VMAD
+  attachment suffices: no ESP change or fourth quest;
+- **RUNTIME FAIL (maintainer Solo smoke, 7 October 2026):** the previous candidate
+  left MQ101 at 0, InvestigationState at 0 and InvestigationStartGameTime at -1.0;
+  HadvarState/RalofState were both 1. After `coc HelgenExterior`, Helgen remained
+  vanilla pre-attack with starting NPCs. No manual `setstage` was used. Projection
+  did not execute and T0 was correctly withheld. Exact deployed artifact hashes
+  were not supplied. This diagnostic FAIL remains recorded; the replacement
+  cleanup-owner boundary requires a new fresh Solo smoke and is not runtime PASS;
+- duplicate Applied acknowledgements no longer reset level or repeat the start
+  mutation. Native/Papyrus latches, admission/recovery gates and the saved campaign
+  flag fence duplicates/disconnects. Existing T+4 spatial and survivor rules are
+  retained. Readiness reconstructs only full-roster checkpoint sessions with no
+  volatile builds, never pending/mixed evidence. No durable build/Helgen state,
+  phase change, host authority, new protocol or MQ101 C++ projection was added;
+- targeted lifecycle corrections clear the native campaign-required latch on
+  Main Menu/EndRuntimeSession (also after admission was lost) and accepted Leave,
+  while preserving it across a simple disconnect. Saved Papyrus campaign fencing
+  and successful readmission remain intact. Cleanup Start failure no longer
+  claims the projection latch. In the corrective runtime candidate, both entry
+  adapters finish latent `Start()` before casting; the cleanup owner's guard runs
+  afterward. Missing MQ101 also remains retryable before the latch is claimed;
+  a partial mutation still forbids replay. The installed Bethesda `Quest.psc`
+  documents that `Start()` waits for startup and returns its success. Two C++
+  lifecycle cases and updated structural tests preserve these boundaries;
+- automated verification for this increment: Debug TPTests passes 424 cases /
+  45,240 assertions (Helgen filter: 10 cases / 182 assertions), all 118 Python
+  structural tests pass, and the six CK audits (packaging, strict record manifest,
+  MQ101 structure/generated fragments, build catalog and ten creation markers)
+  pass. The corrective AlternateStart QF, continuity and investigation PSCs
+  compile with 0 errors / 0 warnings using the installed SKSE/Bethesda imports;
+  each packaged PEX has the same SHA256 as its fresh compiler output. Structural
+  tests verify startup-before-cast, the existing cleanup VMAD attachment, sole
+  MQ101 owner/exact order, no-replay/completion guards and T0 after success.
+  Fragment_0, Fragment_4, BeginCharacterCreation and the physical projection
+  implementation are unchanged by this correction. Debug client, server and
+  SkyrimImmersiveLauncher builds pass with `-j 2`; `git diff --check` passes.
+  Windows secure-store tests and compilers require access outside the sandbox.
+  Skyrim/CK were not launched and no deployment was performed;
 - connected campaigns now use an ephemeral full-roster investigation-start
   barrier plus a server-evaluated `NONE inside Helgen` predicate; clients cache
   the reliable notification without blocking Papyrus, retain the local T+4
@@ -1594,15 +1643,19 @@ The current catalog uses `BuildVersion = 5`.
 - the New Game bootstrap and MQ101/post-Helgen world-state projection are
   implemented, but the neutral MQ102/MQ103 vanilla main-quest handoff remains
   unfinished;
-- the Helgen investigation is still entered through a diagnostic quest
-  bootstrap; Valen does not yet start it;
+- automatic post-creation Helgen entry's previous Solo candidate is runtime FAIL
+  (7 October 2026). The replacement cleanup-controller owner is implemented and
+  automated/build-tested; fresh Solo and two-PC flow still require runtime
+  validation. Valen does not yet start it;
 - the multiplayer T+4 vertical slice and its final occupied projection are
   runtime-validated in a multiplayer campaign, but the complete permutation
   matrix (both exit orders, both already outside at T+4, interior/exterior,
   disconnect, mixed survivor states, save/load, and cell reset) remains pending;
-- the diagnostic stage-10 starts are aligned only after every active sealed
-  roster member reaches `BeginInvestigation()`; Valen remains the missing
-  narrative trigger;
+- the new normal entry opens after the last exact-roster validated Applied.
+  Numeric local T0 equality and the actual cross-client projection latency have
+  not been measured; STR does not rebase local GameDaysPassed. Checkpoint-only
+  readiness reconstruction is retained, but pre-checkpoint creation/build state
+  cannot be reconstructed after server restart;
 - coordinated checkpoint creation is implemented and automated/build-tested;
   its nominal sealed-roster Candidate/ACK/commit path is runtime-validated with
   two real Skyrim clients. Issue #72 is complete: deterministic ordering,
