@@ -107,8 +107,12 @@ enhancement candidate, not part of the v1 product target.
 - canonical inventory and spells;
 - hashes and application acknowledgment;
 - Pending/Applied state broadcast;
-- build state is still session-owned by `CharacterBuildService` and is not yet
-  bound to the admitted durable campaign slot/character identity.
+- build state remains session-owned by `CharacterBuildService`; its volatile
+  provenance identifies the admitted campaign/slot/player/character binding,
+  without durable Character Build restoration;
+- normal Helgen projection/investigation starts only after every exact sealed
+  roster member has a server-validated Applied build (or after local completion
+  in Solo). Individual seating remains independent of this collective gate.
 
 ## Target STRE behavior
 

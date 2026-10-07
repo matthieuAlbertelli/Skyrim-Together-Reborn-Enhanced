@@ -3,6 +3,7 @@
 #include <Services/TransportService.h>
 
 #include <Events/CampaignMainMenuEnteredEvent.h>
+#include <Events/HelgenStartAuthorizedEvent.h>
 #include <Events/ConnectedEvent.h>
 #include <Events/DisconnectedEvent.h>
 #include <Messages/CampaignMessages.h>
@@ -19,7 +20,8 @@ bool Succeeded(CampaignProtocolResult aResult) noexcept
 } // namespace
 
 CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
-    : m_transport(aTransport)
+    : m_dispatcher(aDispatcher)
+    , m_transport(aTransport)
     , m_responseConnection(aDispatcher.sink<CampaignCommandResponse>()
           .connect<&CampaignService::OnCommandResponse>(this))
     , m_snapshotConnection(aDispatcher.sink<NotifyCampaignSnapshot>()
@@ -339,6 +341,7 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
             }
         }
         m_admissionState.Accept(std::move(admission));
+        m_helgenCampaignRequired.store(true);
         m_helgenReadinessRejectionLogged.store(
             false, std::memory_order_relaxed);
         spdlog::info(
@@ -552,6 +555,7 @@ void CampaignService::OnHelgenState(const NotifyCampaignHelgenState& acNotificat
     {
         spdlog::info(
             "[STRE][CampaignAdmission] Helgen investigation authorization received");
+        m_dispatcher.trigger(HelgenStartAuthorizedEvent{m_admissionState.GetAdmission()->CampaignId});
     }
 }
 

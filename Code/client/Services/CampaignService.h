@@ -114,11 +114,21 @@ public:
         const CampaignSnapshotData& acSnapshot) noexcept;
     [[nodiscard]] bool IsHelgenInvestigationStartAuthorized() const noexcept
     {
-        return m_helgenState.IsInvestigationStartAuthorized();
+        return m_admissionState.GetHelgenReadinessView().CanSignal &&
+            m_helgenState.IsInvestigationStartAuthorized();
     }
     [[nodiscard]] bool AreAllRequiredPlayersOutsideHelgen() const noexcept
     {
-        return m_helgenState.AreAllRequiredPlayersOutside();
+        return IsHelgenInvestigationStartAuthorized() &&
+            m_helgenState.AreAllRequiredPlayersOutside();
+    }
+    [[nodiscard]] bool IsHelgenCampaignRequired() const noexcept { return m_helgenCampaignRequired.load(); }
+    void ResetHelgenForFreshGame() noexcept
+    {
+        m_helgenState.Reset();
+        // An already admitted bootstrap must remain a campaign across a
+        // disconnect, even if Create/Join is not issued again this session.
+        m_helgenCampaignRequired.store(m_admissionState.GetAdmission().has_value());
     }
     [[nodiscard]] bool IsMainMenuRuntimeDepartureDisconnect() const noexcept
     {
@@ -141,6 +151,7 @@ private:
     void OnDisconnected(const DisconnectedEvent&) noexcept;
     void ClearVolatileProjection() noexcept;
 
+    entt::dispatcher& m_dispatcher;
     TransportService& m_transport;
     std::unique_ptr<STRE::Campaign::CampaignIdentityStore> m_store;
     std::optional<std::string> m_playerId;
@@ -152,6 +163,7 @@ private:
     std::optional<CampaignClientCommandOutcome> m_lastCommandOutcome;
     std::optional<CampaignClientLobbyState> m_lobbyState;
     CampaignHelgenStateCache m_helgenState;
+    std::atomic_bool m_helgenCampaignRequired{};
     std::atomic_bool m_helgenReadinessRejectionLogged{};
     std::atomic_bool m_mainMenuRuntimeDepartureDisconnectPending{};
 

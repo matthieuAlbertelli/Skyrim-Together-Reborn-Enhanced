@@ -36,6 +36,7 @@ void TP_MAKE_THISCALL(HookBindEverythingToScript, BSScript::IVirtualMachine*)
     (*apThis)->BindNativeMethod(new BSScript::IsRemotePlayerFunc("IsRemotePlayer", "SkyrimTogetherUtils", PapyrusFunctions::IsRemotePlayer, BSScript::Variable::kBoolean));
     (*apThis)->BindNativeMethod(new BSScript::IsPlayerFunc("IsPlayer", "SkyrimTogetherUtils", PapyrusFunctions::IsPlayer, BSScript::Variable::kBoolean));
     (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc("IsConnected", "SkyrimTogetherUtils", PapyrusFunctions::IsConnected, BSScript::Variable::kBoolean));
+    (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc("IsHelgenCampaignRequired", "SkyrimTogetherUtils", PapyrusFunctions::IsHelgenCampaignRequired, BSScript::Variable::kBoolean));
     (*apThis)->BindNativeMethod(
         new BSScript::GlobalBoolFunc("SignalHelgenInvestigationReady", "SkyrimTogetherUtils", PapyrusFunctions::SignalHelgenInvestigationReady, BSScript::Variable::kBoolean));
     (*apThis)->BindNativeMethod(new BSScript::GlobalBoolFunc(

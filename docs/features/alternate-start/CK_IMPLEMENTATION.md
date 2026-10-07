@@ -313,7 +313,8 @@ MQ102A -> untouched
 MQ102B -> untouched
 ```
 
-The Alternate Start generated fragment advances the audited MQ101 continuity
+Alternate Start stage 30 (`Fragment_6`) delegates to the shared
+`EnsurePostHelgenProjection()` function, which advances the audited MQ101 continuity
 stages, starts `STRE_QUEST_HelgenNPCCleanup`, removes or repositions the skipped
 Helgen actors, then delegates complex world-reference projection to
 `STRE_HelgenContinuityController`.
@@ -336,9 +337,9 @@ STRE_QUEST_HelgenInvestigation
 STRE_HelgenInvestigationController
 ```
 
-The quest is not Start Game Enabled. Its stage `10` is currently a diagnostic
-bootstrap used to call `BeginInvestigation()`; it is not the canonical survivor
-state machine and will later be replaced at the narrative boundary by Valen.
+The quest is not Start Game Enabled. Its stage `10` calls `BeginInvestigation()`
+and is now requested automatically after completed character creation. The same
+stage remains a diagnostic entry; it is not shared quest state or a Valen trigger.
 
 `BeginInvestigation()` records `Utility.GetCurrentGameTime()` only when the
 investigation transitions out of its uninitialized state. The current local
@@ -399,12 +400,73 @@ respawn behavior still requires a cell-reset regression test.
 
 `STRE_QUEST_HelgenInvestigation` remains explicitly excluded from generic
 `QuestService` synchronization. The multiplayer vertical slice does not make
-quest stages or Helgen state persistent server authority. Instead, every local
-controller signals that `BeginInvestigation()` has run; once the campaign is
-`ACTIVE` and the exact sealed roster has signalled, the server broadcasts an
-ephemeral collective start authorization. Each client then records its local
-Skyrim time, whose calendar is already resynchronized by STR's
-`CalendarService`, and owns the relative T+4 timer in its native save.
+quest stages or Helgen state persistent server authority. The last server-validated
+Character Build `Applied` opens the existing ephemeral start latch for the exact
+sealed, present, `ACTIVE` roster. `NotifyCampaignHelgenState` remains the only
+Helgen authorization notification. The client emits `HelgenStartAuthorizedEvent`;
+`CharacterCreationService` requests investigation stage 10 after its own local
+finalization. Individual seating does not wait for this collective gate.
+
+### Automatic post-creation boundary and stopped-quest audit
+
+The checked-in ESP's QUST/VMAD table is audited directly by
+`Tools/Scripts/test_automatic_helgen_start.py`:
+
+| Quest | Stage | Fragment / consequence |
+|---|---|---|
+| AlternateStart | 0 | No fragment; never a Helgen trigger |
+| AlternateStart | 10 | `Fragment_0` -> `BeginCharacterCreation()`; startup-stage flag set |
+| AlternateStart | 11 | `Fragment_4` -> `BeginCharacterCreation()` |
+| AlternateStart | 20 | No fragment; native Character Creation handoff |
+| AlternateStart | 30 | `Fragment_6` -> shared MQ101/cleanup/post-attack consequence |
+| HelgenInvestigation | 10 | `Fragment_0` -> `BeginInvestigation()` |
+
+`FinalizeCompletedBuild()` calls native `TESQuest::SetStopped()` (clears Enabled
+and marks quest data changed, rather than calling Papyrus `Stop`).
+`TESQuest::ScriptSetStage()` invokes Bethesda `Quest.SetCurrentStageID`; the
+installed Bethesda `Quest.psc` documents that this latent operation can wait for
+quest startup. Thus stage 30 on this stopped quest is **not established as safe**:
+startup stage 10 could reopen creation. The automatic path neither starts nor
+sets a stage on AlternateStart. Investigation's controller obtains the attached
+quest script by EditorID and calls the alias-free `EnsurePostHelgenProjection()`.
+Both entry points execute the same CK-owned stage sequence; no ESP rebinding,
+new load-order FormID, or C++ MQ101 sequence is introduced. The script-on-stopped-
+quest path still requires Skyrim runtime validation; compilation is not proof.
+
+The shared function records started/completed guards in native Papyrus state.
+Cleanup stage 40 recognizes a completed legacy projection. Repeated investigation
+entry returns before projecting MQ101 or survivors, and retains T0. A missing
+script/property or interrupted shared consequence with only `started` set fails
+closed with a trace; do not clear the guard or reset the quest to force a retry.
+Use the existing coordinated checkpoint restore where available.
+
+For a fresh connected start, authorization is checked before the consequence and
+again after its latent calls. Only then does `InvestigationState == 0` record
+`Utility.GetCurrentGameTime()` and arm the existing four-day deadline immediately.
+The first timer callback no longer adds its 1s/5s scheduling delay to T0. Solo
+uses the same consequence after local finalization, without an admission/server.
+
+`SignalHelgenInvestigationReady()` remains a revalidation/polling path after
+initialization. Reconstruction after a server restart additionally requires a
+committed checkpoint, no volatile Character Build components anywhere in the
+full roster, and readiness from every current member. Pending, mixed or invalid
+build evidence cannot use this fallback. This does not restore Character Build
+persistence or infer quests from stages. Without an eligible checkpoint/native
+state, automatic recovery of a pre-Helgen creation session is not implemented.
+
+The cache is fenced by current canonical ACTIVE/full-roster admission and the
+native recovery lock. A campaign-required latch survives transport disconnect
+until a fresh game bootstrap; Papyrus also saves its campaign-observed flag.
+Neither an uninitialized campaign start nor an existing campaign timer falls
+back to offline solo after disconnection. New-game, main-menu and disconnect
+clear the local one-shot projection request.
+
+Each `.ess` owns its relative T+4 timer. `CalendarService` synchronizes hour and
+TimeScale (date only when `SyncPlayerCalendar` is enabled), but increments the
+local `GameDaysPassed` instead of rebasing it. Numeric T0 equality is therefore
+not promised. Compare elapsed game time and wall-clock authorization/projection
+logs on both PCs; network delivery, main-thread and Papyrus execution latency
+remain to be measured. No shared timestamp or new persistent Helgen state is added.
 
 The cooperative presence gate is also ephemeral. The server evaluates a generic
 group spatial `NONE` condition from the existing `CellIdComponent` values and
