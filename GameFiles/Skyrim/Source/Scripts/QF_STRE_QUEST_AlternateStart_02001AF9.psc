@@ -76,7 +76,27 @@ EndFunction
 ;BEGIN FRAGMENT Fragment_6
 Function Fragment_6()
 ;BEGIN CODE
-EnsurePostHelgenProjection()
+; Diagnostic/compatibility entry only. The automatic path starts Investigation.
+Quest cleanupQuest = Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup")
+If cleanupQuest == None
+    Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest unavailable at AlternateStart stage 30")
+    Return
+EndIf
+If !cleanupQuest.IsRunning()
+    ; Start is latent and returns after startup; cast only afterward.
+    If !cleanupQuest.Start()
+        Debug.Trace("[STRE][HelgenStart] ERROR: cleanup startup failed at AlternateStart stage 30")
+        Return
+    EndIf
+EndIf
+STRE_HelgenContinuityController continuity = cleanupQuest as STRE_HelgenContinuityController
+If continuity == None
+    Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller unavailable at AlternateStart stage 30")
+    Return
+EndIf
+If !continuity.EnsurePostHelgenProjection()
+    Debug.Trace("[STRE][HelgenStart] ERROR: stage 30 post-Helgen consequence incomplete")
+EndIf
 ;END CODE
 EndFunction
 ;END FRAGMENT
@@ -111,80 +131,3 @@ EndFunction
 Quest Property MQ101  Auto
 
 Quest Property STREHelgenNPCCleanup  Auto
-
-; Alias-free consequence shared by stage 30 and the post-creation adapter.
-; Do not Start/Reset/SetStage this quest: its startup stage 10 re-enters creation.
-Bool PostHelgenProjectionStarted = False
-Bool PostHelgenProjectionCompleted = False
-
-Bool Function EnsurePostHelgenProjection()
-    If PostHelgenProjectionCompleted
-        Return True
-    EndIf
-    If MQ101 == None || STREHelgenNPCCleanup == None
-        Debug.Trace("[STRE][HelgenStart] ERROR: projection quest properties missing")
-        Return False
-    EndIf
-    ; Existing saves may already have executed the original Fragment_6.
-    If STREHelgenNPCCleanup.GetStageDone(40)
-        PostHelgenProjectionCompleted = True
-        Return True
-    EndIf
-    If PostHelgenProjectionStarted
-        Debug.Trace("[STRE][HelgenStart] ERROR: projection in progress or interrupted; no replay")
-        Return False
-    EndIf
-    If !(STREHelgenNPCCleanup as STRE_HelgenContinuityController)
-        Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller missing")
-        Return False
-    EndIf
-    If !STREHelgenNPCCleanup.IsRunning()
-        If !STREHelgenNPCCleanup.Start()
-            Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest could not start; projection withheld")
-            Return False
-        EndIf
-    EndIf
-
-    ; Start() is latent: another call may have claimed the projection meanwhile.
-    If PostHelgenProjectionStarted
-        Return False
-    EndIf
-    ; Failures before this point may retry; mutations from here must never replay.
-    PostHelgenProjectionStarted = True
-    Debug.Trace("[STRE][AlternateStart] Starting MQ101 continuity cleanup prototype")
-
-    MQ101.SetStage(20)
-    MQ101.SetStage(25)
-    MQ101.SetStage(26)
-    MQ101.SetStage(28)
-    MQ101.SetStage(30)
-    MQ101.SetStage(40)
-    MQ101.SetStage(70)
-    MQ101.SetStage(100)
-    MQ101.SetStage(145)
-    MQ101.SetStage(150)
-    MQ101.SetStage(180)
-    MQ101.SetStage(200)
-    MQ101.SetStage(250)
-    MQ101.SetStage(500)
-    MQ101.SetStage(800)
-    MQ101.SetStage(900)
-
-    STREHelgenNPCCleanup.SetStage(10)
-    STREHelgenNPCCleanup.SetStage(20)
-    STREHelgenNPCCleanup.SetStage(30)
-
-    STRE_HelgenContinuityController helgenContinuity = STREHelgenNPCCleanup as STRE_HelgenContinuityController
-
-    If helgenContinuity
-        helgenContinuity.ApplyPostAttackProjection()
-    Else
-        Debug.Trace("[STRE][Helgen] ERROR: continuity controller unavailable")
-    EndIf
-
-    STREHelgenNPCCleanup.SetStage(40)
-
-    Debug.Trace("[STRE][AlternateStart] MQ101 continuity cleanup prototype completed")
-    PostHelgenProjectionCompleted = True
-    Return True
-EndFunction

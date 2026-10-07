@@ -313,11 +313,11 @@ MQ102A -> untouched
 MQ102B -> untouched
 ```
 
-Alternate Start stage 30 (`Fragment_6`) delegates to the shared
-`EnsurePostHelgenProjection()` function, which advances the audited MQ101 continuity
-stages, starts `STRE_QUEST_HelgenNPCCleanup`, removes or repositions the skipped
-Helgen actors, then delegates complex world-reference projection to
-`STRE_HelgenContinuityController`.
+`STRE_HelgenContinuityController`, attached to `STRE_QUEST_HelgenNPCCleanup`, owns
+`EnsurePostHelgenProjection()`: the audited MQ101 continuity sequence, cleanup
+stages 10/20/30, `ApplyPostAttackProjection()`, then cleanup stage 40. Investigation
+starts this quest before obtaining its controller. Alternate Start stage 30
+(`Fragment_6`) is only a diagnostic/compatibility adapter to that same owner.
 
 The controller owns the validated destroyed-Helgen enable/disable projection
 and collapse-trigger neutralization. `STRE_HelgenCollapseLoadAlias` applies the
@@ -418,7 +418,7 @@ The checked-in ESP's QUST/VMAD table is audited directly by
 | AlternateStart | 10 | `Fragment_0` -> `BeginCharacterCreation()`; startup-stage flag set |
 | AlternateStart | 11 | `Fragment_4` -> `BeginCharacterCreation()` |
 | AlternateStart | 20 | No fragment; native Character Creation handoff |
-| AlternateStart | 30 | `Fragment_6` -> shared MQ101/cleanup/post-attack consequence |
+| AlternateStart | 30 | `Fragment_6` -> cleanup controller adapter (diagnostic/compatibility) |
 | HelgenInvestigation | 10 | `Fragment_0` -> `BeginInvestigation()` |
 
 `FinalizeCompletedBuild()` calls native `TESQuest::SetStopped()` (clears Enabled
@@ -426,23 +426,36 @@ and marks quest data changed, rather than calling Papyrus `Stop`).
 `TESQuest::ScriptSetStage()` invokes Bethesda `Quest.SetCurrentStageID`; the
 installed Bethesda `Quest.psc` documents that this latent operation can wait for
 quest startup. Thus stage 30 on this stopped quest is **not established as safe**:
-startup stage 10 could reopen creation. The automatic path neither starts nor
-sets a stage on AlternateStart. Investigation's controller obtains the attached
-quest script by EditorID and calls the alias-free `EnsurePostHelgenProjection()`.
-Both entry points execute the same CK-owned stage sequence; no ESP rebinding,
-new load-order FormID, or C++ MQ101 sequence is introduced. The script-on-stopped-
-quest path still requires Skyrim runtime validation; compilation is not proof.
+startup stage 10 could reopen creation. The first real Solo smoke of the previous
+candidate also failed to project Helgen through the generated script of the stopped
+quest (diagnostic evidence in `STATUS.md`). That dependency has been removed.
+The automatic path neither starts nor sets a stage on AlternateStart, and never
+obtains or calls its generated QF script after creation.
 
-The shared function records started/completed guards in native Papyrus state.
-Cleanup stage 40 recognizes a completed legacy projection. Repeated investigation
-entry returns before projecting MQ101 or survivors, and retains T0. A missing
-script/property or interrupted shared consequence with only `started` set fails
-closed with a trace; do not clear the guard or reset the quest to force a retry.
-Use the existing coordinated checkpoint restore where available. Cleanup startup
-failure leaves `PostHelgenProjectionStarted` false, so a later call may retry.
-The latch is set only after cleanup is running/started successfully, immediately
-before the MQ101 sequence. Because `Start()` is latent, the latch is rechecked
-after it returns; concurrent or partially executed projections cannot replay.
+`BeginInvestigation()` obtains `STRE_QUEST_HelgenNPCCleanup` by EditorID, rejects
+`None`, and calls `Start()` if it is not running. The installed Bethesda
+`Data/Source/Scripts/Quest.psc` declares `Start()` latent and explicitly documents
+that it waits for startup before returning whether startup succeeded. Only after
+a successful return does investigation cast to `STRE_HelgenContinuityController`
+and call `EnsurePostHelgenProjection()`. Missing quest, failed startup, missing
+controller or unsuccessful projection emits a diagnostic and returns without T0.
+Fragment_6 uses the same startup-before-cast adapter for its compatibility path.
+The actual ESP VMAD already attaches the continuity controller to cleanup; no
+fourth quest, new property/binding, ESP change or C++ MQ101 sequence is needed.
+Unused existing QF property declarations are retained for the unchanged ESP.
+
+The continuity controller alone stores `PostHelgenProjectionStarted` and
+`PostHelgenProjectionCompleted` in native Papyrus state. Cleanup stage 40
+recognizes a completed legacy projection. The helper checks completion and the
+no-replay guard after the caller's latent startup, then requires a running cleanup
+and an available MQ101 quest before claiming the latch. Startup/lookup failures
+leave the latch false and allow retry. Once claimed before the first MQ101
+mutation, a partial projection remains fail-closed; do not clear the guard or
+reset the quest to force a replay. Use coordinated checkpoint restore where
+available. Repeated investigation entry returns before projecting MQ101 or
+survivors and retains T0. The physical `ApplyPostAttackProjection()` implementation
+is unchanged. This replacement boundary still needs a fresh Skyrim smoke;
+compilation and structural tests do not prove runtime behavior.
 
 For a fresh connected start, authorization is checked before the consequence and
 again after its latent calls. Only then does `InvestigationState == 0` record

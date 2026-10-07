@@ -91,13 +91,27 @@ Function BeginInvestigation()
 
     InvestigationStartInProgress = True
     InvestigationStartPending = False
-    QF_STRE_QUEST_AlternateStart_02001AF9 alternateStart = Quest.GetQuest("STRE_QUEST_AlternateStart") as QF_STRE_QUEST_AlternateStart_02001AF9
-    If alternateStart == None
-        Debug.Trace("[STRE][HelgenStart] ERROR: post-Helgen consequence unavailable")
+    Quest cleanupQuest = Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup")
+    If cleanupQuest == None
+        Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest unavailable; T0 withheld")
         InvestigationStartInProgress = False
         Return
     EndIf
-    If !alternateStart.EnsurePostHelgenProjection()
+    If !cleanupQuest.IsRunning()
+        ; Bethesda Quest.Start is latent: wait for startup before script lookup.
+        If !cleanupQuest.Start()
+            Debug.Trace("[STRE][HelgenStart] ERROR: cleanup startup failed; T0 withheld")
+            InvestigationStartInProgress = False
+            Return
+        EndIf
+    EndIf
+    STRE_HelgenContinuityController continuity = cleanupQuest as STRE_HelgenContinuityController
+    If continuity == None
+        Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller unavailable after startup; T0 withheld")
+        InvestigationStartInProgress = False
+        Return
+    EndIf
+    If !continuity.EnsurePostHelgenProjection()
         Debug.Trace("[STRE][HelgenStart] ERROR: post-Helgen consequence incomplete; T0 withheld")
         InvestigationStartInProgress = False
         Return

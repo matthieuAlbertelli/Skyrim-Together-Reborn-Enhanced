@@ -12,6 +12,7 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8-sig")
 
 ALT = read("GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc")
+CONT = read("GameFiles/Skyrim/Source/Scripts/STRE_HelgenContinuityController.psc")
 INV = read("GameFiles/Skyrim/Source/Scripts/STRE_HelgenInvestigationController.psc")
 CREATION = read("Code/client/Services/Generic/CharacterCreationService.cpp")
 SERVER = read("Code/server/Services/CharacterBuildService.cpp")
@@ -20,6 +21,7 @@ class QuestVmad:
     """Read Skyrim VMAD v5/object-format 2 through the QUST fragment table."""
     def __init__(self, data):
         self.data, self.pos = data, 0
+        self.scripts = []
     def take(self, count):
         value = self.data[self.pos:self.pos + count]
         if len(value) != count:
@@ -42,7 +44,7 @@ class QuestVmad:
         assert self.number('H') == 5
         assert self.number('H') == 2
         for _ in range(self.number('H')):
-            self.string()
+            self.scripts.append(self.string())
             self.take(1)
             for _ in range(self.number('H')):
                 self.string()
@@ -97,28 +99,65 @@ class AutomaticHelgenStart(unittest.TestCase):
         self.assertIn('If MultiplayerCampaignObserved || SkyrimTogetherUtils.IsHelgenCampaignRequired()', INV)
 
     def test_cleanup_start_failure_remains_retryable_before_mq101(self):
-        helper = ALT.split('Bool Function EnsurePostHelgenProjection()', 1)[1]
+        for source, entry in ((INV, 'BeginInvestigation'), (ALT, 'Fragment_6')):
+            with self.subTest(entry=entry):
+                adapter = source.split('Function ' + entry + '()', 1)[1].split('EndFunction', 1)[0]
+                lookup = adapter.index('Quest.GetQuest("STRE_QUEST_HelgenNPCCleanup")')
+                missing = re.search(r'If cleanupQuest == None\s+Debug.Trace\([^\n]+\)\s+(?:InvestigationStartInProgress = False\s+)?Return\s+EndIf', adapter)
+                startup = re.search(r'If !cleanupQuest.IsRunning\(\)\s+(?:;[^\n]+\s+)*If !cleanupQuest.Start\(\)\s+Debug.Trace\([^\n]+\)\s+(?:InvestigationStartInProgress = False\s+)?Return\s+EndIf\s+EndIf', adapter)
+                self.assertIsNotNone(missing)
+                self.assertIsNotNone(startup)
+                cast = adapter.index('cleanupQuest as STRE_HelgenContinuityController')
+                self.assertLess(lookup, missing.start())
+                self.assertLess(missing.end(), startup.start())
+                self.assertLess(startup.end(), cast)
+                self.assertLess(cast, adapter.index('continuity.EnsurePostHelgenProjection()'))
+                self.assertNotIn('PostHelgenProjectionStarted', adapter)
+                self.assertNotRegex(adapter, r'(?i)mq101\.SetStage')
+        helper = CONT.split('Bool Function EnsurePostHelgenProjection()', 1)[1].split('EndFunction', 1)[0]
         claim = helper.index('PostHelgenProjectionStarted = True')
-        first_mutation = helper.index('MQ101.SetStage(20)')
-        startup = re.search(r'If !STREHelgenNPCCleanup.IsRunning\(\)\s+If !STREHelgenNPCCleanup.Start\(\)\s+Debug.Trace\([^\n]+\)\s+Return False\s+EndIf\s+EndIf', helper)
-        self.assertIsNotNone(startup)
-        self.assertLess(startup.end(), claim)
+        first_mutation = helper.index('mq101.SetStage(20)')
+        for guard in ('!IsRunning()', 'mq101 == None'):
+            failure = re.search(r'If ' + re.escape(guard) + r'\s+Debug.Trace\([^\n]+\)\s+Return False\s+EndIf', helper)
+            self.assertIsNotNone(failure)
+            self.assertLess(failure.end(), claim)
         self.assertLess(claim, first_mutation)
-        self.assertNotIn('PostHelgenProjectionStarted =', helper[:startup.end()])
-        self.assertNotIn('MQ101.SetStage', helper[:claim])
+        self.assertNotIn('mq101.SetStage', helper[:claim])
 
     def test_partial_projection_still_rejects_replay_including_latent_start_race(self):
-        helper = ALT.split('Bool Function EnsurePostHelgenProjection()', 1)[1]
-        startup = helper.index('STREHelgenNPCCleanup.Start()')
+        helper = CONT.split('Bool Function EnsurePostHelgenProjection()', 1)[1].split('EndFunction', 1)[0]
         claim = helper.index('PostHelgenProjectionStarted = True')
+        completed = re.search(r'If PostHelgenProjectionCompleted\s+Return True\s+EndIf', helper)
+        legacy = re.search(r'If GetStageDone\(40\)\s+PostHelgenProjectionCompleted = True\s+Return True\s+EndIf', helper)
+        self.assertIsNotNone(completed)
+        self.assertIsNotNone(legacy)
         guards = list(re.finditer(r'If PostHelgenProjectionStarted\s+(?:Debug.Trace\([^\n]+\)\s+)?Return False\s+EndIf', helper))
-        self.assertEqual(len(guards), 2)
-        self.assertLess(guards[0].end(), startup)
-        self.assertLess(startup, guards[1].start())
-        self.assertLess(guards[1].end(), claim)
+        self.assertEqual(len(guards), 1)
+        self.assertLess(completed.end(), legacy.start())
+        self.assertLess(legacy.end(), guards[0].start())
+        self.assertLess(guards[0].end(), claim)
+        # Every adapter finishes latent Start before entering this owner guard.
+        self.assertNotIn('.Start()', helper)
         self.assertEqual(helper.count('PostHelgenProjectionStarted = True'), 1)
-        self.assertNotIn('PostHelgenProjectionStarted = False', helper)
-        self.assertIn('PostHelgenProjectionCompleted = True\n    Return True\nEndFunction', helper)
+        self.assertEqual(CONT.count('PostHelgenProjectionStarted = False'), 1)  # declaration only
+        self.assertLess(helper.index('SetStage(40)', helper.index('ApplyPostAttackProjection()')),
+                        helper.rindex('PostHelgenProjectionCompleted = True'))
+        self.assertRegex(helper, r'PostHelgenProjectionCompleted = True\s+Debug.Trace\([^\n]+\)\s+Return True\s*$')
+
+    def test_continuity_owns_the_only_ordered_post_helgen_sequence(self):
+        self.assertIn('Bool Function EnsurePostHelgenProjection()', CONT)
+        self.assertNotIn('Bool Function EnsurePostHelgenProjection()', ALT + INV)
+        self.assertNotIn('PostHelgenProjectionStarted', ALT + INV)
+        self.assertNotIn('PostHelgenProjectionCompleted', ALT + INV)
+        owners = {}
+        for path in (ROOT / 'GameFiles/Skyrim/Source/Scripts').glob('*.psc'):
+            stages = re.findall(r'(?i)\bmq101\.SetStage\((\d+)\)', path.read_text(encoding='utf-8-sig'))
+            if stages:
+                owners[path.name] = stages
+        self.assertEqual(owners, {'STRE_HelgenContinuityController.psc':
+                         ['20','25','26','28','30','40','70','100','145','150','180','200','250','500','800','900']})
+        helper = CONT.split('Bool Function EnsurePostHelgenProjection()', 1)[1].split('EndFunction', 1)[0]
+        self.assertRegex(helper, r'mq101.SetStage\(900\)\s+SetStage\(10\)\s+SetStage\(20\)\s+SetStage\(30\)\s+ApplyPostAttackProjection\(\)\s+SetStage\(40\)')
 
     def test_real_esp_stage_fragment_mapping_and_startup_flags(self):
         data = (ROOT / 'GameFiles/Skyrim/STRE_AlternateStart.esp').read_bytes()
@@ -128,7 +167,7 @@ class AutomaticHelgenStart(unittest.TestCase):
                 continue
             subs = list(iter_subrecords(record_payload(data, record)))
             edid = next((v.rstrip(b'\0').decode() for k, v in subs if k == 'EDID'), '')
-            if edid in ('STRE_QUEST_AlternateStart', 'STRE_QUEST_HelgenInvestigation'):
+            if edid in ('STRE_QUEST_AlternateStart', 'STRE_QUEST_HelgenInvestigation', 'STRE_QUEST_HelgenNPCCleanup'):
                 quests[edid] = subs
         alt = quests['STRE_QUEST_AlternateStart']
         fragments = QuestVmad(dict(alt)['VMAD']).fragments()
@@ -140,6 +179,9 @@ class AutomaticHelgenStart(unittest.TestCase):
         self.assertIn(20, stages)
         inv = QuestVmad(dict(quests['STRE_QUEST_HelgenInvestigation'])['VMAD']).fragments()
         self.assertEqual({(s, i): f for (s, i), (_, f) in inv.items()}, {(10, 0): 'Fragment_0'})
+        cleanup = QuestVmad(dict(quests['STRE_QUEST_HelgenNPCCleanup'])['VMAD'])
+        cleanup.fragments()
+        self.assertIn('STRE_HelgenContinuityController', cleanup.scripts)
 
     def test_stopped_alternate_start_is_never_restarted_by_adapter(self):
         finalize = body(CREATION, 'void CharacterCreationService::FinalizeCompletedBuild(')
@@ -151,15 +193,10 @@ class AutomaticHelgenStart(unittest.TestCase):
             self.assertNotIn(forbidden, projection)
         fragment = ALT.split('Function Fragment_6()', 1)[1].split('EndFunction', 1)[0]
         self.assertIn('EnsurePostHelgenProjection()', fragment)
-        helper = ALT.split('Bool Function EnsurePostHelgenProjection()', 1)[1]
-        self.assertNotIn('Alias_', helper)
-        self.assertNotIn('BeginCharacterCreation()', helper)
-        self.assertNotIn('SetStage(20)', helper.split('MQ101.SetStage(20)')[0])
-        self.assertIn('STREHelgenNPCCleanup.GetStageDone(40)', helper)
-        self.assertIn('If PostHelgenProjectionStarted', helper)
-        self.assertIn('If !STREHelgenNPCCleanup.Start()', helper)
-        self.assertEqual(re.findall(r'MQ101.SetStage\((\d+)\)', ALT),
-                         ['20','25','26','28','30','40','70','100','145','150','180','200','250','500','800','900'])
+        self.assertNotIn('Alias_', fragment)
+        self.assertNotIn('BeginCharacterCreation()', fragment)
+        self.assertNotIn('SetStage(', fragment)
+        self.assertNotIn('STRE_QUEST_AlternateStart', INV + CONT)
         self.assertEqual(ALT.count('BeginCharacterCreation()'), 3)
 
     def test_t0_after_projection_authorization_and_never_on_duplicate(self):
@@ -167,6 +204,10 @@ class AutomaticHelgenStart(unittest.TestCase):
         self.assertLess(begin.index('If InvestigationState != 0'), begin.index('EnsurePostHelgenProjection'))
         self.assertEqual(begin.count('!SkyrimTogetherUtils.IsHelgenInvestigationStartAuthorized()'), 2)
         self.assertLess(begin.index('EnsurePostHelgenProjection'), begin.index('InvestigationStartGameTime ='))
+        for condition in ('cleanupQuest == None', '!cleanupQuest.Start()', 'continuity == None', '!continuity.EnsurePostHelgenProjection()'):
+            failure = re.search(r'If ' + re.escape(condition) + r'\s+Debug.Trace\([^\n]+\)\s+InvestigationStartInProgress = False\s+Return\s+EndIf', begin)
+            self.assertIsNotNone(failure)
+            self.assertLess(failure.end(), begin.index('InvestigationState = 1'))
         self.assertIn('If InvestigationState == 0', begin)
         self.assertIn('MultiplayerDeadlineArmed = MultiplayerCampaignObserved', begin)
         for name in ('ArmStandaloneBanditOccupationDeadline', 'EvaluateStandaloneBanditOccupationDeadline'):
