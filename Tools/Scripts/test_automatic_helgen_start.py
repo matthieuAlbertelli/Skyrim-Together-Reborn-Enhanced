@@ -65,6 +65,61 @@ class QuestVmad:
         return result
 
 class AutomaticHelgenStart(unittest.TestCase):
+    def test_campaign_required_clears_on_runtime_end_and_accepted_leave(self):
+        service = read('Code/client/Services/Generic/CampaignService.cpp')
+        menu = body(service, 'void CampaignService::OnMainMenuEntered(')
+        # Must also run when Disconnect has already removed the admission.
+        self.assertLess(menu.index('EndRuntimeSession()'), menu.index('m_helgenCampaignRequired.store(false)'))
+        self.assertLess(menu.index('m_helgenCampaignRequired.store(false)'), menu.index('return;'))
+        self.assertNotIn('if (!admission)', menu)
+        response = body(service, 'void CampaignService::OnCommandResponse(')
+        rejected = body(response, 'if (!Succeeded(acResponse.Result))')
+        self.assertIn('return;', rejected)
+        self.assertNotIn('m_helgenCampaignRequired', rejected)
+        leave = body(response, 'else if (acResponse.Operation == CampaignProtocolOperation::Leave)')
+        self.assertLess(leave.index('m_admissionState.Leave('), leave.index('m_helgenCampaignRequired.store(false)'))
+        self.assertIn('if (!m_admissionState.GetAdmission())\n            m_helgenCampaignRequired.store(false);', leave)
+
+    def test_disconnect_preserves_campaign_fence_and_resume_reasserts_it(self):
+        service = read('Code/client/Services/Generic/CampaignService.cpp')
+        disconnect = body(service, 'void CampaignService::OnDisconnected(')
+        self.assertIn('m_admissionState.Disconnect()', disconnect)
+        self.assertNotIn('EndRuntimeSession()', disconnect)
+        for marker in ('void CampaignService::OnDisconnected(', 'void CampaignService::ClearVolatileProjection('):
+            self.assertNotIn('m_helgenCampaignRequired', body(service, marker))
+        response = body(service, 'void CampaignService::OnCommandResponse(')
+        acceptance = body(response, 'if ((acResponse.Operation == CampaignProtocolOperation::Create')
+        self.assertLess(acceptance.index('m_admissionState.Accept('), acceptance.index('m_helgenCampaignRequired.store(true)'))
+        self.assertIn('acResponse.Operation == CampaignProtocolOperation::Resume) &&', response)
+        # The saved campaign fence must survive a menu/Continue in the same process.
+        self.assertEqual(INV.count('MultiplayerCampaignObserved = False'), 1)  # declaration only
+        self.assertIn('If MultiplayerCampaignObserved && !SkyrimTogetherUtils.IsHelgenInvestigationStartAuthorized()', INV)
+        self.assertIn('If MultiplayerCampaignObserved || SkyrimTogetherUtils.IsHelgenCampaignRequired()', INV)
+
+    def test_cleanup_start_failure_remains_retryable_before_mq101(self):
+        helper = ALT.split('Bool Function EnsurePostHelgenProjection()', 1)[1]
+        claim = helper.index('PostHelgenProjectionStarted = True')
+        first_mutation = helper.index('MQ101.SetStage(20)')
+        startup = re.search(r'If !STREHelgenNPCCleanup.IsRunning\(\)\s+If !STREHelgenNPCCleanup.Start\(\)\s+Debug.Trace\([^\n]+\)\s+Return False\s+EndIf\s+EndIf', helper)
+        self.assertIsNotNone(startup)
+        self.assertLess(startup.end(), claim)
+        self.assertLess(claim, first_mutation)
+        self.assertNotIn('PostHelgenProjectionStarted =', helper[:startup.end()])
+        self.assertNotIn('MQ101.SetStage', helper[:claim])
+
+    def test_partial_projection_still_rejects_replay_including_latent_start_race(self):
+        helper = ALT.split('Bool Function EnsurePostHelgenProjection()', 1)[1]
+        startup = helper.index('STREHelgenNPCCleanup.Start()')
+        claim = helper.index('PostHelgenProjectionStarted = True')
+        guards = list(re.finditer(r'If PostHelgenProjectionStarted\s+(?:Debug.Trace\([^\n]+\)\s+)?Return False\s+EndIf', helper))
+        self.assertEqual(len(guards), 2)
+        self.assertLess(guards[0].end(), startup)
+        self.assertLess(startup, guards[1].start())
+        self.assertLess(guards[1].end(), claim)
+        self.assertEqual(helper.count('PostHelgenProjectionStarted = True'), 1)
+        self.assertNotIn('PostHelgenProjectionStarted = False', helper)
+        self.assertIn('PostHelgenProjectionCompleted = True\n    Return True\nEndFunction', helper)
+
     def test_real_esp_stage_fragment_mapping_and_startup_flags(self):
         data = (ROOT / 'GameFiles/Skyrim/STRE_AlternateStart.esp').read_bytes()
         quests = {}

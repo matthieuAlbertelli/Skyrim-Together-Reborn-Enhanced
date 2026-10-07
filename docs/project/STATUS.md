@@ -1554,8 +1554,17 @@ See [the appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_S
   retained. Readiness reconstructs only full-roster checkpoint sessions with no
   volatile builds, never pending/mixed evidence. No durable build/Helgen state,
   phase change, host authority, new protocol or MQ101 C++ projection was added;
-- automated verification for this increment: Debug TPTests passes 422 cases /
-  45,223 assertions (Helgen filter: 8 cases / 165 assertions), all 113 Python
+- targeted lifecycle corrections clear the native campaign-required latch on
+  Main Menu/EndRuntimeSession (also after admission was lost) and accepted Leave,
+  while preserving it across a simple disconnect. Saved Papyrus campaign fencing
+  and successful readmission remain intact. Cleanup Start failure no longer
+  claims the projection latch; it is claimed after successful startup and before
+  MQ101 mutation, with a post-latent recheck preserving no-replay behavior.
+  Two additional C++ lifecycle cases and four structural contract tests cover
+  these boundaries. The modified QF PSC was recompiled and its packaged PEX
+  verified byte-for-byte by matching SHA256 against that compiler output;
+- automated verification for this increment: Debug TPTests passes 424 cases /
+  45,240 assertions (Helgen filter: 10 cases / 182 assertions), all 117 Python
   structural tests pass, and the six CK audits (packaging, strict record manifest,
   MQ101 structure/generated fragments, build catalog and ten creation markers)
   pass. The three modified Papyrus sources compile with 0 errors / 0 warnings

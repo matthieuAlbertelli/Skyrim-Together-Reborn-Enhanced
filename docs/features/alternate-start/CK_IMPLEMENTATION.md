@@ -438,7 +438,11 @@ Cleanup stage 40 recognizes a completed legacy projection. Repeated investigatio
 entry returns before projecting MQ101 or survivors, and retains T0. A missing
 script/property or interrupted shared consequence with only `started` set fails
 closed with a trace; do not clear the guard or reset the quest to force a retry.
-Use the existing coordinated checkpoint restore where available.
+Use the existing coordinated checkpoint restore where available. Cleanup startup
+failure leaves `PostHelgenProjectionStarted` false, so a later call may retry.
+The latch is set only after cleanup is running/started successfully, immediately
+before the MQ101 sequence. Because `Start()` is latent, the latch is rechecked
+after it returns; concurrent or partially executed projections cannot replay.
 
 For a fresh connected start, authorization is checked before the consequence and
 again after its latent calls. Only then does `InvestigationState == 0` record
@@ -455,8 +459,12 @@ persistence or infer quests from stages. Without an eligible checkpoint/native
 state, automatic recovery of a pre-Helgen creation session is not implemented.
 
 The cache is fenced by current canonical ACTIVE/full-roster admission and the
-native recovery lock. A campaign-required latch survives transport disconnect
-until a fresh game bootstrap; Papyrus also saves its campaign-observed flag.
+native recovery lock. The campaign-required latch survives a simple transport
+disconnect/recovery. Main Menu always ends the runtime session and clears the
+latch, including after a disconnect already removed admission; an accepted Leave
+clears it once its admission is gone. A subsequent Solo game has no stale native
+campaign fence. A saved `MultiplayerCampaignObserved` still fences a real campaign
+save during Continue/Resume, and successful readmission reasserts the native latch.
 Neither an uninitialized campaign start nor an existing campaign timer falls
 back to offline solo after disconnection. New-game, main-menu and disconnect
 clear the local one-shot projection request.

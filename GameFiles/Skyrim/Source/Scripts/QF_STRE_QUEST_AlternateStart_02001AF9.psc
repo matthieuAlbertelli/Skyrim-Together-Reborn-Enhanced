@@ -138,15 +138,20 @@ Bool Function EnsurePostHelgenProjection()
         Debug.Trace("[STRE][HelgenStart] ERROR: continuity controller missing")
         Return False
     EndIf
-    PostHelgenProjectionStarted = True
-    Debug.Trace("[STRE][AlternateStart] Starting MQ101 continuity cleanup prototype")
-
     If !STREHelgenNPCCleanup.IsRunning()
         If !STREHelgenNPCCleanup.Start()
             Debug.Trace("[STRE][HelgenStart] ERROR: cleanup quest could not start; projection withheld")
             Return False
         EndIf
     EndIf
+
+    ; Start() is latent: another call may have claimed the projection meanwhile.
+    If PostHelgenProjectionStarted
+        Return False
+    EndIf
+    ; Failures before this point may retry; mutations from here must never replay.
+    PostHelgenProjectionStarted = True
+    Debug.Trace("[STRE][AlternateStart] Starting MQ101 continuity cleanup prototype")
 
     MQ101.SetStage(20)
     MQ101.SetStage(25)

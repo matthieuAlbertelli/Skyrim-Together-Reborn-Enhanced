@@ -373,6 +373,8 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
             }
         }
         m_admissionState.Leave(acResponse.CampaignId.c_str());
+        if (!m_admissionState.GetAdmission())
+            m_helgenCampaignRequired.store(false);
         m_latestSnapshot.reset();
         m_lobbyState.reset();
         m_helgenState.Reset();
@@ -592,18 +594,21 @@ void CampaignService::OnMainMenuEntered(
         "[STRE][CampaignLifecycle] MAIN_MENU_ENTERED wasAdmitted={} campaign={}",
         admission.has_value(),
         admission ? admission->CampaignId : "none");
-    if (!admission)
+    // A disconnect already cleared admission, but may retain a resume candidate
+    // and the campaign fence. A real runtime exit must clear both as well.
+    const auto departedCampaign = m_admissionState.EndRuntimeSession();
+    m_helgenCampaignRequired.store(false);
+    m_resumeRequiresCheckpointRestore = false;
+    ClearVolatileProjection();
+    if (!departedCampaign)
         return;
 
     const bool transportOnline = m_transport.IsOnline();
     spdlog::info(
         "[STRE][CampaignAdmission] RUNTIME_DEPARTURE_REQUESTED campaign={} transportOnline={}",
-        admission->CampaignId,
+        *departedCampaign,
         transportOnline);
 
-    const auto departedCampaign = m_admissionState.EndRuntimeSession();
-    m_resumeRequiresCheckpointRestore = false;
-    ClearVolatileProjection();
     spdlog::info(
         "[STRE][CampaignAdmission] VOLATILE_ADMISSION_CLEARED reason=main-menu campaign={} bindingRetained=true",
         departedCampaign ? *departedCampaign : "none");
