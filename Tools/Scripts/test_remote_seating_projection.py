@@ -35,7 +35,7 @@ class RemoteSeatingProjection(unittest.TestCase):
         self.assertLess(update.index('"action-dequeued"'), update.index('apActor->actorState.flags1 ='))
         self.assertLess(update.index('"action-dequeued"'), update.index('ForceAction('))
         self.assertLess(update.index('ForceAction('), update.index('"force-action-return"'))
-        self.assertLess(update.index('"force-action-return"'), update.index('actions.pop_front()'))
+        self.assertLess(update.index('"force-action-return"'), update.rindex('actions.pop_front()'))
         for phase in ('"graph-not-ready"', '"action-not-due"'):
             self.assertIn(phase, update)
         self.assertIn('MissingUpdateActor', body(CHARACTER, 'void CharacterService::RunRemoteUpdates('))

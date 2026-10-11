@@ -683,6 +683,26 @@ void ObserveAnimationAction(TESActionData* apAction, uint8_t aResult, bool aRemo
                  s_solo.ActorToken.load(), aResult, aRemoteBlocked, now - started, ObservationContext());
 }
 
+uint32_t ReplaySeat(World& aWorld, uint32_t aServer, uint32_t aActorCell) noexcept
+{
+    const auto it = s_intents.find(aServer);
+    const auto* gate = CampaignRuntimeGateService::TryGet();
+    if (it == s_intents.end() || it->second.Local || it->second.Lifetime.Terminal ||
+        !aWorld.GetTransport().IsConnected() || (gate && gate->IsLocked())) return 0;
+    const auto& intent = it->second;
+    const auto& snapshot = aWorld.GetCampaignService().GetLatestSnapshot();
+    if (!snapshot || !snapshot->RosterSealed || snapshot->CampaignId != intent.Campaign.c_str() ||
+        snapshot->Phase != kCampaignWirePhaseCharacterCreation || snapshot->RuntimeState != kCampaignWireRuntimeActive) return 0;
+    auto* manager = ModManager::Get();
+    auto* mod = manager ? manager->GetByName("STRE_AlternateStart.esp") : nullptr;
+    if (!mod || aActorCell != mod->GetFormId(0x000012D1)) return 0;
+    std::vector<std::string_view> players;
+    for (const auto& member : snapshot->Roster) players.emplace_back(member.PlayerId.data(), member.PlayerId.size());
+    const auto index = StandingCreationPositionIndex(players, intent.DurablePlayer);
+    const auto seat = index ? CreationSeatLocalFormId(*index) : std::nullopt;
+    return seat ? mod->GetFormId(*seat) : 0;
+}
+
 void Clear() noexcept
 {
     RemoteSeatingProbe::Clear();

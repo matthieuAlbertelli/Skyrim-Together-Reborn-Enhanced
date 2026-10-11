@@ -17,6 +17,7 @@ struct AnimationBindingChange
     uint64_t Session{}, Generation{};
     uint32_t ServerId{}, EntityVersioned{};
     AnimationBinding Old, New;
+    uint32_t OldCell{}, NewCell{};
     bool operator==(const AnimationBindingChange&) const = default;
 };
 
@@ -38,6 +39,12 @@ public:
     void ObserveBinding(AnimationBinding aBinding, TiltedPhoques::List<ActionEvent>& aPending,
                         uint32_t& aReplayCount, bool& aResetGraph) noexcept;
     void Consumed(const ActionEvent& aAction) noexcept;
+    void Discarded() noexcept { if (m_injected) --m_injected; }
+    void ForgetFurniture() noexcept { m_cache.RemoveFurniture(); }
+    void ObserveCell(uint32_t aCell, TiltedPhoques::List<ActionEvent>& aPending,
+                     uint32_t& aReplayCount, bool& aResetGraph) noexcept;
+    void InvalidateFurniture(TiltedPhoques::List<ActionEvent>& aPending,
+                            uint32_t& aReplayCount, bool& aResetGraph) noexcept;
     Reconstruction Rebind(const AnimationBindingChange& aChange, TiltedPhoques::List<ActionEvent>& aPending,
                           uint32_t& aReplayCount, bool& aResetGraph) noexcept;
     bool CancelForPendingExit(TiltedPhoques::List<ActionEvent>& aPending, uint32_t& aReplayCount, bool& aResetGraph) noexcept;
@@ -56,6 +63,6 @@ private:
     ActionReplayCache m_cache;
     AnimationBinding m_binding;
     AnimationBindingChange m_change;
-    uint32_t m_injected{};
+    uint32_t m_injected{}, m_cell{};
     bool m_enabled{true}, m_waitLogged{};
 };

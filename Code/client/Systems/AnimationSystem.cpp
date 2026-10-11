@@ -2,6 +2,9 @@
 
 #include <Systems/AnimationSystem.h>
 #include <Services/RemoteSeatingProbe.h>
+#include <Services/CreationSeating.h>
+#include <Animation/FurnitureReplay.h>
+#include <PlayerCharacter.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <Services/TransportService.h>
 
@@ -73,15 +76,29 @@ void AnimationSystem::InvalidateReplayContexts(World& aWorld, const char* aReaso
     }
 }
 
-void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationComponent& aAnimationComponent, const uint64_t aTick) noexcept
+void AnimationSystem::Update(World& aWorld, entt::entity aEntity, Actor* apActor, RemoteAnimationComponent& aAnimationComponent, const uint64_t aTick) noexcept
 {
     auto& actions = aAnimationComponent.TimePoints;
     auto& bindingReplay = aAnimationComponent.BindingReplay;
     const auto* gate = CampaignRuntimeGateService::TryGet();
     if (!aWorld.GetTransport().IsConnected() || (gate && gate->IsLocked()))
         bindingReplay.Invalidate(actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
-    const AnimationBinding actualBinding{apActor->formID, reinterpret_cast<uintptr_t>(apActor)};
+    const auto* form = aWorld.try_get<FormIdComponent>(aEntity);
+    const auto* remote = aWorld.try_get<RemoteComponent>(aEntity);
+    // Compare the supplied token with a fresh registry lookup BEFORE reading
+    // the actor. Never resolve or dereference Change().Old to validate replay.
+    if (!form || !remote || remote->CachedRefId != form->Id || !apActor || TESForm::GetById(form->Id) != apActor)
+    {
+        bindingReplay.Invalidate(actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
+        return;
+    }
+    const AnimationBinding actualBinding{form->Id, reinterpret_cast<uintptr_t>(apActor)};
     bindingReplay.ObserveBinding(actualBinding, actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
+    const auto actorCell = apActor->parentCell ? apActor->parentCell->formID : 0;
+    bindingReplay.ObserveCell(actorCell, actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
+    const auto* observer = PlayerCharacter::Get();
+    if (!observer || !observer->parentCell || observer->parentCell->formID != actorCell)
+        bindingReplay.InvalidateFurniture(actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
     if (bindingReplay.CancelForPendingExit(actions, aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay))
         spdlog::info("[STRE][AnimationReplay] phase=replay-cancelled serverId={} generation={} reason=newer-pending-exit",
                      bindingReplay.Change().ServerId, bindingReplay.Change().Generation);
@@ -91,6 +108,32 @@ void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationCompo
         STRE::RemoteSeatingProbe::Replay(aWorld, apActor, *it, "action-not-due", -1, actions.size(), aTick);
     if (it != std::end(actions) && it->Tick <= aTick)
     {
+        auto first = *it; // Local target normalization never rewrites wire/differential state.
+        const bool furniture = ActionReplayCache::IsFurnitureEntry(first);
+        if (furniture && !first.TargetId && ActionReplayCache::IsChairEntry(first))
+            first.TargetId = FurnitureReplayTargetId(first, STRE::CreationSeating::ReplaySeat(aWorld, remote->Id, actorCell));
+        auto* pTarget = Cast<TESObjectREFR>(TESForm::GetById(first.TargetId));
+        const auto& change = bindingReplay.Change();
+        if (furniture)
+        {
+            const FurnitureReplayTarget target{pTarget ? pTarget->formID : 0,
+                pTarget && pTarget->parentCell ? pTarget->parentCell->formID : 0,
+                pTarget && pTarget->baseForm && pTarget->baseForm->formType == FormType::Furniture,
+                pTarget && pTarget->GetNiNode() && !pTarget->IsDisabled()};
+            const bool newerExit = aAnimationComponent.ReplayCount &&
+                std::any_of(std::next(it), actions.end(), ActionReplayCache::IsExitAction);
+            if (!CanApplyFurnitureReplay(actualBinding, bindingReplay.Remaining() ? change.New : actualBinding,
+                    actorCell, apActor->GetNiNode() != nullptr, target, newerExit))
+            {
+                spdlog::info("[STRE][AnimationReplay] phase=furniture-rejected serverId={} actor={:X} cell={:X} target={:X} targetCell={:X} generation={}",
+                    remote->Id, actualBinding.FormId, actorCell, first.TargetId, target.Cell, change.Generation);
+                bindingReplay.ForgetFurniture();
+                bindingReplay.Discarded();
+                if (aAnimationComponent.ReplayCount) --aAnimationComponent.ReplayCount;
+                actions.pop_front();
+                return; // No ActorState/graph mutation and no ForceAction for a stale target.
+            }
+        }
         // Check if animation graph is ready before attempting to play animations
         if (!apActor->animationGraphHolder.IsReady())
         {
@@ -107,13 +150,9 @@ void AnimationSystem::Update(World& aWorld, Actor* apActor, RemoteAnimationCompo
             aAnimationComponent.ResetAnimationGraphForReplay = false;
         }
 
-        const auto& first = *it;
-
         const auto actionId = first.ActionId;
-        const auto targetId = first.TargetId;
 
         const auto pAction = Cast<BGSAction>(TESForm::GetById(actionId));
-        const auto pTarget = Cast<TESObjectREFR>(TESForm::GetById(targetId));
 
         STRE::RemoteSeatingProbe::Replay(aWorld, apActor, first, "action-dequeued", -1, actions.size(), aTick);
 

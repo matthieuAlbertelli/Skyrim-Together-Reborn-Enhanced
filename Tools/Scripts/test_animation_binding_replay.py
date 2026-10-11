@@ -48,7 +48,7 @@ class AnimationBindingReplay(unittest.TestCase):
         self.assertLess(update.index('CancelForPendingExit('), update.index('const auto it ='))
         self.assertLess(update.index('animationGraphHolder.IsReady()'), update.index('ForceAction('))
         self.assertLess(update.index('ForceAction('), update.index('bindingReplay.Consumed(first)'))
-        self.assertLess(update.index('bindingReplay.Consumed(first)'), update.index('actions.pop_front()'))
+        self.assertLess(update.index('bindingReplay.Consumed(first)'), update.rindex('actions.pop_front()'))
 
     def test_disconnect_recovery_and_new_session_invalidate_history(self):
         for method in ('OnConnected', 'OnDisconnected', 'OnUpdate'):
@@ -56,6 +56,19 @@ class AnimationBindingReplay(unittest.TestCase):
         update = body(ANIMATION, 'void AnimationSystem::Update(')
         self.assertLess(update.index('gate->IsLocked()'), update.index('ForceAction('))
         self.assertIn('bindingReplay.Invalidate', update)
+
+    def test_furniture_preflight_precedes_native_mutation_and_does_not_cache_rejection(self):
+        update = body(ANIMATION, 'void AnimationSystem::Update(')
+        guard = body(update, 'if (!CanApplyFurnitureReplay(')
+        for forbidden in ('ForceAction(', 'LoadAnimationVariables', 'bindingReplay.Consumed(', 'actorState.flags'):
+            self.assertNotIn(forbidden, guard)
+        self.assertIn('bindingReplay.Discarded()', guard)
+        self.assertIn('actions.pop_front()', guard)
+        self.assertIn('return;', guard)
+        self.assertLess(update.index('CanApplyFurnitureReplay('), update.index('RevertAnimationGraphManager'))
+        self.assertLess(update.index('TESForm::GetById(form->Id) != apActor'), update.index('apActor->parentCell'))
+        self.assertIn('ObserveCell(actorCell', update)
+        self.assertNotIn('reinterpret_cast<Actor*>', update)
 
     def test_bounded_evidence_is_independent_of_native_probe_budget(self):
         for phase in ('cache-source', 'replay-injected', 'replay-force-action-return', 'replay-graph-pending'):

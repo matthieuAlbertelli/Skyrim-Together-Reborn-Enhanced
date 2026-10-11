@@ -216,3 +216,13 @@ class CreationSeating(unittest.TestCase):
         self.assertIn("size > MaxSeatingIdentityBytes", source)
         self.assertIn("version != 1", source)
         self.assertLess(source.index("!aReader.ReadBytes"), source.index("SeatingCampaignId = std::move"))
+
+    def test_targetless_chair_assignment_requires_current_creation_context(self):
+        resolve = body(SEATING, 'uint32_t ReplaySeat(')
+        for guard in ('Lifetime.Terminal', 'IsConnected()', 'gate->IsLocked()', 'RosterSealed',
+                      'CampaignId != intent.Campaign', 'kCampaignWirePhaseCharacterCreation',
+                      'kCampaignWireRuntimeActive', 'aActorCell != mod->GetFormId(0x000012D1)',
+                      'StandingCreationPositionIndex(players, intent.DurablePlayer)'):
+            self.assertIn(guard, resolve)
+        for forbidden in ('->Activate(', '->MoveTo(', '->currentProcess'):
+            self.assertNotIn(forbidden, resolve)

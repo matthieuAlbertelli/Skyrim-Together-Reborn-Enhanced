@@ -576,7 +576,8 @@ void Advance(World& aWorld, Job& aJob)
     Log(aJob, "candidate-commit");
     AnimationSystem::OnBindingChanged(aWorld, aJob.Entity,
         {aJob.Lifecycle.Key().Session, aJob.Lifecycle.Key().Generation, aJob.Server, static_cast<uint32_t>(aJob.Entity),
-         {aJob.Old.Forms.Actor, aJob.Old.ActorToken}, {aJob.Candidate.Forms.Actor, aJob.Candidate.ActorToken}});
+         {aJob.Old.Forms.Actor, aJob.Old.ActorToken}, {aJob.Candidate.Forms.Actor, aJob.Candidate.ActorToken},
+         aJob.Cell, candidate->parentCell ? candidate->parentCell->formID : 0});
     Log(aJob, "inventory-restore-status", "live-counts-worn-sides-and-magic-equipment-matched");
     DispatchRetirement(aJob);
     Log(aJob, "complete", "natural-join-local-representation-committed-native-retirement-observation-pending");
