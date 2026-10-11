@@ -2,6 +2,56 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Loading-door regression acceptance (issue #89, 2026-10-11)
+
+Use three separately identified candidates: exact Git 605ef668, exact Git
+6dfba159, then the corrective PR head. Build/package in isolated worktrees from
+Git assets without CK import. Record the full source SHA, executable/PDB hashes,
+ESP, AlternateStart PSC/PEX and all managed PEX hashes. Never mix a newer CK Data
+folder into a historical candidate. Keep the existing CK backup intact. Packages
+are prepared for human installation; the agent does not deploy or launch Skyrim.
+
+Start fresh Skyrim processes and fresh campaigns for each independent run, with
+matching A/B/server binaries and matching managed assets. Preserve complete logs
+from startup to termination for server, A and B, plus hashes and wall-clock times.
+
+1. Solo: New Game, finish creation and individual seating, ordinary door out,
+   back in, out again. Expect no crash.
+2. Sealed roster 1: repeat exactly. Expect no crash and normal campaign gating.
+3. Sealed roster 2, A first: finish both creations, confirm final reciprocal
+   appearances and local/remote seated poses, then A exits by the loading door
+   while B stays inside. Verify A remains connected/playable, then B exits.
+   Expect no crash, recovery lock or teleport to the previous chair.
+4. Fresh roster-2 run, B first: repeat with the exit order reversed.
+5. Both return inside then exit again. Confirm no involuntary reseating or
+   old-chair replay; ordinary movement/turn/combat animations still synchronize.
+6. Check final appearance on both sides and absence of a revived placeholder.
+   Repeat after normal recovery using the existing committed-checkpoint protocol;
+   never use partial-roster progression as a workaround.
+7. Only after all door tests pass, exercise `coc HelgenExterior`. A failure here
+   must be recorded separately; the door reproducer does not require Helgen.
+
+If a failure persists, keep the exact matching PDB and a full dump outside Git.
+C0000409 with argument 7 establishes FAST_FAIL_FATAL_APP_EXIT, not a buffer
+overflow or an unhandled C++ exception. Resolve .game/Skyrim addresses separately
+from STRE code before attributing the crashing frame. The original dump/log ZIP
+are no longer available; do not substitute the later overwritten live client log.
+
+Automated regressions cover A->B chair history removal, mixed furniture/ordinary
+queue counts/order, wrong/missing/non-furniture/unloaded targets, stale tokens and
+generations, later exits, terminal intents, and bounded assignment for targetless
+creation-chair events. Run TPTests full plus [seating], [animation],
+[appearance-apply], [respawn]. This checkout has no [respawn] tag: also run
+[final-respawn] and [animation-replay] explicitly rather than interpreting an empty
+filter as coverage. Run all Tools/Scripts unittest tests, client/server/launcher
+builds and diff checks. CK audits/PSC compilation are required only if their
+sources/artifacts/manifests change; this native correction leaves them unchanged.
+
+The 605ef668 aligned PASS is maintainer evidence. Older 6dfba159+ failures lack
+complete artifact provenance; publishing exact packages does not itself prove
+the suspected historical boundary. This acceptance blocks runtime validation
+of PR #88 until the loading-door matrix succeeds.
+
 ## Automatic final activation - ADR-0023 acceptance (2026-09-18)
 
 Initial Character Creation has no live remote appearance synchronization. The
