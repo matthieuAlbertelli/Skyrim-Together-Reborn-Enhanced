@@ -128,8 +128,7 @@ void AnimationSystem::Update(World& aWorld, entt::entity aEntity, Actor* apActor
                 spdlog::info("[STRE][AnimationReplay] phase=furniture-rejected serverId={} actor={:X} cell={:X} target={:X} targetCell={:X} generation={}",
                     remote->Id, actualBinding.FormId, actorCell, first.TargetId, target.Cell, change.Generation);
                 bindingReplay.ForgetFurniture();
-                bindingReplay.Discarded();
-                if (aAnimationComponent.ReplayCount) --aAnimationComponent.ReplayCount;
+                bindingReplay.Discarded(aAnimationComponent.ReplayCount, aAnimationComponent.ResetAnimationGraphForReplay);
                 actions.pop_front();
                 return; // No ActorState/graph mutation and no ForceAction for a stale target.
             }

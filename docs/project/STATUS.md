@@ -35,12 +35,13 @@ transition was not established. Remote observation is now bounded and terminal;
 callback diagnostics use values rather than native pointer walks. Furniture
 history/queued entries are scoped to cell continuity and fresh compatible targets,
 with stale-generation and newer-exit fences, while ordinary animations survive.
+Discarding the last invalid furniture action also clears its deferred graph reset.
 The local seat request, final materializer and appearance contract remain.
 Details belong to [the feature contract](../features/alternate-start/CHARACTER_APPEARANCE_SYNC.md#creation-cell-lifetime-and-transition-regression-2026-10-11).
 No protocol, persistence, authority, CK, PSC, PEX or manifest change.
 
-**Automated evidence:** Windows x64 debug TPTests passes 45,169 assertions in
-424 cases; [seating] 7/87, [animation] 6/66, [appearance-apply] 11/297,
+**Automated evidence:** Windows x64 debug TPTests passes 45,176 assertions in
+425 cases; [seating] 8/94, [animation] 7/73, [appearance-apply] 11/297,
 [final-respawn] 17/34,089 and [animation-replay] 12/340. Requested [respawn]
 matches no test in this repository; the explicit final-respawn run supplies that
 coverage. All 109 Python tests pass. The client, server, immersive launcher and server runner builds pass. One

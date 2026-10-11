@@ -62,7 +62,7 @@ class AnimationBindingReplay(unittest.TestCase):
         guard = body(update, 'if (!CanApplyFurnitureReplay(')
         for forbidden in ('ForceAction(', 'LoadAnimationVariables', 'bindingReplay.Consumed(', 'actorState.flags'):
             self.assertNotIn(forbidden, guard)
-        self.assertIn('bindingReplay.Discarded()', guard)
+        self.assertIn('bindingReplay.Discarded(', guard)
         self.assertIn('actions.pop_front()', guard)
         self.assertIn('return;', guard)
         self.assertLess(update.index('CanApplyFurnitureReplay('), update.index('RevertAnimationGraphManager'))

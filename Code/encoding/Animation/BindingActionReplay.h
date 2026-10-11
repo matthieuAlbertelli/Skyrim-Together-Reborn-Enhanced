@@ -39,7 +39,12 @@ public:
     void ObserveBinding(AnimationBinding aBinding, TiltedPhoques::List<ActionEvent>& aPending,
                         uint32_t& aReplayCount, bool& aResetGraph) noexcept;
     void Consumed(const ActionEvent& aAction) noexcept;
-    void Discarded() noexcept { if (m_injected) --m_injected; }
+    void Discarded(uint32_t& aReplayCount, bool& aResetGraph) noexcept
+    {
+        if (m_injected) --m_injected;
+        if (aReplayCount) --aReplayCount;
+        if (!aReplayCount) aResetGraph = false;
+    }
     void ForgetFurniture() noexcept { m_cache.RemoveFurniture(); }
     void ObserveCell(uint32_t aCell, TiltedPhoques::List<ActionEvent>& aPending,
                      uint32_t& aReplayCount, bool& aResetGraph) noexcept;

@@ -364,3 +364,21 @@ TEST_CASE("Targetless creation chair entry needs a current assigned seat and pre
     ordinary.TargetId = 0;
     REQUIRE(FurnitureReplayTargetId(ordinary, 500) == 0);
 }
+
+TEST_CASE("Rejected last furniture replay cannot leave a deferred graph reset", "[animation][seating]")
+{
+    Observer o;
+    o.History.Consumed(Action("IdleForceDefaultState", 1));
+    o.History.Consumed(Action("IdleChairRightEnter", 2));
+    o.Pending.push_back(Action("moveStart", 3));
+    REQUIRE(o.Rebind().Accepted);
+    REQUIRE(o.Reset);
+    REQUIRE(o.ReplayCount == 1);
+    o.History.ForgetFurniture();
+    o.History.Discarded(o.ReplayCount, o.Reset);
+    o.Pending.pop_front();
+    REQUIRE(o.ReplayCount == 0);
+    REQUIRE(o.History.Remaining() == 0);
+    REQUIRE_FALSE(o.Reset);
+    REQUIRE(o.Pending.front().EventName == "moveStart");
+}
