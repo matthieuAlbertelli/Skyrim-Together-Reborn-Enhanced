@@ -44,22 +44,22 @@ class CreationSeating(unittest.TestCase):
         self.assertIn('SeatingObservationWindow::Active(now, started, entered)', action)
         event = body(SEATING, 'void ObserveFurnitureEvent(')
         self.assertIn('FirstEnterAt.compare_exchange_strong', event)
-        self.assertIn('CaptureSoloSample(', event)
-        self.assertIn('furniture-enter-immediate', event)
+        self.assertNotIn('CaptureSoloSample(', event)
+        self.assertNotIn('Cast<Actor>', event)
         self.assertNotIn('GetRunner', event)  # snapshot is synchronous, not next tick
         self.assertNotIn('SeatingObservationWindow::Active', event)  # first late Enter can reopen
 
-    def test_process_trace_is_read_only_and_does_not_claim_path_solver_or_human_input_proof(self):
-        for field in ('runOncePackage', 'packageProcedureIndex', 'runOnceTargetHandle', 'furniturePathPoint', 'furnitureIdle', 'MoveInputVec', 'LookInputVec'):
-            self.assertIn(field, SEATING)
-            self.assertNotRegex(SEATING, rf'->(?:\w+\.)?{field}\s*=(?!=)')
-        self.assertIn('pathSolverStatus=unavailable', SEATING)
-        self.assertIn('inputProvenance=not-proven', SEATING)
-        self.assertIn('distance={} yawDelta={}', SEATING)
-        capture = body(SEATING, 'void CaptureSoloSample(')
-        self.assertIn('occupiedFurniture.handle.iBits', capture)
-        self.assertIn('PapyrusFunction<int32_t, Actor>', capture)
-        self.assertIn('ReadSoloSample(', capture)
+    def test_removed_diagnostic_pointer_walks_cannot_run_in_callbacks(self):
+        for field in ('runOncePackage', 'packageProcedureIndex', 'runOnceTargetHandle',
+                      'furniturePathPoint', 'furnitureIdle', 'MoveInputVec', 'LookInputVec'):
+            self.assertNotIn(field, SEATING)
+        for signature in ('void ObserveFurnitureEvent(', 'void ObserveAnimationAction('):
+            callback = body(SEATING, signature)
+            for native_read in ('->formID', 'CaptureSoloSample(', 'GetByHandle(', 'GraphBool(', 'Cast<Actor>'):
+                self.assertNotIn(native_read, callback)
+        tick = body(SEATING, 'void Tick(')
+        self.assertLess(tick.index('intent.Lifetime.Terminal'), tick.index('RemoteRespawnLab::CommittedActor'))
+        self.assertLess(tick.index('observerCell != creationCell'), tick.index('PollSoloObservation'))
 
     def test_applied_is_individual_and_server_hash_guards_remain(self):
         receive = body(SEATING, "void Receive(")
@@ -190,7 +190,7 @@ class CreationSeating(unittest.TestCase):
             self.assertIn('ObservationContext()', source)
             self.assertNotIn('IntentContext(', source)
             self.assertNotIn('s_intents', source)
-        for phase in ('prototype-triggered', 'prototype-rejected', 'approach-target', 'furniture-enter-immediate'):
+        for phase in ('prototype-triggered', 'prototype-rejected', 'approach-target', 'furniture-event'):
             self.assertIn(phase, SEATING)
 
     def test_local_finalize_unlocks_before_seating_and_solo_has_no_network_dependency(self):
