@@ -1,13 +1,51 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 14, 2026.
+> **Last updated:** October 15, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
+
+Implemented for [#92](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/92):
+the Windows PowerShell adapter under Tools/Scripts prepares isolated copies,
+enforces clean feature branches and the single-plugin write policy, verifies
+AutoMod JSON/dry-run/record results, and blocks import pending an explicit human
+xEdit attestation. The runbook owns the workflow and its limits:
+[MODDING_TOOLCHAIN](../development/MODDING_TOOLCHAIN.md).
+There is no unattended xEdit validation/save implementation. The shared process
+guard covers game/CK/Vortex and six xEdit names; the ignored local importer and
+build/deploy scripts were connected to it without publishing their machine paths.
+
+**Automated local evidence:** `Test-StreModding.ps1 -RealTools` passes **57
+cases**: 55 synthetic safeguard cases plus real AutoMod GLOB dry-run and
+write/reread cases in a disposable synthetic Git/ESP fixture. The real write
+stops at `HUMAN_XEDIT_REQUIRED`; no quest was created. Synthetic import tests use
+a fixture importer and explicitly simulated receipts, not xEdit validation.
+The tests verify all four repository/installed STRE_AlternateStart.esp and
+SkyrimTogether.esp hashes unchanged. Windows CI is configured for the default
+55-case fixture suite; this statement does not claim a remote CI result.
+
+Real read-only inspection passes for the current ESP info, the exact three
+masters and four QUST. `papyrus status` reports compiler and decompiler available;
+no Papyrus compilation was performed. SkyrimSE.exe reports **1.6.1170.0**;
+official xTESEdit.exe reports **4.1.5.0**, SHA256
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
+The tested AutoMod CLI DLL SHA256 is
+`D7969A1AE8A664474C24645D511074A1128028AA151A21FD4552C412A517B846`;
+the local toolkit extraction has no Git metadata, so no source commit is claimed.
+Real-tool testing found a French-locale float parsing failure; child-only
+invariant globalization corrects it and the 7.25 GLOB case now passes.
+
+No production ESP/PSC/PEX, gameplay, campaign authority, protocol or persistence
+changed. Actual candidate Sort Masters, Check for Errors, save/reopen review,
+production CK import, build/deploy and in-game acceptance remain human/future
+content-mission steps. Neither a real xEdit validation run nor a production
+quest-creation smoke is claimed by this infrastructure evidence.
 
 ## Automatic Helgen integration with the cell-transition correction (2026-10-14)
 

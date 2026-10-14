@@ -54,6 +54,10 @@ The generated UI is written under `Code/skyrim_ui/dist`. Local deployment script
 
 ## Tests
 
+For CK/AutoMod authoring, official xEdit validation and the existing local import/
+deployment boundary, follow [the modding toolchain runbook](MODDING_TOOLCHAIN.md).
+Its fixture checks run with `pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1`.
+
 The C++ tests are defined under `Code/tests` and included by the root xmake project. Run the relevant xmake test target(s) for your configured environment and include the exact command/output in the PR until a single canonical test command is established in CI.
 
 ## Known documentation gaps
