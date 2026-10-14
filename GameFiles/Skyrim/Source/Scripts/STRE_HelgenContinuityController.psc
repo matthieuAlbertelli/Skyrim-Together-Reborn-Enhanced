@@ -76,6 +76,66 @@ Bool CollapseVisualApplied = False
 
 Bool LastApplyCompleted = False
 
+; Persistent local idempotence belongs to this running cleanup quest.
+Bool PostHelgenProjectionStarted = False
+Bool PostHelgenProjectionCompleted = False
+
+Bool Function EnsurePostHelgenProjection()
+    If PostHelgenProjectionCompleted
+        Return True
+    EndIf
+    ; Existing completed projections use the same cleanup completion marker.
+    If GetStageDone(40)
+        PostHelgenProjectionCompleted = True
+        Return True
+    EndIf
+    If PostHelgenProjectionStarted
+        Debug.Trace("[STRE][HelgenStart] ERROR: projection in progress or interrupted; no replay")
+        Return False
+    EndIf
+    If !IsRunning()
+        Debug.Trace("[STRE][HelgenStart] ERROR: cleanup must be running before projection")
+        Return False
+    EndIf
+    Quest mq101 = Quest.GetQuest("MQ101")
+    If mq101 == None
+        Debug.Trace("[STRE][HelgenStart] ERROR: MQ101 unavailable; projection remains retryable")
+        Return False
+    EndIf
+
+    ; No startup or MQ101 lookup failure claims this latch. From the first
+    ; mutation onward, a partial projection must never be replayed.
+    PostHelgenProjectionStarted = True
+    Debug.Trace("[STRE][HelgenContinuity] Starting MQ101/post-Helgen projection")
+
+    mq101.SetStage(20)
+    mq101.SetStage(25)
+    mq101.SetStage(26)
+    mq101.SetStage(28)
+    mq101.SetStage(30)
+    mq101.SetStage(40)
+    mq101.SetStage(70)
+    mq101.SetStage(100)
+    mq101.SetStage(145)
+    mq101.SetStage(150)
+    mq101.SetStage(180)
+    mq101.SetStage(200)
+    mq101.SetStage(250)
+    mq101.SetStage(500)
+    mq101.SetStage(800)
+    mq101.SetStage(900)
+
+    SetStage(10)
+    SetStage(20)
+    SetStage(30)
+    ApplyPostAttackProjection()
+    SetStage(40)
+
+    PostHelgenProjectionCompleted = True
+    Debug.Trace("[STRE][HelgenContinuity] MQ101/post-Helgen projection completed; cleanup stage 40")
+    Return True
+EndFunction
+
 ; ============================================================================
 ; Semantic / world-state projection
 ;

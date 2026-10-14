@@ -517,6 +517,8 @@ void CharacterBuildService::OnCharacterBuildRequest(
         pExisting->Build.SpellHash =
             ComputeCharacterBuildSpellHash(canonicalSpells);
         pExisting->Applied = false;
+        const auto* admission = m_world.GetCampaignProtocolService().GetAdmission(*pPlayer);
+        pExisting->CampaignIdentity = admission ? admission->AdmittedIdentity : std::nullopt;
 
         pInventory->Content = pExisting->Build.CanonicalInventory;
 
@@ -560,6 +562,8 @@ void CharacterBuildService::OnCharacterBuildRequest(
     component.Build.SpellHash =
         ComputeCharacterBuildSpellHash(canonicalSpells);
     component.Applied = false;
+    const auto* admission = m_world.GetCampaignProtocolService().GetAdmission(*pPlayer);
+    component.CampaignIdentity = admission ? admission->AdmittedIdentity : std::nullopt;
 
     // The old imported inventory is discarded atomically on the authority.
     // The client then mirrors this canonical snapshot locally under event
@@ -648,6 +652,14 @@ void CharacterBuildService::OnCharacterBuildAppliedRequest(
         return;
     }
 
+    if (pBuild->Applied)
+    {
+        // Reliable replay may resend individual evidence, never level/reset/start.
+        SendState(*pPlayer, World::ToInteger(*character), *pBuild,
+            CharacterBuildNetworkState::Applied, false);
+        return;
+    }
+
     pBuild->Applied = true;
     pPlayer->SetLevel(1);
 
@@ -671,6 +683,10 @@ void CharacterBuildService::OnCharacterBuildAppliedRequest(
         pBuild->Build.ClassId.c_str(),
         pBuild->Build.InventoryHash,
         pBuild->Build.SpellHash);
+
+    // Individual Applied (including seating) is published before this separate
+    // collective Helgen barrier. Never gate seating on another player's build.
+    m_world.GetCampaignProtocolService().OnCharacterBuildApplied(*pPlayer);
 }
 
 void CharacterBuildService::SendRejected(

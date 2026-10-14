@@ -114,6 +114,53 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Helgen runtime departure after network loss permits Solo but campaign Continue still requires resume",
+    "[helgen][campaign.client][lifecycle]")
+{
+    CampaignClientAdmissionState state;
+    state.Accept(Admission());
+    state.ObserveSnapshot("campaign-a", true, true, 1, 1);
+    REQUIRE(state.Disconnect() == "campaign-a");
+    REQUIRE_FALSE(state.GetHelgenReadinessView().CanSignal);
+    REQUIRE(state.BeginResume() == "campaign-a");
+
+    // Main Menu must end even an unadmitted/in-flight reconnect context.
+    REQUIRE(state.EndRuntimeSession() == "campaign-a");
+    REQUIRE_FALSE(state.BeginResume());
+    REQUIRE_FALSE(state.Disconnect());
+    REQUIRE_FALSE(state.GetAdmission());
+    CampaignBootstrapState solo;
+    solo.BeginFreshGame();
+    REQUIRE(solo.ChooseSolo());
+    CampaignLoadPolicyContext load;
+    load.Target = CampaignLoadTarget::Ordinary;
+    REQUIRE(EvaluateCampaignLoadPolicy(load) == CampaignLoadDecision::AllowVanilla);
+    load.Target = CampaignLoadTarget::Campaign;
+    REQUIRE(EvaluateCampaignLoadPolicy(load) == CampaignLoadDecision::BeginResumeRequired);
+    state.Accept(Admission());
+    REQUIRE_FALSE(state.GetHelgenReadinessView().CanSignal);
+    state.ObserveSnapshot("campaign-a", true, true, 1, 1);
+    REQUIRE(state.GetHelgenReadinessView().CanSignal);
+}
+
+TEST_CASE(
+    "Helgen explicit Leave removes its context without removing another admission",
+    "[helgen][campaign.client][lifecycle]")
+{
+    CampaignClientAdmissionState state;
+    state.Accept(Admission());
+    state.Leave("campaign-other");
+    REQUIRE(state.GetAdmission() == Admission());
+    state.Leave("campaign-a");
+    REQUIRE_FALSE(state.GetAdmission());
+    REQUIRE_FALSE(state.BeginResume());
+    REQUIRE_FALSE(state.Disconnect());
+    CampaignBootstrapState solo;
+    solo.BeginFreshGame();
+    REQUIRE(solo.ChooseSolo());
+}
+
+TEST_CASE(
     "Cold-session resume remains unadmitted until a server response is accepted",
     "[campaign.client][campaign.admission][reconnect][security]")
 {

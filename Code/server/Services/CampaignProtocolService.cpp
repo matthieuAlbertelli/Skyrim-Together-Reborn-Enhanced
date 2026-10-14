@@ -654,7 +654,7 @@ void CampaignProtocolService::OnPlayerLocationChanged(const Player& acPlayer) no
         return;
 
     const CampaignId& campaign = pAdmission->AdmittedIdentity->Campaign;
-    if (m_helgenStartedCampaigns.contains(campaign.Value))
+    if (m_helgenStartBarrier.HasStarted(campaign))
         BroadcastHelgenState(campaign);
 }
 
@@ -1314,61 +1314,61 @@ void CampaignProtocolService::OnLeave(const PacketEvent<CampaignLeaveRequest>& a
         acPacket.Packet.MutationId.c_str());
 }
 
+HelgenBuildEvidence CampaignProtocolService::ReadHelgenBuild(const CampaignAdmissionRecord& acAdmission) const noexcept
+{
+    const auto* member = m_world.GetPlayerManager().GetById(static_cast<std::uint32_t>(acAdmission.Connection));
+    if (!member || !member->GetCharacter() || !m_world.valid(*member->GetCharacter()))
+        return HelgenBuildEvidence::Invalid;
+    const auto character = *member->GetCharacter();
+    const auto* owner = m_world.try_get<OwnerComponent>(character);
+    if (!owner || owner->GetOwner() != member)
+        return HelgenBuildEvidence::Invalid;
+    const auto* build = m_world.try_get<CharacterBuildComponent>(character);
+    if (!build)
+        return HelgenBuildEvidence::Missing;
+    if (!build->CampaignIdentity || build->CampaignIdentity != acAdmission.AdmittedIdentity)
+        return HelgenBuildEvidence::Invalid;
+    return build->Applied ? HelgenBuildEvidence::Applied : HelgenBuildEvidence::Pending;
+}
+
+void CampaignProtocolService::OnCharacterBuildApplied(const Player& acPlayer) noexcept
+{
+    const auto result = m_helgenStartBarrier.Observe(m_admission, ToHandle(acPlayer),
+        [this](const auto& admission) { return ReadHelgenBuild(admission); });
+    spdlog::info("[STRE][Helgen] build barrier campaign={} player={} applied={}/{} outcome={} reason={}",
+        result.Campaign.Value, acPlayer.GetId(), result.Applied, result.Required,
+        static_cast<unsigned>(result.Outcome), result.Reason);
+    if (result.Outcome == HelgenStartOutcome::Started)
+    {
+        spdlog::info("[STRE][Helgen] collective investigation start authorized campaign={} roster={} source=all-builds-applied",
+            result.Campaign.Value, result.Required);
+        BroadcastHelgenState(result.Campaign);
+    }
+}
+
 void CampaignProtocolService::OnHelgenInvestigationReady(const PacketEvent<CampaignHelgenInvestigationReadyRequest>& acPacket) noexcept
 {
+    if (!acPacket.pPlayer)
+        return;
     Player& player = *acPacket.pPlayer;
-    const CampaignAdmissionRecord* const pAdmission = GetAdmission(player);
-    if (!pAdmission || !pAdmission->AdmittedIdentity)
-    {
-        spdlog::debug(
-            "[STRE][Helgen] readiness rejected transientPlayer={} reason=no-admission",
-            player.GetId());
+    const auto* admission = GetAdmission(player);
+    if (!admission || !admission->AdmittedIdentity)
         return;
-    }
-
-    const CampaignId campaign = pAdmission->AdmittedIdentity->Campaign;
-    const std::optional<CampaignSnapshotData> snapshot = m_admission.BuildSnapshot(campaign);
-    if (!snapshot || !snapshot->RosterSealed || snapshot->RuntimeState != static_cast<std::uint8_t>(CampaignRuntimeState::ACTIVE))
+    const auto campaign = admission->AdmittedIdentity->Campaign;
+    // Retain reconstruction for native checkpoints created by the diagnostic
+    // slice. Fresh creation cannot use readiness instead of Applied proofs.
+    const bool hasCheckpoint = !m_helgenStartBarrier.HasStarted(campaign) &&
+        GameServer::Get()->GetCampaignStore().LoadLastCommittedCheckpoint(campaign).Succeeded();
+    const auto result = m_helgenStartBarrier.Observe(m_admission, ToHandle(player),
+        [this](const auto& member) { return ReadHelgenBuild(member); }, true, hasCheckpoint);
+    if (result.Outcome == HelgenStartOutcome::Started)
     {
-        spdlog::debug(
-            "[STRE][Helgen] readiness rejected campaign={} transientPlayer={} reason=runtime-gate snapshot={} sealed={} runtime={}",
-            campaign.Value, player.GetId(), snapshot.has_value(),
-            snapshot && snapshot->RosterSealed,
-            snapshot ? static_cast<unsigned>(snapshot->RuntimeState) : 0u);
-        return;
+        spdlog::info("[STRE][Helgen] collective investigation start authorized campaign={} roster={} source={}",
+            campaign.Value, result.Required, result.Reason);
+        BroadcastHelgenState(campaign);
     }
-
-    const std::vector<CampaignConnectionHandle> connections = m_admission.GetAdmittedConnections(campaign);
-    if (connections.size() != snapshot->Roster.size() ||
-        std::any_of(snapshot->Roster.begin(), snapshot->Roster.end(), [](const CampaignPublicSlotData& acSlot) { return !acSlot.Present; }))
-    {
-        spdlog::debug(
-            "[STRE][Helgen] readiness rejected campaign={} transientPlayer={} reason=incomplete-roster connections={} roster={}",
-            campaign.Value, player.GetId(), connections.size(),
-            snapshot->Roster.size());
-        return;
-    }
-
-    auto& ready = m_helgenReadyConnections[campaign.Value];
-    const auto [readyIterator, firstAnnouncement] = ready.insert(ToHandle(player));
-    (void)readyIterator;
-    spdlog::log(
-        firstAnnouncement ? spdlog::level::info : spdlog::level::debug, "[STRE][Helgen] investigation readiness observed campaign={} player={} firstAnnouncement={} ready={}/{}",
-        campaign.Value, player.GetId(), firstAnnouncement, ready.size(), snapshot->Roster.size());
-
-    if (m_helgenStartedCampaigns.contains(campaign.Value))
-    {
+    else if (result.Outcome == HelgenStartOutcome::AlreadyStarted)
         BroadcastHelgenState(campaign, &player);
-        return;
-    }
-
-    const bool allReady = std::all_of(connections.begin(), connections.end(), [&](CampaignConnectionHandle aConnection) { return ready.contains(aConnection); });
-    if (!allReady)
-        return;
-
-    m_helgenStartedCampaigns.insert(campaign.Value);
-    spdlog::info("[STRE][Helgen] collective investigation start authorized campaign={} roster={}", campaign.Value, connections.size());
-    BroadcastHelgenState(campaign);
 }
 
 void CampaignProtocolService::OnCheckpointSaveResult(
@@ -1682,7 +1682,7 @@ void CampaignProtocolService::BroadcastHelgenState(const CampaignId& acCampaign,
     const STRE::Spatial::Evaluation evaluation = STRE::Spatial::EvaluateGroupSpatialCondition(members, BuildHelgenFootprint(m_world), STRE::Spatial::GroupOperator::None, gateOpen);
 
     NotifyCampaignHelgenState notification;
-    notification.InvestigationStartAuthorized = m_helgenStartedCampaigns.contains(acCampaign.Value);
+    notification.InvestigationStartAuthorized = m_helgenStartBarrier.HasStarted(acCampaign);
     notification.SpatialStatus = ToWireStatus(evaluation.Status);
     notification.AllRequiredPlayersOutside = evaluation.ConditionMet;
 
@@ -1710,9 +1710,7 @@ void CampaignProtocolService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noe
     if (const CampaignAdmissionRecord* const pAdmission = GetAdmission(*acEvent.pPlayer); pAdmission && pAdmission->AdmittedIdentity)
     {
         campaign = pAdmission->AdmittedIdentity->Campaign;
-        auto ready = m_helgenReadyConnections.find(campaign->Value);
-        if (ready != m_helgenReadyConnections.end())
-            ready->second.erase(ToHandle(*acEvent.pPlayer));
+        m_helgenStartBarrier.Disconnect(*campaign);
     }
 
     m_pendingResumeAlignments.erase(ToHandle(*acEvent.pPlayer));
@@ -1723,6 +1721,6 @@ void CampaignProtocolService::OnPlayerLeave(const PlayerLeaveEvent& acEvent) noe
         if (campaign)
             BroadcastLobbyState(*campaign);
     }
-    if (campaign && m_helgenStartedCampaigns.contains(campaign->Value))
+    if (campaign && m_helgenStartBarrier.HasStarted(*campaign))
         BroadcastHelgenState(*campaign);
 }

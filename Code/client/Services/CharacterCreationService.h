@@ -3,6 +3,7 @@
 #include <Events/EventDispatcher.h>
 #include <Games/Events.h>
 #include <Structs/CharacterBuild.h>
+#include <HelgenStartProjection.h>
 
 #include <array>
 #include <chrono>
@@ -17,6 +18,8 @@
 struct Actor;
 struct CharacterBuildResponse;
 struct CampaignBootstrapAuthorizedEvent;
+struct CampaignMainMenuEnteredEvent;
+struct HelgenStartAuthorizedEvent;
 class CampaignBootstrapService;
 struct DisconnectedEvent;
 struct NotifyCharacterBuildState;
@@ -122,6 +125,9 @@ private:
     void OnCharacterBuildResponse(const CharacterBuildResponse& acMessage) noexcept;
     void OnNotifyCharacterBuildState(const NotifyCharacterBuildState& acMessage) noexcept;
     void OnDisconnected(const DisconnectedEvent& acEvent) noexcept;
+    void OnHelgenStartAuthorized(const HelgenStartAuthorizedEvent& acEvent) noexcept;
+    void OnMainMenuEntered(const CampaignMainMenuEnteredEvent&) noexcept;
+    void ProjectHelgenStart() noexcept;
     void OnCampaignBootstrapAuthorized(
         const CampaignBootstrapAuthorizedEvent&) noexcept;
     [[nodiscard]] bool ResetForFreshCharacterCreation() noexcept;
@@ -205,6 +211,9 @@ private:
     entt::scoped_connection m_buildStateConnection;
     entt::scoped_connection m_disconnectedConnection;
     entt::scoped_connection m_bootstrapAuthorizedConnection;
+    entt::scoped_connection m_helgenAuthorizedConnection;
+    entt::scoped_connection m_mainMenuConnection;
+    HelgenStartProjection m_helgenProjection;
 
     TESQuest* m_pQuest{};
     struct PendingCreationPlacement

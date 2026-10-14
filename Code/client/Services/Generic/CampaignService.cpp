@@ -3,6 +3,7 @@
 #include <Services/TransportService.h>
 
 #include <Events/CampaignMainMenuEnteredEvent.h>
+#include <Events/HelgenStartAuthorizedEvent.h>
 #include <Events/ConnectedEvent.h>
 #include <Events/DisconnectedEvent.h>
 #include <Messages/CampaignMessages.h>
@@ -19,7 +20,8 @@ bool Succeeded(CampaignProtocolResult aResult) noexcept
 } // namespace
 
 CampaignService::CampaignService(entt::dispatcher& aDispatcher, TransportService& aTransport) noexcept
-    : m_transport(aTransport)
+    : m_dispatcher(aDispatcher)
+    , m_transport(aTransport)
     , m_responseConnection(aDispatcher.sink<CampaignCommandResponse>()
           .connect<&CampaignService::OnCommandResponse>(this))
     , m_snapshotConnection(aDispatcher.sink<NotifyCampaignSnapshot>()
@@ -339,6 +341,7 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
             }
         }
         m_admissionState.Accept(std::move(admission));
+        m_helgenCampaignRequired.store(true);
         m_helgenReadinessRejectionLogged.store(
             false, std::memory_order_relaxed);
         spdlog::info(
@@ -370,6 +373,8 @@ void CampaignService::OnCommandResponse(const CampaignCommandResponse& acRespons
             }
         }
         m_admissionState.Leave(acResponse.CampaignId.c_str());
+        if (!m_admissionState.GetAdmission())
+            m_helgenCampaignRequired.store(false);
         m_latestSnapshot.reset();
         m_lobbyState.reset();
         m_helgenState.Reset();
@@ -552,6 +557,7 @@ void CampaignService::OnHelgenState(const NotifyCampaignHelgenState& acNotificat
     {
         spdlog::info(
             "[STRE][CampaignAdmission] Helgen investigation authorization received");
+        m_dispatcher.trigger(HelgenStartAuthorizedEvent{m_admissionState.GetAdmission()->CampaignId});
     }
 }
 
@@ -588,18 +594,21 @@ void CampaignService::OnMainMenuEntered(
         "[STRE][CampaignLifecycle] MAIN_MENU_ENTERED wasAdmitted={} campaign={}",
         admission.has_value(),
         admission ? admission->CampaignId : "none");
-    if (!admission)
+    // A disconnect already cleared admission, but may retain a resume candidate
+    // and the campaign fence. A real runtime exit must clear both as well.
+    const auto departedCampaign = m_admissionState.EndRuntimeSession();
+    m_helgenCampaignRequired.store(false);
+    m_resumeRequiresCheckpointRestore = false;
+    ClearVolatileProjection();
+    if (!departedCampaign)
         return;
 
     const bool transportOnline = m_transport.IsOnline();
     spdlog::info(
         "[STRE][CampaignAdmission] RUNTIME_DEPARTURE_REQUESTED campaign={} transportOnline={}",
-        admission->CampaignId,
+        *departedCampaign,
         transportOnline);
 
-    const auto departedCampaign = m_admissionState.EndRuntimeSession();
-    m_resumeRequiresCheckpointRestore = false;
-    ClearVolatileProjection();
     spdlog::info(
         "[STRE][CampaignAdmission] VOLATILE_ADMISSION_CLEARED reason=main-menu campaign={} bindingRetained=true",
         departedCampaign ? *departedCampaign : "none");

@@ -1,6 +1,6 @@
 # Alternate Start — State model
 
-> **Status: Authoritative build, server campaign core, and live admission protocol implemented; Alternate Start gameplay projection pending**
+> **Status: Authoritative build, campaign admission and automatic Helgen entry implemented; full departure progression pending. Validation evidence lives in STATUS.**
 
 ## Currently implemented state
 
@@ -38,19 +38,45 @@ Current invariants:
 - local plugin/FormID resolution does not use a load-order prefix;
 - a build becomes `Applied` only after both hashes are validated;
 - once applied, the build cannot be replaced during the session;
-- a durable campaign/checkpoint persistence substrate exists, but the current
-  session Character Build service is not yet bound to a live campaign identity
-  or restored from that store.
+- a durable campaign/checkpoint persistence substrate exists; the session
+  Character Build component captures its canonical campaign/slot/player/binding
+  identity as volatile provenance, but is not restored from that store.
 
 ## Individual post-build presentation
 
-Applied authorizes only that player's local MarkerXX -> SeatXX approach and
+Individual Applied authorizes that player's local MarkerXX -> SeatXX approach and
 final canonical appearance publication. Observer native rematerialization and
 STR binding replay preserve the logical entity/ownership; posture is presentation,
 not authoritative build completion or collective readiness. The durable sealed
 PlayerId rank selects the existing marker/seat pair. This accepted roster-2
-slice introduces no all-Applied barrier or new campaign phase. STATUS owns its
-human validation; the future collective state below remains separate.
+seating slice introduces no collective seating barrier or new campaign phase.
+STATUS owns its human validation. The separate Helgen gate below does not change
+seating eligibility.
+
+## Automatic Helgen start after Applied
+
+The server publishes each validated Applied immediately. It then derives a
+separate collective predicate from canonical admission: sealed nonempty roster,
+ACTIVE runtime, exact complete presence, live expected character/owner, matching
+build admission identity, and Applied on every required component. Only the
+first success sets the existing ephemeral Helgen start latch and broadcasts
+`NotifyCampaignHelgenState`. Duplicate Applied acknowledgements validate revision
+and both hashes, then reply without resetting level or invoking the barrier again.
+
+The client latches the campaign-scoped event, waits for its own finalized creation,
+and requests the local investigation entry once. Papyrus executes the shared
+post-attack consequence before initializing investigation/T0. Duplicate entry
+preserves MQ101, T0 and Hadvar/Ralof. Standalone uses local finalization without
+server authorization. See CK_IMPLEMENTATION for the audited stage mapping and
+why the stopped AlternateStart quest must not be restarted.
+
+The readiness fallback is restricted to checkpoint sessions with no volatile
+builds and readiness from the entire ACTIVE roster. Disconnect invalidates its
+readiness set and local projection request; the server start latch remains
+session-scoped. Native `.ess` state and the existing recovery protocol restore
+local Papyrus runtime, never quest-stage reconstruction or partial-roster catch-up.
+This increment adds no phase transition, Character Build persistence, checkpoint,
+wire message or timestamp. Valen, Departure and MQ102/MQ103 remain separate work.
 
 ## Target campaign state
 
@@ -59,8 +85,8 @@ eligibility, and atomic `Lobby -> CharacterCreation` seal are implemented in
 `Code/campaign_runtime`. The STR transport now carries durable player identity,
 live create/join/leave/resume/start/readiness commands, and canonical public
 snapshots. The structure below remains the future Alternate Start gameplay
-projection of that core; it is not yet wired to CEF, CK, or the live
-`CharacterBuildService`.
+projection beyond the implemented bootstrap and automatic Helgen slice; the
+full phase/progression model is not implied by those narrow integrations.
 
 ```cpp
 struct AlternateStartState

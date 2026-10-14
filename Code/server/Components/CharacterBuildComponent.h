@@ -6,6 +6,7 @@
 
 #include <Structs/CharacterBuild.h>
 #include <Messages/CharacterAppearanceUpdate.h>
+#include <CampaignState.h>
 #include <optional>
 
 struct CharacterBuildComponent
@@ -13,5 +14,7 @@ struct CharacterBuildComponent
     std::uint64_t Revision{};
     CharacterBuildSnapshotData Build{};
     bool Applied{};
+    // Volatile provenance only; not Character Build persistence or restoration.
+    std::optional<STRE::Campaign::CampaignMemberIdentity> CampaignIdentity;
     std::optional<CharacterAppearanceUpdate> FinalAppearance;
 };
