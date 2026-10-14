@@ -39,15 +39,54 @@ creation markers. ESP/PSC/PEX did not change during integration; all four PEX
 from PR #88 match their retained compiler outputs byte-for-byte. No recompilation
 of unchanged PSCs was needed. `git diff --check` and documentation links pass.
 
-**Runtime: NOT RUN by agent.** The issue #89 critical crash reproducer was accepted
-on `974b12fc` and its correction is now in main; that acceptance and the earlier
-PR #88 smoke do not validate this combined Helgen candidate. New maintainer
-acceptance is required after its Windows/Linux CI passes. The exact A-first,
-B-first, transition and T+4/presence procedure is in
-[TEST_PLAN](../features/alternate-start/TEST_PLAN.md#integrated-pr-88-candidate-after-pr-90-2026-10-14).
+**Previously executed automated validation on `d9501d57`:**
+[Windows CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38618138860)
+and [Linux CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38618138963)
+are SUCCESS. The tests/builds/audits above belong to that candidate and were not
+rerun for this documentation-only attestation. Automated evidence is separate
+from the maintainer's gameplay results below.
+
+**Integrated candidate runtime: PARTIALLY VALIDATED BY MAINTAINER** on
+`d9501d57c7472e276b2ad8397d203b093a16762c`, attested on 2026-10-14.
+**Runtime gameplay: NOT RUN by agent.**
+
+The tested runtime was restored to **Skyrim SE 1.6.1170**, with the matching
+Address Library. Steam's accidental update to **1.7.104** was downgraded before
+validation; this evidence does **not** establish Skyrim 1.7.x support.
+
+| Maintainer-tested scenario | Result and exact scope |
+|---|---|
+| A-first | PASS: A finishes while B remains in creation; no early Helgen start. Collective automatic triggering occurs after B finishes. |
+| Automatic state after final Applied | PASS without manual setstage: MQ101=1000, cleanup=40, investigation stage=10, InvestigationState=1, InvestigationStartGameTime/T0>=0. |
+| Post-attack Helgen | PASS: automatically projected post-attack state and no occupation bandits before T+4. `coc HelgenExterior` was only an observation shortcut, not the trigger. |
+| B-first | PASS: no early start before the last player; automatic collective triggering after the final Applied, with expected stages/states. |
+| Cell transitions / prior crash | PASS only for the tested exits/cell changes; the critical crash did not recur. This is not recovery-matrix acceptance. |
+| T+4 with the full roster outside Helgen | PASS: after four elapsed game days from T0, occupation triggers and bandits appear. |
+
+Console commands `getstage MQ101`, `getstage STRE_QUEST_HelgenNPCCleanup`,
+`getstage STRE_QUEST_HelgenInvestigation` and `sqv STRE_QUEST_HelgenInvestigation`
+were read-only observations. No manual `setstage` was used.
+
+**Pending runtime matrix (not PASS):**
+
+- T+4 with one player still in Helgen: expect Pending and no physical occupation
+  until the last player exits;
+- inverse player roles for that Pending case;
+- presence in HelgenKeep01 at T+4;
+- disconnect/reconnect before the final Applied;
+- recovery/checkpoint after authorization;
+- duplicate/repeated readiness in manual runtime;
+- complete Solo regression on the integrated candidate;
+- same-process New Game regression;
+- all remaining recovery variants in TEST_PLAN.
+
 Seating remains **KNOWN ISSUE / DEFERRED / NON-BLOCKING BY MAINTAINER DECISION**,
-tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91);
-it is not PASS. No Skyrim/CK launch, deployment, tag or release was performed.
+tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91).
+It is **not PASS**; Helgen runs do not validate seating. Neither PR #88 nor the
+complete T+4/recovery matrix is exhaustively validated. The remaining procedure is
+in [TEST_PLAN](../features/alternate-start/TEST_PLAN.md#integrated-pr-88-candidate-after-pr-90-2026-10-14).
+This follow-up changes documentation only; no code/ESP/PSC/PEX change, local build,
+Skyrim/CK launch, deployment, merge, tag or release was performed.
 
 ## Multiplayer loading-door regression candidate (2026-10-11)
 
@@ -1682,7 +1721,8 @@ See [the appearance contract](../features/alternate-start/CHARACTER_APPEARANCE_S
   vanilla pre-attack with starting NPCs. No manual `setstage` was used. Projection
   did not execute and T0 was correctly withheld. Exact deployed artifact hashes
   were not supplied. This diagnostic FAIL remains recorded; the replacement
-  cleanup-owner boundary requires a new fresh Solo smoke and is not runtime PASS;
+  cleanup-owner boundary still requires a fresh Solo smoke. The later integrated
+  roster-2 partial PASS is recorded above and does not validate Solo;
 - duplicate Applied acknowledgements no longer reset level or repeat the start
   mutation. Native/Papyrus latches, admission/recovery gates and the saved campaign
   flag fence duplicates/disconnects. Existing T+4 spatial and survivor rules are
@@ -1768,12 +1808,14 @@ The current catalog uses `BuildVersion = 5`.
   unfinished;
 - automatic post-creation Helgen entry's previous Solo candidate is runtime FAIL
   (7 October 2026). The replacement cleanup-controller owner is implemented and
-  automated/build-tested; fresh Solo and two-PC flow still require runtime
-  validation. Valen does not yet start it;
+  automated/build-tested, with the integrated two-PC flow partially accepted on
+  d9501d57 (dated checkpoint above). Full Solo and the listed recovery/negative
+  cases remain pending. Valen does not yet start it;
 - the multiplayer T+4 vertical slice and its final occupied projection are
   runtime-validated in a multiplayer campaign, but the complete permutation
-  matrix (both exit orders, both already outside at T+4, interior/exterior,
-  disconnect, mixed survivor states, save/load, and cell reset) remains pending;
+  matrix remains pending. The d9501d57 all-outside case passes; occupied-at-deadline
+  Pending, inverse roles, HelgenKeep01, disconnect, mixed survivor states,
+  save/load and cell reset are not inferred from that result;
 - the new normal entry opens after the last exact-roster validated Applied.
   Numeric local T0 equality and the actual cross-client projection latency have
   not been measured; STR does not rebase local GameDaysPassed. Checkpoint-only

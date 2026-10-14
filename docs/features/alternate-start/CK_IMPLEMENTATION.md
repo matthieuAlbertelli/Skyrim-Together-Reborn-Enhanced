@@ -454,8 +454,9 @@ mutation, a partial projection remains fail-closed; do not clear the guard or
 reset the quest to force a replay. Use coordinated checkpoint restore where
 available. Repeated investigation entry returns before projecting MQ101 or
 survivors and retains T0. The physical `ApplyPostAttackProjection()` implementation
-is unchanged. This replacement boundary still needs a fresh Skyrim smoke;
-compilation and structural tests do not prove runtime behavior.
+is unchanged. Executed runtime evidence and remaining acceptance scenarios are
+recorded in [STATUS](../../project/STATUS.md#automatic-helgen-integration-with-the-cell-transition-correction-2026-10-14);
+compilation and structural tests alone do not prove runtime behavior.
 
 For a fresh connected start, authorization is checked before the consequence and
 again after its latent calls. Only then does `InvestigationState == 0` record

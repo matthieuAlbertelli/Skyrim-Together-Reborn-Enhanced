@@ -1648,16 +1648,47 @@ new changes require their own evidence and publication authorization. Native lif
 
 ### Integrated PR #88 candidate after PR #90 (2026-10-14)
 
-**Runtime: NOT RUN by agent.** PR #90 is integrated in main at
-`1a997c3037cf55a3127bb323458e4ea16f9fec7f`; this candidate merges that main into
-Helgen head `5a66e9413f26aa48e862fb1f1e6f447a69e163e8`, without a code conflict.
-The prior PR #88 smoke and the issue #89 PASS on `974b12fc` do not validate this
-new combined candidate. Wait for its own Windows/Linux CI success before the
-maintainer run. No scenario below is PASS until explicit maintainer feedback.
+**Integrated candidate runtime: PARTIALLY VALIDATED BY MAINTAINER**, attested
+2026-10-14 on `d9501d57c7472e276b2ad8397d203b093a16762c`, based on main
+`1a997c3037cf55a3127bb323458e4ea16f9fec7f`. **Runtime gameplay: NOT RUN by agent.**
+Windows/Linux CI, tests and builds already passed on d9501d57; none was rerun for
+this documentary update. [STATUS](../../project/STATUS.md#automatic-helgen-integration-with-the-cell-transition-correction-2026-10-14)
+owns the detailed executed evidence, separately from the procedure below.
 
-Remaining seating bugs are tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91):
-**KNOWN ISSUE / DEFERRED / NON-BLOCKING BY MAINTAINER DECISION** for this
-integration. Seating quality must be recorded separately and is not PASS.
+Platform: restored **Skyrim SE 1.6.1170** with matching Address Library. The
+accidental Steam update to **1.7.104** was downgraded before validation. This is
+not Skyrim 1.7.x support.
+
+| Scenario | Recorded maintainer result on d9501d57 |
+|---|---|
+| A-first | PASS: no Helgen start while B remains in creation; automatic collective triggering after B finishes. |
+| State after final Applied | PASS without manual setstage: MQ101=1000, cleanup=40, investigation stage=10, InvestigationState=1, T0>=0. |
+| Post-attack Helgen / before T+4 | PASS: post-attack projection and no occupation bandits before T+4; `coc HelgenExterior` was an observation shortcut only. |
+| B-first | PASS: no early trigger, automatic triggering after final Applied, expected stages/states. |
+| Cell transitions / crash | PASS only for tested exits/cell changes; no recurrence of the critical crash. |
+| T+4 all-outside | PASS: after four elapsed game days from T0 with the full roster outside, occupation triggers and bandits appear. |
+
+The four console queries in step 3 below were used only to read state. No manual
+`setstage` was needed. No broader recovery, Solo or complete T+4 PASS follows.
+
+**Pending (not PASS):**
+
+- T+4 with a player in Helgen: Pending, no physical occupation until last exit;
+- inverse roles for the Pending case;
+- HelgenKeep01 presence at T+4;
+- disconnect/reconnect before the final Applied;
+- recovery/checkpoint after authorization;
+- duplicate/repeated readiness in manual runtime;
+- full Solo regression on the integrated candidate;
+- same-process New Game;
+- all remaining recovery variants in this plan.
+
+Seating remains **not PASS**, tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91):
+**KNOWN ISSUE / DEFERRED / NON-BLOCKING BY MAINTAINER DECISION**. Helgen acceptance
+does not validate seating. The earlier Solo failure remains historical evidence.
+
+**Reference procedure:** the table above records only the explicitly attested
+results; all additional checks and pending variants still require maintainer runs.
 
 1. Use fresh client processes, a fresh sealed roster-2 campaign and matching
    integrated client/server/PEX packages. Record the candidate SHA and hashes.
@@ -1687,11 +1718,12 @@ integration. Seating quality must be recorded separately and is not PASS.
    occupation until the last player exits. Preserve the existing full-roster
    and elapsed-time rules, including HelgenKeep01 and inverse player roles.
 
-The full procedures and log collection below remain applicable. Earlier smoke
-results remain historical evidence; they cannot replace this integrated run.
+The full procedures and log collection below remain applicable to pending cases
+and future regressions. Earlier smoke results remain historical evidence; the
+partial integrated acceptance above comes from the new maintainer runs.
 
-This is a new runtime acceptance matrix; earlier manual stage-10/continuity
-passes do not validate the new automatic cleanup-controller boundary. Do not deploy
+The broader matrix below is not marked PASS as a whole. Earlier manual
+stage-10/continuity passes cannot substitute for its unexecuted scenarios. Do not deploy
 or launch Skyrim/CK automatically. The maintainer prepares matching client,
 server and three rebuilt PEX files on both PCs. Preserve build/ESP/PEX hashes,
 configuration (especially SyncPlayerCalendar/TimeScale), campaign ID, sealed
@@ -1794,8 +1826,8 @@ do not use build-and-deploy-dev.ps1 for this validation.
 The previous candidate's first real Solo smoke is diagnostic **FAIL**, not a
 pending pass: MQ101=0, InvestigationState=0, T0=-1.0, HadvarState=RalofState=1,
 and vanilla pre-attack Helgen after `coc HelgenExterior`, without manual
-`setstage`. `STATUS.md` owns that evidence. This correction needs a new run;
-automated checks cannot supersede the failure.
+`setstage`. `STATUS.md` owns that evidence. A fresh Solo run is still required:
+neither automated checks nor the later roster-2 partial acceptance validates Solo.
 
 1. The maintainer prepares the candidate's matching client/launcher and these
    three freshly compiled PEX files, with the unchanged checked-in ESP:
