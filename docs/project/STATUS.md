@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 11, 2026.
+> **Last updated:** October 14, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -12,12 +12,41 @@ and technical detail belongs in each feature's documentation.
 ## Multiplayer loading-door regression candidate (2026-10-11)
 
 [Issue #89](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/89)
-tracks the fatal roster-2 transition after Character Creation. This is separate
-from PR #88 and blocks its runtime validation. The correction is based on main
+tracks the fatal roster-2 transition after Character Creation, corrected in
+[PR #90](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/pull/90).
+This is separate from PR #88. The correction is based on main
 `cba7569c74140b4ffa9a180aad94ebd2f1a865e3`, in an isolated worktree.
 
-**Runtime evidence supplied by the maintainer:** Solo and roster 1 pass; roster 2
-fails when a player takes the ordinary inn loading door after reciprocal seating.
+**Human runtime acceptance (maintainer attestation, 2026-10-14):** the critical
+issue #89 reproducer is **PASS** on
+`974b12fc9285831443d34f32f18b1d40eb100393`.
+
+- Fresh sealed roster 2: the normal inn interior-to-exterior loading door works.
+- Cell changes and campaign continuation work; no new crash or recovery lock
+  related to this regression was observed.
+- General behavior outside seating conforms within the tested scope.
+- Seating still has functional bugs: **KNOWN ISSUE / DEFERRED / NON-BLOCKING BY
+  MAINTAINER DECISION** for PR #90, tracked separately in
+  [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91).
+  Seating is **not PASS**. The maintainer explicitly deferred its correction;
+  accepting the crash fix does not establish functional seating quality.
+
+No new logs/captures characterize the seating symptoms in this attestation, so
+no more specific symptom or cause is asserted. The original crash dump/log ZIP
+are lost. This clears the issue #89 reproducer blocker for continuing PR #88
+runtime validation on the validated correction; it does not validate PR #88
+itself or imply that the correction has been merged. Exit-order permutations,
+re-entry/re-exit, recovery and Helgen checks not individually attested in this
+report remain unconfirmed; the entire test matrix is not marked PASS.
+
+Both [Windows CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38171040331)
+and [Linux CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38171040414)
+are **PASS** on `974b12fc`. The 2026-10-14 follow-up changes documentation only;
+runtime and native-test evidence remain tied to that exact candidate, not to a
+new gameplay run of the documentation commit.
+
+**Historical runtime evidence before the correction:** Solo and roster 1 passed;
+roster 2 failed when a player took the ordinary inn loading door after reciprocal seating.
 `9108727b` passed; `605ef668ce9a9311fe6df713064038e9d09643c3` passed with CK artifacts
 explicitly aligned. `6dfba1594e35852d106be0b4785dd5280a58fa8d` and later failed in
 older runs, but auto-import prevents treating their artifact fidelity as proven.
@@ -51,16 +80,17 @@ ignored -fPIC and the TESObjectREFR signed/unsigned comparison. No CK audit was 
 content changed. The first observation-only commit also passed the full C++/Python
 suites and the client build independently.
 
-**Not yet validated:** no gameplay was run by the agent. The reported dump had
-C0000409 / parameter 7 (FAST_FAIL_FATAL_APP_EXIT), and an E06D7363 breakpoint caught
-no C++ exception. The supplied dump and archived A log paths were absent and the
-maintainer confirmed those files are no longer available; the matching PDB alone
-cannot establish a faulting stack. Crash elimination and the exact historical
-boundary therefore remain pending the [human loading-door matrix](../features/alternate-start/TEST_PLAN.md#loading-door-regression-acceptance-issue-89-2026-10-11).
+**Evidence limits:** no gameplay was run by the agent; runtime acceptance above
+is the maintainer's report. The reported historical dump had C0000409 / parameter
+7 (FAST_FAIL_FATAL_APP_EXIT), and an E06D7363 breakpoint caught no C++ exception.
+The matching PDB alone cannot establish a faulting stack without the lost dump.
+The critical reproducer now passes on `974b12fc`; the exact historical good/bad
+boundary and native faulting instruction remain unproven. Remaining scenarios
+belong to the [human loading-door matrix](../features/alternate-start/TEST_PLAN.md#loading-door-regression-acceptance-issue-89-2026-10-11).
 No buffer-overflow, C++ exception, Helgen, PR #88 or Main Menu cause is asserted.
 Roster 2 uniquely exercises remote observation/replay; this explains the audit
 focus, not a proven instruction-level cause. Historical in-inn seating acceptance
-below does not imply loading-door safety.
+below does not validate seating on this candidate or replace the dated door evidence.
 
 ## Startup and Main Menu presentation (2026-09-23)
 
