@@ -129,6 +129,18 @@ function Assert-StreMutationGit($Config, [string]$Plugin) {
     if ($branch -eq 'main' -or $branch -notmatch '^(feat|fix|test|chore|codex)/[A-Za-z0-9][A-Za-z0-9._/-]*$') {
         throw "Unsafe mutation branch: '$branch'. Use a dedicated feature branch; main/detached HEAD are forbidden."
     }
+    # The operator must fetch first; checking the local tracking ref never proves remote freshness.
+    try {
+        $main = Invoke-StreGit $Config @('rev-parse', '--verify', 'refs/remotes/origin/main^{commit}')
+    } catch {
+        throw "origin/main is missing or invalid. Run git fetch origin before mutation. $($_.Exception.Message)"
+    }
+    try {
+        $null = Invoke-StreGit $Config @('merge-base', '--is-ancestor', $main, 'HEAD')
+    } catch {
+        # Reject both non-ancestry (exit 1) and any Git error; neither grants mutation permission.
+        throw "origin/main must be an ancestor of HEAD. Run git fetch origin and integrate origin/main before mutation. $($_.Exception.Message)"
+    }
     $target = "GameFiles/Skyrim/$Plugin"
     if ((Invoke-StreGit $Config @('ls-files', '--', $target)) -cne $target) { throw 'Target ESP must be tracked by Git.' }
     if (Invoke-StreGit $Config @('status', '--porcelain=v1', '--untracked-files=all', '--', $target)) {

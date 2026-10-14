@@ -76,6 +76,7 @@ foreach ($relative in $RelativePath) {
             $null = Invoke-StreGit $Config @('config', 'user.name', 'Toolchain fixture')
             $null = Invoke-StreGit $Config @('add', '.')
             $null = Invoke-StreGit $Config @('commit', '-m', 'test: synthetic fixture')
+            $null = Invoke-StreGit $Config @('update-ref', 'refs/remotes/origin/main', 'HEAD')
             $script:Request = @{ Operation = 'AddGlobal'; EditorId = 'STRE_ToolchainFixture'; Name = 'Fixture'; Priority = 50; Value = 7.25 }
             $script:Calls = [Collections.Generic.List[string]]::new()
             $script:Fault = ''
@@ -162,6 +163,36 @@ foreach ($relative in $RelativePath) {
         Test 'refuse detached HEAD' {
             New-Fixture; $null = Invoke-StreGit $Config @('checkout','--detach')
             Reject { Invoke-StreModding -Config $Config -Action DryRun -Request $Request } 'Unsafe mutation branch'
+        }
+        Test 'current origin/main ancestor permits a feature descendant' {
+            New-Fixture
+            $null = Invoke-StreGit $Config @('commit', '--allow-empty', '-m', 'test: feature descendant')
+            $result = Invoke-StreModding -Config $Config -Action DryRun -Request $Request
+            Assert ($result.State -eq 'DryRunOnly')
+            Assert ($Calls.Count -eq 2); Assert-Originals
+        }
+        foreach ($diverged in @($false, $true)) {
+            Test "refuse branch missing current origin/main (diverged=$diverged)" {
+                New-Fixture
+                $base = Invoke-StreGit $Config @('rev-parse', 'HEAD')
+                $tree = Invoke-StreGit $Config @('rev-parse', 'HEAD^{tree}')
+                if ($diverged) {
+                    $null = Invoke-StreGit $Config @('commit', '--allow-empty', '-m', 'test: independent feature commit')
+                }
+                $upstream = Invoke-StreGit $Config @('commit-tree', $tree, '-p', $base, '-m', 'test: upstream advanced')
+                $null = Invoke-StreGit $Config @('update-ref', 'refs/remotes/origin/main', $upstream)
+                Reject { Invoke-StreModding -Config $Config -Action Prepare -Request $Request } 'origin/main must be an ancestor of HEAD'
+                Assert ($Calls.Count -eq 0); Assert-Originals
+                Assert (-not (Test-Path "$($Config.RepoRoot)/_audit/modding")) 'Rejected branch created a session'
+            }
+        }
+        Test 'refuse missing origin/main even when a local main exists' {
+            New-Fixture
+            $null = Invoke-StreGit $Config @('branch', 'main')
+            $null = Invoke-StreGit $Config @('update-ref', '-d', 'refs/remotes/origin/main')
+            Reject { Invoke-StreModding -Config $Config -Action DryRun -Request $Request } 'origin/main is missing or invalid'
+            Assert ($Calls.Count -eq 0); Assert-Originals
+            Assert (-not (Test-Path "$($Config.RepoRoot)/_audit/modding")) 'Rejected branch created a session'
         }
         foreach ($plugin in @('Other.esp','SkyrimTogether.esp','skyrimtogether.esp','../STRE_AlternateStart.esp')) {
             Test "refuse write target $plugin" {

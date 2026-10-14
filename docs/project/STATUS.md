@@ -13,7 +13,8 @@ and technical detail belongs in each feature's documentation.
 
 Implemented for [#92](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/92):
 the Windows PowerShell adapter under Tools/Scripts prepares isolated copies,
-enforces clean feature branches and the single-plugin write policy, verifies
+enforces clean feature branches containing the fetched origin/main and the
+single-plugin write policy, verifies
 AutoMod JSON/dry-run/record results, and blocks import pending an explicit human
 xEdit attestation. The runbook owns the workflow and its limits:
 [MODDING_TOOLCHAIN](../development/MODDING_TOOLCHAIN.md).
@@ -21,14 +22,27 @@ There is no unattended xEdit validation/save implementation. The shared process
 guard covers game/CK/Vortex and six xEdit names; the ignored local importer and
 build/deploy scripts were connected to it without publishing their machine paths.
 
-**Automated local evidence:** `Test-StreModding.ps1 -RealTools` passes **57
-cases**: 55 synthetic safeguard cases plus real AutoMod GLOB dry-run and
+**Automated local evidence:** `Test-StreModding.ps1 -RealTools` passes **61
+cases**: 59 synthetic safeguard cases plus real AutoMod GLOB dry-run and
 write/reread cases in a disposable synthetic Git/ESP fixture. The real write
 stops at `HUMAN_XEDIT_REQUIRED`; no quest was created. Synthetic import tests use
 a fixture importer and explicitly simulated receipts, not xEdit validation.
 The tests verify all four repository/installed STRE_AlternateStart.esp and
 SkyrimTogether.esp hashes unchanged. Windows CI is configured for the default
-55-case fixture suite; this statement does not claim a remote CI result.
+59-case fixture suite; this statement does not claim a remote CI result.
+
+**PR #93 review follow-up:** rebased onto main
+`f9e550ccc469546875cb4ca9d54707ad6e9471b6`, preserving all of its status evidence
+below. The mutation guard rejects missing/invalid origin/main and any failed
+ancestry check, including stale and diverged feature histories. The runbook
+requires a successful `git fetch origin` before each mutation action because a
+local tracking ref alone cannot prove remote freshness. Four added tests exercise
+an accepted descendant, a stale branch, a diverged branch and missing origin/main
+even with a local main present. Both the default 59-case and real-tool 61-case
+suites were rerun successfully. Rebuilt Debug TPTests passes **432 cases / 45,334
+assertions**; all **119 Python tests** and the six CK audits pass. PowerShell
+parsing, local documentation links and `git diff --check` also pass. No new
+gameplay or xEdit runtime validation is inferred from these checks.
 
 Real read-only inspection passes for the current ESP info, the exact three
 masters and four QUST. `papyrus status` reports compiler and decompiler available;

@@ -72,6 +72,14 @@ operation needing that tool. This wrapper does not compile/decompile scripts.
 
 ## Prepare a future authorized content change
 
+**Run `git fetch origin` successfully before every `DryRun`, `Prepare` and
+`ImportValidated` invocation.** Stop if fetch fails. The wrapper checks the local
+`refs/remotes/origin/main` commit and requires it to be an ancestor of `HEAD`;
+missing/invalid refs, stale/diverged branches and Git errors fail closed. It does
+not fetch or establish remote freshness itself. Integrate the fetched main and
+resolve any conflicts before continuing. If this changes HEAD after preparation,
+discard the session and prepare a new candidate on that HEAD.
+
 Start from current origin/main on a dedicated clean `feat/`, `fix/`, `test/`,
 `chore/` or `codex/` branch. Main, detached HEAD, other branch families, pending
 Git operations and dirty/untracked work fail closed. The target ESP must be
@@ -91,7 +99,11 @@ The following example is **only for an isolated fixture or a separately
 authorized content mission**, never an instruction to add a production test record:
 
 ```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
 & $tool -Action DryRun -Operation AddGlobal -EditorId STRE_Example -Value 7.25
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
 & $tool -Action Prepare -Operation AddGlobal -EditorId STRE_Example -Value 7.25
 # Future quest mission: -Operation AddQuest -EditorId STRE_QUEST_... -Name '...' -Priority 50
 ```
@@ -169,6 +181,8 @@ explicitly labeled as such and never apply to real content.
 ## Import, review, deployment and gameplay
 
 ```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
 & $tool -Action ImportValidated -Session $session
 git diff --stat
 git status --short
@@ -236,7 +250,9 @@ pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1 -RealTools
 ```
 
 The default suite creates its own synthetic ESPs and disposable Git repositories;
-tool responses and human attestations are explicitly simulated. It needs Git
+tool responses and human attestations are explicitly simulated. It verifies
+current-main ancestry, stale/diverged branches and missing
+`origin/main` using real local Git histories without a network remote. It needs Git
 and PowerShell, with `dotnet` discoverable for the path-resolution test, but no
 game/modding binaries. Windows CI runs it. `-RealTools` additionally uses the
 configured installed AutoMod/.NET/xEdit/runtime preflight, runs a real GLOB
