@@ -47,6 +47,10 @@ jobs:
         shell: pwsh
         run: python Tools/Scripts/audit_ck_packaging.py
 
+      - name: Test modding toolchain safeguards with disposable fixtures
+        shell: pwsh
+        run: ./Tools/Scripts/Test-StreModding.ps1
+
       - name: Checkout submodules
         shell: pwsh
         run: |

@@ -1,0 +1,263 @@
+# Codex / AutoMod / official xEdit authoring
+
+This is the development procedure, not an implementation-status tracker.
+[STATUS](../project/STATUS.md) owns executed evidence and limitations.
+[CK_IMPLEMENTATION](../features/alternate-start/CK_IMPLEMENTATION.md) owns record
+contracts; its manifest/audits and the feature test plan remain mandatory for
+content changes. Campaign authority and ADR-0018 are unchanged.
+
+## Prerequisites and configuration
+
+Use Windows, PowerShell 7.2+, Git, a .NET 8 SDK/runtime, Skyrim SE **Steam
+1.6.1170.0**, the installed CK/Papyrus tools and Vortex. Do not substitute
+1.5.97/1.6.640, introduce a native/SKSE dependency, migrate plugin formats, or
+ESL-flag STRE_AlternateStart.esp. No MO2, TES5Edit-MCP or Delphi installation.
+
+Install [Spooky's AutoMod Toolkit](https://github.com/SpookyPirate/spookys-automod-toolkit)
+outside the STRE repository. Build its Debug CLI once from the chosen source:
+
+```powershell
+dotnet build <AutoModRoot>/src/SpookysAutomod.Cli -c Debug
+```
+
+Extract [official xEdit](https://github.com/TES5Edit/TES5Edit/releases) separately,
+keeping its support files. Verify download provenance manually: the executable's
+ProductName check is a mistake detector, not a cryptographic publisher guarantee.
+The wrapper never downloads tools. Record hashes when upgrading and rerun the
+fixture checks. AutoMod installations extracted without `.git` have no provable
+source commit; retain their distribution provenance and binary hashes.
+
+Configure local paths in your shell/profile, outside tracked files:
+
+```powershell
+$env:STRE_AUTOMOD_ROOT = '<absolute AutoMod checkout/extraction>'
+$env:STRE_XEDIT_PATH = '<absolute official xTESEdit.exe>'
+$env:STRE_SKYRIM_DATA = '<Steam Skyrim Special Edition>/Data'
+$tool = './Tools/Scripts/Invoke-StreModding.ps1'
+& $tool -Action Preflight
+```
+
+Explicit `-AutoModRoot`, `-XEditPath` and `-DataRoot` override these variables.
+The repository root is discovered from the script location, independently of
+the caller's working directory. No personal-path fallback is built in.
+The runtime is checked beside Data. The CLI project and prebuilt
+`bin/Debug/net8.0/spookys-automod.dll` must exist; the wrapper uses
+`dotnet run --no-build --no-restore --project ... -- --json ...` from AutoMod's
+root so its existing settings/Papyrus tools are resolved consistently.
+Only that child process uses .NET invariant globalization (named cultures are
+permitted with invariant data), making float CLI parsing/reflection consistent
+on French/English Windows. The user's process/system locale is unchanged.
+
+Close Skyrim, STR client/server, CK, Vortex and every xEdit session first.
+The shared process guard blocks `xTESEdit`, `xTESEdit64`, `SSEEdit`, `SSEEdit64`,
+`xSSEEdit`, `xSSEEdit64`, and the existing game/CK/Vortex names. Never launch
+editors during snapshot/import/deployment. Process checks cannot prevent a
+user launching an unrelated application later; file handles also protect each
+snapshot and the Data promotion. One wrapper operation per repository is locked.
+
+## Inspection
+
+```powershell
+& $tool -Action Inspect                         # info, masters, all QUST
+& $tool -Action Inspect -RecordType global
+& $tool -Action Inspect -Plugin SkyrimTogether.esp
+& $tool -Action PapyrusStatus
+```
+
+Every AutoMod response must be one JSON object with Boolean `success=true`.
+Nonzero exits, stderr, malformed JSON, missing/false/string success stop execution.
+Inspection checks the plugin hash before/after. `PapyrusStatus` reports tool
+availability; inspect `compilerAvailable`/`decompilerAvailable` before the first
+operation needing that tool. This wrapper does not compile/decompile scripts.
+
+## Prepare a future authorized content change
+
+**Run `git fetch origin` successfully before every `DryRun`, `Prepare` and
+`ImportValidated` invocation.** Stop if fetch fails. The wrapper checks the local
+`refs/remotes/origin/main` commit and requires it to be an ancestor of `HEAD`;
+missing/invalid refs, stale/diverged branches and Git errors fail closed. It does
+not fetch or establish remote freshness itself. Integrate the fetched main and
+resolve any conflicts before continuing. If this changes HEAD after preparation,
+discard the session and prepare a new candidate on that HEAD.
+
+Start from current origin/main on a dedicated clean `feat/`, `fix/`, `test/`,
+`chore/` or `codex/` branch. Main, detached HEAD, other branch families, pending
+Git operations and dirty/untracked work fail closed. The target ESP must be
+tracked and clean; there is no dirty-target override. Data must match the Git
+ESP byte-for-byte. Resolve existing CK changes through the established importer
+and review them before preparation; do not silently overwrite either version.
+
+Only `STRE_AlternateStart.esp` can be written. `SkyrimTogether.esp` is explicitly
+denied, even though it can be inspected. Paths/options cannot be supplied as
+plugin names. The initial adapters are deliberately limited to `AddGlobal`
+(float GLOB) and `AddQuest` (QUST name/priority, not start-enabled). EditorIDs
+must begin `STRE_` and must not already exist. There is no arbitrary AutoMod
+argument, deletion, override, merge, ESL or Papyrus write passthrough. Add other
+operations only with a typed adapter, postconditions and fixture tests.
+
+The following example is **only for an isolated fixture or a separately
+authorized content mission**, never an instruction to add a production test record:
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
+& $tool -Action DryRun -Operation AddGlobal -EditorId STRE_Example -Value 7.25
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
+& $tool -Action Prepare -Operation AddGlobal -EditorId STRE_Example -Value 7.25
+# Future quest mission: -Operation AddQuest -EditorId STRE_QUEST_... -Name '...' -Priority 50
+```
+
+Each invocation allocates `_audit/modding/<unique-id>/`, ignored by Git, containing
+`before.esp`, `repository-before.esp`, a private `Data/STRE_AlternateStart.esp`,
+JSON command results and `session.json`. Backups use create-new semantics and
+SHA256 verification. Dry-run executes on the private copy, verifies unchanged
+bytes, and ends as `DryRunOnly`, which cannot be imported.
+
+Prepare repeats the dry-run, writes only the private copy, rereads the requested
+EditorID/FormKey/properties and checks the TES4 flags/form version/HEDR version.
+It copies the three required masters into the private Data as ordinary files,
+never links. Allow disk space for those copies. It then deliberately returns
+**nonzero** with `HUMAN_XEDIT_REQUIRED`. This is a blocked pipeline, not validation
+success. A failed operation is terminal and retains backups; do not rerun its
+mutation or bypass its state. Begin a fresh session after resolving the cause.
+
+## Official xEdit boundary
+
+AutoMod/Mutagen can reorder masters. An AutoMod write is never ready for Git by
+itself. The required saved master list is exactly:
+
+```text
+Skyrim.esm
+Update.esm
+Dragonborn.esm
+```
+
+The [official scripting API](https://tes5edit.github.io/docs/13-Scripting-Functions.html)
+documents `SortMasters(file)` (current load order) and `Check(element)` (error
+text). This establishes useful primitives, not this wrapper's ability to traverse
+every error and prove a durable save unattended. The
+[official CLI/save documentation](https://tes5edit.github.io/docs/2-overview.html)
+documents alternate Data/log paths and save confirmation; messages must be
+checked because saving can fail. The
+[official release notes](https://github.com/TES5Edit/TES5Edit/releases)
+document quickedit/autoload/autoexit/direct-save options. None is treated here
+as a validated headless save-and-check protocol. No xEdit script is installed,
+no xEdit process is launched by the wrapper, and exit code zero alone grants no
+approval. Quick Auto Clean is not a replacement for Sort Masters/Check for Errors.
+
+For the actual candidate, a human must:
+
+1. Open official xEdit in SSE mode against the **private** Data directory. For
+   example, from PowerShell (replace `$session` with the printed absolute path):
+
+   ```powershell
+   & $env:STRE_XEDIT_PATH -SSE "-D:$session\Data\" '-quickedit:STRE_AlternateStart.esp'
+   ```
+
+   Check the startup Messages Data path and selected plugin before proceeding.
+   Only the candidate and required masters should be loaded. The candidate must
+   never be SkyrimTogether.esp. Do not save master changes.
+2. On the candidate, run **Sort Masters (to match current load order)**, verify
+   the expected list, then **Check for Errors** for the complete plugin. Follow
+   [the official error-checking procedure](https://tes5edit.github.io/docs/7-mod-cleaning-and-error-checking.html).
+   Any error stops the workflow; there is no automatic waiver/repair.
+3. Save only the candidate; inspect save messages and close xEdit completely.
+   Reopen that saved file, verify the requested record and all intended changes,
+   rerun Check for Errors, then close again. Preserve relevant messages from both
+   sessions in `<session>/xedit-validation.log`, including target/path, tool
+   version, completed error check, errors/warnings and save outcome.
+4. Complete the generated `validation.json` **only after that actual review**:
+   `Reviewer`, `PluginSha256`, `LogSha256`, and Boolean `SortMasters`,
+   `CheckForErrors`, `SavedAndClosed`. Keep `Schema=1` and the recorded
+   `XEditSha256`. Obtain hashes with `Get-FileHash -Algorithm SHA256` on the
+   saved candidate and evidence log. Never invent logs or mark these true from
+   AutoMod success, a correct master list or old evidence.
+
+This receipt is a human attestation tied to exact bytes, not a machine-certified
+xEdit verdict or tamper-proof authorization token. Synthetic test receipts are
+explicitly labeled as such and never apply to real content.
+
+## Import, review, deployment and gameplay
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop before mutation.' }
+& $tool -Action ImportValidated -Session $session
+git diff --stat
+git status --short
+# Run the feature-owned CK audits and inspect the semantic record diff.
+# Only after successful review, use the existing local build/deploy entry point:
+./build-and-deploy-dev.ps1
+```
+
+Resume requires the same branch/HEAD, tools, configuration, unchanged original
+Data/Git ESP, backups and matching human receipt/log. It independently rereads
+the saved TES4 master order and AutoMod master list, format and expected record.
+The validated copy is frozen into `validated/`. Only then is Data updated to
+those same bytes and **the existing** root `import-from-ck-dev.ps1` invoked with
+`-RelativePath STRE_AlternateStart.esp -SourceDataRoot <validated snapshot>`.
+The wrapper never passes `-AllowDirtyTarget`. It checks the importer exit and
+resulting Git ESP hash. Partial failure is terminal, retains backups, and never
+automatically continues to build or retries an import.
+
+Keeping Data aligned matters because the existing local build script snapshots
+and imports CK outputs before deployment. Do not run it on a different Data
+candidate. The wrapper imports only this ESP: generated fragments/SEQ/voices/
+FaceGen from separate CK work still use the established ownership workflow.
+Ordinary `STRE_*.psc/.pex` remain repository-authoritative; generated CK fragments
+retain their existing source/compiled consistency checks. Data is a working
+authoring location, not the final source of truth.
+
+The machine-specific root importer/build scripts remain local and ignored.
+Do not force-add them. On a new workstation, connect their existing
+`Assert-GameProcessesStopped` to tracked `Tools/Scripts/Stre.ProcessGuard.ps1`,
+calling it before snapshots, imports and deployment copies (including after a
+long build). Dot-source it **after** any old same-named function definition or
+replace that function. A missing helper must stop the local script. Do not copy
+machine paths into the generic module.
+
+Build/deploy and in-game acceptance remain explicit subsequent steps. This
+infrastructure does not prove gameplay, complete quest behavior or a new content
+record's semantic correctness. The first real quest smoke belongs to a later
+mission on a new branch after infrastructure merge.
+
+## Rollback and cleanup
+
+Before promotion, failures affect only the private session: original Data/Git
+must retain `BeforeHash`. Preserve the session for diagnosis. After an import
+failure or rejected content review, stop all guarded processes, inspect Git
+status and snapshot any newer work before restoring. Compare `before.esp` and
+`repository-before.esp` against the recorded hash. Restore the specific Data ESP
+from its backup, then use the existing explicit CK importer for the repository;
+any deliberate overwrite of a dirty target requires human review through that
+importer's existing policy. Never use blanket reset/clean or restore unrelated
+PSC/PEX/SkyrimTogether.esp. If the branch already committed the content, use a
+reviewed revert/change rather than silently discarding it. Redeploy only the
+reviewed consistent repository/Data pair.
+
+Do not delete backups automatically. After acceptance or abandonment, with all
+tools closed, identify the exact session under this repository's `_audit/modding`
+and remove only that directory if its evidence/backups are no longer needed.
+Retain any evidence required by the PR. Do not recursively delete Data, Vortex
+staging, save directories or the shared audit parent.
+
+## Automated checks
+
+```powershell
+pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1
+pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1 -RealTools
+```
+
+The default suite creates its own synthetic ESPs and disposable Git repositories;
+tool responses and human attestations are explicitly simulated. It verifies
+current-main ancestry, stale/diverged branches and missing
+`origin/main` using real local Git histories without a network remote. It needs Git
+and PowerShell, with `dotnet` discoverable for the path-resolution test, but no
+game/modding binaries. Windows CI runs it. `-RealTools` additionally uses the
+configured installed AutoMod/.NET/xEdit/runtime preflight, runs a real GLOB
+dry-run/write/reread **only on a synthetic plugin**, and stops at the human gate.
+Its master files are fixtures, not Bethesda content, and xEdit is never launched.
+It checks repository and installed production ESP hashes before/after. No test
+creates a quest or imports a production ESP. Temporary fixtures are deleted only
+after validating their unique path beneath the temporary directory.
