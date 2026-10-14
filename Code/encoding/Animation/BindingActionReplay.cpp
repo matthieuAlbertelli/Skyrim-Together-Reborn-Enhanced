@@ -51,6 +51,11 @@ BindingActionReplay::Reconstruction BindingActionReplay::Rebind(const AnimationB
         (m_change.Session && m_change.Session != aChange.Session))
         return result;
 
+    // A final commit may arrive before the next actor update. Cell evidence is
+    // supplied by the transaction, without resolving the retired old Actor.
+    if (!aChange.OldCell || aChange.OldCell != aChange.NewCell || (m_cell && m_cell != aChange.OldCell))
+        InvalidateFurniture(aPending, aReplayCount, aResetGraph);
+    m_cell = aChange.NewCell;
     RemovePrefix(aPending, aReplayCount, aResetGraph);
     result.SourceCount = m_cache.GetActions().size();
     // A newer exit received but not yet consumed already invalidates all old
@@ -78,6 +83,7 @@ void BindingActionReplay::Invalidate(TiltedPhoques::List<ActionEvent>& aPending,
     m_cache.Clear();
     m_binding = {};
     m_change = {};
+    m_cell = 0;
     m_enabled = false;
 }
 
@@ -93,4 +99,31 @@ bool BindingActionReplay::CancelForPendingExit(TiltedPhoques::List<ActionEvent>&
     RemovePrefix(aPending, aReplayCount, aResetGraph);
     m_cache.Clear();
     return true;
+}
+
+void BindingActionReplay::InvalidateFurniture(TiltedPhoques::List<ActionEvent>& aPending,
+    uint32_t& aReplayCount, bool& aResetGraph) noexcept
+{
+    m_cache.RemoveFurniture();
+    uint32_t index{}, injectedRemoved{}, replayRemoved{};
+    for (auto it = aPending.begin(); it != aPending.end(); ++index)
+    {
+        if (ActionReplayCache::IsFurnitureEntry(*it))
+        {
+            if (index < m_injected) ++injectedRemoved;
+            if (index < aReplayCount) ++replayRemoved;
+            it = aPending.erase(it);
+        }
+        else ++it;
+    }
+    m_injected -= injectedRemoved;
+    aReplayCount -= replayRemoved;
+    if (!aReplayCount) aResetGraph = false;
+}
+
+void BindingActionReplay::ObserveCell(uint32_t aCell, TiltedPhoques::List<ActionEvent>& aPending,
+    uint32_t& aReplayCount, bool& aResetGraph) noexcept
+{
+    if (m_cell && m_cell != aCell) InvalidateFurniture(aPending, aReplayCount, aResetGraph);
+    m_cell = aCell;
 }

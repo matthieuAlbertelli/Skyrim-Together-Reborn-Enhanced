@@ -2,6 +2,85 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Loading-door regression acceptance (issue #89, 2026-10-11)
+
+### Recorded acceptance and seating disposition (2026-10-14)
+
+The maintainer accepts the critical issue #89 reproducer on PR #90 candidate
+`974b12fc9285831443d34f32f18b1d40eb100393`: **PASS** for a fresh sealed roster-2
+campaign taking the normal inn interior-to-exterior loading door, changing cells
+and continuing the campaign. No new crash or recovery lock related to this
+regression was observed. General behavior outside seating conforms within the
+tested scope. Windows and Linux CI pass on that exact SHA; the canonical evidence
+and its limits are recorded in [STATUS](../../project/STATUS.md#multiplayer-loading-door-regression-candidate-2026-10-11).
+
+Seating is **KNOWN ISSUE / DEFERRED / NON-BLOCKING BY MAINTAINER DECISION** for
+PR #90, tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91).
+It is **not PASS** and is excluded from this crash correction by the maintainer.
+Record seating observations separately from crash/transition results; a seating
+failure does not invalidate the accepted crash result. No fresh logs/captures
+were supplied to characterize the remaining seating symptoms more precisely.
+
+The procedure below remains the broader regression/characterization matrix.
+Solo/roster-1 reruns, A-first versus B-first, repeated re-entry, recovery and
+Helgen permutations are not individually attested for `974b12fc` in this report;
+do not mark them PASS by inference. This documentation-only follow-up adds no
+new code, native build or agent-operated gameplay evidence.
+
+### Procedure and remaining permutations
+
+Use three separately identified candidates: exact Git 605ef668, exact Git
+6dfba159, then the corrective PR head. Build/package in isolated worktrees from
+Git assets without CK import. Record the full source SHA, executable/PDB hashes,
+ESP, AlternateStart PSC/PEX and all managed PEX hashes. Never mix a newer CK Data
+folder into a historical candidate. Keep the existing CK backup intact. Packages
+are prepared for human installation; the agent does not deploy or launch Skyrim.
+
+Start fresh Skyrim processes and fresh campaigns for each independent run, with
+matching A/B/server binaries and matching managed assets. Preserve complete logs
+from startup to termination for server, A and B, plus hashes and wall-clock times.
+
+1. Solo: New Game, finish creation and individual seating, ordinary door out,
+   back in, out again. Expect no crash.
+2. Sealed roster 1: repeat exactly. Expect no crash and normal campaign gating.
+3. Sealed roster 2, A first: finish both creations, check final reciprocal
+   appearances and record local/remote seated poses separately for issue #91;
+   seating PASS is not a prerequisite for accepting the crash correction.
+   A exits by the loading door while B stays inside. Verify A remains
+   connected/playable, then B exits. Expect no crash, recovery lock or teleport
+   to the previous chair; distinguish any observed seating defect from a crash.
+4. Fresh roster-2 run, B first: repeat with the exit order reversed.
+5. Both return inside then exit again. Confirm no involuntary reseating or
+   old-chair replay; ordinary movement/turn/combat animations still synchronize.
+6. Check final appearance on both sides and absence of a revived placeholder.
+   Repeat after normal recovery using the existing committed-checkpoint protocol;
+   never use partial-roster progression as a workaround.
+7. Only after all door tests pass, exercise `coc HelgenExterior`. A failure here
+   must be recorded separately; the door reproducer does not require Helgen.
+
+If a failure persists, keep the exact matching PDB and a full dump outside Git.
+C0000409 with argument 7 establishes FAST_FAIL_FATAL_APP_EXIT, not a buffer
+overflow or an unhandled C++ exception. Resolve .game/Skyrim addresses separately
+from STRE code before attributing the crashing frame. The original dump/log ZIP
+are no longer available; do not substitute the later overwritten live client log.
+
+Automated regressions cover A->B chair history removal, mixed furniture/ordinary
+queue counts/order, wrong/missing/non-furniture/unloaded targets, stale tokens and
+generations, later exits, terminal intents, and bounded assignment for targetless
+creation-chair events. Run TPTests full plus [seating], [animation],
+[appearance-apply], [respawn]. This checkout has no [respawn] tag: also run
+[final-respawn] and [animation-replay] explicitly rather than interpreting an empty
+filter as coverage. Run all Tools/Scripts unittest tests, client/server/launcher
+builds and diff checks. CK audits/PSC compilation are required only if their
+sources/artifacts/manifests change; this native correction leaves them unchanged.
+
+The 605ef668 aligned PASS is historical maintainer evidence. Older 6dfba159+
+failures lack complete artifact provenance; publishing exact packages does not
+itself prove the suspected historical boundary. The 2026-10-14 critical-reproducer
+PASS clears the issue #89 blocker for continuing PR #88 runtime validation on the
+validated correction. It does not validate PR #88, imply a merge, or mark every
+permutation above PASS. Seating remains a separate, deferred follow-up in #91.
+
 ## Automatic final activation - ADR-0023 acceptance (2026-09-18)
 
 Initial Character Creation has no live remote appearance synchronization. The
@@ -1566,6 +1645,50 @@ No remote Activate or MoveTo is allowed. Reciprocal visual acceptance in both co
 new changes require their own evidence and publication authorization. Native lifetime remains outside this test.
 
 ## Automatic Helgen after collective Character Build (7 October 2026)
+
+### Integrated PR #88 candidate after PR #90 (2026-10-14)
+
+**Runtime: NOT RUN by agent.** PR #90 is integrated in main at
+`1a997c3037cf55a3127bb323458e4ea16f9fec7f`; this candidate merges that main into
+Helgen head `5a66e9413f26aa48e862fb1f1e6f447a69e163e8`, without a code conflict.
+The prior PR #88 smoke and the issue #89 PASS on `974b12fc` do not validate this
+new combined candidate. Wait for its own Windows/Linux CI success before the
+maintainer run. No scenario below is PASS until explicit maintainer feedback.
+
+Remaining seating bugs are tracked in [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91):
+**KNOWN ISSUE / DEFERRED / NON-BLOCKING BY MAINTAINER DECISION** for this
+integration. Seating quality must be recorded separately and is not PASS.
+
+1. Use fresh client processes, a fresh sealed roster-2 campaign and matching
+   integrated client/server/PEX packages. Record the candidate SHA and hashes.
+2. A finishes Character Creation while B remains in creation. Helgen must not
+   start: no collective authorization, post-attack projection or investigation T0.
+   A's individual Applied remains independent from the collective Helgen barrier.
+3. B finishes. Require exactly one collective authorization. On **both clients**,
+   use read-only console queries and retain full client/server/Papyrus logs:
+
+   ```text
+   getstage MQ101
+   getstage STRE_QUEST_HelgenNPCCleanup
+   getstage STRE_QUEST_HelgenInvestigation
+   sqv STRE_QUEST_HelgenInvestigation
+   ```
+
+   Expect MQ101=1000, cleanup=40, investigation stage=10,
+   InvestigationState=1 and InvestigationStartGameTime (T0)>=0. Projection
+   completion must precede T0; no repeated initialization or creation bootstrap.
+4. Take the normal inn door and change cells: no crash or regression-related
+   recovery lock. Then `coc HelgenExterior`: Helgen is post-attack, with no bandits
+   before four elapsed game days from T0. Do not force quest stages to obtain it.
+5. Repeat from fresh processes/campaign in B-first order; test returning and
+   changing cells. Record seating defects separately under #91.
+6. Exercise T+4 with everyone outside Helgen: occupation may apply. On a separate
+   run, leave one player inside Helgen at T+4: remain Pending with no physical
+   occupation until the last player exits. Preserve the existing full-roster
+   and elapsed-time rules, including HelgenKeep01 and inverse player roles.
+
+The full procedures and log collection below remain applicable. Earlier smoke
+results remain historical evidence; they cannot replace this integrated run.
 
 This is a new runtime acceptance matrix; earlier manual stage-10/continuity
 passes do not validate the new automatic cleanup-controller boundary. Do not deploy

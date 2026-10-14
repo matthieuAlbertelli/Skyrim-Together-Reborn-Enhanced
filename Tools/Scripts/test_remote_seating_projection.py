@@ -35,7 +35,7 @@ class RemoteSeatingProjection(unittest.TestCase):
         self.assertLess(update.index('"action-dequeued"'), update.index('apActor->actorState.flags1 ='))
         self.assertLess(update.index('"action-dequeued"'), update.index('ForceAction('))
         self.assertLess(update.index('ForceAction('), update.index('"force-action-return"'))
-        self.assertLess(update.index('"force-action-return"'), update.index('actions.pop_front()'))
+        self.assertLess(update.index('"force-action-return"'), update.rindex('actions.pop_front()'))
         for phase in ('"graph-not-ready"', '"action-not-due"'):
             self.assertIn(phase, update)
         self.assertIn('MissingUpdateActor', body(CHARACTER, 'void CharacterService::RunRemoteUpdates('))
@@ -45,8 +45,6 @@ class RemoteSeatingProjection(unittest.TestCase):
         clean = body(ANIMATION, 'void AnimationSystem::Clean(')
         self.assertLess(setup.index('RemoteSeatingProbe::QueueReset'), setup.index('emplace_or_replace'))
         self.assertLess(clean.index('RemoteSeatingProbe::QueueReset'), clean.index('remove<'))
-        self.assertIn('last-force-action-at-binding', PROBE)
-        self.assertIn('queue-at-binding', PROBE)
 
     def test_probe_cannot_mutate_native_or_network_or_animation_queue(self):
         for forbidden in ('->Activate(', '->MoveTo(', 'ForceAction(', 'SetVariable', 'SetRotation(',
@@ -57,37 +55,24 @@ class RemoteSeatingProjection(unittest.TestCase):
         self.assertNotIn('Services/RemoteRespawnLab.h', PROBE)
         self.assertNotIn('const_cast', PROBE)
 
-    def test_observation_has_fixed_bounds_and_session_reset(self):
+    def test_observation_has_fixed_bounds_and_terminal_reset(self):
         self.assertIn('#if (!IS_MASTER)', PROBE)
-        self.assertIn('std::array<std::atomic<std::shared_ptr<Trace>>, 10>', PROBE)
+        self.assertIn('s_traces.size() >= 10', PROBE)
         self.assertIn('SeatingObservationWindow::Active', PROBE)
-        self.assertIn('>= 512', PROBE)
+        self.assertIn('t.Lines >= 512', PROBE)
         self.assertIn('t.Budget.Admit(now)', PROBE)
-        self.assertIn('droppedDiagnosticLines={}', PROBE)
-        applied = body(PROBE, 'void Applied(')
-        self.assertLess(applied.index('t->Identity.load()'), applied.index('t->Started ='))
-        self.assertIn('!t->SawCommit.exchange(true)', body(PROBE, 'void Binding('))
-        self.assertIn('slot.exchange(nullptr)', body(PROBE, 'void Clear('))
+        self.assertIn('if (!inserted) return;', body(PROBE, 'void Applied('))
+        self.assertIn('t->Closed = true', body(PROBE, 'void End('))
+        self.assertIn('s_traces.clear()', body(PROBE, 'void Clear('))
         self.assertIn('RemoteSeatingProbe::Clear()', body(SEATING, 'void Clear('))
 
-    def test_actual_action_target_is_fresh_and_distinct_from_observed_binding(self):
-        replay = body(PROBE, 'void Replay(')
-        self.assertIn('Find(world, actor)', replay)
-        for field in ('actualActor={:X}', 'actualActorToken={:X}', 'actionTick={}',
-                      'committedObserved={}', 'matchesObservedCommitted={}'):
-            self.assertIn(field, PROBE)
-        self.assertIn('RemoteComponent, PlayerComponent', body(PROBE, 'void Received('))
-        self.assertIn('Track(server)', body(PROBE, 'void Received('))  # Before Applied too.
-        self.assertIn('receivedBeforeApplied={}', PROBE)
-
-    def test_native_callbacks_use_only_published_value_context(self):
-        for signature in ('void NativeAction(', 'void Furniture('):
-            callback = body(PROBE, signature)
-            self.assertIn('Find(', callback)
-            self.assertNotIn('world.', callback)
-            self.assertNotIn('s_intents', callback)
-        self.assertIn('RemoteSeatingProbe::Furniture(apEvent)', body(SEATING, 'void ObserveFurnitureEvent('))
-        self.assertIn('RemoteSeatingProbe::NativeAction(', body(SEATING, 'void ObserveAnimationAction('))
+    def test_probe_has_no_native_object_dereferences(self):
+        for field in ('actor->', 'seat->', 'currentProcess', 'GetByHandle', 'GetById',
+                      'GetNiNode', 'GetVariableBool', 'Cast<Actor>', 'NativeAction(', 'Furniture('):
+            self.assertNotIn(field, PROBE)
+        self.assertIn('reinterpret_cast<uintptr_t>(actor)', body(PROBE, 'void Replay('))
+        self.assertNotIn('RemoteSeatingProbe::Furniture', SEATING)
+        self.assertNotIn('RemoteSeatingProbe::NativeAction', SEATING)
 
 
 if __name__ == '__main__':

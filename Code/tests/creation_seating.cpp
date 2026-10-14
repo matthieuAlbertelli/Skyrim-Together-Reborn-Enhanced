@@ -293,3 +293,26 @@ TEST_CASE("Seating identity rejects oversized output", "[creation-seating]")
 
 
 }
+
+#include <CharacterCreation/SeatingLifetime.h>
+
+TEST_CASE("Creation seating observation is terminal on cell exit and cannot rearm", "[seating]")
+{
+    using STRE::CharacterCreation::SeatingLifetime;
+    SeatingLifetime lifetime;
+    REQUIRE_FALSE(lifetime.Observe(10, 10, 0, false, 100));
+    REQUIRE(lifetime.Observe(10, 10, 10, true, 200));
+    SECTION("Observer leaves first") { REQUIRE_FALSE(lifetime.Observe(10, 20, 10, true, 300)); }
+    SECTION("Remote leaves first") { REQUIRE_FALSE(lifetime.Observe(10, 10, 20, true, 300)); }
+    SECTION("Committed binding disappears") { REQUIRE_FALSE(lifetime.Observe(10, 10, 0, false, 300)); }
+    SECTION("Diagnostic deadline ends without following the player forever")
+    {
+        REQUIRE(lifetime.Observe(10, 10, 10, true, 40199));
+        REQUIRE_FALSE(lifetime.Observe(10, 10, 10, true, 40200));
+    }
+    REQUIRE(lifetime.Terminal);
+    unsigned nativeBindingCalls{};
+    for (int i = 0; i < 100; ++i)
+        if (!lifetime.Terminal && lifetime.Observe(10, 10, 10, true, 500 + i)) ++nativeBindingCalls;
+    REQUIRE(nativeBindingCalls == 0);
+}
