@@ -7,6 +7,55 @@ camera or campaign recovery authority. ADR-0022 makes entry and final
 rematerialization independent of posture; collective seating is a future phase.
 ADR-0023 makes the official final flow automatic in every build, including MASTER.
 
+## Creation-cell lifetime and transition regression (2026-10-11)
+
+Remote seating is transient presentation in the creation cell. A final appearance
+commit may reconstruct consumed actions on its new binding in that same cell;
+it does not make the initial chair a permanent player state. The materializer,
+canonical final appearance, local single MoveTo/Activate and server authority
+remain unchanged. See [issue #89](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/89).
+
+The runtime chain is Applied -> bounded seating intent -> existing STR actions
+-> consumed cache -> one final-commit binding notification -> refined prefix
+before pending actions. `OnBindingChanged` is called by the final transaction,
+not by every cell transition. Session/generation and Actor FormID/token reject
+stale notifications; no old Actor pointer is dereferenced to check replay.
+`AnimationSystem::Update` verifies the ECS binding against a fresh form lookup.
+A value-only old/new cell accompanies the final commit. Observed cell changes
+remove furniture entries from both history and queue, adjusting injected/replay
+counts while retaining ordinary actions and their order. Re-entry cannot revive
+that removed history. Recovery/disconnect still invalidate the whole replay
+context until Setup; component replacement/Clean discard their owned state.
+
+Known vanilla chair, bed and work-furniture entry families are distinguished
+from movement, ordinary gestures, mounted idles and exits. Before any ActorState,
+graph or ForceAction mutation, their target must resolve to enabled Furniture
+with 3D in the current actor cell, the actor must have 3D and the current binding
+must match the injected generation. A later exit cancels older reconstruction,
+including one waiting for graph readiness. An invalid target is discarded without
+being cached. Ordinary actions continue through the existing graph-ready path.
+Targetless vanilla chair events may use only the matching Applied intent's
+sealed-roster rank/SeatXX in the creation cell; explicit targets are never
+substituted. The resulting local target passes the same native preflight. This
+uses existing seating identity and never changes the wire/differential baseline.
+The native effect of this target completion remains part of human seating tests.
+
+Remote seating observation stops on observer/actor departure, committed-binding
+loss, recovery, or 40 seconds after the first committed binding. Terminal intents
+remain bounded tombstones, so duplicate Applied cannot rearm them. Local
+observation stops on departure/recovery, or after confirmed entry plus its passive
+capture window. Remote diagnostics read only message/ECS values and comparison
+tokens; they no longer walk native actors, graphs, packages, handles or furniture.
+Local furniture callbacks retain token/state evidence and local action callbacks
+retain result/token evidence. Native local seating checks run on the game update;
+callbacks no longer take synchronous process/graph snapshots. The diagnostic-only
+AIProcess/MiddleProcess package/path/idle fields have returned to padding; existing
+product offsets, including occupiedFurniture at 0x208, remain unchanged.
+
+These rules narrow the earlier diagnostic procedures below, including requests
+for immediate callback/process snapshots. Automated coverage is not proof that
+the reported native fail-fast is eliminated; STATUS owns that validation limit.
+
 ## Runtime checkpoint and remaining validation
 
 The 2026-09-19 maintainer checkpoint accepts final appearance in both directions,

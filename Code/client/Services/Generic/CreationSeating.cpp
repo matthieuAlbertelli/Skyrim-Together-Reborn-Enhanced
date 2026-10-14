@@ -1,6 +1,7 @@
 #include <TiltedOnlinePCH.h>
 #include <Services/CreationSeating.h>
 #include <Services/RemoteSeatingProbe.h>
+#include <CharacterCreation/SeatingLifetime.h>
 #include <CharacterCreation/CreationSeating.h>
 #include <CharacterCreation/SeatingEntryEvidence.h>
 #include <CharacterCreation/SeatingObservationWindow.h>
@@ -26,9 +27,6 @@
 #include <Events/EventDispatcher.h>
 #include <Games/Animation/TESActionData.h>
 #include <Forms/BGSAction.h>
-#include <Forms/TESIdleForm.h>
-#include <Forms/TESPackage.h>
-#include <AI/Movement/PlayerControls.h>
 #include <map>
 #include <string>
 #include <chrono>
@@ -50,6 +48,7 @@ struct Intent
     std::string Campaign, DurablePlayer;
     bool Local{}, Solo{}, SessionConnected{};
     SeatProjection Projection;
+    SeatingLifetime Lifetime;
     std::string LastReason;
     std::chrono::steady_clock::time_point IssuedAt{};
     int64_t LastSampleMs{}, LastClosedDeadline{};
@@ -170,7 +169,7 @@ void LogSoloSample(const char* apPhase, Actor* apActor, TESObjectREFR* apSeat, T
                  "actorCell={:X} seatCell={:X} actorState1={:08X} actorState2={:08X} actorRemote={} {}",
                  apPhase, apActor->formID, reinterpret_cast<uintptr_t>(apActor), apSeat->formID, reinterpret_cast<uintptr_t>(apSeat),
                  now - started, entered ? now - entered : -1, distance, apActor->rotation.z - apSeat->rotation.z,
-                 apOccupied ? apOccupied->formID : 0, aSitState, aSample.Evidence.LogicalSeated(), aSample.Evidence.EnterEvent,
+                 apOccupied == apSeat ? apSeat->formID : 0, aSitState, aSample.Evidence.LogicalSeated(), aSample.Evidence.EnterEvent,
                  aSample.Evidence.AnimationObserved(), aSample.Root, aSample.Evidence.GraphReady, aSample.InFurniture,
                  aSample.IdleSitting, aSample.AnimationDriven, aSample.MotionDriven, aSample.Synced,
                  apActor->position.x, apActor->position.y, apActor->position.z, apSeat->position.x, apSeat->position.y, apSeat->position.z,
@@ -178,40 +177,7 @@ void LogSoloSample(const char* apPhase, Actor* apActor, TESObjectREFR* apSeat, T
                  apActor->parentCell ? apActor->parentCell->formID : 0, apSeat->parentCell ? apSeat->parentCell->formID : 0,
                  apActor->actorState.flags1, apActor->actorState.flags2, apActor->GetExtension()->IsRemote(), ObservationContext());
 
-    auto* process = apActor->currentProcess;
-    auto* middle = process ? process->middleProcess : nullptr;
-    auto* currentPackage = process ? process->package : nullptr;
-    auto* runOnce = middle ? middle->runOncePackage : nullptr;
-    // CommonLibSSE-NG AIProcess::GetRunningPackage chooses run-once first.
-    auto* effective = runOnce ? runOnce : currentPackage;
-    const auto targetHandle = runOnce ? middle->runOnceTargetHandle : (process ? process->packageTargetHandle : 0);
-    auto* target = targetHandle ? TESObjectREFR::GetByHandle(targetHandle) : nullptr;
-    const auto pathPoint = middle ? middle->furniturePathPoint : NiPoint3{};
-    const auto pathDelta = apActor->position - pathPoint;
-    auto* controls = PlayerControls::GetInstance();
-    spdlog::info("[STRE][CreationSeating][LocalProbe] phase=process-sample context={} elapsedMs={} sinceEnterMs={} "
-                 "process={:X} middle={:X} processLevelRaw={} currentPackage={:X} currentPackageToken={:X} "
-                 "runOncePackage={:X} runOnceToken={:X} effectiveSource={} effectivePackage={:X} effectiveProcedureTypeRaw={} "
-                 "procedureIndex={} packageDataToken={:X} targetHandle={:X} targetForm={:X} targetIsSeat={} packageStartTime={} "
-                 "furniturePathPointReadable={} furniturePathPoint=({},{},{}) distanceToRawPathPoint={} pathPointSpace=unverified furnitureIdle={:X} "
-                 "controlsAvailable={} moveInput=({},{}) lookInput=({},{}) autoMove={} blockInput={} movementHandlerEnabled={} "
-                 "actionsDropped={} pathSolverStatus=unavailable inputProvenance=not-proven {}",
-                 apPhase, now - started, entered ? now - entered : -1,
-                 reinterpret_cast<uintptr_t>(process), reinterpret_cast<uintptr_t>(middle), process ? int(process->movementType) : -1,
-                 currentPackage ? currentPackage->formID : 0, reinterpret_cast<uintptr_t>(currentPackage),
-                 runOnce ? runOnce->formID : 0, reinterpret_cast<uintptr_t>(runOnce), runOnce ? "run-once" : (currentPackage ? "current" : "none"),
-                 effective ? effective->formID : 0, effective ? effective->ePROCEDURE_TYPE : -1,
-                 runOnce ? middle->runOnceProcedureIndex : (process ? process->packageProcedureIndex : -1),
-                 reinterpret_cast<uintptr_t>(runOnce ? middle->runOncePackageData : (process ? process->packageData : nullptr)),
-                 targetHandle, target ? target->formID : 0, target == apSeat,
-                 runOnce ? middle->runOnceStartTime : (process ? process->packageStartTime : -1.0f),
-                 middle != nullptr, pathPoint.x, pathPoint.y, pathPoint.z,
-                 middle ? std::sqrt(pathDelta.x * pathDelta.x + pathDelta.y * pathDelta.y + pathDelta.z * pathDelta.z) : -1.0f,
-                 middle && middle->furnitureIdle ? middle->furnitureIdle->formID : 0,
-                 controls != nullptr, controls ? controls->Data.MoveInputVec.x : 0.0f, controls ? controls->Data.MoveInputVec.y : 0.0f,
-                 controls ? controls->Data.LookInputVec.x : 0.0f, controls ? controls->Data.LookInputVec.y : 0.0f,
-                 controls ? int(controls->Data.bAutoMove) : -1, controls ? int(controls->bBlockPlayerInput) : -1,
-                 controls && controls->pMovementHandler ? int(controls->pMovementHandler->isEnabled) : -1, s_solo.ActionsDropped.load(), ObservationContext());
+
 }
 
 void CaptureSoloSample(const char* apPhase, Actor* apActor, TESObjectREFR* apSeat)
@@ -442,6 +408,7 @@ void Tick(World& aWorld) noexcept
     const auto* gate = CampaignRuntimeGateService::TryGet();
     for (auto& [id, intent] : s_intents)
     {
+        if (intent.Lifetime.Terminal) continue;
         intent.SessionConnected = aWorld.GetTransport().IsConnected();
         bool observeLocal = intent.Solo;
 #ifndef MASTER
@@ -449,6 +416,9 @@ void Tick(World& aWorld) noexcept
 #endif
         if (gate && gate->IsLocked())
         {
+            intent.Lifetime.Terminal = true;
+            RemoteSeatingProbe::End(intent.Server);
+            if (intent.Local) s_solo.ActorToken = s_solo.SeatToken = 0;
             Log(intent, "pending-recovery-lock");
             continue;
         }
@@ -509,6 +479,19 @@ void Tick(World& aWorld) noexcept
                 continue;
             }
         }
+        auto* manager = ModManager::Get();
+        auto* mod = manager ? manager->GetByName("STRE_AlternateStart.esp") : nullptr;
+        const auto creationCell = mod ? mod->GetFormId(0x000012D1) : 0;
+        auto* observer = PlayerCharacter::Get();
+        const auto observerCell = observer && observer->parentCell ? observer->parentCell->formID : 0;
+        if (creationCell && observerCell != creationCell)
+        {
+            intent.Lifetime.Terminal = true;
+            RemoteSeatingProbe::End(intent.Server);
+            if (intent.Local) s_solo.ActorToken = s_solo.SeatToken = 0;
+            Log(intent, "creation-cell-left-terminal");
+            continue;
+        }
         // Keep the passive window through native pending/completed states, but
         // only after the session, recovery, campaign and local identity fences.
         if (observeLocal && intent.SoloProbeStarted)
@@ -517,6 +500,16 @@ void Tick(World& aWorld) noexcept
         if (!intent.Local)
         {
             intent.Index = index;
+            const auto actorCell = actor && actor->parentCell ? actor->parentCell->formID : 0;
+            if (!intent.Lifetime.Observe(creationCell, observerCell, actorCell, actor != nullptr, NowMilliseconds()))
+            {
+                if (intent.Lifetime.Terminal)
+                {
+                    RemoteSeatingProbe::End(intent.Server);
+                    Log(intent, "remote-observation-terminal");
+                }
+                continue;
+            }
             RemoteSeatingProbe::Binding(aWorld, intent.Server, intent.Revision, index, actor);
             Log(intent, actor ? "remote-network-animation-only" : "pending-actor");
             // TESFurniture::Activate on 1.6.1170 only accepts the native local
@@ -548,8 +541,6 @@ void Tick(World& aWorld) noexcept
             Log(intent, "pending-seat-or-cell");
             continue;
         }
-        auto* manager = ModManager::Get();
-        auto* mod = manager ? manager->GetByName("STRE_AlternateStart.esp") : nullptr;
         if (!mod || seat->parentCell->formID != mod->GetFormId(0x000012D1))
         {
             Log(intent, "rejected-seat-cell");
@@ -590,6 +581,11 @@ void Tick(World& aWorld) noexcept
                                                       correct, entryConfirmed, occupied && !correct, used);
         if (action == SeatAction::Complete)
         {
+            if (!SeatingObservationWindow::Active(NowMilliseconds(), s_solo.StartedAt, s_solo.FirstEnterAt))
+            {
+                intent.Lifetime.Terminal = true;
+                s_solo.ActorToken = s_solo.SeatToken = 0;
+            }
             Log(intent, observeLocal ? (sample.Evidence.AnimationObserved() ? "entry-animation-observed" : "projection-already-completed") :
                            (correct && seated ? "furniture-state-confirmed" : "projection-already-completed"));
             continue;
@@ -641,7 +637,6 @@ void Tick(World& aWorld) noexcept
 }
 void ObserveFurnitureEvent(const TESFurnitureEvent* apEvent) noexcept
 {
-    RemoteSeatingProbe::Furniture(apEvent);
     if (!apEvent || !apEvent->character || !apEvent->furniture ||
         s_solo.ActorToken != reinterpret_cast<uintptr_t>(apEvent->character) ||
         s_solo.SeatToken != reinterpret_cast<uintptr_t>(apEvent->furniture))
@@ -660,23 +655,18 @@ void ObserveFurnitureEvent(const TESFurnitureEvent* apEvent) noexcept
         s_solo.Entered = false;
     if (firstEnter || s_solo.EventLogs.fetch_add(1) < 8)
     {
-        spdlog::info("[STRE][CreationSeating][LocalProbe] phase=furniture-event actor={:X} seat={:X} event={} eventState={} "
+        spdlog::info("[STRE][CreationSeating][LocalProbe] phase=furniture-event actorToken={:X} seatToken={:X} event={} eventState={} "
                      "elapsedMs={} firstEnter={} visualConfirmation=human-required {}",
-                     apEvent->character->formID, apEvent->furniture->formID,
+                     s_solo.ActorToken.load(), s_solo.SeatToken.load(),
                      apEvent->state == TESFurnitureEvent::State::Enter ? "enter" :
                          (apEvent->state == TESFurnitureEvent::State::Exit ? "exit" : "unknown"),
                      static_cast<uint32_t>(apEvent->state), now - s_solo.StartedAt.load(), firstEnter, ObservationContext());
-        // Synchronous, sequential read-only snapshot at callback entry, before
-        // returning to the engine. Do not defer the useful moment to a VM tick.
-        if (auto* actor = Cast<Actor>(apEvent->character))
-            CaptureSoloSample(apEvent->state == TESFurnitureEvent::State::Enter ? "furniture-enter-immediate" : "furniture-exit-immediate",
-                              actor, apEvent->furniture);
+        // Callback payload tokens/state only; native observation stays on Update.
     }
 }
 
 void ObserveAnimationAction(TESActionData* apAction, uint8_t aResult, bool aRemoteBlocked) noexcept
 {
-    RemoteSeatingProbe::NativeAction(apAction, aResult, aRemoteBlocked);
     if (!apAction || !apAction->actor || s_solo.ActorToken != reinterpret_cast<uintptr_t>(static_cast<Actor*>(apAction->actor)))
         return;
     const auto now = NowMilliseconds();
@@ -689,13 +679,28 @@ void ObserveAnimationAction(TESActionData* apAction, uint8_t aResult, bool aRemo
         ++s_solo.ActionsDropped;
         return;
     }
-    spdlog::info("[STRE][CreationSeating][LocalProbe] phase=animation-action actor={:X} target={:X} action={:X} idle={:X} "
-                 "event={} targetEvent={} input={} flags={} transitionNoAnimation={} skipped={} result={} remoteBlocked={} elapsedMs={} sinceEnterMs={} {}",
-                 apAction->actor->formID, apAction->target ? apAction->target->formID : 0,
-                 apAction->action ? apAction->action->formID : 0, apAction->idleForm ? apAction->idleForm->formID : 0,
-                 apAction->eventName.AsAscii() ? apAction->eventName.AsAscii() : "", apAction->targetEventName.AsAscii() ? apAction->targetEventName.AsAscii() : "",
-                 apAction->unkInput, apAction->someFlag, apAction->someFlag == BGSActionData::kTransitionNoAnimation,
-                 apAction->someFlag == BGSActionData::kSkip, aResult, aRemoteBlocked, now - started, entered ? now - entered : -1, ObservationContext());
+    spdlog::info("[STRE][CreationSeating][LocalProbe] phase=animation-action actorToken={:X} result={} remoteBlocked={} elapsedMs={} {}",
+                 s_solo.ActorToken.load(), aResult, aRemoteBlocked, now - started, ObservationContext());
+}
+
+uint32_t ReplaySeat(World& aWorld, uint32_t aServer, uint32_t aActorCell) noexcept
+{
+    const auto it = s_intents.find(aServer);
+    const auto* gate = CampaignRuntimeGateService::TryGet();
+    if (it == s_intents.end() || it->second.Local || it->second.Lifetime.Terminal ||
+        !aWorld.GetTransport().IsConnected() || (gate && gate->IsLocked())) return 0;
+    const auto& intent = it->second;
+    const auto& snapshot = aWorld.GetCampaignService().GetLatestSnapshot();
+    if (!snapshot || !snapshot->RosterSealed || snapshot->CampaignId != intent.Campaign.c_str() ||
+        snapshot->Phase != kCampaignWirePhaseCharacterCreation || snapshot->RuntimeState != kCampaignWireRuntimeActive) return 0;
+    auto* manager = ModManager::Get();
+    auto* mod = manager ? manager->GetByName("STRE_AlternateStart.esp") : nullptr;
+    if (!mod || aActorCell != mod->GetFormId(0x000012D1)) return 0;
+    std::vector<std::string_view> players;
+    for (const auto& member : snapshot->Roster) players.emplace_back(member.PlayerId.data(), member.PlayerId.size());
+    const auto index = StandingCreationPositionIndex(players, intent.DurablePlayer);
+    const auto seat = index ? CreationSeatLocalFormId(*index) : std::nullopt;
+    return seat ? mod->GetFormId(*seat) : 0;
 }
 
 void Clear() noexcept

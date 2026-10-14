@@ -104,3 +104,29 @@ void ActionReplayCache::Clear() noexcept
 {
     m_actions.clear();
 }
+
+bool ActionReplayCache::IsChairEntry(const ActionEvent& aAction) noexcept
+{
+    const String& name = aAction.EventName;
+    return !IsExitAction(aAction) && (name.starts_with("IdleChair") || name.starts_with("IdleJarlChair") ||
+        name.starts_with("IdleSnowElfPrinceChair") || name.starts_with("IdleStool"));
+}
+
+bool ActionReplayCache::IsFurnitureEntry(const ActionEvent& aAction) noexcept
+{
+    if (IsExitAction(aAction)) return false;
+    if (IsChairEntry(aAction)) return true;
+    const String& name = aAction.EventName;
+    // Explicit furniture families; ordinary gestures, movement, mounted and
+    // floor idles do not acquire a furniture-target requirement.
+    for (const auto prefix : {"IdleFurniture", "IdleBed", "IdleAlchemy", "IdleAltar", "IdleBarCounter",
+        "IdleBlackSmith", "IdleCoffin", "IdleCooking", "IdleEnchanting", "IdleGrainMill", "IdleOven",
+        "IdleSharpening", "IdleSmelter", "IdleTanning", "IdleTable", "IdleCounter", "IdleLeanTable"})
+        if (name.starts_with(prefix)) return true;
+    return false;
+}
+
+void ActionReplayCache::RemoveFurniture() noexcept
+{
+    m_actions.erase(std::remove_if(m_actions.begin(), m_actions.end(), IsFurnitureEntry), m_actions.end());
+}

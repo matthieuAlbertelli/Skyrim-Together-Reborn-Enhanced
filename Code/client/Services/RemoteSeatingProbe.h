@@ -19,7 +19,6 @@ void Received(World&, uint32_t aServer, uint32_t aEntity, const ActionEvent&, ui
 void Replay(World&, Actor*, const ActionEvent&, const char* aPhase, int aResult, size_t aQueueSize, uint64_t aUpdateTick) noexcept;
 void QueueReset(World&, uint32_t aEntity, const char* aReason) noexcept;
 void MissingUpdateActor(World&, uint32_t aEntity, uint64_t aUpdateTick) noexcept;
-void NativeAction(TESActionData*, uint8_t aResult, bool aBlocked) noexcept;
-void Furniture(const TESFurnitureEvent*) noexcept;
+void End(uint32_t aServer) noexcept;
 void Clear() noexcept;
 }

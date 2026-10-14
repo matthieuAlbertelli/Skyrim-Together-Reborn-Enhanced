@@ -32,6 +32,10 @@ public:
     const Vector<ActionEvent>& GetActions() const noexcept { return m_actions; };
 
     void Clear() noexcept;
+    // Entry/state reconstruction only; exits remain ordinary causal input.
+    static bool IsFurnitureEntry(const ActionEvent& aAction) noexcept;
+    static bool IsChairEntry(const ActionEvent& aAction) noexcept;
+    void RemoveFurniture() noexcept;
 
 private:
     // Returns true if clients should reset the animation graph of the Actor before replaying

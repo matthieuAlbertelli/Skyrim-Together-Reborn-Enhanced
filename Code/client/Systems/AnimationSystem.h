@@ -21,7 +21,7 @@ struct AnimationSystem
      * @param aAnimationComponent The animation component attached to the actor.
      * @param aTick The current tick.
      */
-    static void Update(World& aWorld, Actor* apActor, RemoteAnimationComponent& aAnimationComponent, uint64_t aTick) noexcept;
+    static void Update(World& aWorld, entt::entity aEntity, Actor* apActor, RemoteAnimationComponent& aAnimationComponent, uint64_t aTick) noexcept;
     /**
      * @brief Sets up the animation system for a particular actor.
      * @param aWorld The registry where the actor in question lives.

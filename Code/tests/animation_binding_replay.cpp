@@ -29,8 +29,8 @@ struct Observer
     uint32_t ReplayCount{};
     bool Reset{};
     AnimationBinding Old{1000, 10000}, New{2000, 20000};
-    AnimationBindingChange Change{1, 1, 3, 19, Old, New};
-    Observer() { History.ObserveBinding(Old, Pending, ReplayCount, Reset); }
+    AnimationBindingChange Change{1, 1, 3, 19, Old, New, 10, 10};
+    Observer() { History.ObserveBinding(Old, Pending, ReplayCount, Reset); History.ObserveCell(10, Pending, ReplayCount, Reset); }
     void Consume()
     {
         REQUIRE_FALSE(Pending.empty());
@@ -258,4 +258,127 @@ TEST_CASE("Subsequent generation rebuilds once without duplicating unconsumed in
     REQUIRE(o.ReplayCount == 1);
     REQUIRE(o.Pending.front().EventName == "IdleChairEnterInstant");
     REQUIRE_FALSE(o.History.Rebind(stale, o.Pending, o.ReplayCount, o.Reset).Accepted);
+}
+
+#include <Animation/FurnitureReplay.h>
+
+TEST_CASE("Furniture history cannot cross a cell boundary but ordinary replay survives", "[animation][seating]")
+{
+    Observer o;
+    o.History.Consumed(Action("IdleChairRightEnter"));
+    o.History.Consumed(Action("IdleDialogueHappyStart", 2));
+    o.Pending.push_back(Action("moveStart", 3));
+    SECTION("Commit moves to another cell before an update") { o.Change.NewCell = 20; }
+    SECTION("Cell change is observed before the commit")
+    {
+        o.History.ObserveCell(20, o.Pending, o.ReplayCount, o.Reset);
+        o.Change.OldCell = o.Change.NewCell = 20;
+    }
+    SECTION("Unknown new cell cannot prove furniture continuity") { o.Change.NewCell = 0; }
+    REQUIRE(o.Rebind().Accepted);
+    REQUIRE(o.ReplayCount == 1);
+    REQUIRE(o.Pending.size() == 2);
+    REQUIRE(o.Pending.front().EventName == "IdleDialogueHappyStart");
+    REQUIRE(o.Pending.back().EventName == "moveStart");
+    REQUIRE(o.History.Cache().GetActions().size() == 1);
+}
+
+TEST_CASE("Cell invalidation drops only furniture from mixed replay and live queues", "[animation][seating]")
+{
+    Observer o;
+    o.History.Consumed(Action("IdleChairRightEnter"));
+    o.History.Consumed(Action("IdleDialogueHappyStart", 2));
+    o.Pending.push_back(Action("IdleChairLeftEnter", 3));
+    o.Pending.push_back(Action("moveStart", 4));
+    REQUIRE(o.Rebind().Accepted);
+    REQUIRE(o.ReplayCount == 2);
+    o.History.ObserveCell(20, o.Pending, o.ReplayCount, o.Reset);
+    REQUIRE(o.History.Remaining() == 1);
+    REQUIRE(o.ReplayCount == 1);
+    REQUIRE(o.Pending.size() == 2);
+    o.Consume();
+    REQUIRE(o.Pending.front().EventName == "moveStart");
+    REQUIRE(o.History.Remaining() == 0);
+    o.History.ObserveCell(10, o.Pending, o.ReplayCount, o.Reset); // Re-entry does not resurrect the chair.
+    o.Change.Old = o.New;
+    o.Change.New = {3000, 30000};
+    ++o.Change.Generation;
+    REQUIRE(o.Rebind().Chain.Actions.size() == 1);
+    REQUIRE(o.Pending.front().EventName == "IdleDialogueHappyStart");
+}
+
+TEST_CASE("Furniture dispatch requires a current binding and a loaded compatible same-cell target", "[animation][seating]")
+{
+    const AnimationBinding current{100, 1000};
+    auto actual = current;
+    FurnitureReplayTarget target{500, 10, true, true};
+    uint32_t cell = 10;
+    bool actor3D = true, newerExit = false;
+    SECTION("Missing target") { target.FormId = 0; }
+    SECTION("Wrong target cell") { target.Cell = 20; }
+    SECTION("Target has unloaded 3D") { target.Has3D = false; }
+    SECTION("Actor has unloaded 3D") { actor3D = false; }
+    SECTION("Target is not furniture") { target.IsFurniture = false; }
+    SECTION("Actor cell unknown") { cell = 0; }
+    SECTION("Old actor token") { actual.Token = 999; }
+    SECTION("Old actor form") { actual.FormId = 99; }
+    SECTION("Newer exit") { newerExit = true; }
+    unsigned forceCalls{};
+    if (CanApplyFurnitureReplay(actual, current, cell, actor3D, target, newerExit)) ++forceCalls;
+    REQUIRE(forceCalls == 0);
+    REQUIRE(CanApplyFurnitureReplay(current, current, 10, true, {500, 10, true, true}));
+}
+
+TEST_CASE("Stale generation is rejected before consulting any native target", "[animation][seating]")
+{
+    Observer o;
+    o.History.Consumed(Action("IdleChairRightEnter"));
+    REQUIRE(o.Rebind().Accepted);
+    auto stale = o.Change;
+    stale.New = {3000, 30000};
+    unsigned targetLookups{};
+    if (o.History.Rebind(stale, o.Pending, o.ReplayCount, o.Reset).Accepted) ++targetLookups;
+    REQUIRE(targetLookups == 0);
+    REQUIRE(o.Pending.size() == 1);
+    o.History.ObserveBinding({o.New.FormId, o.New.Token + 1}, o.Pending, o.ReplayCount, o.Reset);
+    REQUIRE(o.Pending.empty());
+}
+
+TEST_CASE("Furniture classification preserves ordinary and exit actions", "[animation][seating]")
+{
+    for (const auto* name : {"IdleChairFrontEnter", "IdleChairEnterInstant", "IdleBedEnterStart", "IdleAlchemyEnterInstant", "IdleFurnitureStart"})
+        REQUIRE(ActionReplayCache::IsFurnitureEntry(Action(name)));
+    for (const auto* name : {"moveStart", "TurnRight", "IdleDialogueHappyStart", "HorseEnter", "IdleChairExitToStand", "ForceFurnExit", "IdleSitCrossLeggedEnter"})
+        REQUIRE_FALSE(ActionReplayCache::IsFurnitureEntry(Action(name)));
+}
+
+TEST_CASE("Targetless creation chair entry needs a current assigned seat and preserves explicit targets", "[animation][seating]")
+{
+    auto chair = Action("IdleChairEnterInstant");
+    chair.TargetId = 0;
+    REQUIRE(FurnitureReplayTargetId(chair, 0) == 0);
+    REQUIRE(FurnitureReplayTargetId(chair, 500) == 500);
+    chair.TargetId = 600;
+    REQUIRE(FurnitureReplayTargetId(chair, 500) == 600);
+    auto ordinary = Action("moveStart");
+    ordinary.TargetId = 0;
+    REQUIRE(FurnitureReplayTargetId(ordinary, 500) == 0);
+}
+
+TEST_CASE("Rejected last furniture replay cannot leave a deferred graph reset", "[animation][seating]")
+{
+    Observer o;
+    o.History.Consumed(Action("IdleForceDefaultState", 1));
+    o.History.Consumed(Action("IdleChairRightEnter", 2));
+    o.Pending.push_back(Action("moveStart", 3));
+    REQUIRE(o.Rebind().Accepted);
+    REQUIRE(o.Reset);
+    REQUIRE(o.ReplayCount == 1);
+    o.History.ForgetFurniture();
+    o.History.Discarded(o.ReplayCount, o.Reset);
+    o.Pending.pop_front();
+    REQUIRE(o.ReplayCount == 0);
+    REQUIRE(o.History.Remaining() == 0);
+    REQUIRE_FALSE(o.Reset);
+    REQUIRE(o.Pending.front().EventName == "moveStart");
 }

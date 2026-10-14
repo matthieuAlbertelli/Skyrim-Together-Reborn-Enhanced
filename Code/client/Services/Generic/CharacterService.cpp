@@ -1668,7 +1668,7 @@ void CharacterService::RunRemoteUpdates() noexcept
             continue;
         }
 
-        AnimationSystem::Update(m_world, pActor, animationComponent, tick);
+        AnimationSystem::Update(m_world, entity, pActor, animationComponent, tick);
     }
 
     auto facegenView = m_world.view<FormIdComponent, FaceGenComponent>();

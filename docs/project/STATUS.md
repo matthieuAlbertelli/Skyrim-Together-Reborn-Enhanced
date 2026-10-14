@@ -1,13 +1,96 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** September 23, 2026.
+> **Last updated:** October 14, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Multiplayer loading-door regression candidate (2026-10-11)
+
+[Issue #89](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/89)
+tracks the fatal roster-2 transition after Character Creation, corrected in
+[PR #90](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/pull/90).
+This is separate from PR #88. The correction is based on main
+`cba7569c74140b4ffa9a180aad94ebd2f1a865e3`, in an isolated worktree.
+
+**Human runtime acceptance (maintainer attestation, 2026-10-14):** the critical
+issue #89 reproducer is **PASS** on
+`974b12fc9285831443d34f32f18b1d40eb100393`.
+
+- Fresh sealed roster 2: the normal inn interior-to-exterior loading door works.
+- Cell changes and campaign continuation work; no new crash or recovery lock
+  related to this regression was observed.
+- General behavior outside seating conforms within the tested scope.
+- Seating still has functional bugs: **KNOWN ISSUE / DEFERRED / NON-BLOCKING BY
+  MAINTAINER DECISION** for PR #90, tracked separately in
+  [issue #91](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/91).
+  Seating is **not PASS**. The maintainer explicitly deferred its correction;
+  accepting the crash fix does not establish functional seating quality.
+
+No new logs/captures characterize the seating symptoms in this attestation, so
+no more specific symptom or cause is asserted. The original crash dump/log ZIP
+are lost. This clears the issue #89 reproducer blocker for continuing PR #88
+runtime validation on the validated correction; it does not validate PR #88
+itself or imply that the correction has been merged. Exit-order permutations,
+re-entry/re-exit, recovery and Helgen checks not individually attested in this
+report remain unconfirmed; the entire test matrix is not marked PASS.
+
+Both [Windows CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38171040331)
+and [Linux CI](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38171040414)
+are **PASS** on `974b12fc`. The 2026-10-14 follow-up changes documentation only;
+runtime and native-test evidence remain tied to that exact candidate, not to a
+new gameplay run of the documentation commit.
+
+**Historical runtime evidence before the correction:** Solo and roster 1 passed;
+roster 2 failed when a player took the ordinary inn loading door after reciprocal seating.
+`9108727b` passed; `605ef668ce9a9311fe6df713064038e9d09643c3` passed with CK artifacts
+explicitly aligned. `6dfba1594e35852d106be0b4785dd5280a58fa8d` and later failed in
+older runs, but auto-import prevents treating their artifact fidelity as proven.
+The exact interval is the seating PR #84. Both historical launcher/server builds
+have now passed in isolated worktrees using Git content, without CK import or
+local deployment. Their matched packages/hashes support a new human comparison;
+no new historical gameplay result is claimed.
+
+**Source findings and implemented correction:** remote intents previously kept
+querying the final committed binding; diagnostic callbacks traversed borrowed
+actor/process/package/furniture data, and binding replay had no cell scope.
+These are demonstrated source-level lifetime gaps. The new final binding signal
+is only emitted by the appearance commit, so replay on every ordinary cell
+transition was not established. Remote observation is now bounded and terminal;
+callback diagnostics use values rather than native pointer walks. Furniture
+history/queued entries are scoped to cell continuity and fresh compatible targets,
+with stale-generation and newer-exit fences, while ordinary animations survive.
+Discarding the last invalid furniture action also clears its deferred graph reset.
+The local seat request, final materializer and appearance contract remain.
+Details belong to [the feature contract](../features/alternate-start/CHARACTER_APPEARANCE_SYNC.md#creation-cell-lifetime-and-transition-regression-2026-10-11).
+No protocol, persistence, authority, CK, PSC, PEX or manifest change.
+
+**Automated evidence:** Windows x64 debug TPTests passes 45,176 assertions in
+425 cases; [seating] 8/94, [animation] 7/73, [appearance-apply] 11/297,
+[final-respawn] 17/34,089 and [animation-replay] 12/340. Requested [respawn]
+matches no test in this repository; the explicit final-respawn run supplies that
+coverage. All 109 Python tests pass. The client, server, immersive launcher and server runner builds pass. One
+MSVC C1090/PDB RPC failure during an overlapping build cleared on the isolated
+retry; the final sequential build set passed. Existing warnings remain
+ignored -fPIC and the TESObjectREFR signed/unsigned comparison. No CK audit was rerun because no managed
+content changed. The first observation-only commit also passed the full C++/Python
+suites and the client build independently.
+
+**Evidence limits:** no gameplay was run by the agent; runtime acceptance above
+is the maintainer's report. The reported historical dump had C0000409 / parameter
+7 (FAST_FAIL_FATAL_APP_EXIT), and an E06D7363 breakpoint caught no C++ exception.
+The matching PDB alone cannot establish a faulting stack without the lost dump.
+The critical reproducer now passes on `974b12fc`; the exact historical good/bad
+boundary and native faulting instruction remain unproven. Remaining scenarios
+belong to the [human loading-door matrix](../features/alternate-start/TEST_PLAN.md#loading-door-regression-acceptance-issue-89-2026-10-11).
+No buffer-overflow, C++ exception, Helgen, PR #88 or Main Menu cause is asserted.
+Roster 2 uniquely exercises remote observation/replay; this explains the audit
+focus, not a proven instruction-level cause. Historical in-inn seating acceptance
+below does not validate seating on this candidate or replace the dated door evidence.
 
 ## Startup and Main Menu presentation (2026-09-23)
 
