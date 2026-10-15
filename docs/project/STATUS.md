@@ -9,16 +9,18 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen dialogue matrix v1: editorial preparation; authoring blocked (2026-10-16)
+## Valen dialogue matrix v1: complete editorial condition coverage (2026-10-16)
 
 [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
 tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
 on main `bdedb163aa516dc28917b292caf9b869afda983c`. The canonical JSON, formal
 schema, linter, generated review and exhaustive survivor condition table are
-prepared. The source comparison accounts for all 140 approved new response
-blocks; the two existing #95 response blocks preserve the actual ESP strings.
-The editorial graph has 131 semantic nodes, 142 response blocks including the
-common recruitment introduction, and 21 classes plus fallback. These counts
+prepared. The source comparison accounts for all 140 original approved response
+blocks. The maintainer additionally approved SINGLE_KNOWN_FREED and
+SINGLE_KNOWN_DEPARTED on October 16; the two existing #95 response blocks preserve
+the actual ESP strings. The editorial graph has 133 semantic nodes, 144 response
+blocks including the common recruitment introduction, and 21 classes plus
+fallback. These counts
 are not CK record or allocated FormKey counts.
 
 The maintainer corrected discovery to two independent shared facts, distinct
@@ -28,13 +30,15 @@ uses completed stages 11/12 on the existing shared narrative quest, after arriva
 stage 20, with ordinary QuestService propagation and per-player native saves
 under ADR-0018. This discovery mechanism is **proposed, not implemented**.
 
-The exhaustive 100-row table finds 20 generic-reply cases, 17 separate explicit
+The exhaustive 100-row table finds **32 generic-reply cases**, 17 separate explicit
 report/navigation cases, 51 inconsistent/transient cases rejected without speech,
-and **12 coherent cases without safe approved wording**: one known Freed/Departed
-survivor and the other undiscovered. The authoring gate rejects these gaps even
-if decision metadata is changed to approved. No approximate reply or premature
-disclosure is permitted. This is an intermediate preparation, not delivery of
-the whole feature.
+and **0 uncovered cases**. The two approved additions cover all twelve former
+gaps symmetrically: one known survivor Freed or Departed while the other is
+undiscovered in state 0, 1 or 2. They remain repeatable generic-topic variants,
+with no shared effect, new first report or `Reported` fact. The corpus authoring
+gate now passes; negative tests still reject missing rules or overlaps.
+Technical implementation work is not an editorial approval gate. This is an
+intermediate preparation, not delivery of the whole feature.
 
 Local Preflight, read-only Inspect and PapyrusStatus succeeded. Baselines cover
 all 27 managed files in both Git/Data, both protected plugins, the canonical
@@ -42,14 +46,21 @@ record manifest and tool executables. No ESP, Papyrus, manifest or runtime asset
 was changed; no xEdit writer, import, build/deploy or game process was launched.
 No new xEdit, Solo, roster-2, native save or recovery PASS is claimed.
 
-Executed preparation checks: **160 Python tests** (21 new editorial/condition
-cases), **66 PowerShell toolchain cases**, **13 collector fixture cases**, all six
-existing read-only CK audits and `git diff --check` pass. All **61 baseline file
-hashes** remain unchanged. The exact approved-source comparison covers all 140
-new reply blocks. `--for-authoring` returns `success: false` and exit 1 for the
-twelve uncovered combinations; this expected rejection is tested. Discovery
-order/idempotency evidence is a completed-stage reference model plus source-path
-inspection, not implemented Papyrus or native save/recovery execution.
+Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
+cases, 13 collector fixture cases and all six existing read-only CK audits. Its
+source comparison verified all 140 original replies against the mission file.
+The approved additions are separately fingerprinted; a regression test proves
+the original editorial fingerprint is unchanged even if that external attachment
+is no longer available. Discovery order/idempotency evidence remains a
+completed-stage reference model plus source-path inspection, not implemented
+Papyrus or native save/recovery execution.
+
+After integrating the two approved replies, all 164 Python tests pass (25 for
+this matrix), generated views agree with the corpus, the authoring input gate
+passes with 32/17/51/0 coverage, and `git diff --check` passes. All 60 protected
+Git/Data/tool baseline hashes remain unchanged. The external mission attachment
+is now absent; its original comparison remains historical evidence, with the
+original editorial fingerprint independently preserved by the regression test.
 
 ## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
 

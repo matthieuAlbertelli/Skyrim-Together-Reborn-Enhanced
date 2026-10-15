@@ -6,7 +6,7 @@ The collective introduction below remains a separate prototype. The approved
 free-conversation corpus for #96 lives in
 [the canonical matrix JSON](valen/VALEN_DIALOGUE_MATRIX_V1.json), with a
 [generated review](valen/VALEN_DIALOGUE_MATRIX_V1.generated.md). Its implementation
-contract and current authoring blockers are documented in
+contract and authoring gates are documented in
 [Valen dialogue matrix v1](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md).
 
 ## Convention

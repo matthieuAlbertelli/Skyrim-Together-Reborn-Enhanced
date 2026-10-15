@@ -1,7 +1,7 @@
 """Validate the complete #96 editorial corpus and enumerate survivor conditions.
 
 This preparatory tool never writes an ESP, Papyrus, or an asset. --for-authoring
-is deliberately fail-closed while the frozen corpus has uncovered valid states.
+fails closed if the frozen corpus has any uncovered valid states or overlaps.
 The small schema interpreter implements only the keywords used by our checked-in
 schema; an unknown keyword is an error, never a silently ignored constraint.
 """
@@ -108,6 +108,21 @@ def editorial_hash(data):
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest().upper()
 
 
+def approved_amendment_nodes(data):
+    """Verify separately approved additions without weakening original-source coverage."""
+    nodes = {n['id']: n for n in data['nodes']}
+    amended = set()
+    for amendment in data['source']['amendments']:
+        ids = amendment['nodeIds']
+        require(not amended.intersection(ids), 'duplicate amended node')
+        require(set(ids) <= nodes.keys(), 'missing approved amendment node')
+        payload = [(id_, [(r['id'], r['text']) for r in nodes[id_]['responses']]) for id_ in ids]
+        digest = hashlib.sha256(json.dumps(payload, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest().upper()
+        require(digest == amendment['sha256'], 'approved amendment text changed')
+        amended.update(ids)
+    return amended
+
+
 def condition_matches(condition, context, classes):
     kind, op, expected = condition['kind'], condition['operator'], condition['value']
     require(kind in context, f'missing condition input: {kind}')
@@ -148,7 +163,7 @@ def survivor_selection(data, hadvar_discovered, ralof_discovered, hadvar_state, 
         require(not matching, f'incoherent state must fail closed: {inputs}')
         return {'kind': 'incoherent', 'node': None, 'reason': 'discovery/state mismatch; no INFO'}
     if not matching:
-        return {'kind': 'uncovered', 'node': None, 'reason': 'known Freed/Departed survivor; other undiscovered; no safe approved reply'}
+        return {'kind': 'uncovered', 'node': None, 'reason': 'no approved rule for coherent survivor combination'}
     rule = matching[0]
     return {'kind': rule['selection'], 'node': rule['node'], 'reason': rule['id']}
 
@@ -168,11 +183,17 @@ def survivor_rows(data):
                'result': selected['kind'], 'reason': selected['reason']}
 
 
+def survivor_counts(rows):
+    counts = Counter(row['result'] for row in rows)
+    return {kind: counts[kind] for kind in ('automatic', 'explicit', 'incoherent', 'uncovered')}
+
+
 def validate(data):
     schema = read_json(SCHEMA)
     validate_schema_definition(schema)
     validate_schema(data, schema)
     require(editorial_hash(data) == data['source']['editorialSha256'], 'frozen editorial text changed')
+    amended = approved_amendment_nodes(data)
     nodes = {n['id']: n for n in data['nodes']}
     require(len(nodes) == len(data['nodes']), 'duplicate node ID')
     require(nodes['VALEN_ROOT']['kind'] == 'root', 'missing root')
@@ -211,6 +232,8 @@ def validate(data):
             node['playerText'].encode('cp1252', errors='strict')
         if node.get('route') == 'generic-survivor-topic':
             require(node['playerText'] == data['survivors']['genericPlayerText'], 'invented survivor prompt')
+            require(node['repeatability'] == 'Repeatable' and node['effect'] == 'None'
+                    and node['scope'] == 'LocalPresentation', 'generic survivor reply must be repeatable and have no effect')
         if node['kind'] not in ('root', 'exit'):
             current, visited = node, set()
             while current['kind'] != 'root':
@@ -260,7 +283,8 @@ def validate(data):
             nodes['VALEN_SURVIVOR_RALOF']['repeatability'] == 'OncePerLocalSave' and
             nodes['VALEN_SURVIVOR_BOTH']['repeatability'] == 'OncePerLocalSave', 'first reports must be Say Once')
     return {'nodes': len(nodes), 'responsesIncludingLeadIn': len(response_ids), 'classes': len(classes),
-            'survivorCombinations': len(rows), 'survivorResults': dict(Counter(r['result'] for r in rows))}
+            'approvedAmendmentReplies': sum(len(nodes[id_]['responses']) for id_ in amended),
+            'survivorCombinations': len(rows), 'survivorResults': survivor_counts(rows)}
 
 
 def require_authoring_ready(data):
@@ -285,8 +309,9 @@ def verify_approved_source(data, path):
     # the existing ESP's encoding. It is not another spoken Valen response.
     quotes.remove('Nous irons peut-être voir ce qui s’y est passé.')
     actual = []
+    amended = approved_amendment_nodes(data)
     for node in data['nodes']:
-        if node['id'] not in ('VALEN_HELGEN_NEWS', 'VALEN_HELGEN_ACCEPT'):
+        if node['id'] not in {'VALEN_HELGEN_NEWS', 'VALEN_HELGEN_ACCEPT'} | amended:
             actual.extend(r['text'] for r in node['responses'])
             if 'leadIn' in node:
                 actual.append(node['leadIn']['text'])
@@ -339,8 +364,8 @@ def render_table(data, markdown=False):
     for row in rows:
         lines.append('| ' + ' | '.join(str(row[key]) for key in list(row)[:-1]) + ' |')
     lines += ['', '## Coverage', '']
-    lines.extend(f'- {key}: {value}' for key, value in Counter(r['result'] for r in rows).items())
-    lines += ['', 'The twelve uncovered combinations are one known survivor in state 3 or 4 while the other remains undiscovered in state 0, 1 or 2. Replies mentioning the other survivor cannot safely cover them.', '']
+    lines.extend(f'- {key}: {value}' for key, value in survivor_counts(rows).items())
+    lines += ['', 'The approved SINGLE_KNOWN_FREED and SINGLE_KNOWN_DEPARTED replies cover one known survivor in state 3 or 4 while the other remains undiscovered in state 0, 1 or 2. Each reply applies symmetrically to Hadvar or Ralof, remains repeatable under the generic subject, and creates no Reported fact. Any new uncovered coherent combination blocks authoring.', '']
     return '\n'.join(lines)
 
 

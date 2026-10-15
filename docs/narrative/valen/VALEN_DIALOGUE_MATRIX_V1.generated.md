@@ -8,8 +8,7 @@ Authoring decisions:
 
 - **approved** `survivor-discovery`: Maintainer requires two independent shared discovery facts, proximity in wounded/captured projections, defensive future rescue, persistence and both discovery orders.
 - **approved** `survivor-player-text`: Maintainer assigns the eight unlabelled replies to the existing generic post-arrival topic. Explicit declarations stay conditional; arrival report is available only before either discovery.
-- **pending** `undiscovered-other-safe-survivor`: One known survivor Freed or Departed with the other undiscovered: no approved reply fits without implying knowledge of the other. The exhaustive matrix rejects these twelve physically consistent combinations.
-- **pending** `ck-authoring-design`: Discovery proposal and exhaustive matrix require review before real candidate authoring; native save/recovery and runtime remain unvalidated.
+- **approved** `undiscovered-other-safe-survivor`: Maintainer explicitly approved SINGLE_KNOWN_FREED and SINGLE_KNOWN_DEPARTED on 2026-10-16, symmetrically for either known survivor. Repeatable generic-topic variants; no disclosure, first-report or Reported effect.
 
 ## Nodes
 
@@ -261,7 +260,7 @@ Direction: Answer the player without advancing shared state; Measured candour; i
 - Parent: `VALEN_ROOT`; return: `VALEN_ROOT`.
 - Scope: `LocalPresentation`; effect: `None`; repeatability: `Repeatable`.
 - Conditions: `[]`.
-- Followups: [VALEN_HELGEN_PRE_010](#valen_helgen_pre_010), [VALEN_HELGEN_PRE_020](#valen_helgen_pre_020), [VALEN_HELGEN_PRE_030](#valen_helgen_pre_030), [VALEN_HELGEN_PRE_040](#valen_helgen_pre_040), [VALEN_HELGEN_PRE_050](#valen_helgen_pre_050), [VALEN_HELGEN_ACTIVE_010](#valen_helgen_active_010), [VALEN_HELGEN_ACTIVE_020](#valen_helgen_active_020), [VALEN_HELGEN_ACTIVE_030](#valen_helgen_active_030), [VALEN_HELGEN_ARRIVAL_010](#valen_helgen_arrival_010), [VALEN_SURVIVOR_NONE](#valen_survivor_none), [VALEN_SURVIVOR_HADVAR](#valen_survivor_hadvar), [VALEN_SURVIVOR_RALOF](#valen_survivor_ralof), [VALEN_SURVIVOR_BOTH](#valen_survivor_both), [VALEN_SURVIVOR_HADVAR_SAFE](#valen_survivor_hadvar_safe), [VALEN_SURVIVOR_RALOF_SAFE](#valen_survivor_ralof_safe), [VALEN_SURVIVOR_BOTH_SAFE](#valen_survivor_both_safe), [VALEN_SURVIVOR_ONE_CAPTURED](#valen_survivor_one_captured), [VALEN_SURVIVOR_HADVAR_CAPTURED](#valen_survivor_hadvar_captured), [VALEN_SURVIVOR_RALOF_CAPTURED](#valen_survivor_ralof_captured), [VALEN_SURVIVOR_BOTH_CAPTURED](#valen_survivor_both_captured), [VALEN_SURVIVOR_ONE_DEPARTED](#valen_survivor_one_departed), [VALEN_SURVIVOR_BOTH_DEPARTED](#valen_survivor_both_departed), [VALEN_HELGEN_NEWS](#valen_helgen_news), [VALEN_HELGEN_ACCEPT](#valen_helgen_accept).
+- Followups: [VALEN_HELGEN_PRE_010](#valen_helgen_pre_010), [VALEN_HELGEN_PRE_020](#valen_helgen_pre_020), [VALEN_HELGEN_PRE_030](#valen_helgen_pre_030), [VALEN_HELGEN_PRE_040](#valen_helgen_pre_040), [VALEN_HELGEN_PRE_050](#valen_helgen_pre_050), [VALEN_HELGEN_ACTIVE_010](#valen_helgen_active_010), [VALEN_HELGEN_ACTIVE_020](#valen_helgen_active_020), [VALEN_HELGEN_ACTIVE_030](#valen_helgen_active_030), [VALEN_HELGEN_ARRIVAL_010](#valen_helgen_arrival_010), [VALEN_SURVIVOR_NONE](#valen_survivor_none), [VALEN_SURVIVOR_HADVAR](#valen_survivor_hadvar), [VALEN_SURVIVOR_RALOF](#valen_survivor_ralof), [VALEN_SURVIVOR_BOTH](#valen_survivor_both), [VALEN_SURVIVOR_HADVAR_SAFE](#valen_survivor_hadvar_safe), [VALEN_SURVIVOR_RALOF_SAFE](#valen_survivor_ralof_safe), [VALEN_SURVIVOR_BOTH_SAFE](#valen_survivor_both_safe), [VALEN_SURVIVOR_ONE_CAPTURED](#valen_survivor_one_captured), [VALEN_SURVIVOR_HADVAR_CAPTURED](#valen_survivor_hadvar_captured), [VALEN_SURVIVOR_RALOF_CAPTURED](#valen_survivor_ralof_captured), [VALEN_SURVIVOR_BOTH_CAPTURED](#valen_survivor_both_captured), [VALEN_SURVIVOR_ONE_DEPARTED](#valen_survivor_one_departed), [VALEN_SURVIVOR_BOTH_DEPARTED](#valen_survivor_both_departed), [VALEN_HELGEN_NEWS](#valen_helgen_news), [VALEN_HELGEN_ACCEPT](#valen_helgen_accept), [VALEN_SURVIVOR_SINGLE_KNOWN_FREED](#valen_survivor_single_known_freed), [VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED](#valen_survivor_single_known_departed).
 
 **Player:** À propos de Helgen...
 
@@ -2648,3 +2647,39 @@ Conditions: `[]`.
 Direction: Answer the player without advancing shared state; Measured candour; intensity 0.4.
 
 > Faites-le. Mais restez prudents. Si ces récits sont vrais, Helgen pourrait n'être que le commencement.
+
+### VALEN_SURVIVOR_SINGLE_KNOWN_FREED
+
+- Category: `helgen_arrival`; kind: `dialogue`; status: `approved`.
+- Parent: `VALEN_MENU_HELGEN`; return: `VALEN_MENU_HELGEN`.
+- Scope: `LocalPresentation`; effect: `None`; repeatability: `Repeatable`.
+- Conditions: `[{"kind": "QuestStage", "operator": "GreaterOrEqual", "value": 20}]`.
+- Followups: .
+
+**Player:** Nous devons parler de ce que nous avons trouvé à Helgen.
+
+**VALEN_SURVIVOR_SINGLE_KNOWN_FREED_R** — 4 sentence segments.
+
+Conditions: `[]`.
+
+Direction: Acknowledge the known survivor’s state without disclosing another survivor; Restrained relief; intensity 0.4.
+
+> Le survivant que vous avez trouvé est libre. Ne vous pressez pas d’appeler cela une victoire : tant qu’il demeure à Helgen, le danger n’a pas renoncé à lui. Mais il peut de nouveau choisir où poser ses pas. C’est une chose simple, et immense.
+
+### VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED
+
+- Category: `helgen_arrival`; kind: `dialogue`; status: `approved`.
+- Parent: `VALEN_MENU_HELGEN`; return: `VALEN_MENU_HELGEN`.
+- Scope: `LocalPresentation`; effect: `None`; repeatability: `Repeatable`.
+- Conditions: `[{"kind": "QuestStage", "operator": "GreaterOrEqual", "value": 20}]`.
+- Followups: .
+
+**Player:** Nous devons parler de ce que nous avons trouvé à Helgen.
+
+**VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED_R** — 4 sentence segments.
+
+Conditions: `[]`.
+
+Direction: Acknowledge the known survivor’s state without disclosing another survivor; Restrained relief; intensity 0.4.
+
+> Le survivant que vous avez trouvé a quitté Helgen vivant. Pour une fois, ce lieu a rendu quelqu’un au monde au lieu de l’engloutir. Ne cherchez pas à rendre cela plus grandiose : vous lui avez rendu un lendemain. C’est déjà beaucoup.

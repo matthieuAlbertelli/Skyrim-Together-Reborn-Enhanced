@@ -6,9 +6,11 @@
 
 The complete corpus/condition checks and proposed discovery lifecycle are in
 [Valen dialogue matrix v1](VALEN_DIALOGUE_MATRIX_V1.md). Its generated 100-row
-survivor table is a required review before real CK authoring. The twelve coherent
-states without safe approved wording currently block that authoring. Existing
-#94 acceptance below is not validation of any new matrix/discovery behavior.
+survivor table is a required review before real CK authoring. Approved single-known
+survivor variants close the twelve former gaps: 32 automatic, 17 explicit,
+51 incoherent and 0 uncovered cases. Missing rules, overlaps or turning a repeatable
+state reply into a first report must reject authoring. Existing #94 acceptance
+below is not validation of any new matrix/discovery behavior.
 
 After authoring, human xEdit/import and explicitly authorized build/deploy, add
 human Solo and both roster-2 initiation directions with these required cases:

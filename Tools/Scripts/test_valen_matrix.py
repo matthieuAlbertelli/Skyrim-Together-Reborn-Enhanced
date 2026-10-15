@@ -15,7 +15,7 @@ DATA = matrix.read_json(matrix.CORPUS)
 class MatrixEditorialTests(unittest.TestCase):
     def test_schema_corpus_and_all_three_generated_reviews_agree(self):
         report = matrix.validate(DATA)
-        self.assertEqual((report['nodes'], report['responsesIncludingLeadIn'], report['classes']), (131, 142, 21))
+        self.assertEqual((report['nodes'], report['responsesIncludingLeadIn'], report['classes']), (133, 144, 21))
         for path, expected in ((matrix.REVIEW, matrix.render_review(DATA)),
                                (matrix.TABLE, matrix.render_table(DATA)),
                                (matrix.TABLE_REVIEW, matrix.render_table(DATA, True))):
@@ -23,11 +23,19 @@ class MatrixEditorialTests(unittest.TestCase):
 
     def test_frozen_editorial_fingerprint(self):
         # Approval pin is deliberately independent of the editable JSON's hash.
-        self.assertEqual(matrix.editorial_hash(DATA), '4574A7EB686DDE79F123113EE8D7796B19C9CB9A26F0B85FAC5A6364FA184452')
+        self.assertEqual(matrix.editorial_hash(DATA), '9B29AFABA5E75CF9436817AA77619B3408DB9530D5884F896E05C94EA122D4F5')
         changed = deepcopy(DATA)
         next(n for n in changed['nodes'] if n['id'] == 'VALEN_SELF_010')['responses'][0]['text'] += ' '
         with self.assertRaisesRegex(ValueError, 'frozen editorial text'):
             matrix.validate(changed)
+
+    def test_original_approved_corpus_is_unchanged_by_the_two_additions(self):
+        original = deepcopy(DATA)
+        amended = matrix.approved_amendment_nodes(DATA)
+        original['nodes'] = [n for n in original['nodes'] if n['id'] not in amended]
+        # This fingerprint was verified against all 140 reply blocks in the
+        # original attachment at 414556a9, before the two approved additions.
+        self.assertEqual(matrix.editorial_hash(original), '4574A7EB686DDE79F123113EE8D7796B19C9CB9A26F0B85FAC5A6364FA184452')
 
     def test_legacy_acceptance_and_news_keep_exact_esp_text(self):
         plugin = Plugin((matrix.ROOT / 'GameFiles/Skyrim/STRE_AlternateStart.esp').read_bytes())
@@ -115,7 +123,7 @@ class SurvivorMatrixTests(unittest.TestCase):
         rows = list(matrix.survivor_rows(DATA))
         self.assertEqual(len(rows), 100)
         self.assertEqual(matrix.validate(DATA)['survivorResults'],
-                         {'automatic': 20, 'explicit': 17, 'incoherent': 51, 'uncovered': 12})
+                         {'automatic': 32, 'explicit': 17, 'incoherent': 51, 'uncovered': 0})
 
     def test_distinct_freed_departed_cases_and_specificity(self):
         for hs, rs, suffix in ((4,4,'BOTH_DEPARTED'), (4,2,'ONE_DEPARTED'), (2,4,'ONE_DEPARTED'),
@@ -133,13 +141,42 @@ class SurvivorMatrixTests(unittest.TestCase):
             self.assertEqual(self.select(hidden_state,2,False,True)['node'], 'VALEN_SURVIVOR_ONE_CAPTURED')
             self.assertEqual(self.select(hidden_state,hidden_state,False,False)['node'], 'VALEN_SURVIVOR_NONE')
 
-    def test_all_twelve_known_safe_other_unknown_cases_fail_closed(self):
+    def test_all_twelve_known_safe_other_unknown_cases_select_exact_symmetric_reply(self):
         for known, unknown in itertools.product((3,4), (0,1,2)):
             for args in ((known,unknown,True,False), (unknown,known,False,True)):
                 with self.subTest(args=args):
                     selected = self.select(*args)
-                    self.assertEqual(selected['kind'], 'uncovered')
-                    self.assertIsNone(selected['node'])
+                    self.assertEqual(selected['kind'], 'automatic')
+                    suffix = 'FREED' if known == 3 else 'DEPARTED'
+                    self.assertEqual(selected['node'], 'VALEN_SURVIVOR_SINGLE_KNOWN_' + suffix)
+
+    def test_approved_single_known_texts_are_exact_repeatable_and_have_no_effect(self):
+        ids = matrix.approved_amendment_nodes(DATA)
+        self.assertEqual(ids, {'VALEN_SURVIVOR_SINGLE_KNOWN_FREED', 'VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED'})
+        self.assertEqual(DATA['source']['amendments'][0]['sha256'], '4EBDDAEBD8FEDDBA5EA7C368012567D87F47ED37525150C452081FCA1A62B746')
+        for node in DATA['nodes']:
+            if node['id'] in ids:
+                self.assertEqual(node['playerText'], DATA['survivors']['genericPlayerText'])
+                self.assertEqual(node['route'], 'generic-survivor-topic')
+                self.assertEqual((node['repeatability'],node['effect'],node['scope']), ('Repeatable','None','LocalPresentation'))
+                text = node['responses'][0]['text'].casefold()
+                for forbidden in ('hadvar','ralof','l’autre','un autre','deux','reported'):
+                    self.assertNotIn(forbidden, text)
+
+    def test_new_replies_never_replace_both_known_or_incoherent_cases(self):
+        for row in matrix.survivor_rows(DATA):
+            if row['genericINFO'].startswith('VALEN_SURVIVOR_SINGLE_KNOWN_'):
+                self.assertNotEqual(row['HadvarDiscovered'], row['RalofDiscovered'])
+                known = row['HadvarState'] if row['HadvarDiscovered'] else row['RalofState']
+                unknown = row['RalofState'] if row['HadvarDiscovered'] else row['HadvarState']
+                self.assertIn(unknown, (0,1,2))
+                self.assertEqual(known, 3 if row['genericINFO'].endswith('_FREED') else 4)
+
+    def test_generic_reply_cannot_become_a_say_once_discovery_report(self):
+        changed = deepcopy(DATA)
+        next(n for n in changed['nodes'] if n['id']=='VALEN_SURVIVOR_SINGLE_KNOWN_FREED')['repeatability']='OncePerLocalSave'
+        with self.assertRaisesRegex(ValueError, 'generic survivor reply must be repeatable'):
+            matrix.require_authoring_ready(changed)
 
     def test_overlapping_conditions_fail_even_when_order_would_choose_one(self):
         changed = deepcopy(DATA)
@@ -147,12 +184,15 @@ class SurvivorMatrixTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'overlapping survivor conditions'):
             matrix.validate(changed)
 
-    def test_authoring_fails_even_if_someone_marks_decisions_approved(self):
-        changed = deepcopy(DATA)
-        for decision in changed['authoringDecisions']:
-            decision['status'] = 'approved'
-        with self.assertRaisesRegex(ValueError, 'AUTHORING_BLOCKED: 12'):
-            matrix.require_authoring_ready(changed)
+    def test_authoring_passes_only_with_complete_unambiguous_conditions(self):
+        matrix.require_authoring_ready(DATA)
+        # Remove one symmetric case: the reply is still used on the other side,
+        # so this must detect a coverage hole, not merely an unused node.
+        for missing in ('only-known-hadvar-freed','only-known-ralof-departed','only-known-hadvar-wounded'):
+            changed = deepcopy(DATA)
+            changed['survivors']['rules'] = [r for r in changed['survivors']['rules'] if r['id'] != missing]
+            with self.subTest(missing=missing), self.assertRaisesRegex(ValueError, 'AUTHORING_BLOCKED: 3'):
+                matrix.require_authoring_ready(changed)
 
     def test_both_rescued_topic_uses_four_explicit_freed_departed_pairs(self):
         rows = [row for row in matrix.survivor_rows(DATA) if row['bothRescuedTopic']]

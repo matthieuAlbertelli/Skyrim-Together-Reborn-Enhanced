@@ -16,13 +16,15 @@ The sole editable editorial source is
 validated against its adjacent formal JSON schema. The adjacent Markdown review
 and survivor CSV/Markdown are generated views. The corpus preserves all 140
 Valen response blocks in section 19 of the approved mission, including the common
-recruitment introduction, 21 class variants and fallback. Two existing #95
-response blocks are additionally retained from the merged ESP. Existing ASCII
+recruitment introduction, 21 class variants and fallback. The maintainer's
+2026-10-16 amendment adds SINGLE_KNOWN_FREED and SINGLE_KNOWN_DEPARTED, bringing
+approved new response blocks to 142. Two existing #95 response blocks are
+additionally retained from the merged ESP. Existing ASCII
 apostrophes in that exchange remain byte-faithful to #95; new frozen French text
 keeps its original typographic apostrophes and accents. Paragraphs and all
 sentence-boundary segmentation are lossless.
 
-The initial editorial graph contains 131 semantic nodes and 142 response blocks
+The editorial graph contains 133 semantic nodes and 144 response blocks
 including the shared recruitment introduction. These are **not record counts**:
 multiple semantic variants will share a DIAL, and allocated FormKeys do not yet
 exist. Performance directions are provisional metadata, not final voice acting.
@@ -33,10 +35,13 @@ python Tools/Scripts/valen_matrix.py --for-authoring
 python -m unittest discover -s Tools/Scripts -p 'test_valen_matrix.py'
 ```
 
-The second command must currently fail. An editorial check returning
-`success: true, authoringReady: false` is not permission to create a candidate.
-The future bounded `AddValenDialogueMatrixV1` adapter must invoke the authoring
-gate before even launching the private xEdit writer.
+The second command now passes the corpus/condition gate with
+`success: true, authoringReady: true`. Missing coherent-state coverage or an
+overlap still fails it. This checks the editorial input; it is not evidence that
+the CK writer, class bridge, discovery scripts or private candidate are ready.
+The bounded `AddValenDialogueMatrixV1` adapter must invoke this gate before
+launching the private xEdit writer. Implementation work is not represented as
+an invented pending human approval in the editorial decisions.
 
 ## Maintainer correction: discovery is independent of physical state
 
@@ -123,8 +128,8 @@ may be observed again normally. The model tests do not prove this engine path.
 
 ## Dialogue routing and exhaustive conditions
 
-The maintainer explicitly assigned all eight unlabelled state responses to the
-single generic player subject:
+The maintainer explicitly assigned the eight initially unlabelled state responses
+and the two later single-known-survivor responses to the single generic subject:
 
 > Nous devons parler de ce que nous avons trouvé à Helgen.
 
@@ -147,20 +152,22 @@ first-match implementation would conceal it.
 
 Current coverage:
 
-- 20 combinations select one of the eight generic state replies.
+- 32 combinations select one of the ten generic state replies.
 - 17 combinations use a separate approved explicit-report/navigation path,
   with no generic state reply. First reports are subject to their local Say Once
   condition; these table rows do not override it.
 - 51 combinations are inconsistent or transient (known + Uninitialized, or
   Freed/Departed not yet discovered). They fail closed and must not disclose data.
-- **12 physically consistent combinations lack a safe approved response:**
-  one discovered survivor is Freed or Departed while the other is undiscovered
-  in state 0, 1 or 2. The approved saved/departed replies mention or imply the
-  other survivor. No approximate substitution is allowed. The generic subject
-  is unavailable, and the authoring gate fails regardless of decision labels.
+- **0 coherent combinations are uncovered.** The twelve former gaps now select
+  SINGLE_KNOWN_FREED or SINGLE_KNOWN_DEPARTED when exactly one discovered survivor
+  is respectively in state 3 or 4 and the other is undiscovered in state 0, 1 or 2.
+  Each text is shared symmetrically by the two directions, without naming or
+  implying the unknown survivor. They remain repeatable local generic-topic
+  variants, not first reports and not new `Reported` facts.
 
-This last gap requires a maintainer decision on approved wording or explicit
-scope. It is not silently deferred and is not presented as a complete matrix.
+The authoring gate rejects any newly introduced overlap or uncovered coherent
+combination. Negative tests remove rules for both new and pre-existing cases;
+marking editorial decisions approved cannot bypass actual coverage checks.
 
 ## Validation required before a real candidate
 
@@ -168,11 +175,14 @@ The implemented checks validate the editorial schema, frozen text fingerprint,
 all 21 classes/fallback, Solo/group partitions, stage-label boundaries, graph
 reachability/returns, reserved-node exclusion, effects, lossless segmentation,
 all 100 survivor combinations, name-disclosure guards and generated concordance.
-An optional local approved-source check compares all 140 new responses directly
-with the exact mission attachment hash; no Bethesda payload is copied into a
-test fixture.
+The original 140 responses were compared directly with the hashed mission
+attachment at preparation commit 414556a9. The optional approved-source check
+continues to check those original responses separately from the later amendment.
+An independent test preserves the original editorial fingerprint, and the two
+approved additions have a separate approval hash. No Bethesda payload is copied
+into a test fixture.
 
-Still required: close the twelve-state gap; finalize CK graph/conditions and
+Still required: finalize CK graph/conditions and
 allocation plan; implement and test the class bridge and discovery scripts;
 official xEdit fixture authoring; direct PapyrusCompiler compilation; real
 private dry-run/prepare; independent binary reread; human xEdit review; validated

@@ -7,7 +7,19 @@
     "sha256": "80950D03A10378B676164406049FC656E53087E11A23B1FEDA631344B3FE0140",
     "baseCommit": "bdedb163aa516dc28917b292caf9b869afda983c",
     "legacyTextPolicy": "Preserve the existing #95 ESP strings including ASCII apostrophes.",
-    "editorialSha256": "4574A7EB686DDE79F123113EE8D7796B19C9CB9A26F0B85FAC5A6364FA184452"
+    "editorialSha256": "9B29AFABA5E75CF9436817AA77619B3408DB9530D5884F896E05C94EA122D4F5",
+    "amendments": [
+      {
+        "id": "single-known-survivor-20261016",
+        "approvedOn": "2026-10-16",
+        "reviewer": "Human maintainer, explicit approval in this task",
+        "nodeIds": [
+          "VALEN_SURVIVOR_SINGLE_KNOWN_FREED",
+          "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED"
+        ],
+        "sha256": "4EBDDAEBD8FEDDBA5EA7C368012567D87F47ED37525150C452081FCA1A62B746"
+      }
+    ]
   },
   "classes": [
     {
@@ -147,13 +159,8 @@
     },
     {
       "id": "undiscovered-other-safe-survivor",
-      "status": "pending",
-      "reason": "One known survivor Freed or Departed with the other undiscovered: no approved reply fits without implying knowledge of the other. The exhaustive matrix rejects these twelve physically consistent combinations."
-    },
-    {
-      "id": "ck-authoring-design",
-      "status": "pending",
-      "reason": "Discovery proposal and exhaustive matrix require review before real candidate authoring; native save/recovery and runtime remain unvalidated."
+      "status": "approved",
+      "reason": "Maintainer explicitly approved SINGLE_KNOWN_FREED and SINGLE_KNOWN_DEPARTED on 2026-10-16, symmetrically for either known survivor. Repeatable generic-topic variants; no disclosure, first-report or Reported effect."
     }
   ],
   "nodes": [
@@ -803,7 +810,9 @@
         "VALEN_SURVIVOR_ONE_DEPARTED",
         "VALEN_SURVIVOR_BOTH_DEPARTED",
         "VALEN_HELGEN_NEWS",
-        "VALEN_HELGEN_ACCEPT"
+        "VALEN_HELGEN_ACCEPT",
+        "VALEN_SURVIVOR_SINGLE_KNOWN_FREED",
+        "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED"
       ],
       "returnTo": "VALEN_ROOT",
       "effect": "None",
@@ -4976,6 +4985,80 @@
       "scope": "SharedQuest",
       "repeatability": "OnceBeforeStage10",
       "state": "approved"
+    },
+    {
+      "id": "VALEN_SURVIVOR_SINGLE_KNOWN_FREED",
+      "category": "helgen_arrival",
+      "kind": "dialogue",
+      "playerText": "Nous devons parler de ce que nous avons trouvé à Helgen.",
+      "responses": [
+        {
+          "id": "VALEN_SURVIVOR_SINGLE_KNOWN_FREED_R",
+          "text": "Le survivant que vous avez trouvé est libre. Ne vous pressez pas d’appeler cela une victoire : tant qu’il demeure à Helgen, le danger n’a pas renoncé à lui. Mais il peut de nouveau choisir où poser ses pas. C’est une chose simple, et immense.",
+          "segments": [
+            "Le survivant que vous avez trouvé est libre.",
+            " Ne vous pressez pas d’appeler cela une victoire : tant qu’il demeure à Helgen, le danger n’a pas renoncé à lui.",
+            " Mais il peut de nouveau choisir où poser ses pas.",
+            " C’est une chose simple, et immense."
+          ],
+          "conditions": [],
+          "intent": "Acknowledge the known survivor’s state without disclosing another survivor",
+          "emotion": "Restrained relief",
+          "intensity": 0.4
+        }
+      ],
+      "conditions": [
+        {
+          "kind": "QuestStage",
+          "operator": "GreaterOrEqual",
+          "value": 20
+        }
+      ],
+      "parent": "VALEN_MENU_HELGEN",
+      "followups": [],
+      "returnTo": "VALEN_MENU_HELGEN",
+      "effect": "None",
+      "scope": "LocalPresentation",
+      "repeatability": "Repeatable",
+      "state": "approved",
+      "route": "generic-survivor-topic"
+    },
+    {
+      "id": "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED",
+      "category": "helgen_arrival",
+      "kind": "dialogue",
+      "playerText": "Nous devons parler de ce que nous avons trouvé à Helgen.",
+      "responses": [
+        {
+          "id": "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED_R",
+          "text": "Le survivant que vous avez trouvé a quitté Helgen vivant. Pour une fois, ce lieu a rendu quelqu’un au monde au lieu de l’engloutir. Ne cherchez pas à rendre cela plus grandiose : vous lui avez rendu un lendemain. C’est déjà beaucoup.",
+          "segments": [
+            "Le survivant que vous avez trouvé a quitté Helgen vivant.",
+            " Pour une fois, ce lieu a rendu quelqu’un au monde au lieu de l’engloutir.",
+            " Ne cherchez pas à rendre cela plus grandiose : vous lui avez rendu un lendemain.",
+            " C’est déjà beaucoup."
+          ],
+          "conditions": [],
+          "intent": "Acknowledge the known survivor’s state without disclosing another survivor",
+          "emotion": "Restrained relief",
+          "intensity": 0.4
+        }
+      ],
+      "conditions": [
+        {
+          "kind": "QuestStage",
+          "operator": "GreaterOrEqual",
+          "value": 20
+        }
+      ],
+      "parent": "VALEN_MENU_HELGEN",
+      "followups": [],
+      "returnTo": "VALEN_MENU_HELGEN",
+      "effect": "None",
+      "scope": "LocalPresentation",
+      "repeatability": "Repeatable",
+      "state": "approved",
+      "route": "generic-survivor-topic"
     }
   ],
   "survivors": {
@@ -5034,6 +5117,36 @@
         ],
         "selection": "automatic",
         "node": "VALEN_SURVIVOR_ONE_DEPARTED"
+      },
+      {
+        "id": "only-known-hadvar-departed",
+        "hadvarDiscovered": true,
+        "ralofDiscovered": false,
+        "hadvarStates": [
+          4
+        ],
+        "ralofStates": [
+          0,
+          1,
+          2
+        ],
+        "selection": "automatic",
+        "node": "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED"
+      },
+      {
+        "id": "only-known-ralof-departed",
+        "hadvarDiscovered": false,
+        "ralofDiscovered": true,
+        "hadvarStates": [
+          0,
+          1,
+          2
+        ],
+        "ralofStates": [
+          4
+        ],
+        "selection": "automatic",
+        "node": "VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED"
       },
       {
         "id": "both-captured",
@@ -5155,6 +5268,36 @@
         ],
         "selection": "automatic",
         "node": "VALEN_SURVIVOR_RALOF_SAFE"
+      },
+      {
+        "id": "only-known-hadvar-freed",
+        "hadvarDiscovered": true,
+        "ralofDiscovered": false,
+        "hadvarStates": [
+          3
+        ],
+        "ralofStates": [
+          0,
+          1,
+          2
+        ],
+        "selection": "automatic",
+        "node": "VALEN_SURVIVOR_SINGLE_KNOWN_FREED"
+      },
+      {
+        "id": "only-known-ralof-freed",
+        "hadvarDiscovered": false,
+        "ralofDiscovered": true,
+        "hadvarStates": [
+          0,
+          1,
+          2
+        ],
+        "ralofStates": [
+          3
+        ],
+        "selection": "automatic",
+        "node": "VALEN_SURVIVOR_SINGLE_KNOWN_FREED"
       },
       {
         "id": "both-freed",
