@@ -171,9 +171,14 @@ companion hashes/paths, manifest hash, unchanged originals and common receipt
 guards. It freezes the companions/manifest with the validated ESP, imports the
 eight explicit generated-artifact paths through the existing CK importer and
 updates the canonical records manifest. It rejects existing companion targets;
-there is no overwrite escape hatch. Inspect the complete Git diff and all audits,
-then obtain separate build/deploy authorization. The local build's established
-CK ownership collector includes generated fragments, SEQ and plugin voice assets.
+there is no overwrite escape hatch. Before the post-import packaging audit,
+register only these eight verified paths with the existing
+`Add-NewManagedFilesToManifest` helper (and its `Read-ManagedFileManifest`
+dependency) from the local build script. Load only those function definitions;
+do not invoke or dot-source the whole build/deploy script at this gate. Inspect
+the complete Git diff and all audits, then obtain separate build/deploy
+authorization. The local build's established CK ownership collector includes
+generated fragments, SEQ and plugin voice assets.
 
 Tests: `python -m unittest discover -s Tools/Scripts -p test_valen_helgen.py`
 uses tiny synthetic xEdit output, including corrupted contract cases.

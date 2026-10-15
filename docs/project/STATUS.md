@@ -9,11 +9,12 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen's local Helgen lead: authoring source, before human gates (2026-10-15)
+## Valen's local Helgen lead: validated content imported; runtime pending (2026-10-15)
 
 For [#94](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/94),
-the dedicated `AddValenHelgen` adapter and official xEdit script now author the
-seven-record candidate described in CK_IMPLEMENTATION. The player's acceptance
+the dedicated `AddValenHelgen` adapter and official xEdit script author the
+seven-record content described in CK_IMPLEMENTATION, now imported into the
+versioned ESP with its eight companion files. The player's acceptance
 starts the separate narrative `STRE_QUEST_ValenHelgen`, stage/objective 10,
 through bound TIF/QF fragments. The dialogue owner and narrative quest are
 excluded from generic QuestService synchronization. Existing technical Helgen
@@ -29,15 +30,38 @@ generated fixture fragments compile with the installed Papyrus compiler and
 local CK/SKSE imports: **0 errors, 0 warnings**. This evidence is authoring and
 static validation, not a human xEdit verdict or gameplay PASS.
 
-The versioned gameplay ESP, generated gameplay PSC/PEX and canonical CK records
-manifest still contain the prior imported state. A real candidate is prepared
-only under `_audit/modding/<id>/Data`; its report owns exact private identities,
-hashes and command results. The record manifest is extended privately first and
-promoted only with the validated import. Human Sort Masters, complete error
-checks, save/close/reopen inspection, explicit import, separately authorized
-build/deploy, Solo runtime and the subsequent two-player smoke remain required.
-No human receipt, validation log or runtime PASS is inferred from source tests.
-The broader Valen presentation and all later narrative stages remain deferred.
+**Human xEdit evidence:** the user explicitly attested PASS for Sort Masters
+(`Skyrim.esm / Update.esm / Dragonborn.esm`), both error checks, QUST,
+DIAL/DLBR/INFO, conditions, QF/TIF VMAD, French text, save, reopen and final review.
+The private session `926a8ab42da345219dba588ef604c7e3` retains this human review in
+`xedit-validation.log` and `validation.json`; the log is a faithful transcript
+of the user's attestation, not a raw xEdit Messages export. Its SHA256 is
+`48A80BC620C349D17A58237864B7AF20B8B72E7C81403BE246339231488DA344`.
+
+**Real import and post-import evidence:** after a successful fetch, the clean
+preparation branch/HEAD, origin/main ancestry, tool identities and all original
+Data/Git hashes were rechecked. `ImportValidated` completed through the existing
+CK importer. The saved candidate, frozen validated copy, installed Data ESP and
+repository ESP all have SHA256
+`0058D2BD28C5BBEF5CCC14D09767EB2CB1BB8C22D81F3604C1D02187E01DB97F`.
+All eight companions match across these locations. The canonical records
+manifest adds exactly the seven real records at local IDs `0D6B14` through
+`0D6B1A`; independent binary auditing confirms unchanged existing record payloads.
+`SkyrimTogether.esp` is unchanged in both Data and Git. The existing packaging
+manifest helper adds the eight companions, bringing its count from 19 to 27,
+without executing the build/deploy entry point.
+
+The six post-import audits pass: packaging, strict records with
+`--reject-unexpected`, MQ101 structure, generated invariants, character-build
+catalog and seat markers. The post-import suites pass **134 Python tests** and
+**66 PowerShell safeguard cases**; `git diff --check` also passes. Both real
+QF/TIF fragments were compiled directly with `PapyrusCompiler.exe` during
+preparation, with **0 errors, 0 warnings**; there is no SSEScript dependency.
+
+**Not executed for this feature:** local native build/deploy, Skyrim launch,
+Solo smoke and subsequent two-player smoke. Build/deploy and Solo require the
+user's next explicit authorization. No runtime PASS is claimed. The broader
+Valen presentation and all later narrative stages remain deferred.
 
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 

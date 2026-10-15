@@ -1,4 +1,4 @@
-﻿# Fichiers geres automatiquement par build-and-deploy-dev.ps1
+# Fichiers geres automatiquement par build-and-deploy-dev.ps1
 # Plugin : STRE_AlternateStart.esp
 # Ne pas modifier manuellement cette liste.
 Scripts\QF_MQ101_0003372B.pex
@@ -20,3 +20,11 @@ Source\Scripts\STRE_HelgenContinuityController.psc
 Source\Scripts\STRE_HelgenInvestigationController.psc
 Source\Scripts\STRE_HelgenRubbleSqueezeActivator.psc
 STRE_AlternateStart.esp
+Scripts\QF_STRE_QUEST_ValenHelgen_030D6B14.pex
+Scripts\TIF_030D6B1A.pex
+SEQ\STRE_AlternateStart.seq
+Sound\Voice\STRE_AlternateStart.esp\MaleWarlock\stre_quest_stre_dial_valen_000d6b19_1.wav
+Sound\Voice\STRE_AlternateStart.esp\MaleWarlock\stre_quest_stre_dial_valen_000d6b19_2.wav
+Sound\Voice\STRE_AlternateStart.esp\MaleWarlock\stre_quest_stre_dial_valen_000d6b1a_1.wav
+Source\Scripts\QF_STRE_QUEST_ValenHelgen_030D6B14.psc
+Source\Scripts\TIF_030D6B1A.psc
