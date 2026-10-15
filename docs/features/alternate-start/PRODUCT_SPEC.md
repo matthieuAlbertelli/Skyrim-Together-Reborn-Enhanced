@@ -4,6 +4,16 @@
 
 ## Pitch
 
+Issue #94 specifies a local Helgen lead: each player may ask Messire Valen about
+Helgen and choose « Nous irons peut-être voir ce qui s'y est passé. » Their own
+Skyrim journal then opens **Les ruines de Helgen**, with objective 10: « Se rendre
+à Helgen pour enquêter sur l'attaque du dragon. » Acceptance happens once per local
+save; the quest remains open. There is no arrival, survivor, reward, MQ102 or
+faction decision in this increment. It does not gate the automatic technical
+Helgen projection. A future single group decision requires a separate campaign
+design; this increment adds no shared narrative authority or network message.
+See [STATUS](../../project/STATUS.md) for implementation and validation evidence.
+
 Start a campaign in an inn without importing an already-advanced character. Each player creates their appearance, chooses a class and kits, then receives a clean build consistent with the campaign.
 
 ## Implemented today

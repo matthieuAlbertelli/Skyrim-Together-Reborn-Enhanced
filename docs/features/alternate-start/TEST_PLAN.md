@@ -2,6 +2,23 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Local Valen lead acceptance (issue #94; pending human execution)
+
+After the separate human xEdit gate and authorized build/deploy: fully close
+Skyrim, start New Game, finish character creation normally, and talk to Valen at
+Ilinalta's Vigil. Read both news responses, select the proposed investigation,
+and verify the final response, readable French accents/subtitles, the
+**Les ruines de Helgen** journal entry, objective 10 displayed and quest active.
+Read-only `getstage STRE_QUEST_ValenHelgen` and `sqv STRE_QUEST_ValenHelgen` must show
+stage 10/running. Talk again: acceptance must be unavailable. Verify the existing
+technical Helgen flow still starts automatically and this dialogue changes no
+other quest. Do not use setstage/startquest/resetquest/stopquest to obtain PASS.
+
+Only after Solo PASS, test a sealed roster of two: both can speak and accept
+locally, with no crash/corruption or assumed shared journal synchronization.
+Record per-player results and exact candidate hashes in STATUS. This is not
+campaign-wide narrative acceptance or partial-roster catch-up.
+
 ## Loading-door regression acceptance (issue #89, 2026-10-11)
 
 ### Recorded acceptance and seating disposition (2026-10-14)

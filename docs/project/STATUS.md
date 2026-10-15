@@ -9,6 +9,36 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Valen's local Helgen lead: authoring source, before human gates (2026-10-15)
+
+For [#94](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/94),
+the dedicated `AddValenHelgen` adapter and official xEdit script now author the
+seven-record candidate described in CK_IMPLEMENTATION. The player's acceptance
+starts the separate narrative `STRE_QUEST_ValenHelgen`, stage/objective 10,
+through bound TIF/QF fragments. The dialogue owner and narrative quest are
+excluded from generic QuestService synchronization. Existing technical Helgen
+projection, its post-character-creation trigger, T+4 and ADR-0018 stay unchanged.
+
+**Executed source/fixture evidence:** 134 Python tests (including 15 Valen
+candidate-audit cases), 66 PowerShell safeguard cases and all six baseline CK
+audits pass. Official xEdit 4.1.5f successfully executes DryRun then Prepare on
+fresh synthetic masters/plugin; independent binary auditing confirms seven
+records, ownership/parentage, CTDA, French strings, VMAD and unchanged original
+record payloads. Its synthetic input and masters retain their hashes. Both
+generated fixture fragments compile with the installed Papyrus compiler and
+local CK/SKSE imports: **0 errors, 0 warnings**. This evidence is authoring and
+static validation, not a human xEdit verdict or gameplay PASS.
+
+The versioned gameplay ESP, generated gameplay PSC/PEX and canonical CK records
+manifest still contain the prior imported state. A real candidate is prepared
+only under `_audit/modding/<id>/Data`; its report owns exact private identities,
+hashes and command results. The record manifest is extended privately first and
+promoted only with the validated import. Human Sort Masters, complete error
+checks, save/close/reopen inspection, explicit import, separately authorized
+build/deploy, Solo runtime and the subsequent two-player smoke remain required.
+No human receipt, validation log or runtime PASS is inferred from source tests.
+The broader Valen presentation and all later narrative stages remain deferred.
+
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 
 Implemented for [#92](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/92):

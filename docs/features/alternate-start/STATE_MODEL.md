@@ -4,6 +4,19 @@
 
 ## Currently implemented state
 
+The #94 narrative contract adds two **local Skyrim** quests, independently of
+the campaign state machine: `STRE_QUEST_ValenDialogue` owns the available dialogue;
+`STRE_QUEST_ValenHelgen` starts only on local acceptance, advances from not-started
+to stage 10, displays objective 10 and remains active. Both are excluded from
+Generic QuestService replication. GetIsID restricts responses to Valen; GetStage
+< 10 and an idempotent result fragment prevent repeated acceptance. The fragment
+uses a bound Quest property, never a loaded FormID constant.
+
+`STRE_QUEST_HelgenInvestigation` remains the independent technical projection,
+including its automatic post-creation stage 10. No campaign transition, roster
+rule, checkpoint authority or recovery rule changes. See STATUS for whether the
+narrative candidate has actually been imported and runtime-validated.
+
 `CharacterBuildSnapshotData` represents a player's canonical build:
 
 ```cpp

@@ -343,6 +343,31 @@ foreach ($relative in $RelativePath) {
                 Assert ($NativeEnvironment.DOTNET_SYSTEM_GLOBALIZATION_INVARIANT -eq '1')
             } finally { Set-Item Function:script:Invoke-StreProcess $native }
         }
+        Test 'Valen authoring requires an explicitly visible private window' {
+            Reject { New-StreValenSession @{} 'STRE_AlternateStart.esp' @{ShowXEdit=$false} } 'requires explicit'
+        }
+        Test 'Valen operation refuses an arbitrary EditorID' {
+            Reject { New-StreValenSession @{} 'STRE_AlternateStart.esp' @{ShowXEdit=$true; EditorId='STRE_Other'} } 'fixed EditorID'
+        }
+        Test 'Valen companion allow-list rejects traversal before any writes' {
+            $record = @{result=@{QF='QF_Test'; TIF='TIF_Test'; NewsInfo=0x03000807; AcceptInfo=0x03000808}}
+            Reject { Assert-StreValenCompanions @{} @{Companions=@{'../evil.psc'='bad'}} $TestRoot $record } 'Unexpected companion paths'
+        }
+        Test 'Valen companion freeze detects modified content' {
+            $root = Join-Path $TestRoot 'valen-corruption'
+            $null = New-Item -ItemType Directory -Path "$root/Data/Scripts", "$root/frozen"
+            [IO.File]::WriteAllText("$root/Data/Scripts/TIF_Test.pex", 'fixture bytes')
+            Reject { Copy-StreValenCompanions @{} @{Companions=@{'Scripts/TIF_Test.pex'='wrong hash'}} $root "$root/frozen" } 'changed while freezing'
+        }
+        Test 'Papyrus accepts actual zero-error zero-warning success format' {
+            Assert-StrePapyrusCompilation @{ExitCode=0; Err=''; Out="0 error(s), 0 warning(s)`r`nCompilation succeeded.`nBatch compile of 1 files finished. 1 succeeded, 0 failed."}
+        }
+        Test 'Papyrus rejects usage output even with exit zero' {
+            Reject { Assert-StrePapyrusCompilation @{ExitCode=0; Err=''; Out='Usage: PapyrusCompiler'} } 'compilation failed'
+        }
+        Test 'Papyrus rejects warnings despite successful compilation' {
+            Reject { Assert-StrePapyrusCompilation @{ExitCode=0; Err=''; Out="0 error(s), 0 warning(s)`nwarning: unsafe input`n1 succeeded, 0 failed"} } 'compilation failed'
+        }
         # Exercise the REAL guard against observed process objects, never actual game processes.
         Set-Item Function:script:Assert-GameProcessesStopped $script:RealGuard
         foreach ($name in @('CreationKit','SkyrimSE','SkyrimTogether','SkyrimTogetherServer','Vortex','xTESEdit','xTESEdit64','SSEEdit','SSEEdit64','xSSEEdit','xSSEEdit64')) {

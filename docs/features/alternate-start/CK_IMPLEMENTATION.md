@@ -4,6 +4,30 @@
 
 ## Versioned files
 
+Issue #94 adds **candidate-authoring source** under
+`Tools/Scripts/xedit/STRE_CreateValenHelgenDialogue.pas` and `Tools/Scripts/valen/`.
+Until human xEdit validation and explicit import, the checked-in ESP and canonical
+CK manifest retain their previous content. `AddValenHelgen` creates exactly two
+QUST, one DLBR, two DIAL and two INFO in a private session. An independent reader
+checks nesting, references, conditions, French text, VMAD and unchanged existing
+record payloads.
+
+The narrative QUST is priority 50, Side Quest, Run Once, not Start Game Enabled.
+Stage 10's QF displays objective 10 and activates it. The separate journal-free
+dialogue QUST has Start Game Enabled, Run Once, Has Dialogue Data and a SEQ. Its
+top-level branch starts the news topic and links to acceptance. Both INFO require
+GetIsID Valen and GetStage narrative < 10. Acceptance's OnBegin TIF starts the
+bound quest if needed, checks failure and rechecks the stage after latent startup.
+QF/TIF names derive from identities actually allocated by xEdit.
+
+Force Subtitle and No LIP File plus three silent PCM timing assets support the
+unvoiced smoke; no recorded or synthesized actor voice is supplied. The voice
+type remains MaleWarlock. Subtitle timing requires human runtime review. Valen's
+NPC, placed reference, unbound sandbox package, face and AI are preserved, as are
+technical Helgen fragments and their automatic trigger. Final presentation/AI,
+broader dialogue and the rest of the narrative remain deferred. The runbook owns
+preparation/import; STATUS owns validation evidence.
+
 ```text
 GameFiles/Skyrim/STRE_AlternateStart.esp
 GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc

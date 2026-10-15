@@ -26,6 +26,15 @@ NEWS_INFO = "STRE_INFO_ValenHelgen_News"
 ACCEPT_INFO = "STRE_INFO_ValenHelgen_Accept"
 EXPECTED = {NARRATIVE: "QUST", OWNER: "QUST", BRANCH: "DLBR", NEWS: "DIAL",
             ACCEPT: "DIAL", NEWS_INFO: "INFO", ACCEPT_INFO: "INFO"}
+FIELDS = {
+    NARRATIVE: 'EDID VMAD FULL DNAM NEXT INDX INDX QSDT CNAM QOBJ FNAM NNAM ANAM',
+    OWNER: 'EDID DNAM NEXT ANAM',
+    BRANCH: 'EDID QNAM TNAM DNAM SNAM',
+    NEWS: 'EDID FULL PNAM BNAM QNAM DATA SNAM TIFC',
+    ACCEPT: 'EDID FULL PNAM BNAM QNAM DATA SNAM TIFC',
+    NEWS_INFO: 'EDID ENAM TPIC PNAM TCLT TRDT NAM1 TRDT NAM1 CTDA CTDA',
+    ACCEPT_INFO: 'EDID VMAD ENAM TPIC PNAM TRDT NAM1 CTDA CTDA',
+}
 MASTERS = ["Skyrim.esm", "Update.esm", "Dragonborn.esm"]
 TITLE = "Les ruines de Helgen"
 OBJECTIVE = "Se rendre à Helgen pour enquêter sur l'attaque du dragon."
@@ -149,11 +158,13 @@ def audit(before: bytes, candidate: bytes):
     for r in new:
         name = p.one(r.form_id, "EDID").rstrip(b"\0").decode("ascii")
         require(r.signature == EXPECTED[name] and r.form_id >> 24 == len(MASTERS), "Record ownership/signature")
-        require(not r.flags & (0x20 | 0x800), "Deleted/disabled added record")
+        require(r.flags == 0, "Unexpected added record flags")
+        require([s for s, _ in p.fields[r.form_id]] == FIELDS[name].split(),
+                "Unexpected field/order in " + name)
     n, d, b, news, accept, ni, ai = [p.ids[x] for x in EXPECTED]
     valen = p.ids["STRE_NPC_MessireValen"]
     require(text(p.one(n, "FULL")) == TITLE, "Narrative title")
-    for fid, flags, kind in [(n, 0x100, 8), (d, 0x101, 0)]:
+    for fid, flags, kind in [(n, 0x100, 8), (d, 0x8101, 0)]:
         data = p.one(fid, "DNAM")
         require(len(data) == 12 and int.from_bytes(data[:2], "little") == flags and data[2] == 50
                 and int.from_bytes(data[8:], "little") == kind, "Quest flags/priority/type")
@@ -163,12 +174,15 @@ def audit(before: bytes, candidate: bytes):
             and all(len(s) == 4 and s[2] == 0 for s in stages), "Stage contract")
     require(p.values(n, "QSDT") == [b"\0"] and len(p.values(n, "CNAM")) == 1, "One uncompleted stage log")
     require(p.integer(n, "QOBJ") == 10 and text(p.one(n, "NNAM")) == OBJECTIVE, "Objective 10")
+    require(p.integer(n, "FNAM") == 0, "Objective flags")
     require(not p.values(n, "QSTA"), "No target/arrival implementation")
     require(p.integer(b, "QNAM") == d and p.integer(b, "TNAM") == 0
             and p.integer(b, "DNAM") == 1 and p.integer(b, "SNAM") == news, "Branch ownership/start")
     for fid, info, name in [(news, ni, NEWS_INFO), (accept, ai, ACCEPT_INFO)]:
         require(p.integer(fid, "QNAM") == d and p.integer(fid, "BNAM") == b, "Topic ownership")
         require(p.one(fid, "DATA") == bytes(4) and p.one(fid, "SNAM") == b"CUST", "Custom player topic")
+        require(p.integer(fid, "TIFC") == 1, "Topic INFO count")
+        require(p.one(fid, "PNAM") == struct.pack('<f', 50), "Topic priority")
         require(p.parents[info] == fid and p.integer(info, "TPIC") == fid and p.integer(info, "PNAM") == 0, "INFO parent/order")
         require(p.integer(info, "ENAM") == (0xA00 if info == ni else 0xA01), "Subtitle/NoLIP/Goodbye flags")
         require([text(v) for v in p.values(info, "NAM1")] == LINES[name], "French response text")
@@ -182,6 +196,7 @@ def audit(before: bytes, candidate: bytes):
                     and c[20:28] == bytes(8), "Valen/preacceptance condition")
     require(p.values(ni, "TCLT") == [struct.pack("<I", accept)] and not p.values(ai, "TCLT"), "Topic continuation")
     require(text(p.one(accept, "FULL")) == PROMPT, "Player acceptance text")
+    require(text(p.one(news, "FULL")) == 'Quelles nouvelles avez-vous de Helgen ?', "News topic text")
     qf, tif = f"QF_STRE_QUEST_ValenHelgen_{n:08X}", f"TIF_{ai:08X}"
     for fid, name, props, quest in [(n, qf, {}, True), (ai, tif, {"ValenHelgen": n}, False)]:
         vm = Vmad(p.one(fid, "VMAD"))

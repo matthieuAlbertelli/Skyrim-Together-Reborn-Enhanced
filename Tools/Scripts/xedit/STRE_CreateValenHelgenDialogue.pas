@@ -25,8 +25,25 @@ end;
 function NewRecord(sig, edid: string): IInterface;
 begin
   Require(not Assigned(FindRecord(sig, edid)), 'Already exists: ' + edid);
-  Result := Add(target, sig, True);
+  if not HasGroup(target, sig) then Add(target, sig, True);
+  Result := Add(GroupBySignature(target, sig), sig, True);
   SetElementEditValues(Result, 'EDID', edid);
+end;
+
+function AppendEntry(e: IInterface; path: string): IInterface;
+var a: IInterface;
+begin
+  AddMessage('Appending ' + path + ' to ' + FullPath(e));
+  if not ElementExists(e, path) then begin
+    Add(e, path, True);
+    a := ElementByPath(e, path);
+    if ElementCount(a) = 0 then ElementAssign(a, HighInteger, nil, False);
+  end else begin
+    a := ElementByPath(e, path);
+    ElementAssign(a, HighInteger, nil, False);
+  end;
+  Result := ElementByIndex(a, ElementCount(a) - 1);
+  Require(Assigned(Result), 'Missing array element: ' + path);
 end;
 
 procedure Link(e: IInterface; path: string; linked: IInterface);
@@ -40,9 +57,7 @@ procedure Condition(e: IInterface; func, paramName: string; ref: IInterface;
   compareType: integer; value: float);
 var c: IInterface;
 begin
-  if not ElementExists(e, 'Conditions') then Add(e, 'Conditions', True)
-  else ElementAssign(ElementByPath(e, 'Conditions'), HighInteger, nil, False);
-  c := ElementByIndex(ElementByPath(e, 'Conditions'), ElementCount(ElementByPath(e, 'Conditions')) - 1);
+  c := AppendEntry(e, 'Conditions');
   SetElementNativeValues(c, 'CTDA\Type', compareType);
   SetElementEditValues(c, 'CTDA\Function', func);
   SetElementNativeValues(c, 'CTDA\Comparison Value - Float', value);
@@ -58,10 +73,11 @@ begin
   SetElementNativeValues(Result, 'PNAM', 50.0);
   Link(Result, 'QNAM', dialogue);
   Link(Result, 'BNAM', branch);
+  Add(Result, 'DATA', True);
   SetElementNativeValues(Result, 'DATA\Category', 0);
   SetElementNativeValues(Result, 'DATA\Subtype', 0);
   Add(Result, 'SNAM', True);
-  SetElementEditValues(Result, 'SNAM', 'CUST');
+  SetElementNativeValues(Result, 'SNAM', $54535543); // CUST signature, little endian
 end;
 
 function Info(owner: IInterface; edid: string; flags: integer): IInterface;
@@ -80,10 +96,7 @@ end;
 procedure Response(infoRecord: IInterface; number: integer; text: string);
 var r, responses: IInterface;
 begin
-  if not ElementExists(infoRecord, 'Responses') then Add(infoRecord, 'Responses', True)
-  else ElementAssign(ElementByPath(infoRecord, 'Responses'), HighInteger, nil, False);
-  responses := ElementByPath(infoRecord, 'Responses');
-  r := ElementByIndex(responses, ElementCount(responses) - 1);
+  r := AppendEntry(infoRecord, 'Responses');
   SetElementNativeValues(r, 'TRDT\Response number', number);
   SetElementEditValues(r, 'NAM1', text);
 end;
@@ -94,8 +107,7 @@ begin
   vm := Add(e, 'VMAD', True);
   SetElementNativeValues(vm, 'Version', 5);
   SetElementNativeValues(vm, 'Object Format', 2);
-  Add(vm, 'Scripts', True);
-  Result := ElementByIndex(ElementByPath(vm, 'Scripts'), 0);
+  Result := AppendEntry(vm, 'Scripts');
   SetElementEditValues(Result, 'ScriptName', scriptName);
 end;
 
@@ -113,17 +125,22 @@ begin
   SetElementNativeValues(stage, 'INDX\Stage Index', 0);
   stage := ElementAssign(ElementByPath(narrative, 'Stages'), HighInteger, nil, False);
   SetElementNativeValues(stage, 'INDX\Stage Index', 10);
-  Add(stage, 'Log Entries', True);
+  // QUST Stage definition: member 0=INDX, member 1=Log Entries.
+  // Add(stage,'QSDT') creates the array but asserts while returning a nested field.
+  // Assign the documented schema member directly, never a record's file position.
+  ElementAssign(stage, 1, nil, False);
   entry := ElementByIndex(ElementByPath(stage, 'Log Entries'), 0);
+  Require(Assigned(entry), 'Stage 10 log entry was not materialized');
   Add(entry, 'CNAM', True);
   SetElementEditValues(entry, 'CNAM', 'Valen nous a parlé d''une attaque de dragon à Helgen. Nous avons choisi d''aller enquêter sur place.');
   Add(narrative, 'Objectives', True);
   obj := ElementByIndex(ElementByPath(narrative, 'Objectives'), 0);
   SetElementNativeValues(obj, 'QOBJ', 10);
+  Add(obj, 'FNAM', True);
   SetElementEditValues(obj, 'NNAM', 'Se rendre à Helgen pour enquêter sur l''attaque du dragon.');
 
   dialogue := NewRecord('QUST', 'STRE_QUEST_ValenDialogue');
-  SetElementNativeValues(dialogue, 'DNAM\Flags', $101);
+  SetElementNativeValues(dialogue, 'DNAM\Flags', $8101); // SGE, Run Once, Has Dialogue Data
   SetElementNativeValues(dialogue, 'DNAM\Priority', 50);
   SetElementNativeValues(dialogue, 'DNAM\Type', 0);
   branch := NewRecord('DLBR', 'STRE_DLBR_ValenHelgen');
@@ -142,31 +159,38 @@ begin
   SetNativeValue(ElementByIndex(ElementByPath(newsInfo, 'Link To'), 0), GetLoadOrderFormID(acceptTopic));
   acceptInfo := Info(acceptTopic, 'STRE_INFO_ValenHelgen_Accept', $A01);
   Response(acceptInfo, 1, 'Faites-le. Mais restez prudents. Si ces récits sont vrais, Helgen pourrait n''être que le commencement.');
+  Add(news, 'TIFC', True);
+  SetElementNativeValues(news, 'TIFC', 1);
+  Add(acceptTopic, 'TIFC', True);
+  SetElementNativeValues(acceptTopic, 'TIFC', 1);
 
   // CK-style names are derived only AFTER xEdit allocates real identities.
   qfName := 'QF_STRE_QUEST_ValenHelgen_' + IntToHex(FixedFormID(narrative), 8);
   tifName := 'TIF_' + IntToHex(FixedFormID(acceptInfo), 8);
   scriptEntry := AttachScript(narrative, qfName);
-  fragments := Add(narrative, 'VMAD\Script Fragments', True);
+  ElementAssign(ElementByPath(narrative, 'VMAD'), 3, nil, False);
+  ElementAssign(ElementByPath(narrative, 'VMAD'), 4, nil, False);
+  fragments := ElementByPath(narrative, 'VMAD\Script Fragments');
   SetElementEditValues(fragments, 'FileName', qfName);
-  Add(fragments, 'Fragments', True);
-  fragment := ElementByIndex(ElementByPath(fragments, 'Fragments'), 0);
+  fragment := AppendEntry(fragments, 'Fragments');
   SetElementNativeValues(fragment, 'Quest Stage', 10);
   SetElementNativeValues(fragment, 'Quest Stage Index', 0);
   SetElementEditValues(fragment, 'ScriptName', qfName);
   SetElementEditValues(fragment, 'FragmentName', 'Fragment_0');
 
   scriptEntry := AttachScript(acceptInfo, tifName);
-  Add(scriptEntry, 'Properties', True);
-  prop := ElementByIndex(ElementByPath(scriptEntry, 'Properties'), 0);
+  prop := AppendEntry(scriptEntry, 'Properties');
   SetElementEditValues(prop, 'propertyName', 'ValenHelgen');
   SetElementNativeValues(prop, 'Type', 1);
   SetElementNativeValues(prop, 'Flags', 1);
   SetElementNativeValues(prop, 'Value\Object Union\Object v2\Alias', -1);
   SetElementNativeValues(prop, 'Value\Object Union\Object v2\FormID', GetLoadOrderFormID(narrative));
-  fragments := Add(acceptInfo, 'VMAD\Script Fragments', True);
+  ElementAssign(ElementByPath(acceptInfo, 'VMAD'), 3, nil, False);
+  fragments := ElementByPath(acceptInfo, 'VMAD\Script Fragments');
   SetElementNativeValues(fragments, 'Flags', 1);
   SetElementEditValues(fragments, 'FileName', tifName);
+  if ElementCount(ElementByPath(fragments, 'Fragments')) = 0 then
+    ElementAssign(ElementByPath(fragments, 'Fragments'), HighInteger, nil, False);
   fragment := ElementByIndex(ElementByPath(fragments, 'Fragments'), 0);
   SetElementEditValues(fragment, 'ScriptName', tifName);
   SetElementEditValues(fragment, 'FragmentName', 'Fragment_0');
@@ -178,7 +202,7 @@ begin
   Require(not FileExists(root + fileName), 'Output already exists');
   stream := TFileStream.Create(root + fileName, fmCreate);
   try
-    FileWriteToStream(target, stream, True);
+    FileWriteToStream(target, stream, False);
   finally
     stream.Free;
   end;
@@ -188,7 +212,7 @@ function Initialize: integer;
 var i: integer; config: TStringList; mode: string;
 begin
   Result := 0;
-  root := IncludeTrailingPathDelimiter(ExtractFileDir(ExcludeTrailingPathDelimiter(DataPath)));
+  root := ExtractFileDir(Copy(DataPath, 1, Length(DataPath) - 1)) + '\';
   Require(Pos('\_audit\modding\', LowerCase(root)) > 0, 'Not a private modding session');
   Require(SameText(DataPath, root + 'Data\'), 'Unexpected private Data path');
   Require(FileExists(root + 'authoring-mode.txt'), 'Missing wrapper marker');
@@ -211,6 +235,7 @@ begin
   Require(GetFileName(MasterByIndex(target, 2)) = 'Dragonborn.esm', 'Wrong third master');
   valen := FindRecord('NPC_', 'STRE_NPC_MessireValen');
   Require(Assigned(valen), 'Valen NPC missing');
+  Require(EditorID(LinksTo(ElementByPath(valen, 'VTCK'))) = 'MaleWarlock', 'Unexpected Valen voice type');
   Require(Assigned(FindRecord('QUST', 'STRE_QUEST_HelgenInvestigation')), 'Technical Helgen missing');
   Require(not Assigned(FindRecord('QUST', 'STRE_QUEST_ValenHelgen')), 'Narrative already exists');
   Require(not Assigned(FindRecord('QUST', 'STRE_QUEST_ValenDialogue')), 'Dialogue owner already exists');
@@ -224,10 +249,10 @@ begin
         ExportPrivate('authored.esp');
       except
         on E: Exception do begin
-          // Preserve failed bytes privately, reset unsaved flags, and fail closed.
-          ExportPrivate('rejected.esp');
+          // Preserve failure evidence privately. Script mode closes without save.
           output.Add('FAIL: ' + E.Message);
           output.SaveToFile(root + 'authoring-result.txt');
+          ExportPrivate('rejected.esp');
           Exit;
         end;
       end;
