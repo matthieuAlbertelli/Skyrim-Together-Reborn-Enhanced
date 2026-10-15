@@ -5,17 +5,21 @@
 
 ## Source de la preuve
 
-Après la checklist manuelle A→B puis B→A, le mainteneur a déclaré dans cette conversation :
+Le mainteneur a explicitement confirmé l'exécution des deux directions :
 
-> tout est PASS, aucune erreur
+> J’ai effectivement testé A→B puis B→A sur le build e6a18213. Les deux directions sont PASS, aucune erreur.
 
-Cette attestation globale couvre les deux directions demandées. Les résultats
-ci-dessous sont transcrits comme **PASS humains**. L'agent n'a pas exécuté le
+L'ancienne déclaration « tout est PASS, aucune erreur » concernait le smoke
+Solo. Son attribution au roster-2 était erronée et est retirée comme source de
+preuve. La preuve roster-2 repose désormais sur la nouvelle attestation
+explicite ci-dessus, pour les deux directions et le build réellement testé.
+
+Les résultats ci-dessous sont transcrits comme **PASS humains**. L'agent n'a pas exécuté le
 smoke ou analysé de nouveaux logs, captures ou exports console fournis avec
 cette attestation. Aucun horaire de partie, identifiant de campagne ou paquet
 réseau n'est inventé.
 
-Build désigné : `e6a182138a17d8d143fbfd0976a76b34734ddfb3`, branche
+Build réellement testé : `e6a182138a17d8d143fbfd0976a76b34734ddfb3`, branche
 `feat/valen-helgen-lead`. Client attendu et vérifié au build/deploy et préflight :
 `D4CF33B57472EB51D6BE7C5A052D67E61B7C80A809252228B91716D67C44DA3F`.
 A = poste local ; B = PC-Vero, correspondance confirmée par le mainteneur.

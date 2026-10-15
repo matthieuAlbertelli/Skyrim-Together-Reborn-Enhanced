@@ -106,9 +106,13 @@ The fixture reproduces the old failure and passes **13 checks** after correction
 including real WAV retention, mixed case, future voice extensions, manifest
 exclusion and backup preservation. This is tooling evidence, not roster-2 PASS.
 
-**Human roster-2 acceptance:** on October 15, 2026, the maintainer reported
-"tout est PASS, aucune erreur" in response to the manual A-to-B then B-to-A
-checklist. The designated tested build is
+**Human roster-2 acceptance:** on October 15, 2026, the maintainer explicitly attested:
+
+> J’ai effectivement testé A→B puis B→A sur le build e6a18213. Les deux directions sont PASS, aucune erreur.
+
+This explicit statement is the roster-2 evidence. The earlier statement
+"tout est PASS, aucune erreur" concerned the Solo smoke; its erroneous
+attribution to roster-2 is withdrawn. The build actually tested is
 `e6a182138a17d8d143fbfd0976a76b34734ddfb3`, client SHA256
 `D4CF33B57472EB51D6BE7C5A052D67E61B7C80A809252228B91716D67C44DA3F`.
 For each direction, the initiator receives the quest at stage 10/running;
