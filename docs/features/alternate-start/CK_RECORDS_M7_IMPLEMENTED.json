@@ -527,6 +527,41 @@
       "signature": "REFR",
       "editorId": "STRE_REFR_PlayerCreationMarker10",
       "expectedLocalFormId": "0x000D6B0F"
+    },
+    {
+      "signature": "QUST",
+      "editorId": "STRE_QUEST_ValenHelgen",
+      "expectedLocalFormId": "0x000D6B14"
+    },
+    {
+      "signature": "QUST",
+      "editorId": "STRE_QUEST_ValenDialogue",
+      "expectedLocalFormId": "0x000D6B15"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_ValenHelgen",
+      "expectedLocalFormId": "0x000D6B16"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_ValenHelgen_News",
+      "expectedLocalFormId": "0x000D6B17"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_ValenHelgen_Accept",
+      "expectedLocalFormId": "0x000D6B18"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_ValenHelgen_News",
+      "expectedLocalFormId": "0x000D6B19"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_ValenHelgen_Accept",
+      "expectedLocalFormId": "0x000D6B1A"
     }
   ],
   "spellEffectExpectations": {

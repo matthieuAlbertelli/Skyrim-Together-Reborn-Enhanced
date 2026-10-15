@@ -4,6 +4,39 @@
 
 ## Versioned files
 
+Issue #94 adds **authoring source** under
+`Tools/Scripts/xedit/STRE_CreateValenHelgenDialogue.pas` and `Tools/Scripts/valen/`.
+The checked-in ESP and canonical CK manifest include exactly two new QUST, one
+DLBR, two DIAL and two INFO authored by `AddValenHelgen` in a private session,
+then imported through the existing CK workflow after human xEdit validation.
+Their allocated local IDs are `0D6B14` through `0D6B1A`; the strict manifest owns
+the exact EditorID/signature mapping. An independent reader checks nesting,
+references, conditions, French text, VMAD and unchanged existing record payloads.
+See [STATUS](../../project/STATUS.md) for the validation evidence and runtime gate.
+
+The narrative QUST is priority 50, Side Quest, Run Once, not Start Game Enabled.
+Stage 10's QF displays objective 10 and activates it. The separate journal-free
+dialogue QUST has Start Game Enabled, Run Once, Has Dialogue Data and a SEQ. Its
+top-level branch starts the news topic and links to acceptance. Both INFO require
+GetIsID Valen and GetStage narrative < 10. Acceptance's OnBegin TIF starts the
+bound quest if needed, checks failure and rechecks the stage after latent startup.
+QF/TIF names derive from identities actually allocated by xEdit.
+
+The narrative quest follows standard QuestService Start/StageUpdate/Stop
+synchronization. Acceptance by either party member propagates stage 10; the
+recipient's existing QF displays objective 10, and GetStage < 10 disables further
+acceptance. Side Quest type 8 does not depend on experimental None/Misc sync.
+Only the dialogue owner remains excluded alongside the existing technical STRE
+quests. This policy requires no CK record, fragment or asset changes.
+
+Force Subtitle and No LIP File plus three silent PCM timing assets support the
+unvoiced smoke; no recorded or synthesized actor voice is supplied. The voice
+type remains MaleWarlock. Subtitle timing requires human runtime review. Valen's
+NPC, placed reference, unbound sandbox package, face and AI are preserved, as are
+technical Helgen fragments and their automatic trigger. Final presentation/AI,
+broader dialogue and the rest of the narrative remain deferred. The runbook owns
+preparation/import; STATUS owns validation evidence.
+
 ```text
 GameFiles/Skyrim/STRE_AlternateStart.esp
 GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_AlternateStart_02001AF9.psc
@@ -22,6 +55,14 @@ GameFiles/Skyrim/Source/Scripts/STRE_HelgenInvestigationController.psc
 GameFiles/Skyrim/scripts/STRE_HelgenInvestigationController.pex
 GameFiles/Skyrim/Source/Scripts/STRE_HelgenRubbleSqueezeActivator.psc
 GameFiles/Skyrim/scripts/STRE_HelgenRubbleSqueezeActivator.pex
+GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_ValenHelgen_030D6B14.psc
+GameFiles/Skyrim/scripts/QF_STRE_QUEST_ValenHelgen_030D6B14.pex
+GameFiles/Skyrim/Source/Scripts/TIF_030D6B1A.psc
+GameFiles/Skyrim/scripts/TIF_030D6B1A.pex
+GameFiles/Skyrim/SEQ/STRE_AlternateStart.seq
+GameFiles/Skyrim/Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6b19_1.wav
+GameFiles/Skyrim/Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6b19_2.wav
+GameFiles/Skyrim/Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6b1a_1.wav
 GameFiles/STRE_AlternateStart.manifest.txt
 ```
 
@@ -258,16 +299,19 @@ animations were runtime-tested in game.
 This is not the production FaceGen/dialogue head. Finger weighting remains
 imperfect, the material/shader pass is provisional, and the temporary Sandbox
 behavior moves Valen between chairs or other furniture too frequently. Final
-AI, dialogue, scene, and narrative-departure work is deferred.
+AI, broader dialogue, scene, and narrative-departure work is deferred. The
+Helgen dialogue above does not complete that presentation work.
 
 ## M7 records and continuity helper
 
-The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 83 expected STRE-owned records:
+The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 100 expected STRE-owned records:
 
 - cells, quests, and the ten headquarters seat references;
+- the ten dedicated player-creation marker references;
 - the Ilinalta fireplace static plus the two STRE-owned headquarters light records;
 - the Messire Valen prototype's full-body `ARMA`/`ARMO`, outfit, NPC base, and
   provisional inn Sandbox package;
+- the shared Valen Helgen narrative quest, local dialogue owner, branch, two topics and two responses;
 - outfits and boots;
 - weak enchantments;
 - Destruction and Alteration spells;
@@ -600,7 +644,8 @@ Not implemented yet:
 - general coordinated checkpoint/recovery infrastructure; Helgen intentionally
   relies on native saves and adds no dedicated persistent adapter state;
 - rescue/liberation interaction and physical `Freed`/`Departed` projections;
-- Valen-driven quest start;
+- Valen-driven technical investigation start (the existing automatic trigger
+  remains separate from the synchronized narrative quest above);
 - neutral/Hadvar/Ralof MQ102 continuity.
 
 ## Deferred post-v1 Helgen occupation encounter
@@ -636,7 +681,7 @@ be followed by the necessary navmesh update and another NPC navigation test.
 - neutral MQ102/MQ103 vanilla-continuity handoff and its Riverwood/Alduin/Civil
   War semantics;
 - Hadvar/Ralof branch commit without making rescue itself a faction choice;
-- final Valen AI, FaceGen/dialogue head, scenes, dialogue, and aliases;
+- final Valen AI, FaceGen/dialogue head, scenes, broader dialogue, and aliases;
 - real Departure/exit flow and main-quest resumption;
 - markers and placements for more players;
 - automated Papyrus compilation.

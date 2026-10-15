@@ -68,7 +68,8 @@ Every AutoMod response must be one JSON object with Boolean `success=true`.
 Nonzero exits, stderr, malformed JSON, missing/false/string success stop execution.
 Inspection checks the plugin hash before/after. `PapyrusStatus` reports tool
 availability; inspect `compilerAvailable`/`decompilerAvailable` before the first
-operation needing that tool. This wrapper does not compile/decompile scripts.
+operation needing that tool. The bounded Valen adapter below compiles its two
+generated fragments; the simple adapters do not compile/decompile scripts.
 
 ## Prepare a future authorized content change
 
@@ -94,6 +95,7 @@ plugin names. The initial adapters are deliberately limited to `AddGlobal`
 must begin `STRE_` and must not already exist. There is no arbitrary AutoMod
 argument, deletion, override, merge, ESL or Papyrus write passthrough. Add other
 operations only with a typed adapter, postconditions and fixture tests.
+`AddValenHelgen` is the dedicated exception described below, with a fixed contract.
 
 The following example is **only for an isolated fixture or a separately
 authorized content mission**, never an instruction to add a production test record:
@@ -118,9 +120,71 @@ Prepare repeats the dry-run, writes only the private copy, rereads the requested
 EditorID/FormKey/properties and checks the TES4 flags/form version/HEDR version.
 It copies the three required masters into the private Data as ordinary files,
 never links. Allow disk space for those copies. It then deliberately returns
-**nonzero** with `HUMAN_XEDIT_REQUIRED`. This is a blocked pipeline, not validation
+**nonzero** with `HUMAN_XEDIT_REQUIRED` for AddQuest/AddGlobal. This is a blocked pipeline, not validation
 success. A failed operation is terminal and retains backups; do not rerun its
 mutation or bypass its state. Begin a fresh session after resolving the cause.
+
+## Typed Valen authoring (#94)
+
+`AddValenHelgen -ShowXEdit` creates exactly two QUST, one DLBR, two DIAL and two
+INFO. Its contract is [CK_IMPLEMENTATION](../features/alternate-start/CK_IMPLEMENTATION.md).
+It has no free-form operation/script argument. AutoMod does not author DIAL/INFO;
+the versioned `xedit/STRE_CreateValenHelgenDialogue.pas` uses official xEdit's
+record allocator, typed links and serializer. `valen_helgen.py` independently
+audits every new identity, field order, CTDA, parent, fragment and French string,
+and rejects any change to an existing record payload. The master order and ESP
+format stay fixed. Valen's voice type must remain MaleWarlock.
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop.' }
+& $tool -Action Prepare -Operation AddValenHelgen -ShowXEdit
+```
+
+The checkout must already contain committed source changes. This operation opens
+two **visible private authoring** windows, first DryRun then Prepare. In each,
+accept only the four preselected private modules, wait for script completion,
+then close xEdit. These clicks are not human validation. Script mode in tested
+xEdit 4.1.5f requires FormShow/module selection and ignores autoload/autoexit;
+the bounded 15-minute timeout rejects an unfinished session. It never points at
+production Data. The dry-run must leave identical bytes; Prepare exports a new
+private `authored.esp`, audits it, then replaces only the private candidate.
+
+Papyrus status must confirm compiler/decompiler availability. The installed
+compiler builds the actual allocated QF/TIF names with private, repository and
+installed CK/SKSE imports. Errors, warnings, missing output or non-success results
+reject the session. Eight companion files are hashed: two PSC, two PEX, one SEQ
+for the dialogue owner and three silent PCM WAV timing assets. The WAVs contain
+no recorded/generated speech. The independent reader also creates the exact
+private `candidate-manifest.json`; the canonical record manifest still describes
+the unchanged Git ESP until validated import.
+
+Success returns `State=AwaitingHumanXEdit`, **not validation approval**. This
+operation creates neither `validation.json` nor `xedit-validation.log`. The
+human must perform the boundary below and explicitly attest the actual result
+before either file is created. Preparation records the four original ESP hashes,
+private master hashes, tool identities and clean branch/HEAD. Keep that HEAD
+unchanged while reviewing. No import/build/deploy is chained to preparation.
+
+After the explicit human PASS, `ImportValidated` rechecks all seven identities,
+companion hashes/paths, manifest hash, unchanged originals and common receipt
+guards. It freezes the companions/manifest with the validated ESP, imports the
+eight explicit generated-artifact paths through the existing CK importer and
+updates the canonical records manifest. It rejects existing companion targets;
+there is no overwrite escape hatch. Before the post-import packaging audit,
+register only these eight verified paths with the existing
+`Add-NewManagedFilesToManifest` helper (and its `Read-ManagedFileManifest`
+dependency) from the local build script. Load only those function definitions;
+do not invoke or dot-source the whole build/deploy script at this gate. Inspect
+the complete Git diff and all audits, then obtain separate build/deploy
+authorization. The local build's established CK ownership collector includes
+generated fragments, SEQ and plugin voice assets.
+
+Tests: `python -m unittest discover -s Tools/Scripts -p test_valen_helgen.py`
+uses tiny synthetic xEdit output, including corrupted contract cases.
+`Test-StreValenAuthor.ps1 -XEditPath <official executable>` repeats actual
+DryRun/Prepare on newly generated synthetic modules, with the same visible-window
+steps and before/after input/master hashes. Neither test grants human xEdit PASS.
 
 ## Official xEdit boundary
 
@@ -142,8 +206,8 @@ documents alternate Data/log paths and save confirmation; messages must be
 checked because saving can fail. The
 [official release notes](https://github.com/TES5Edit/TES5Edit/releases)
 document quickedit/autoload/autoexit/direct-save options. None is treated here
-as a validated headless save-and-check protocol. No xEdit script is installed,
-no xEdit process is launched by the wrapper, and exit code zero alone grants no
+as a validated headless save-and-check protocol. Only the dedicated Valen
+authoring adapter launches its versioned script; exit code zero alone grants no
 approval. Quick Auto Clean is not a replacement for Sort Masters/Check for Errors.
 
 For the actual candidate, a human must:
@@ -167,7 +231,8 @@ For the actual candidate, a human must:
    rerun Check for Errors, then close again. Preserve relevant messages from both
    sessions in `<session>/xedit-validation.log`, including target/path, tool
    version, completed error check, errors/warnings and save outcome.
-4. Complete the generated `validation.json` **only after that actual review**:
+4. Complete `validation.json` **only after that actual review** (the simple
+   adapters create a false-valued template; the Valen adapter creates no receipt):
    `Reviewer`, `PluginSha256`, `LogSha256`, and Boolean `SortMasters`,
    `CheckForErrors`, `SavedAndClosed`. Keep `Schema=1` and the recorded
    `XEditSha256`. Obtain hashes with `Get-FileHash -Algorithm SHA256` on the
@@ -203,8 +268,9 @@ automatically continues to build or retries an import.
 
 Keeping Data aligned matters because the existing local build script snapshots
 and imports CK outputs before deployment. Do not run it on a different Data
-candidate. The wrapper imports only this ESP: generated fragments/SEQ/voices/
-FaceGen from separate CK work still use the established ownership workflow.
+candidate. The simple adapters import only this ESP. The Valen adapter also
+imports its eight fixed companions; generated artifacts from other CK work
+still use the established ownership workflow.
 Ordinary `STRE_*.psc/.pex` remain repository-authoritative; generated CK fragments
 retain their existing source/compiled consistency checks. Data is a working
 authoring location, not the final source of truth.
@@ -217,10 +283,32 @@ long build). Dot-source it **after** any old same-named function definition or
 replace that function. A missing helper must stop the local script. Do not copy
 machine paths into the generic module.
 
+The local CK collector must exclude Vortex metadata at both boundaries. In
+`Get-CkPluginOwnedFiles`'s nested `Add-OwnedFile`, return before adding any file
+whose filename ends with `.vortex_backup`, using `StringComparison.OrdinalIgnoreCase`.
+In `Test-CkAutoImportPath`, return `$false` immediately for a relative path with
+the same suffix. Do not delete or alter those backups. Do not replace this exact
+suffix exclusion with a global voice-extension allowlist: WAV, FUZ, LIP, XWM and
+other genuine voice artifacts must keep their existing eligibility. The manifest
+is populated only from the filtered auto-import set.
+
+Test the actual workstation functions without loading the deployment entry point:
+
+```powershell
+./Tools/Scripts/Test-StreCkCollector.ps1 -BuildScriptPath ./build-and-deploy-dev.ps1
+```
+
+This local fixture test extracts the function definitions using the PowerShell
+parser. It preserves a real PCM WAV, rejects lowercase/mixed-case backup suffixes
+at both boundaries, preserves future extensions and non-terminal substrings,
+and checks the resulting manifest and untouched fixture backups. It requires
+the local ignored script and is not an unattended deployment or a CI stand-in
+for a workstation script absent from the repository.
+
 Build/deploy and in-game acceptance remain explicit subsequent steps. This
 infrastructure does not prove gameplay, complete quest behavior or a new content
-record's semantic correctness. The first real quest smoke belongs to a later
-mission on a new branch after infrastructure merge.
+record's runtime behavior. The first Valen content candidate remains subject
+to its explicit human xEdit, import, build/deploy and in-game gates.
 
 ## Rollback and cleanup
 

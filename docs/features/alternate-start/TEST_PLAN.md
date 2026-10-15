@@ -2,6 +2,56 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Shared Valen lead acceptance (issue #94)
+
+The maintainer attested complete Solo PASS on native revision
+`8398037112757318c12537dbefa7dbca105a6657`: dialogue/text/choice/final response,
+journal title and objective 10 active, getstage 10, running quest, non-repeatable
+acceptance, unchanged technical Helgen and no crash/error. STATUS owns this
+evidence. The subsequent policy correction enables ordinary QuestService sync
+for the narrative quest while preserving the validated CK bytes.
+
+The subsequent maintainer-attested A-to-B and B-to-A results and their tested
+revision are recorded in [STATUS](../../project/STATUS.md#valens-shared-helgen-lead-solo-and-both-roster-2-directions-accepted-2026-10-15).
+The following procedure remains the manual regression contract; its acceptance
+does not derive from the Solo run or automated source checks.
+
+Automated source contracts must verify narrative eligibility, retained exclusions
+for ValenDialogue/AlternateStart/HelgenInvestigation, Side Quest independence from
+the experimental Misc/None setting, and existing Start/StageUpdate/Stop paths.
+Compare the complete native diff and protocol files with the accepted baseline:
+only the narrative EditorID exclusion may be removed. Re-run the existing Python,
+PowerShell and CK audit suites without re-authoring or recompiling CK content.
+
+Human players perform this procedure after the authorized build/deploy; the
+agent prepares the checklist and records the maintainer's results, without
+launching clients/server or performing the smoke:
+
+1. Use fresh client processes and a new sealed roster of two with the same
+   deployed build and CK hashes. Finish normal creation at Ilinalta's Vigil.
+   Keep experimental Misc/None synchronization disabled.
+2. A initiates the dialogue with Valen and selects exactly
+   « Nous irons peut-être voir ce qui s'y est passé. » B must not accept it.
+3. A reaches stage 10. B automatically receives **Les ruines de Helgen**,
+   objective 10 **Se rendre à Helgen pour enquêter sur l'attaque du dragon.**,
+   displayed and active. Both read-only `getstage STRE_QUEST_ValenHelgen` and
+   `sqv STRE_QUEST_ValenHelgen` must show stage 10 / running on each player.
+4. Talk to Valen again on both clients: GetStage < 10 must make acceptance
+   unavailable, with no restart or duplicate journal/objective.
+5. Verify no crash/error, second Character Creation or technical Helgen
+   regression. Preserve client/server logs showing standard RequestQuestUpdate /
+   NotifyQuestUpdate and the existing remote-stage application.
+6. Fully close both clients and the server. Start fresh processes and a separate
+   clean campaign with B initiating and A receiving automatically, without A
+   accepting. Never reuse the stage-10 campaign from the first direction. Cover
+   a non-party-leader initiator across the two runs.
+
+Do not use setstage/startquest/stopquest/resetquest to obtain PASS. No raw-stage
+recovery, campaign late join or partial-roster catch-up is added. The broader
+Shared / PlayerLocal / TechnicalProjection classification remains future work.
+Record each direction's exact native/CK hashes and human outcomes in STATUS.
+No roster-2 PASS follows from the already accepted Solo smoke.
+
 ## Loading-door regression acceptance (issue #89, 2026-10-11)
 
 ### Recorded acceptance and seating disposition (2026-10-14)

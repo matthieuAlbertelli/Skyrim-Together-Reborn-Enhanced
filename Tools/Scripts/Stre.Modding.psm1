@@ -3,6 +3,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Stre.ProcessGuard.ps1')
 $script:Masters = @('Skyrim.esm', 'Update.esm', 'Dragonborn.esm')
+. (Join-Path $PSScriptRoot 'Stre.ValenHelgen.ps1')
 
 function Get-StreHash([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
@@ -233,6 +234,9 @@ function Get-StreMutationArguments($Request, [string]$Path) {
 }
 
 function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
+    if ($Request.Operation -eq 'AddValenHelgen') {
+        return Invoke-StreValenAudit $Config (Split-Path -Parent (Split-Path -Parent $Path)) $Path
+    }
     $type = if ($Request.Operation -eq 'AddQuest') { 'quest' } else { 'global' }
     $record = Invoke-StreAutoMod $Config @('esp', 'view-record', $Path, '--editor-id', $Request.EditorId, '--type', $type, '--include-raw')
     if ($record.result.EditorId -cne $Request.EditorId -or $record.result.FormKey -notmatch ':STRE_AlternateStart\.esp$') {
@@ -250,6 +254,7 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
 }
 
 function New-StreSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
+    if ($Request.Operation -eq 'AddValenHelgen') { return New-StreValenSession $Config $Plugin $Request -DryRun:$DryRun }
     $git = Assert-StreMutationGit $Config $Plugin
     if (-not (Test-Path -LiteralPath $Config.ImportScript -PathType Leaf)) { throw 'Existing local CK importer is required.' }
     $source = Resolve-StrePath (Join-Path $Config.DataRoot $Plugin)
@@ -344,6 +349,10 @@ function Import-StreValidated($Config, [string]$Session) {
     $record = Get-StreExpectedRecord $Config $state.Request $candidate
     $originalRecord = Get-Content -LiteralPath (Join-Path $root 'record-after.json') -Raw | ConvertFrom-Json -AsHashtable
     if ($record.result.FormKey -cne $originalRecord.result.FormKey) { throw 'Created record FormKey changed during xEdit validation.' }
+    if ($state.Request.Operation -eq 'AddValenHelgen') {
+        if (($record.result.Records | ConvertTo-Json -Compress) -cne ($originalRecord.result.Records | ConvertTo-Json -Compress)) { throw 'Dialogue record identities changed.' }
+        Assert-StreValenCompanions $Config $state $root $record
+    }
     $source = Resolve-StrePath (Join-Path $Config.DataRoot $state.Plugin)
     $repoPlugin = Resolve-StrePath (Join-Path $Config.RepoRoot "GameFiles/Skyrim/$($state.Plugin)")
     foreach ($path in @($source, $repoPlugin, (Join-Path $root 'before.esp'), (Join-Path $root 'repository-before.esp'))) {
@@ -354,6 +363,7 @@ function Import-StreValidated($Config, [string]$Session) {
     $null = New-Item -ItemType Directory -Path $snapshot
     $frozen = Join-Path $snapshot $state.Plugin
     Copy-StreVerified $candidate $frozen
+    if ($state.Request.Operation -eq 'AddValenHelgen') { Copy-StreValenCompanions $Config $state $root $snapshot }
     if ((Get-StreHash $frozen) -ne $receipt.PluginSha256) { throw 'Candidate changed during validation.' }
     Assert-GameProcessesStopped
     $null = Assert-StreMutationGit $Config $state.Plugin
@@ -377,6 +387,7 @@ function Import-StreValidated($Config, [string]$Session) {
     ) $Config.RepoRoot
     Write-StreJson (Join-Path $root 'import-result.json') $import
     if ($import.ExitCode -ne 0 -or (Get-StreHash $repoPlugin) -ne $receipt.PluginSha256) { throw 'Existing CK import failed; stop and use retained backups.' }
+    if ($state.Request.Operation -eq 'AddValenHelgen') { Import-StreValenCompanions $Config $state $root $snapshot }
     $state.State = 'Imported'
     Write-StreJson (Join-Path $root 'session.json') $state
     @{ State = $state.State; Session = $root; Sha256 = $receipt.PluginSha256

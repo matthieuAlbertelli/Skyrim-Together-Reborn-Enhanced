@@ -4,6 +4,22 @@
 
 ## Pitch
 
+Issue #94 specifies a shared Helgen lead using Skyrim Together's standard quest
+synchronization. Either player may ask Messire Valen about Helgen and choose
+« Nous irons peut-être voir ce qui s'y est passé. » **Les ruines de Helgen** then
+opens for the initiator and propagates to the group at stage 10, with objective
+10: « Se rendre à Helgen pour enquêter sur l'attaque du dragon. » Other players
+receive the quest without accepting it themselves. Once stage 10 is received,
+the existing GetStage < 10 condition removes acceptance there too. The quest
+remains open and also works in Solo. It is a Side Quest and does not require
+experimental Misc/None synchronization. The dialogue owner stays local.
+There is no arrival, survivor, reward, MQ102 or faction decision in this increment.
+It does not gate the automatic technical Helgen projection. Start/StageUpdate/Stop
+use the existing QuestService protocol; no new campaign authority or network
+message is introduced. A general Shared / PlayerLocal / TechnicalProjection
+classification remains a future evolution, outside this increment.
+See [STATUS](../../project/STATUS.md) for implementation and validation evidence.
+
 Start a campaign in an inn without importing an already-advanced character. Each player creates their appearance, chooses a class and kits, then receives a clean build consistent with the campaign.
 
 ## Implemented today

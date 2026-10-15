@@ -9,6 +9,128 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
+
+For [#94](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/94),
+the dedicated `AddValenHelgen` adapter and official xEdit script author the
+seven-record content described in CK_IMPLEMENTATION, now imported into the
+versioned ESP with its eight companion files. The player's acceptance
+starts the separate narrative `STRE_QUEST_ValenHelgen`, stage/objective 10,
+through bound TIF/QF fragments. The narrative quest now follows standard
+QuestService Start/StageUpdate/Stop synchronization: acceptance by either party
+member must give the other members stage/objective 10 without separate acceptance.
+Only `STRE_QUEST_ValenDialogue` stays excluded alongside AlternateStart and
+HelgenInvestigation. Side Quest type 8 does not require the experimental
+Misc/None setting. Existing technical Helgen
+projection, its post-character-creation trigger, T+4 and ADR-0018 stay unchanged.
+
+**Executed source/fixture evidence:** 134 Python tests (including 15 Valen
+candidate-audit cases), 66 PowerShell safeguard cases and all six baseline CK
+audits pass. Official xEdit 4.1.5f successfully executes DryRun then Prepare on
+fresh synthetic masters/plugin; independent binary auditing confirms seven
+records, ownership/parentage, CTDA, French strings, VMAD and unchanged original
+record payloads. Its synthetic input and masters retain their hashes. Both
+generated fixture fragments compile with the installed Papyrus compiler and
+local CK/SKSE imports: **0 errors, 0 warnings**. This evidence is authoring and
+static validation, not a human xEdit verdict or gameplay PASS.
+
+**Human xEdit evidence:** the user explicitly attested PASS for Sort Masters
+(`Skyrim.esm / Update.esm / Dragonborn.esm`), both error checks, QUST,
+DIAL/DLBR/INFO, conditions, QF/TIF VMAD, French text, save, reopen and final review.
+The private session `926a8ab42da345219dba588ef604c7e3` retains this human review in
+`xedit-validation.log` and `validation.json`; the log is a faithful transcript
+of the user's attestation, not a raw xEdit Messages export. Its SHA256 is
+`48A80BC620C349D17A58237864B7AF20B8B72E7C81403BE246339231488DA344`.
+
+**Real import and post-import evidence:** after a successful fetch, the clean
+preparation branch/HEAD, origin/main ancestry, tool identities and all original
+Data/Git hashes were rechecked. `ImportValidated` completed through the existing
+CK importer. The saved candidate, frozen validated copy, installed Data ESP and
+repository ESP all have SHA256
+`0058D2BD28C5BBEF5CCC14D09767EB2CB1BB8C22D81F3604C1D02187E01DB97F`.
+All eight companions match across these locations. The canonical records
+manifest adds exactly the seven real records at local IDs `0D6B14` through
+`0D6B1A`; independent binary auditing confirms unchanged existing record payloads.
+`SkyrimTogether.esp` is unchanged in both Data and Git. The existing packaging
+manifest helper adds the eight companions, bringing its count from 19 to 27,
+without executing the build/deploy entry point.
+
+The six post-import audits pass: packaging, strict records with
+`--reject-unexpected`, MQ101 structure, generated invariants, character-build
+catalog and seat markers. The post-import suites pass **134 Python tests** and
+**66 PowerShell safeguard cases**; `git diff --check` also passes. Both real
+QF/TIF fragments were compiled directly with `PapyrusCompiler.exe` during
+preparation, with **0 errors, 0 warnings**; there is no SSEScript dependency.
+
+**Build/deploy and human Solo acceptance:** the existing local workflow completed
+on `8398037112757318c12537dbefa7dbca105a6657`, with 27 managed files verified,
+unchanged CK hashes, clean Git state and no agent game launch. Windows run
+38664757655 and Linux run 38664757637 passed on that exact revision. The maintainer
+then explicitly attested **complete Solo PASS, no error/crash**: Helgen dialogue,
+readable Valen text, exact player choice and final response, journal title,
+objective 10 correct/active, read-only `getstage = 10` and `sqv = running`,
+non-repeatable acceptance and no technical Helgen regression.
+
+**Scope correction after that Solo test:** remove only
+`STRE_QUEST_ValenHelgen` from the native non-syncable EditorID array. The previous
+per-player acceptance assumption is superseded by standard Skyrim Together
+party quest synchronization. No generic QuestService behavior, server relay,
+message/schema, CK content or generated companion changes are needed. Source
+contracts cover narrative eligibility, preserved technical exclusions, the
+Side Quest/experimental-setting boundary and existing send/receive paths.
+The existing human xEdit and Solo content evidence remains tied to identical CK
+bytes; it is not evidence of multiplayer propagation on the corrected native
+policy. The separate human roster-2 acceptance below now covers both directions.
+A general Shared / PlayerLocal / TechnicalProjection classification is a future
+evolution only. ADR-0018 recovery remains unchanged; stage synchronization does
+not reconstruct a native save. Broader Valen presentation and later narrative
+stages remain deferred.
+
+**Correction verification:** all **139 Python tests** pass, including five new
+quest-sync source contracts; Windows/Linux CI now includes those contracts.
+The **66 PowerShell safeguard cases**, all six CK audits and `git diff --check`
+pass. The existing unchanged TPTests target passes **432 cases / 45,334
+assertions** using a writable isolated temporary directory. Comparison against
+`83980371` confirms exactly one native line removed, no protocol changes and
+byte-identical ESP/eight companions in Git, Data and validated snapshots. No new
+human xEdit review is needed for this native-only change.
+
+**Local collector regression:** a read-only preflight detected three
+`.wav.vortex_backup` files that the workstation's broad voice collector would
+have imported. It stopped before the workflow ran, preserving the files.
+The authorized correction adds only two case-insensitive exact-suffix guards:
+`Add-OwnedFile` excludes them from ownership and `Test-CkAutoImportPath` excludes
+them from import eligibility. The ignored local script remains unversioned;
+the runbook and tracked `Test-StreCkCollector.ps1` preserve the contract.
+The fixture reproduces the old failure and passes **13 checks** after correction,
+including real WAV retention, mixed case, future voice extensions, manifest
+exclusion and backup preservation. This is tooling evidence, not roster-2 PASS.
+
+**Human roster-2 acceptance:** on October 15, 2026, the maintainer explicitly attested:
+
+> J’ai effectivement testé A→B puis B→A sur le build e6a18213. Les deux directions sont PASS, aucune erreur.
+
+This explicit statement is the roster-2 evidence. The earlier statement
+"tout est PASS, aucune erreur" concerned the Solo smoke; its erroneous
+attribution to roster-2 is withdrawn. The build actually tested is
+`e6a182138a17d8d143fbfd0976a76b34734ddfb3`, client SHA256
+`D4CF33B57472EB51D6BE7C5A052D67E61B7C80A809252228B91716D67C44DA3F`.
+For each direction, the initiator receives the quest at stage 10/running;
+the recipient receives it automatically without accepting, with objective 10
+visible/active and stage 10/running. The recipient's acceptance option then
+disappears. No duplicate, technical Helgen regression, crash or error was
+reported. The checklist requires fresh processes and a separate clean campaign
+for the reverse direction, with only read-only quest console commands.
+
+This is a **maintainer human attestation**, not an agent-executed smoke or an
+independent analysis of gameplay traces. The [dated runtime report](../audit/history/VALEN_HELGEN_ROSTER2_20261015.md)
+records the two-direction matrix and evidence limits. The existing build/deploy
+on that revision passed with unchanged ESP/eight companions and protected
+SkyrimTogether.esp; Windows run 38719181490 and Linux run 38719181617 also passed.
+Recording this acceptance changes documentation only; the tested binaries and
+CK content are not rebuilt, re-imported or re-authored. This smoke does not
+validate later quest stages, Stop propagation or campaign recovery behavior.
+
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 
 Implemented for [#92](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/92):
