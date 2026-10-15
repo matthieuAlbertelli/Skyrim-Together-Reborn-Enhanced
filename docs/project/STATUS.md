@@ -9,7 +9,7 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen's shared Helgen lead: Solo accepted; standard quest sync pending multiplayer smoke (2026-10-15)
+## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
 
 For [#94](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/94),
 the dedicated `AddValenHelgen` adapter and official xEdit script author the
@@ -80,7 +80,7 @@ contracts cover narrative eligibility, preserved technical exclusions, the
 Side Quest/experimental-setting boundary and existing send/receive paths.
 The existing human xEdit and Solo content evidence remains tied to identical CK
 bytes; it is not evidence of multiplayer propagation on the corrected native
-policy. Roster-2 runtime remains pending explicit authorization and human testing.
+policy. The separate human roster-2 acceptance below now covers both directions.
 A general Shared / PlayerLocal / TechnicalProjection classification is a future
 evolution only. ADR-0018 recovery remains unchanged; stage synchronization does
 not reconstruct a native save. Broader Valen presentation and later narrative
@@ -105,6 +105,27 @@ the runbook and tracked `Test-StreCkCollector.ps1` preserve the contract.
 The fixture reproduces the old failure and passes **13 checks** after correction,
 including real WAV retention, mixed case, future voice extensions, manifest
 exclusion and backup preservation. This is tooling evidence, not roster-2 PASS.
+
+**Human roster-2 acceptance:** on October 15, 2026, the maintainer reported
+"tout est PASS, aucune erreur" in response to the manual A-to-B then B-to-A
+checklist. The designated tested build is
+`e6a182138a17d8d143fbfd0976a76b34734ddfb3`, client SHA256
+`D4CF33B57472EB51D6BE7C5A052D67E61B7C80A809252228B91716D67C44DA3F`.
+For each direction, the initiator receives the quest at stage 10/running;
+the recipient receives it automatically without accepting, with objective 10
+visible/active and stage 10/running. The recipient's acceptance option then
+disappears. No duplicate, technical Helgen regression, crash or error was
+reported. The checklist requires fresh processes and a separate clean campaign
+for the reverse direction, with only read-only quest console commands.
+
+This is a **maintainer human attestation**, not an agent-executed smoke or an
+independent analysis of gameplay traces. The [dated runtime report](../audit/history/VALEN_HELGEN_ROSTER2_20261015.md)
+records the two-direction matrix and evidence limits. The existing build/deploy
+on that revision passed with unchanged ESP/eight companions and protected
+SkyrimTogether.esp; Windows run 38719181490 and Linux run 38719181617 also passed.
+Recording this acceptance changes documentation only; the tested binaries and
+CK content are not rebuilt, re-imported or re-authored. This smoke does not
+validate later quest stages, Stop propagation or campaign recovery behavior.
 
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 

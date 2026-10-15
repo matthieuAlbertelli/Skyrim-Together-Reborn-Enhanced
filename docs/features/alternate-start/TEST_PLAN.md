@@ -11,6 +11,11 @@ acceptance, unchanged technical Helgen and no crash/error. STATUS owns this
 evidence. The subsequent policy correction enables ordinary QuestService sync
 for the narrative quest while preserving the validated CK bytes.
 
+The subsequent maintainer-attested A-to-B and B-to-A results and their tested
+revision are recorded in [STATUS](../../project/STATUS.md#valens-shared-helgen-lead-solo-and-both-roster-2-directions-accepted-2026-10-15).
+The following procedure remains the manual regression contract; its acceptance
+does not derive from the Solo run or automated source checks.
+
 Automated source contracts must verify narrative eligibility, retained exclusions
 for ValenDialogue/AlternateStart/HelgenInvestigation, Side Quest independence from
 the experimental Misc/None setting, and existing Start/StageUpdate/Stop paths.
@@ -18,7 +23,9 @@ Compare the complete native diff and protocol files with the accepted baseline:
 only the narrative EditorID exclusion may be removed. Re-run the existing Python,
 PowerShell and CK audit suites without re-authoring or recompiling CK content.
 
-After authorized build/deploy and separate authorization for roster-2 runtime:
+Human players perform this procedure after the authorized build/deploy; the
+agent prepares the checklist and records the maintainer's results, without
+launching clients/server or performing the smoke:
 
 1. Use fresh client processes and a new sealed roster of two with the same
    deployed build and CK hashes. Finish normal creation at Ilinalta's Vigil.
@@ -34,8 +41,10 @@ After authorized build/deploy and separate authorization for roster-2 runtime:
 5. Verify no crash/error, second Character Creation or technical Helgen
    regression. Preserve client/server logs showing standard RequestQuestUpdate /
    NotifyQuestUpdate and the existing remote-stage application.
-6. Repeat from a fresh campaign with B initiating and A receiving automatically,
-   without A accepting. Cover a non-party-leader initiator across the two runs.
+6. Fully close both clients and the server. Start fresh processes and a separate
+   clean campaign with B initiating and A receiving automatically, without A
+   accepting. Never reuse the stage-10 campaign from the first direction. Cover
+   a non-party-leader initiator across the two runs.
 
 Do not use setstage/startquest/stopquest/resetquest to obtain PASS. No raw-stage
 recovery, campaign late join or partial-roster catch-up is added. The broader
