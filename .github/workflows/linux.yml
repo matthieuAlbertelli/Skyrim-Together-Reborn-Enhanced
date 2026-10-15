@@ -24,7 +24,7 @@ jobs:
       run: python3 Tools/Scripts/audit_ck_packaging.py
 
     - name: Audit Valen dialogue fixtures
-      run: python3 -m unittest discover -s Tools/Scripts -p test_valen_helgen.py
+      run: python3 -m unittest discover -s Tools/Scripts -p 'test_valen_*.py'
 
     - name: Checkout submodules
       run: |

@@ -48,7 +48,7 @@ jobs:
         run: python Tools/Scripts/audit_ck_packaging.py
 
       - name: Audit Valen dialogue fixtures
-        run: python -m unittest discover -s Tools/Scripts -p test_valen_helgen.py
+        run: python -m unittest discover -s Tools/Scripts -p 'test_valen_*.py'
 
       - name: Test modding toolchain safeguards with disposable fixtures
         shell: pwsh

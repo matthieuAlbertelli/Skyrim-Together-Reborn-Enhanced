@@ -9,15 +9,19 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen's local Helgen lead: validated content imported; runtime pending (2026-10-15)
+## Valen's shared Helgen lead: Solo accepted; standard quest sync pending multiplayer smoke (2026-10-15)
 
 For [#94](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/94),
 the dedicated `AddValenHelgen` adapter and official xEdit script author the
 seven-record content described in CK_IMPLEMENTATION, now imported into the
 versioned ESP with its eight companion files. The player's acceptance
 starts the separate narrative `STRE_QUEST_ValenHelgen`, stage/objective 10,
-through bound TIF/QF fragments. The dialogue owner and narrative quest are
-excluded from generic QuestService synchronization. Existing technical Helgen
+through bound TIF/QF fragments. The narrative quest now follows standard
+QuestService Start/StageUpdate/Stop synchronization: acceptance by either party
+member must give the other members stage/objective 10 without separate acceptance.
+Only `STRE_QUEST_ValenDialogue` stays excluded alongside AlternateStart and
+HelgenInvestigation. Side Quest type 8 does not require the experimental
+Misc/None setting. Existing technical Helgen
 projection, its post-character-creation trigger, T+4 and ADR-0018 stay unchanged.
 
 **Executed source/fixture evidence:** 134 Python tests (including 15 Valen
@@ -58,10 +62,38 @@ catalog and seat markers. The post-import suites pass **134 Python tests** and
 QF/TIF fragments were compiled directly with `PapyrusCompiler.exe` during
 preparation, with **0 errors, 0 warnings**; there is no SSEScript dependency.
 
-**Not executed for this feature:** local native build/deploy, Skyrim launch,
-Solo smoke and subsequent two-player smoke. Build/deploy and Solo require the
-user's next explicit authorization. No runtime PASS is claimed. The broader
-Valen presentation and all later narrative stages remain deferred.
+**Build/deploy and human Solo acceptance:** the existing local workflow completed
+on `8398037112757318c12537dbefa7dbca105a6657`, with 27 managed files verified,
+unchanged CK hashes, clean Git state and no agent game launch. Windows run
+38664757655 and Linux run 38664757637 passed on that exact revision. The maintainer
+then explicitly attested **complete Solo PASS, no error/crash**: Helgen dialogue,
+readable Valen text, exact player choice and final response, journal title,
+objective 10 correct/active, read-only `getstage = 10` and `sqv = running`,
+non-repeatable acceptance and no technical Helgen regression.
+
+**Scope correction after that Solo test:** remove only
+`STRE_QUEST_ValenHelgen` from the native non-syncable EditorID array. The previous
+per-player acceptance assumption is superseded by standard Skyrim Together
+party quest synchronization. No generic QuestService behavior, server relay,
+message/schema, CK content or generated companion changes are needed. Source
+contracts cover narrative eligibility, preserved technical exclusions, the
+Side Quest/experimental-setting boundary and existing send/receive paths.
+The existing human xEdit and Solo content evidence remains tied to identical CK
+bytes; it is not evidence of multiplayer propagation on the corrected native
+policy. Roster-2 runtime remains pending explicit authorization and human testing.
+A general Shared / PlayerLocal / TechnicalProjection classification is a future
+evolution only. ADR-0018 recovery remains unchanged; stage synchronization does
+not reconstruct a native save. Broader Valen presentation and later narrative
+stages remain deferred.
+
+**Correction verification:** all **139 Python tests** pass, including five new
+quest-sync source contracts; Windows/Linux CI now includes those contracts.
+The **66 PowerShell safeguard cases**, all six CK audits and `git diff --check`
+pass. The existing unchanged TPTests target passes **432 cases / 45,334
+assertions** using a writable isolated temporary directory. Comparison against
+`83980371` confirms exactly one native line removed, no protocol changes and
+byte-identical ESP/eight companions in Git, Data and validated snapshots. No new
+human xEdit review is needed for this native-only change.
 
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 

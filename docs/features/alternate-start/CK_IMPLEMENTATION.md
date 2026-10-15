@@ -22,6 +22,13 @@ GetIsID Valen and GetStage narrative < 10. Acceptance's OnBegin TIF starts the
 bound quest if needed, checks failure and rechecks the stage after latent startup.
 QF/TIF names derive from identities actually allocated by xEdit.
 
+The narrative quest follows standard QuestService Start/StageUpdate/Stop
+synchronization. Acceptance by either party member propagates stage 10; the
+recipient's existing QF displays objective 10, and GetStage < 10 disables further
+acceptance. Side Quest type 8 does not depend on experimental None/Misc sync.
+Only the dialogue owner remains excluded alongside the existing technical STRE
+quests. This policy requires no CK record, fragment or asset changes.
+
 Force Subtitle and No LIP File plus three silent PCM timing assets support the
 unvoiced smoke; no recorded or synthesized actor voice is supplied. The voice
 type remains MaleWarlock. Subtitle timing requires human runtime review. Valen's
@@ -292,7 +299,7 @@ animations were runtime-tested in game.
 This is not the production FaceGen/dialogue head. Finger weighting remains
 imperfect, the material/shader pass is provisional, and the temporary Sandbox
 behavior moves Valen between chairs or other furniture too frequently. Final
-AI, broader dialogue, scene, and narrative-departure work is deferred. The local
+AI, broader dialogue, scene, and narrative-departure work is deferred. The
 Helgen dialogue above does not complete that presentation work.
 
 ## M7 records and continuity helper
@@ -304,7 +311,7 @@ The legacy-named `CK_RECORDS_M7_IMPLEMENTED.json` strict manifest now covers 100
 - the Ilinalta fireplace static plus the two STRE-owned headquarters light records;
 - the Messire Valen prototype's full-body `ARMA`/`ARMO`, outfit, NPC base, and
   provisional inn Sandbox package;
-- the two local Valen Helgen quests, their branch, two topics and two responses;
+- the shared Valen Helgen narrative quest, local dialogue owner, branch, two topics and two responses;
 - outfits and boots;
 - weak enchantments;
 - Destruction and Alteration spells;
@@ -638,7 +645,7 @@ Not implemented yet:
   relies on native saves and adds no dedicated persistent adapter state;
 - rescue/liberation interaction and physical `Freed`/`Departed` projections;
 - Valen-driven technical investigation start (the existing automatic trigger
-  remains separate from the local narrative quest above);
+  remains separate from the synchronized narrative quest above);
 - neutral/Hadvar/Ralof MQ102 continuity.
 
 ## Deferred post-v1 Helgen occupation encounter

@@ -4,18 +4,25 @@
 
 ## Currently implemented state
 
-The #94 narrative contract adds two **local Skyrim** quests, independently of
-the campaign state machine: `STRE_QUEST_ValenDialogue` owns the available dialogue;
-`STRE_QUEST_ValenHelgen` starts only on local acceptance, advances from not-started
-to stage 10, displays objective 10 and remains active. Both are excluded from
-Generic QuestService replication. GetIsID restricts responses to Valen; GetStage
-< 10 and an idempotent result fragment prevent repeated acceptance. The fragment
-uses a bound Quest property, never a loaded FormID constant.
+The #94 narrative contract uses the existing QuestService for the shared
+`STRE_QUEST_ValenHelgen`: acceptance by either party member starts the quest and
+sets stage 10; ordinary Start/StageUpdate/Stop messages propagate to the group.
+The receiving client applies the stage through the existing ScriptSetStage path,
+whose QF displays objective 10 and activates the quest. A recipient need not
+accept separately. Side Quest type 8 bypasses the experimental None/Misc gate.
+`STRE_QUEST_ValenDialogue` remains a local technical dialogue projection and is
+excluded from generic synchronization alongside AlternateStart and
+HelgenInvestigation. GetIsID restricts responses to Valen; GetStage < 10 and an
+idempotent result fragment prevent repeated acceptance, including after remote
+stage 10. The fragment uses a bound Quest property, never a loaded FormID constant.
 
 `STRE_QUEST_HelgenInvestigation` remains the independent technical projection,
 including its automatic post-creation stage 10. No campaign transition, roster
-rule, checkpoint authority or recovery rule changes. See STATUS for whether the
-narrative candidate has actually been imported and runtime-validated.
+rule, checkpoint authority or recovery rule changes. No new protocol or general
+quest classification system is added. Shared / PlayerLocal / TechnicalProjection
+classification remains a future evolution. Standard quest synchronization does
+not replace ADR-0018 native-save recovery or permit campaign late join. See STATUS
+for the imported content, Solo evidence and pending multiplayer validation.
 
 `CharacterBuildSnapshotData` represents a player's canonical build:
 

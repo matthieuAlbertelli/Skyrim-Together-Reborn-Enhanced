@@ -2,22 +2,46 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
-## Local Valen lead acceptance (issue #94; pending human execution)
+## Shared Valen lead acceptance (issue #94)
 
-After the separate human xEdit gate and authorized build/deploy: fully close
-Skyrim, start New Game, finish character creation normally, and talk to Valen at
-Ilinalta's Vigil. Read both news responses, select the proposed investigation,
-and verify the final response, readable French accents/subtitles, the
-**Les ruines de Helgen** journal entry, objective 10 displayed and quest active.
-Read-only `getstage STRE_QUEST_ValenHelgen` and `sqv STRE_QUEST_ValenHelgen` must show
-stage 10/running. Talk again: acceptance must be unavailable. Verify the existing
-technical Helgen flow still starts automatically and this dialogue changes no
-other quest. Do not use setstage/startquest/resetquest/stopquest to obtain PASS.
+The maintainer attested complete Solo PASS on native revision
+`8398037112757318c12537dbefa7dbca105a6657`: dialogue/text/choice/final response,
+journal title and objective 10 active, getstage 10, running quest, non-repeatable
+acceptance, unchanged technical Helgen and no crash/error. STATUS owns this
+evidence. The subsequent policy correction enables ordinary QuestService sync
+for the narrative quest while preserving the validated CK bytes.
 
-Only after Solo PASS, test a sealed roster of two: both can speak and accept
-locally, with no crash/corruption or assumed shared journal synchronization.
-Record per-player results and exact candidate hashes in STATUS. This is not
-campaign-wide narrative acceptance or partial-roster catch-up.
+Automated source contracts must verify narrative eligibility, retained exclusions
+for ValenDialogue/AlternateStart/HelgenInvestigation, Side Quest independence from
+the experimental Misc/None setting, and existing Start/StageUpdate/Stop paths.
+Compare the complete native diff and protocol files with the accepted baseline:
+only the narrative EditorID exclusion may be removed. Re-run the existing Python,
+PowerShell and CK audit suites without re-authoring or recompiling CK content.
+
+After authorized build/deploy and separate authorization for roster-2 runtime:
+
+1. Use fresh client processes and a new sealed roster of two with the same
+   deployed build and CK hashes. Finish normal creation at Ilinalta's Vigil.
+   Keep experimental Misc/None synchronization disabled.
+2. A initiates the dialogue with Valen and selects exactly
+   « Nous irons peut-être voir ce qui s'y est passé. » B must not accept it.
+3. A reaches stage 10. B automatically receives **Les ruines de Helgen**,
+   objective 10 **Se rendre à Helgen pour enquêter sur l'attaque du dragon.**,
+   displayed and active. Both read-only `getstage STRE_QUEST_ValenHelgen` and
+   `sqv STRE_QUEST_ValenHelgen` must show stage 10 / running on each player.
+4. Talk to Valen again on both clients: GetStage < 10 must make acceptance
+   unavailable, with no restart or duplicate journal/objective.
+5. Verify no crash/error, second Character Creation or technical Helgen
+   regression. Preserve client/server logs showing standard RequestQuestUpdate /
+   NotifyQuestUpdate and the existing remote-stage application.
+6. Repeat from a fresh campaign with B initiating and A receiving automatically,
+   without A accepting. Cover a non-party-leader initiator across the two runs.
+
+Do not use setstage/startquest/stopquest/resetquest to obtain PASS. No raw-stage
+recovery, campaign late join or partial-roster catch-up is added. The broader
+Shared / PlayerLocal / TechnicalProjection classification remains future work.
+Record each direction's exact native/CK hashes and human outcomes in STATUS.
+No roster-2 PASS follows from the already accepted Solo smoke.
 
 ## Loading-door regression acceptance (issue #89, 2026-10-11)
 
