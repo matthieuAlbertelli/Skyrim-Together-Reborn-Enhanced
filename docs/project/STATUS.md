@@ -1,13 +1,55 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 15, 2026.
+> **Last updated:** October 16, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Valen dialogue matrix v1: editorial preparation; authoring blocked (2026-10-16)
+
+[#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
+tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
+on main `bdedb163aa516dc28917b292caf9b869afda983c`. The canonical JSON, formal
+schema, linter, generated review and exhaustive survivor condition table are
+prepared. The source comparison accounts for all 140 approved new response
+blocks; the two existing #95 response blocks preserve the actual ESP strings.
+The editorial graph has 131 semantic nodes, 142 response blocks including the
+common recruitment introduction, and 21 classes plus fallback. These counts
+are not CK record or allocated FormKey counts.
+
+The maintainer corrected discovery to two independent shared facts, distinct
+from the existing Hadvar/Ralof physical states. The
+[implementation proposal](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md)
+uses completed stages 11/12 on the existing shared narrative quest, after arrival
+stage 20, with ordinary QuestService propagation and per-player native saves
+under ADR-0018. This discovery mechanism is **proposed, not implemented**.
+
+The exhaustive 100-row table finds 20 generic-reply cases, 17 separate explicit
+report/navigation cases, 51 inconsistent/transient cases rejected without speech,
+and **12 coherent cases without safe approved wording**: one known Freed/Departed
+survivor and the other undiscovered. The authoring gate rejects these gaps even
+if decision metadata is changed to approved. No approximate reply or premature
+disclosure is permitted. This is an intermediate preparation, not delivery of
+the whole feature.
+
+Local Preflight, read-only Inspect and PapyrusStatus succeeded. Baselines cover
+all 27 managed files in both Git/Data, both protected plugins, the canonical
+record manifest and tool executables. No ESP, Papyrus, manifest or runtime asset
+was changed; no xEdit writer, import, build/deploy or game process was launched.
+No new xEdit, Solo, roster-2, native save or recovery PASS is claimed.
+
+Executed preparation checks: **160 Python tests** (21 new editorial/condition
+cases), **66 PowerShell toolchain cases**, **13 collector fixture cases**, all six
+existing read-only CK audits and `git diff --check` pass. All **61 baseline file
+hashes** remain unchanged. The exact approved-source comparison covers all 140
+new reply blocks. `--for-authoring` returns `success: false` and exit 1 for the
+twelve uncovered combinations; this expected rejection is tested. Discovery
+order/idempotency evidence is a completed-stage reference model plus source-path
+inspection, not implemented Papyrus or native save/recovery execution.
 
 ## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
 
