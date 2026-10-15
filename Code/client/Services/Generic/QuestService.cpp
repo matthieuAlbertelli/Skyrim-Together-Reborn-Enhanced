@@ -225,6 +225,8 @@ bool QuestService::IsNonSyncableQuest(TESQuest* apQuest)
     std::to_array<const char*>({
         "STRE_QUEST_AlternateStart",
         "STRE_QUEST_HelgenInvestigation",
+        "STRE_QUEST_ValenHelgen",
+        "STRE_QUEST_ValenDialogue",
     });
 
     const char* const pEditorId = apQuest->idName.AsAscii();

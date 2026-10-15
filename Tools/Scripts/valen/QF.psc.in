@@ -1,0 +1,7 @@
+; Generated for the actual xEdit-allocated quest. CK-generated artifact ownership.
+Scriptname __SCRIPT__ extends Quest Hidden
+
+Function Fragment_0()
+    SetObjectiveDisplayed(10, True)
+    SetActive(True)
+EndFunction

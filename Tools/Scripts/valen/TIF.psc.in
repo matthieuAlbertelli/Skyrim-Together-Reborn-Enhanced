@@ -1,0 +1,26 @@
+; Generated for the actual xEdit-allocated INFO. CK-generated artifact ownership.
+Scriptname __SCRIPT__ extends TopicInfo Hidden
+
+Quest Property ValenHelgen Auto
+
+Function Fragment_0(ObjectReference akSpeakerRef)
+    If ValenHelgen == None
+        Debug.Trace("[STRE][ValenHelgen] Missing narrative quest property", 2)
+        Return
+    EndIf
+    If ValenHelgen.GetStageDone(10) || ValenHelgen.GetStage() >= 10
+        Return
+    EndIf
+    If !ValenHelgen.IsRunning()
+        If !ValenHelgen.Start()
+            Debug.Trace("[STRE][ValenHelgen] Narrative quest startup failed", 2)
+            Return
+        EndIf
+    EndIf
+    ; Start is latent: recheck after it returns. Repeated stages are disabled.
+    If !ValenHelgen.GetStageDone(10) && ValenHelgen.GetStage() < 10
+        If !ValenHelgen.SetStage(10)
+            Debug.Trace("[STRE][ValenHelgen] Narrative stage 10 rejected", 2)
+        EndIf
+    EndIf
+EndFunction
