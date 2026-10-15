@@ -283,6 +283,28 @@ long build). Dot-source it **after** any old same-named function definition or
 replace that function. A missing helper must stop the local script. Do not copy
 machine paths into the generic module.
 
+The local CK collector must exclude Vortex metadata at both boundaries. In
+`Get-CkPluginOwnedFiles`'s nested `Add-OwnedFile`, return before adding any file
+whose filename ends with `.vortex_backup`, using `StringComparison.OrdinalIgnoreCase`.
+In `Test-CkAutoImportPath`, return `$false` immediately for a relative path with
+the same suffix. Do not delete or alter those backups. Do not replace this exact
+suffix exclusion with a global voice-extension allowlist: WAV, FUZ, LIP, XWM and
+other genuine voice artifacts must keep their existing eligibility. The manifest
+is populated only from the filtered auto-import set.
+
+Test the actual workstation functions without loading the deployment entry point:
+
+```powershell
+./Tools/Scripts/Test-StreCkCollector.ps1 -BuildScriptPath ./build-and-deploy-dev.ps1
+```
+
+This local fixture test extracts the function definitions using the PowerShell
+parser. It preserves a real PCM WAV, rejects lowercase/mixed-case backup suffixes
+at both boundaries, preserves future extensions and non-terminal substrings,
+and checks the resulting manifest and untouched fixture backups. It requires
+the local ignored script and is not an unattended deployment or a CI stand-in
+for a workstation script absent from the repository.
+
 Build/deploy and in-game acceptance remain explicit subsequent steps. This
 infrastructure does not prove gameplay, complete quest behavior or a new content
 record's runtime behavior. The first Valen content candidate remains subject

@@ -95,6 +95,17 @@ assertions** using a writable isolated temporary directory. Comparison against
 byte-identical ESP/eight companions in Git, Data and validated snapshots. No new
 human xEdit review is needed for this native-only change.
 
+**Local collector regression:** a read-only preflight detected three
+`.wav.vortex_backup` files that the workstation's broad voice collector would
+have imported. It stopped before the workflow ran, preserving the files.
+The authorized correction adds only two case-insensitive exact-suffix guards:
+`Add-OwnedFile` excludes them from ownership and `Test-CkAutoImportPath` excludes
+them from import eligibility. The ignored local script remains unversioned;
+the runbook and tracked `Test-StreCkCollector.ps1` preserve the contract.
+The fixture reproduces the old failure and passes **13 checks** after correction,
+including real WAV retention, mixed case, future voice extensions, manifest
+exclusion and backup preservation. This is tooling evidence, not roster-2 PASS.
+
 ## Codex / AutoMod / official xEdit infrastructure (2026-10-15)
 
 Implemented for [#92](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/92):
