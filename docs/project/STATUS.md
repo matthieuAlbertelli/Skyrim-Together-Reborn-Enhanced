@@ -77,7 +77,27 @@ byte-identical between Data and the repository. `git diff --check` passed.
 The diagnostic content commit is retained locally because synchronizing the PR
 would automatically trigger Windows/Linux CI. The maintainer explicitly forbids
 that CI for this iteration; it is reserved for the merge candidate after runtime
-validation. DEV build/deployment results are recorded separately when observed.
+validation.
+
+**DEV build and deployment SUCCESS** on local content HEAD
+`ffaf089dbfec3e3eb233f0047fcbf846e4cd5634` (exit 0,
+2026-10-16 13:16:00–13:17:53 UTC). The existing workstation workflow deployed to
+local Vortex and its configured Pc-vero share. Independent verification confirms
+all 697 managed files in Data/repository/both destinations and the ESP's indexed
+blob match the reviewed bytes. Its internal snapshot contains 695 files; all 685
+automatic imports were IDENTICAL, zero copied, zero Vortex backups. Both manifests
+and SkyrimTogether.esp remain unchanged; Git was clean after deployment. The
+client, server and STServer.dll match distribution = installed Data = local
+Vortex = Pc-vero. Native binaries are unchanged from c48be63; client SHA256:
+`C4FF4BAADD05D4CCF24D1371EBA3D9B4E3E35759CEBFD9D329F03765F8F540A3`.
+Build/deploy log SHA256:
+`13D7C4531468B192C0D7158D0D8269CF5647544B3D83933B1DECE6B15481E6B4`.
+Receipts are retained in the B session (`build-execution.json`,
+`build-internal-snapshot-verification.json`, `deployment-verification.json`,
+`final-gates.json`). The following documentation commit records these observations;
+it does not change deployed content. Neither local commit is pushed, so no new
+Windows/Linux CI is triggered. **STOP before Skyrim**: B skip and effective WAV
+loading remain unvalidated; the maintainer performs the next in-game test.
 
 ## Historical human-reviewed Valen matrix import (2026-10-16)
 
