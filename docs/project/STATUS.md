@@ -56,8 +56,30 @@ including strict records, packaging, MQ101, catalogue, markers, serialized
 typography/graph/classes and all 100 survivor combinations. Seven Python tests
 and 22 PowerShell checks also pass. The actual DEV collector finds 695 owned
 files and 685 automatic imports identical to Git; its manifest update is
-byte-idempotent. DEV build/deploy remains pending. No CI, push, Skyrim launch or
-new audio generation.
+byte-idempotent.
+
+DEV build/deploy **PASS** from local implementation HEAD
+`7e0834906aeb4e41275cdd5dcdad2a280c562f58`, exit 0,
+`2026-10-16T15:28:59.2642917Z`–`2026-10-16T15:31:01.9328535Z`.
+The internal snapshot contains 695 files; 685 automatic imports are IDENTICAL,
+zero copied and zero Vortex backups. Independent verification confirms all 697
+managed files across Git/index, installed Data, local Vortex and Pc-vero, with
+the restored ESP also matching the private A and internal snapshot. The six C
+FUZ are absent everywhere. Client/server/DLL hashes match the distribution and
+all three installed destinations; SkyrimTogether.esp and protected tools remain
+unchanged. Repository clean after deployment.
+
+- Deployed client SHA256: `992BA1F9B83A36D58600AC3AA31F92C1F46A635649847E4ED80E884A51671EF0`.
+- Build/deploy log SHA256: `FD546BBC65466FF20A844F0D7FB90EB2CACF134694F134DAE67F95B01A128346`.
+- Receipts: `build-execution.json`, `build-internal-snapshot-verification.json`,
+  `deployment-verification.json` and `final-gates.json` in the evidence directory.
+
+**STOP for human D smoke** on the six segments of the selected INFO: wait more
+than 750 ms before each vanilla skip and check silence, untouched duration,
+successive skips, clean menu return, no double-skip and unchanged vanilla
+dialogues. Runtime D is **NOT TESTED**. No CI, push, Skyrim launch, new xEdit pass
+or new audio generation. PR #97 remains DRAFT at remote HEAD
+`54bcc6a2954a51da201f0fee043969203a755da2`; #96 remains OPEN.
 
 ## Historical Valen A/B/C presentation experiments (2026-10-16)
 
