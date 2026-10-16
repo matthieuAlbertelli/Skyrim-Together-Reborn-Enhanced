@@ -141,6 +141,16 @@ The historical misplaced PEX in Data/Scripts/Source is ignored by the collector
 and is not imported. Protected tools and the original 697 managed files retain
 their before-import hashes. Local commits are retained without push to avoid CI.
 
+The first C build/deploy on `658a1b90bbc45845e6fb660365624a3a3b3b1a32`
+returned exit 0 but is **not accepted as a clean deployment**: the local collector
+appended six duplicate manifest entries because the new paths used `/` while its
+paths use `\`. The 691 imports were identical and all deployed assets match, but
+the repository was dirty. Its log/receipt are preserved. Only the six new entries
+are normalized to the collector's existing spelling; the original 697 entries
+and all assets are unchanged. The second preflight additionally runs the actual
+manifest helper on a private copy and requires byte-identical output before the
+workflow may be repeated. No build-script or importer change is needed.
+
 ## Historical human-reviewed Valen matrix import (2026-10-16)
 
 The complete reviewed matrix is imported into `GameFiles/Skyrim` on
