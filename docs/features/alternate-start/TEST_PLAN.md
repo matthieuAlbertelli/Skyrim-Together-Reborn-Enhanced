@@ -21,6 +21,14 @@ ordering. Reproduce official authoring with `Test-StreValenMatrixAuthor.ps1`.
 Verify the two generated scripts with direct PapyrusCompiler and all silent
 WAVs by reading their samples and metadata. These are static/toolchain checks.
 
+Before validated matrix import, also run `Test-StreValenMatrixImport.ps1` and
+`python -m unittest discover -s Tools/Scripts -p test_valen_matrix_import.py`.
+Cover an unchanged human-reviewed artifact imported from an ancestor preparation
+HEAD, receipt/log/plan/writer/audit/companion drift, missing assets, extra files,
+wrong branch, non-ancestor provenance, missing/failed import-HEAD CI, changed
+Git/Data originals and rejected reimport. The positive fixture must preserve
+historical evidence and prove the exact delta snapshot and three-way file hashes.
+
 After authoring, human xEdit/import and explicitly authorized build/deploy, add
 human Solo and both roster-2 initiation directions with these required cases:
 

@@ -223,10 +223,68 @@ Git/Data originals, masters, tools, branch, HEAD and plan are checked again.
 
 Success is `HUMAN_XEDIT_REQUIRED`, with the session state `AwaitingHumanXEdit`.
 The draft validation JSON contains empty hashes/reviewer and false check flags;
-it is not an attestation. No human validation log is fabricated. Matrix
-`ImportValidated` is explicitly refused by this preparation-only adapter.
+it is not an attestation. No human validation log is fabricated.
 Import/promotion, build/deploy and runtime require later maintainer authorization.
 Synthetic tests and automated UI authoring never satisfy the human boundary.
+
+### Validated matrix import
+
+`Import-StreValenMatrixValidated` handles only `AddValenDialogueMatrixV1`.
+Other operations retain their exact preparation-HEAD requirement. The matrix
+may be imported on a later committed HEAD on the same branch only when its
+preparation HEAD is an ancestor, current origin/main is an ancestor, the checkout
+is clean, and both Windows/Linux CI runs succeed on that exact import HEAD.
+The session must still be `AwaitingHumanXEdit`. A changed candidate, script,
+companion, plan, writer, reviewed graph, audit or protected original stops import.
+An unchanged candidate does not need another human review merely because the
+import implementation advanced. A changed artifact requires a new review.
+
+Retain the original review dossier, including `review-evidence-hashes.json`,
+`review-private-hashes.json`, `review-graph.json`, and the proposed record
+manifest. After the actual human receipt/log is complete, pin their existing
+bytes once with the known reviewed candidate hash and preparation commit:
+
+```powershell
+python -B Tools/Scripts/valen_matrix_import.py --root $session --seal-review `
+  --expected-candidate-sha256 $reviewedSha256 --expected-preparation-head $preparationHead
+```
+
+This creates only `import-evidence.json`, refuses replacement, verifies the
+historical hashes, and never creates a human verdict. It preserves the receipt,
+log, ESP and historical evidence unchanged. The checksum inventory is not a
+cryptographic signature. Existing xEdit `.refcache` files are pinned separately
+as non-import files; new/unexpected private files fail closed.
+
+Before promotion, the current binary auditor must reproduce `candidate-audit.json`
+semantically, including the complete graph, 22 class/fallback contexts and all
+100 survivor cases (32/17/51/0). The current asset reader verifies the original
+PCM bytes, timing, names, scripts and hashes without rewriting `assets-audit.json`.
+All originals, private masters, tools, receipts and target collisions are checked.
+
+The delta is computed from `PrivateOriginals`, `Companions` and `assets-audit`.
+`validated/` contains only the reviewed ESP and added/changed companions, never
+masters, audit files, caches, `.vortex_backup` or `SkyrimTogether.esp`. Existing
+targets are backed up with their separate Git/Data bytes. The wrapper rereads
+the candidate immediately before promotion, uses the existing explicit CK
+importer in one bounded batch, and requires snapshot = Data = repository SHA256
+for every promoted file. Ordinary scripts are explicitly imported once here;
+their later authority remains the repository, not automatic Data collection.
+
+The exact proposed record manifest must preserve every existing constraint and
+add only audited identities. Packaging uses the existing local helper with the
+explicit import inventory, and verifies the resulting exact union. It never
+loads the build/deploy entry point. `preparation-session.json` preserves the
+original session bytes; lifecycle state records `PreparationHead`, `ImportHead`,
+CI and inventory hashes separately. Partial promotion is terminal `ImportFailed`;
+retain backups and investigate instead of retrying. `Imported` cannot be replayed.
+
+Run `Test-StreValenMatrixImport.ps1` and `test_valen_matrix_import.py` before real
+import. Their receipts, tools and content are explicitly synthetic. The former
+uses real disposable Git ancestry and the CK bridge; the latter independently
+rereads invented official-xEdit binary fixtures, PCM assets and review evidence.
+After import run every feature audit/test, commit and push the content, wait for
+Windows/Linux CI on that new HEAD, then perform an authorized build/deploy.
+Never launch Skyrim as part of this workflow.
 
 ## Official xEdit boundary
 
@@ -298,7 +356,7 @@ git status --short
 ./build-and-deploy-dev.ps1
 ```
 
-Resume requires the same branch/HEAD, tools, configuration, unchanged original
+Except for the bounded matrix descendant rule above, resume requires the same branch/HEAD, tools, configuration, unchanged original
 Data/Git ESP, backups and matching human receipt/log. It independently rereads
 the saved TES4 master order and AutoMod master list, format and expected record.
 The validated copy is frozen into `validated/`. Only then is Data updated to

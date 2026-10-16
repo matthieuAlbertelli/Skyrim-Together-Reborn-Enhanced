@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $script:Masters = @('Skyrim.esm', 'Update.esm', 'Dragonborn.esm')
 . (Join-Path $PSScriptRoot 'Stre.ValenHelgen.ps1')
 . (Join-Path $PSScriptRoot 'Stre.ValenMatrix.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenMatrixImport.ps1')
 
 function Get-StreHash([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
@@ -23,7 +24,7 @@ function Resolve-StrePath([string]$Path) {
     $full
 }
 
-function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Directory, [hashtable]$Environment = @{}) {
+function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Directory, [hashtable]$Environment = @{}, [int]$TimeoutMilliseconds = 120000) {
     $start = [Diagnostics.ProcessStartInfo]::new($File)
     $start.WorkingDirectory = $Directory
     $start.UseShellExecute = $false
@@ -38,7 +39,7 @@ function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Direct
         if (-not $process.Start()) { throw "Could not start $File" }
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(120000)) {
+        if (-not $process.WaitForExit($TimeoutMilliseconds)) {
             $process.Kill($true)
             $process.WaitForExit()
             throw "Tool timed out: $File"
@@ -328,7 +329,7 @@ function Import-StreValidated($Config, [string]$Session) {
     if ((Split-Path -Parent $root) -ine $sessionParent -or (Split-Path -Leaf $root) -notmatch '^[a-f0-9]{32}$') { throw 'Session must be an isolated _audit/modding/<id> directory in this repository.' }
     $state = Get-Content -LiteralPath (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
     if ($state.Request.Operation -eq 'AddValenDialogueMatrixV1') {
-        throw 'HUMAN_XEDIT_REQUIRED: matrix preparation is private-only; no matrix import is authorized by this adapter.'
+        return Import-StreValenMatrixValidated $Config $root $state
     }
     if ($state.Schema -ne 1 -or $state.State -ne 'AwaitingHumanXEdit') { throw 'Session is not awaiting xEdit; failed/dry-run/imported sessions cannot be promoted.' }
     $git = Assert-StreMutationGit $Config $state.Plugin

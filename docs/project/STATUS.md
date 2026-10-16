@@ -9,6 +9,45 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Validated Valen matrix import adapter (2026-10-16)
+
+The dedicated matrix import adapter is implemented on the existing #97 DRAFT
+branch. It preserves preparation provenance while allowing a later descendant
+import HEAD on the same clean branch, after exact-HEAD Windows/Linux CI. The
+ordinary AddGlobal/AddQuest/AddValenHelgen import rules retain exact-HEAD matching.
+The current binary and asset readers must reproduce the frozen review dossier;
+only the added/changed companion delta is promoted through the existing CK bridge.
+The snapshot excludes masters, audits, caches and Vortex backups. Historical
+session bytes are preserved separately from PreparationHead/ImportHead lifecycle
+metadata. The runbook owns the operational procedure.
+
+The maintainer explicitly attested all listed xEdit checks on session
+`63c81f61da724c01a6b561181457d3f1`: Sort Masters, Check for Errors, save/close,
+reopen and a second Check for Errors, with no errors. Warnings were not separately
+specified. The log is a transcript of that statement, not raw xEdit output.
+Preparation HEAD remains `6a1694861af408c1a7c9d0eb690b69859714dbdf`.
+The actual reviewed candidate is unchanged:
+`2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E`.
+The human log SHA256 is
+`B99FA865F3D939D912635F91A08D698F778D704E103C9AC95B8EBEEC7F8D2E31`.
+The read-only import validator passes against that real session, reproducing
+300 planned identities, 293 additions, five changed payloads, two unchanged
+planned updates, 22 class/fallback projections and 32/17/51/0 survivor coverage.
+Its exact delta is 672 companions (two QF replacements, observer PSC/PEX and
+668 new WAVs), plus the ESP. All 696 private companions and protected originals
+remain unchanged. No new xEdit session or candidate generation was performed.
+
+Executed implementation tests: 207 Python tests pass, including 12 import-evidence
+tests with invented official-xEdit binary fixtures. The positive fixture rereads
+actual serialized conditions and PCM assets without changing historical evidence;
+negative cases reject receipt/log/plan/writer/audit/inventory drift, missing assets,
+extra files, changed protected originals and altered semantic reread results.
+The PowerShell orchestration fixture verifies real ancestor Git histories,
+explicit CK promotion, exact snapshots and hash equality, branch/ancestry/CI/target
+rejections and reimport refusal. Production import, content-HEAD CI and build/deploy
+are still pending at this source checkpoint. Runtime remains unvalidated; #96 is
+open and #97 remains DRAFT.
+
 ## Valen dialogue matrix v1: implementation and synthetic authoring verified (2026-10-16)
 
 [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)

@@ -227,6 +227,17 @@ belong in STATUS. Real preparation requires successful Windows/Linux CI on its
 exact committed HEAD and stops at HUMAN_XEDIT_REQUIRED. Import, build/deploy and
 human runtime remain later explicit gates.
 
+The dedicated validated-import adapter can promote the unchanged reviewed
+bundle on a later descendant of its preparation commit, on the same clean branch
+and only after exact import-HEAD Windows/Linux CI succeeds. It preserves the
+original preparation evidence, checks the current binary/asset reread against
+the historical results, and imports only the computed added/changed companion
+delta through the existing CK bridge. Records and packaging manifests follow
+that verified inventory. Other modding operations retain their exact-HEAD rule.
+Procedure and failure handling belong in the
+[modding runbook](../../development/MODDING_TOOLCHAIN.md#validated-matrix-import).
+This import capability does not grant runtime acceptance.
+
 Discovery acceptance must cover both orders, simultaneous observation of
 different actors, repeated observation, first discovery only after capture,
 same-cell/wall/disabled/dead/distance rejection, defensive Freed/Departed handling,
