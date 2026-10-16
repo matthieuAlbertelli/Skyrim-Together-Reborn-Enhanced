@@ -35,7 +35,49 @@ ordered human experiment. Static path/PCM verification is not engine-load proof.
 Full Windows/Linux CI is explicitly deferred until the merge HEAD for this
 content iteration. Local tests/audits, exact new-candidate xEdit review, DEV
 build/deploy and STOP before the human smoke remain distinct gates. PR #97 stays
-DRAFT; #96 stays open. Current preparation/results are recorded below when run.
+DRAFT; #96 stays open.
+
+**Reviewed B imported, runtime result pending.** Preparation/import HEAD is
+`54bcc6a2954a51da201f0fee043969203a755da2`, session
+`3505022e7434419188eb6f4b1a02b2b1`. The maintainer's exact reply, “tout est PASS
+sans error”, attests the requested Sort Masters, Check for Errors, save/close,
+reopen and second Check for Errors. Warnings were not separately specified.
+The saved ESP SHA256 is
+`852E2CF392CA64F7694C7C8914BF53D54D3C93BFEBF88F2EF84F3BF240934933`;
+the transcription log SHA256 is
+`E750C56E942E1D229120B995EE26578795341EE074BD55830E5104E9A1F3D466`.
+The receipt pins xEdit
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
+No raw xEdit output is inferred from this attestation.
+
+Official `ImportValidated` succeeded with the ESP alone: zero companions copied
+or changed. Saved candidate, validated snapshot, installed Data and repository
+hashes agree. The plugin still contains 549 records including TES4, with 172
+changed payloads, 392 text substitutions and exactly one INFO flag change.
+The audit checks 796 serialized text fields (121 FULL, two RNAM, 671 NAM1,
+two NNAM), the graph, 22 class contexts and all 100 survivor combinations.
+All 696 companions, canonical corpus/fingerprint, both manifests and
+SkyrimTogether.esp are unchanged. Packaging remains 697 files; the canonical
+record manifest remains 393 identities. Nine post-import audits passed.
+
+The maintainer subsequently confirmed the selected INFO's **A skip FAIL** on
+the tested baseline: subtitles display apart from the reported typography defect,
+advance automatically after their delay, and cannot be skipped manually.
+No Process Monitor capture or exact timing/control was supplied. The maintainer
+explicitly directed continuation of the A/B diagnosis with WAV resolution
+**unproven**. B remains an experiment; its next human smoke must establish actual
+engine reads and all skip/timing/silence/transition criteria. No C or matrix-wide
+audio regeneration has occurred, and the agent has not launched Skyrim.
+
+Post-import local tests passed: 215 Python tests, 130 PowerShell checks
+(66 general, 21 matrix preparation, 21 matrix import, 13 collector and nine
+presentation guards), and TPTests 433 cases / 45,406 assertions. The actual
+build collector finds 695 owned files and 685 auto-importable files, all
+byte-identical between Data and the repository. `git diff --check` passed.
+The diagnostic content commit is retained locally because synchronizing the PR
+would automatically trigger Windows/Linux CI. The maintainer explicitly forbids
+that CI for this iteration; it is reserved for the merge candidate after runtime
+validation. DEV build/deployment results are recorded separately when observed.
 
 ## Historical human-reviewed Valen matrix import (2026-10-16)
 
