@@ -63,7 +63,8 @@ class ValenQuestSyncContracts(unittest.TestCase):
         stopped = receiver.split('case NotifyQuestUpdate::Stopped:', 1)[1].split('break;', 1)[0]
         self.assertIn('StopQuest(formId)', stopped)
         qf = (ROOT / 'GameFiles/Skyrim/Source/Scripts/QF_STRE_QUEST_ValenHelgen_030D6B14.psc').read_text()
-        self.assertIn('SetObjectiveDisplayed(10, True)', qf)
+        # Quest.psc declares abDisplayed=true; the reviewed matrix QF uses that default.
+        self.assertRegex(qf, r'(?im)^\s*SetObjectiveDisplayed\(10(?:,\s*True)?\)\s*$')
         self.assertIn('SetActive(True)', qf)
 
 

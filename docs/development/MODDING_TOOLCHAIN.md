@@ -266,7 +266,7 @@ The delta is computed from `PrivateOriginals`, `Companions` and `assets-audit`.
 masters, audit files, caches, `.vortex_backup` or `SkyrimTogether.esp`. Existing
 targets are backed up with their separate Git/Data bytes. The wrapper rereads
 the candidate immediately before promotion, uses the existing explicit CK
-importer in one bounded batch, and requires snapshot = Data = repository SHA256
+importer in batches of at most 64 paths and 16000 native-command characters, and requires snapshot = Data = repository SHA256
 for every promoted file. Ordinary scripts are explicitly imported once here;
 their later authority remains the repository, not automatic Data collection.
 
@@ -277,6 +277,23 @@ loads the build/deploy entry point. `preparation-session.json` preserves the
 original session bytes; lifecycle state records `PreparationHead`, `ImportHead`,
 CI and inventory hashes separately. Partial promotion is terminal `ImportFailed`;
 retain backups and investigate instead of retrying. `Imported` cannot be replayed.
+
+One explicit completion action exists for a failed matrix transaction whose entire
+content delta is already present, byte-identical in snapshot, Data and repository:
+`Invoke-StreModding.ps1 -Action FinalizeInterrupted -Session <session>`. It does not
+copy content or rerun the importer. It requires the original frozen evidence,
+both original manifests, no staged files and no dirty path outside the exact
+approved content delta. Preparation and original import HEADs must be ancestors
+of the same branch's current HEAD, with current main ancestry and Windows/Linux
+SUCCESS on that exact completion HEAD. The current binary/asset auditors rerun
+before manifest promotion. Missing or differing files are rejected, not repaired.
+`CompletionHead`/`CompletionCI` are recorded separately; the failed result and
+preparation evidence remain intact.
+
+The local build workflow uses `Stre.CkImportBatches.ps1` around its existing CK
+importer call as well, preserving its existing snapshot and dirty-target policy.
+This avoids the same Windows argument limit when collecting the complete bundle.
+The underlying workstation importer remains unchanged.
 
 Run `Test-StreValenMatrixImport.ps1` and `test_valen_matrix_import.py` before real
 import. Their receipts, tools and content are explicitly synthetic. The former

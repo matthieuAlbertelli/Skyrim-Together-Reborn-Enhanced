@@ -1,4 +1,4 @@
-# Internal batch bridge: one invocation of the existing explicit CK importer.
+# Internal bounded batches through the existing explicit CK importer.
 # Never dot-source the build/deploy entry point or pass AllowDirtyTarget.
 #requires -Version 7.2
 param(
@@ -9,5 +9,6 @@ param(
 $ErrorActionPreference = 'Stop'
 $report = Get-Content -LiteralPath $Inventory -Raw | ConvertFrom-Json -AsHashtable
 if ($report.success -isnot [bool] -or -not $report.success) { throw 'Unvalidated matrix inventory.' }
-& $ImportScript -RelativePath @($report.Files.Keys | Sort-Object) -SourceDataRoot $SourceDataRoot
-if (-not $?) { throw 'CK importer failed.' }
+. (Join-Path $PSScriptRoot 'Stre.CkImportBatches.ps1')
+Invoke-StreCkImportBatches -ImportScript $ImportScript -SourceDataRoot $SourceDataRoot `
+    -RelativePath @($report.Files.Keys | Sort-Object)

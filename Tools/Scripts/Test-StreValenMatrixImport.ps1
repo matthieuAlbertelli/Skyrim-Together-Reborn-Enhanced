@@ -25,7 +25,7 @@ try {
             if($script:ci -ne 'success'){throw 'CI must be green on exact import HEAD.'}
             @(@{name='Build windows';headSha=$Head;conclusion='success'},@{name='Build linux';headSha=$Head;conclusion='success'})
         }
-        function script:Get-StreMatrixImportInventory($Config,$Root) {
+        function script:Get-StreMatrixImportInventory($Config,$Root,[switch]$Promoted) {
             # Deliberately simulated content audit for orchestration tests only.
             $result=Get-Content (Join-Path $Root 'fixture-inventory.json') -Raw | ConvertFrom-Json -AsHashtable
             foreach($p in $result.Files.Keys){
@@ -39,6 +39,7 @@ try {
             $repo=Join-Path $TestRoot ([guid]::NewGuid().ToString('N'))
             $null=New-Item -ItemType Directory -Path "$repo/GameFiles/Skyrim","$repo/game/Data","$repo/Tools/Scripts","$repo/docs/features/alternate-start"
             Copy-Item -LiteralPath (Join-Path $Source 'Tools/Scripts/Invoke-StreMatrixCkImport.ps1') -Destination "$repo/Tools/Scripts"
+            Copy-Item -LiteralPath (Join-Path $Source 'Tools/Scripts/Stre.CkImportBatches.ps1') -Destination "$repo/Tools/Scripts"
             [IO.File]::WriteAllText("$repo/.gitignore","_audit/`ngame/`n")
             foreach($relative in @('STRE_AlternateStart.esp','Source/Scripts/QF_fixture.psc','Scripts/QF_fixture.pex','Scripts/untouched.pex','SkyrimTogether.esp')){
                 foreach($base in @("$repo/GameFiles/Skyrim","$repo/game/Data")){
@@ -50,13 +51,18 @@ try {
             [IO.File]::WriteAllText("$repo/GameFiles/STRE_AlternateStart.manifest.txt","STRE_AlternateStart.esp`n")
             [IO.File]::WriteAllText("$repo/docs/features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json",'original manifest fixture')
             @'
-param([string[]]$RelativePath,[string]$SourceDataRoot)
+param([string[]]$RelativePath,[string]$SourceDataRoot,[switch]$AllowDirtyTarget)
 $ErrorActionPreference='Stop'
 foreach($p in $RelativePath){
  $destination=Join-Path $PSScriptRoot "GameFiles/Skyrim/$p"
  $null=New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force
  Copy-Item -LiteralPath (Join-Path $SourceDataRoot $p) -Destination $destination -Force
 }
+$RelativePath.Count | Add-Content "$PSScriptRoot/_audit/batch-counts.txt"
+$RelativePath | Add-Content "$PSScriptRoot/_audit/copied-paths.txt"
+& git -C $PSScriptRoot status --short -- @($RelativePath | ForEach-Object {"GameFiles/Skyrim/$_"})
+if($LASTEXITCODE -ne 0){throw 'Native Git status failed.'}
+if(Test-Path "$PSScriptRoot/_audit/fail-after-copy"){throw 'Simulated post-copy reporting failure.'}
 '@ | Set-Content "$repo/import-from-ck-dev.ps1"
             @'
 throw 'The deployment entry point must NEVER execute during import.'
@@ -160,6 +166,56 @@ function Add-NewManagedFilesToManifest {
         New-Fixture
         $state.State='ImportFailed'; Write-StreJson "$root/session.json" $state
         Reject { Import-Fixture } 'no reimport'
+        New-Fixture
+        $inventory=Get-Content "$root/fixture-inventory.json" -Raw | ConvertFrom-Json -AsHashtable
+        for($i=0;$i -lt 668;$i++){
+            $p='Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/STRE_full_scale_matrix_native_command_regression_{0:D5}_1.wav' -f $i
+            [IO.File]::WriteAllText((Join-Path $root "Data/$p"),"synthetic timing fixture $i")
+            $inventory.Files[$p]=Get-StreHash (Join-Path $root "Data/$p")
+        }
+        Write-StreJson "$root/fixture-inventory.json" $inventory
+        $result=Import-Fixture
+        $counts=@(Get-Content "$($config.RepoRoot)/_audit/batch-counts.txt" | ForEach-Object {[int]$_})
+        $copied=@(Get-Content "$($config.RepoRoot)/_audit/copied-paths.txt")
+        Assert ($result.ImportedFiles -eq 673 -and $counts.Count -eq 11 -and ($counts | Measure-Object -Sum).Sum -eq 673) 'Full-scale batching failed'
+        Assert (@($counts | Where-Object {$_ -gt 64}).Count -eq 0 -and ($copied | Sort-Object -Unique).Count -eq 673) 'Batch duplicated or broadened inventory'
+        Assert-StreMatrixPromoted $config $inventory "$root/validated"
+        $script:passed++
+
+        New-Fixture
+        [IO.File]::WriteAllText("$($config.RepoRoot)/_audit/fail-after-copy",'synthetic failure')
+        Reject { Import-Fixture } 'Simulated post-copy reporting failure'
+        $failed=Get-Content "$root/session.json" -Raw | ConvertFrom-Json -AsHashtable
+        Assert ($failed.State -ceq 'ImportFailed') 'Failed transaction was not preserved'
+        $inventory=Get-Content "$root/fixture-inventory.json" -Raw | ConvertFrom-Json -AsHashtable
+        $failedResultHash=Get-StreHash "$root/import-result.json"
+        $copyLogHash=Get-StreHash "$($config.RepoRoot)/_audit/copied-paths.txt"
+        $null=Invoke-StreGit $config @('commit','--allow-empty','-m','test: completion fix descendant')
+        $completionHead=Invoke-StreGit $config @('rev-parse','HEAD')
+        foreach($ciState in @('missing','failure')){
+            $script:ci=$ciState
+            Reject {Complete-StreValenMatrixInterrupted $config $root} 'CI must be green'
+        }
+        $script:ci='success'
+        [IO.File]::WriteAllText("$($config.RepoRoot)/unrelated.txt",'unrelated')
+        Reject {Complete-StreValenMatrixInterrupted $config $root} 'Out-of-scope dirty path'
+        Remove-Item -LiteralPath "$($config.RepoRoot)/unrelated.txt"
+        $null=Invoke-StreGit $config @('add','GameFiles/Skyrim/STRE_AlternateStart.esp')
+        Reject {Complete-StreValenMatrixInterrupted $config $root} 'Git failed|git failed|Process failed'
+        $null=Invoke-StreGit $config @('restore','--staged','GameFiles/Skyrim/STRE_AlternateStart.esp')
+        $live=Join-Path $config.DataRoot 'STRE_AlternateStart.esp'
+        $bytes=[IO.File]::ReadAllBytes($live)
+        [IO.File]::AppendAllText($live,'drift')
+        Reject {Complete-StreValenMatrixInterrupted $config $root} 'promoted hash mismatch'
+        [IO.File]::WriteAllBytes($live,$bytes)
+        $result=Complete-StreValenMatrixInterrupted $config $root
+        Assert ($result.State -ceq 'Imported' -and $result.ContentRecopied -eq $false -and $result.CompletionHead -ceq $completionHead -and $result.ImportHead -ceq $failed.ImportHead) 'Completion provenance failed'
+        Assert ((Get-StreHash "$root/import-result.json") -ceq $failedResultHash -and (Get-StreHash "$($config.RepoRoot)/_audit/copied-paths.txt") -ceq $copyLogHash) 'Completion rewrote failure or recopied content'
+        Assert ((Get-StreHash "$root/preparation-session.json") -ceq $script:sessionHash) 'Completion rewrote preparation'
+        Assert-StreMatrixPromoted $config $inventory "$root/validated"
+        $script:passed++
+        Reject {Complete-StreValenMatrixInterrupted $config $root} 'Only an interrupted'
+        Reject {Import-Fixture} 'no reimport'
         Write-Output "PASS: $script:passed matrix import orchestration cases"
     } $testRoot $source
 } finally {

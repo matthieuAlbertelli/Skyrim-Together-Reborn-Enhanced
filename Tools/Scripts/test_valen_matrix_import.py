@@ -2,6 +2,7 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -67,7 +68,7 @@ class MatrixImportEvidenceTests(unittest.TestCase):
         write(root/'papyrus-status.json', {'success': True, 'scope': 'simulated fixture'})
         state = dict(Schema=1, State='AwaitingHumanXEdit', Plugin=importer.PLUGIN,
                      Request=dict(Operation='AddValenDialogueMatrixV1'), Git=dict(Head='1'*40, Branch='feat/fixture'),
-                     Config=dict(XEditPath=str(tool), RepoRoot=str(cls.repo)),
+                     Config=dict(XEditPath=str(tool), RepoRoot=str(cls.repo), DataRoot=str(cls.repo/'live')),
                      CandidateHash=importer.sha(data/importer.PLUGIN), BeforeHash=importer.sha(root/'before.esp'),
                      PlanHash=importer.sha(root/'record-plan.json'), WriterHash=importer.sha(root/'author.ssepas'),
                      XEditHash=importer.sha(tool), Protected={str(cls.manifest): importer.sha(cls.manifest)},
@@ -206,6 +207,55 @@ class MatrixImportEvidenceTests(unittest.TestCase):
         for name in ('../out', '/absolute', 'C:/absolute', 'Scripts/../out', 'Scripts//file', 'Scripts\\file'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 importer.safe_child(self.root, name)
+
+    def test_fully_copied_interruption_preserves_evidence_and_rejects_drift(self):
+        root = self.root
+        original = (root/'session.json').read_bytes()
+        result = self.validate()
+        write(root/'import-inventory.json', result)
+        (root/'preparation-session.json').write_bytes(original)
+        for base in (root/'validated', self.repo/'live', self.repo/'GameFiles/Skyrim'):
+            for name in result['Files']:
+                destination = base/name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root/'Data'/name, destination)
+        write(root/'import-result.json', dict(ExitCode=1, Err='SIMULATED post-copy failure'))
+        interrupted = dict(self.state, State='ImportFailed', PreparationHead=self.state['Git']['Head'],
+                           ImportHead='2'*40, ImportEvidenceHash=importer.sha(root/importer.SEAL),
+                           ImportInventoryHash=importer.sha(root/'import-inventory.json'))
+        write(root/'session.json', interrupted)
+        def verify():
+            with patch.object(corpus, 'ROOT', self.repo):
+                return importer.validate(root, promoted=True)
+        try:
+            self.assertEqual(verify(), result)
+            self.assertEqual((root/'preparation-session.json').read_bytes(), original)
+            for base in (root/'validated', self.repo/'live', self.repo/'GameFiles/Skyrim'):
+                path = base/importer.PLUGIN
+                contents = path.read_bytes()
+                try:
+                    path.write_bytes(contents+b'drift')
+                    with self.assertRaisesRegex(ValueError, 'Frozen file changed'):
+                        verify()
+                finally:
+                    path.write_bytes(contents)
+            extra = root/'validated/unapproved.esp'
+            extra.write_bytes(b'not approved')
+            try:
+                with self.assertRaisesRegex(ValueError, 'Unexpected interrupted snapshot'):
+                    verify()
+            finally:
+                extra.unlink()
+            for change in (dict(State='Imported'), dict(CandidateHash='0'*64), dict(ImportInventoryHash='0'*64)):
+                write(root/'session.json', dict(interrupted, **change))
+                with self.assertRaises(ValueError):
+                    verify()
+            write(root/'session.json', interrupted)
+            write(root/'import-result.json', dict(ExitCode=0))
+            with self.assertRaisesRegex(ValueError, 'Missing interrupted'):
+                verify()
+        finally:
+            (root/'session.json').write_bytes(original)
 
 
 if __name__ == '__main__':

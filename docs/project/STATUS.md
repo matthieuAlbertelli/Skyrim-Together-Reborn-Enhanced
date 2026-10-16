@@ -37,16 +37,33 @@ Its exact delta is 672 companions (two QF replacements, observer PSC/PEX and
 668 new WAVs), plus the ESP. All 696 private companions and protected originals
 remain unchanged. No new xEdit session or candidate generation was performed.
 
-Executed implementation tests: 207 Python tests pass, including 12 import-evidence
-tests with invented official-xEdit binary fixtures. The positive fixture rereads
-actual serialized conditions and PCM assets without changing historical evidence;
-negative cases reject receipt/log/plan/writer/audit/inventory drift, missing assets,
-extra files, changed protected originals and altered semantic reread results.
-The PowerShell orchestration fixture verifies real ancestor Git histories,
-explicit CK promotion, exact snapshots and hash equality, branch/ancestry/CI/target
-rejections and reimport refusal. Production import, content-HEAD CI and build/deploy
-are still pending at this source checkpoint. Runtime remains unvalidated; #96 is
-open and #97 remains DRAFT.
+The first import ran on `24c981a958b789e0542886e6f319cc2cbe4e45c8`, after
+[Windows](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38883485381)
+and [Linux](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38883485408)
+CI succeeded. It copied all 673 approved files, then the existing importer's final
+`git status` exceeded Windows' native command-line limit. The wrapper recorded
+`ImportFailed`; no manifest promotion, content commit, build or deployment followed.
+Read-only checks confirmed all 673 snapshot/Data/repository triples, unchanged
+review evidence and protected out-of-scope files. The failure log and backups are
+retained. The original protected importer is unchanged.
+
+The follow-up implementation bounds each importer call to 64 files and 16000
+characters. An explicit `FinalizeInterrupted` action accepts only a fully copied,
+exactly verified failed transaction, with unchanged original manifests and no
+unrelated or staged changes. It rereads the frozen review using current auditors,
+requires exact-completion-HEAD CI, promotes the manifests without recopying content,
+and records completion provenance separately from the original import attempt.
+Tests cover the 673-file native Git command regression, no-copy completion, missing
+or red CI, staged/unrelated changes, copied-file drift, replay refusal and preserved
+historical evidence. Completion and its CI remain pending at this checkpoint.
+
+The initial source checkpoint passed 207 Python tests and PowerShell fixtures
+(66 general, 21 matrix preparation, 11 import and 13 local collector cases).
+The corrected checkpoint passes 208 Python tests and 21 import orchestration
+cases, plus the unchanged 66/21/13 general, preparation and collector suites.
+The quest-sync assertion now accepts the declared Papyrus default `abDisplayed=true`
+as well as explicit `True`; reviewed QF/PEX bytes were not edited.
+Runtime remains unvalidated; #96 is open and #97 remains DRAFT. No Skyrim launch.
 
 ## Valen dialogue matrix v1: implementation and synthetic authoring verified (2026-10-16)
 

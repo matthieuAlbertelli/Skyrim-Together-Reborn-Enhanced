@@ -9,11 +9,103 @@ function Assert-StreMatrixImportGit($Config, $State) {
     @{ Git=$git; CI=@(Assert-StreMatrixCI $Config $git.Head) }
 }
 
-function Get-StreMatrixImportInventory($Config, [string]$Root) {
+function Get-StreMatrixImportInventory($Config, [string]$Root, [switch]$Promoted) {
     $python = @(Get-Command python -CommandType Application -ErrorAction Stop)[0].Source
-    $result = Invoke-StreProcess $python @('-B',(Join-Path $PSScriptRoot 'valen_matrix_import.py'),'--root',$Root) $Config.RepoRoot
+    $arguments=@('-B',(Join-Path $PSScriptRoot 'valen_matrix_import.py'),'--root',$Root)
+    if($Promoted){$arguments+='--verify-promoted'}
+    $result = Invoke-StreProcess $python $arguments $Config.RepoRoot
     if ($result.ExitCode -ne 0 -or $result.Err.Trim()) { throw "Matrix import audit failed: $($result.Err) $($result.Out)" }
     ConvertFrom-StreAutoModJson $result.Out $result.ExitCode
+}
+
+function Assert-StreMatrixCompletionGit($Config, $State, $Inventory) {
+    $branch=Invoke-StreGit $Config @('branch','--show-current')
+    if($branch -cne $State.Git.Branch -or $branch -notmatch '^(feat|fix|test|chore|codex)/'){throw 'Completion branch changed.'}
+    $head=Invoke-StreGit $Config @('rev-parse','HEAD')
+    foreach($ancestor in @('refs/remotes/origin/main',$State.Git.Head,$State.ImportHead)){
+        try{$null=Invoke-StreGit $Config @('merge-base','--is-ancestor',$ancestor,$head)}
+        catch{throw 'Completion requires current main, preparation and import ancestry.'}
+    }
+    foreach($marker in @('MERGE_HEAD','CHERRY_PICK_HEAD','REVERT_HEAD','rebase-merge','rebase-apply')){
+        $p=Invoke-StreGit $Config @('rev-parse','--git-path',$marker)
+        if(-not [IO.Path]::IsPathRooted($p)){$p=Join-Path $Config.RepoRoot $p}
+        if(Test-Path -LiteralPath $p){throw 'Git operation in progress during completion.'}
+    }
+    $null=Invoke-StreGit $Config @('diff','--cached','--quiet')
+    $allowed=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($p in $Inventory.Files.Keys){$null=$allowed.Add('GameFiles/Skyrim/'+$p)}
+    # Preserve the leading index/worktree status spaces; Invoke-StreGit trims them.
+    $git=@(Get-Command git -CommandType Application -ErrorAction Stop)[0].Source
+    $statusResult=Invoke-StreProcess $git @('status','--porcelain=v1','--untracked-files=all') $Config.RepoRoot
+    if($statusResult.ExitCode -ne 0){throw 'Cannot read completion Git status.'}
+    $status=$statusResult.Out
+    foreach($line in ($status -split "`n" | Where-Object {$_})){
+        if($line.Length -lt 4 -or $line.Substring(0,3) -notin @(' M ','?? ') -or -not $allowed.Contains($line.Substring(3).TrimEnd("`r"))){
+            throw "Out-of-scope dirty path during completion: $line"
+        }
+    }
+    @{Head=$head;Branch=$branch;CI=@(Assert-StreMatrixCI $Config $head)}
+}
+
+function Complete-StreValenMatrixInterrupted($Config, [string]$Session) {
+    # No Data/GameFiles content copies, no retry and no replacement of failure evidence.
+    $root=Resolve-StrePath $Session
+    if((Split-Path -Parent $root) -ine (Resolve-StrePath (Join-Path $Config.RepoRoot '_audit/modding')) -or
+       (Split-Path -Leaf $root) -notmatch '^[a-f0-9]{32}$'){throw 'Completion requires an isolated matrix session.'}
+    $state=Get-Content (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
+    if($state.Schema -ne 1 -or $state.State -cne 'ImportFailed' -or $state.Request.Operation -cne 'AddValenDialogueMatrixV1'){
+        throw 'Only an interrupted matrix import can be finalized; no reimport.'
+    }
+    foreach($key in @('RepoRoot','DataRoot','XEditPath','AutoModRoot','ImportScript')){
+        if($Config[$key] -ine $state.Config[$key]){throw "Completion configuration changed: $key"}
+    }
+    Assert-StrePlugin $state.Plugin -Writable
+    Assert-GameProcessesStopped
+    $inventory=Get-StreMatrixImportInventory $Config $root -Promoted
+    $provenance=Assert-StreMatrixCompletionGit $Config $state $inventory
+    $snapshot=Join-Path $root 'validated'
+    Assert-StreMatrixPromoted $Config $inventory $snapshot
+    $allowed=@(foreach($relative in $inventory.Files.Keys){
+        Resolve-StrePath (Join-Path $Config.DataRoot $relative)
+        Resolve-StrePath (Join-Path $Config.RepoRoot "GameFiles/Skyrim/$relative")
+    })
+    Assert-StreMatrixUnchanged $state $allowed
+    $packagingPath=Join-Path $Config.RepoRoot 'GameFiles/STRE_AlternateStart.manifest.txt'
+    $expected=@(@(Get-StreMatrixPackaging $packagingPath)+@($inventory.Files.Keys) | Sort-Object -Unique)
+    # Check the same actual helper signatures before writing either manifest.
+    $tokens=$null; $errors=$null
+    $build=Join-Path $Config.RepoRoot 'build-and-deploy-dev.ps1'
+    $ast=[Management.Automation.Language.Parser]::ParseFile($build,[ref]$tokens,[ref]$errors)
+    $buildHash=Get-StreHash $build
+    if($errors.Count){throw 'Invalid packaging helper during completion.'}
+    foreach($name in @('Read-ManagedFileManifest','Add-NewManagedFilesToManifest')){
+        $nodes=@($ast.FindAll({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -ceq $name},$true))
+        if($nodes.Count -ne 1){throw 'Missing packaging helper during completion.'}
+        $parameters=@($nodes[0].Body.ParamBlock.Parameters | ForEach-Object {$_.Name.VariablePath.UserPath})
+        $required=if($name -eq 'Read-ManagedFileManifest'){@('ManifestPath')}else{@('ManifestPath','RelativeFiles')}
+        if(@($required | Where-Object {$_ -notin $parameters}).Count){throw 'Packaging helper contract changed.'}
+    }
+    $reread=Get-StreMatrixImportInventory $Config $root -Promoted
+    if(($reread | ConvertTo-Json -Depth 32 -Compress) -cne ($inventory | ConvertTo-Json -Depth 32 -Compress)){throw 'Completion reread changed.'}
+    $current=Assert-StreMatrixCompletionGit $Config $state $inventory
+    if($current.Head -cne $provenance.Head -or (Get-StreHash $build) -cne $buildHash){throw 'Completion HEAD/helper changed.'}
+    Assert-GameProcessesStopped
+    $failedResult=Get-StreHash (Join-Path $root 'import-result.json')
+    $manifest=Join-Path $root 'review-proposed-record-manifest.json'
+    $target=Join-Path $Config.RepoRoot $inventory.ManifestPath
+    Copy-Item -LiteralPath $manifest -Destination $target
+    if((Get-StreHash $target) -cne $inventory.ManifestSha256){throw 'Completion manifest hash mismatch.'}
+    Update-StreMatrixPackaging $Config $inventory
+    if(((@(Get-StreMatrixPackaging $packagingPath | Sort-Object)) -join '|') -cne ($expected -join '|')){throw 'Completion packaging differs.'}
+    Assert-StreMatrixUnchanged $state ($allowed+@($target,$packagingPath))
+    Assert-StreMatrixPromoted $Config $inventory $snapshot
+    $state.CompletionHead=$provenance.Head
+    $state.CompletionCI=$provenance.CI
+    $state.Completion=@{PriorState='ImportFailed';ContentRecopied=$false;ImportResultHash=$failedResult;VerifiedFiles=$inventory.Files.Count}
+    $state.State='Imported'
+    Write-StreJson (Join-Path $root 'session.json') $state
+    @{Success=$true;State='Imported';PreparationHead=$state.PreparationHead;ImportHead=$state.ImportHead;CompletionHead=$state.CompletionHead;
+      ContentRecopied=$false;Sha256=$inventory.PluginSha256;ImportedFiles=$inventory.Files.Count;Companions=($inventory.Files.Count-1)}
 }
 
 function Assert-StreMatrixTargets($Config, $State, $Inventory) {

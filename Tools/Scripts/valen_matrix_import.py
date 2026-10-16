@@ -137,23 +137,43 @@ def verify_manifest(before, proposed, audit_result):
                 'Manifest FormKey mismatch')
 
 
-def validate(root):
-    state, seal = read(root/'session.json'), read(root/SEAL)
+def validate(root, *, promoted=False):
+    current, seal = read(root/'session.json'), read(root/SEAL)
+    state = read(root/'preparation-session.json') if promoted else current
+    if promoted:
+        require(current['State'] == 'ImportFailed', 'Only an interrupted import can be finalized')
+        require(all(current[k] == v for k,v in state.items() if k != 'State'), 'Historical session fields changed')
+        require(current['PreparationHead'] == state['Git']['Head'] and
+                current['ImportEvidenceHash'] == sha(root/SEAL) and
+                current['ImportInventoryHash'] == sha(root/'import-inventory.json'), 'Interrupted import evidence changed')
+        require(read(root/'import-result.json')['ExitCode'] != 0, 'Missing interrupted importer result')
     require(state['Schema'] == 1 and state['State'] == 'AwaitingHumanXEdit', 'Session not awaiting human import')
     require(state['Plugin'] == PLUGIN and state['Request']['Operation'] == 'AddValenDialogueMatrixV1',
             'Wrong matrix operation/plugin')
     require(seal['Schema'] == 1 and REQUIRED <= seal['Files'].keys(), 'Incomplete import evidence')
     require(seal['PreparationHead'] == state['Git']['Head'] and
             seal['CandidateSha256'] == state['CandidateHash'], 'Frozen provenance changed')
-    verify_hashes(root, seal['Files'])
-    verify_hashes(root, read(root/'review-evidence-hashes.json'))
+    def original_names(hashes):
+        return {('preparation-session.json' if promoted and k == 'session.json' else k):v for k,v in hashes.items()}
+    verify_hashes(root, original_names(seal['Files']))
+    verify_hashes(root, original_names(read(root/'review-evidence-hashes.json')))
     receipt(root, state)
     require(sha(root/'record-plan.json') == state['PlanHash'] and
             sha(root/'author.ssepas') == state['WriterHash'], 'Plan/writer changed')
     for name in ('before.esp', 'repository-before.esp', 'writer-input.esp'):
         require(sha(root/name) == state['BeforeHash'], 'Backup changed')
+    promoted_paths = {}
+    if promoted:
+        delta = {p:h for p,h in state['Companions'].items() if state['PrivateOriginals'].get(p) != h}
+        delta[PLUGIN] = state['CandidateHash']
+        for base in (root/'validated', Path(state['Config']['DataRoot']), Path(state['Config']['RepoRoot'])/'GameFiles/Skyrim'):
+            verify_hashes(base, delta)
+            promoted_paths.update({safe_child(base, p).resolve():h for p,h in delta.items()})
+        actual = {p.relative_to(root/'validated').as_posix() for p in (root/'validated').rglob('*') if p.is_file()}
+        require(actual == set(delta), 'Unexpected interrupted snapshot file')
     for group in ('Protected', 'PrivateMasters'):
         for path, expected in state[group].items():
+            expected = promoted_paths.get(Path(path).resolve(), expected)
             require(sha(Path(path)) == expected, 'Protected original/tool changed: ' + path)
     plan = read(root/'record-plan.json')
     result = audit((root/'before.esp').read_bytes(), (root/'Data'/PLUGIN).read_bytes(), plan)
@@ -198,11 +218,14 @@ def validate(root):
     repo = Path(state['Config']['RepoRoot'])
     manifest = 'docs/features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json'
     verify_manifest(read(repo/manifest), read(root/'review-proposed-record-manifest.json'), result)
-    return dict(success=True, PreparationHead=state['Git']['Head'], PluginSha256=state['CandidateHash'],
+    result = dict(success=True, PreparationHead=state['Git']['Head'], PluginSha256=state['CandidateHash'],
                 Files=dict(sorted(dict(delta, **{PLUGIN: state['CandidateHash']}).items())),
                 CompanionCount=len(companions), ClassProjections=22, Coverage=result['coverage'],
                 ActualChanges=result['actualChanges'], ManifestPath=manifest,
                 ManifestSha256=sha(root/'review-proposed-record-manifest.json'))
+    if promoted:
+        require(result == read(root/'import-inventory.json'), 'Interrupted inventory semantic mismatch')
+    return result
 
 
 def main():
@@ -211,11 +234,12 @@ def main():
     parser.add_argument('--seal-review', action='store_true')
     parser.add_argument('--expected-candidate-sha256')
     parser.add_argument('--expected-preparation-head')
+    parser.add_argument('--verify-promoted', action='store_true')
     args = parser.parse_args()
     root = args.root.resolve()
     require(root.parent == (assets.corpus.ROOT/'_audit/modding').resolve(), 'Private session required')
     result = (seal_review(root, args.expected_candidate_sha256, args.expected_preparation_head)
-              if args.seal_review else validate(root))
+              if args.seal_review else validate(root, promoted=args.verify_promoted))
     print(json.dumps(result))
 
 

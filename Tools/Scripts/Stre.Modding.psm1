@@ -420,6 +420,7 @@ function Invoke-StreModdingCore {
         'DryRun' { return New-StreSession $Config $Plugin $Request -DryRun }
         'Prepare' { return New-StreSession $Config $Plugin $Request }
         'ImportValidated' { return Import-StreValidated $Config $Session }
+        'FinalizeInterrupted' { return Complete-StreValenMatrixInterrupted $Config $Session }
         default { throw 'Unknown action.' }
     }
 }
@@ -428,7 +429,7 @@ function Invoke-StreModding {
     param($Config, [string]$Action, [string]$Plugin = 'STRE_AlternateStart.esp', $Request = @{}, [string]$Session, [string]$RecordType = 'quest')
     $lock = $null
     try {
-        if ($Action -in @('DryRun', 'Prepare', 'ImportValidated')) {
+        if ($Action -in @('DryRun', 'Prepare', 'ImportValidated', 'FinalizeInterrupted')) {
             $audit = Resolve-StrePath (Join-Path $Config.RepoRoot '_audit')
             $null = New-Item -ItemType Directory -Path $audit -Force
             $lock = [IO.File]::Open((Join-Path $audit 'modding-operation.lock'), 'OpenOrCreate', 'ReadWrite', 'None')

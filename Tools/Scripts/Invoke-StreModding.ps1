@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Preflight', 'Inspect', 'PapyrusStatus', 'DryRun', 'Prepare', 'ImportValidated')]
+    [ValidateSet('Preflight', 'Inspect', 'PapyrusStatus', 'DryRun', 'Prepare', 'ImportValidated', 'FinalizeInterrupted')]
     [string]$Action,
     [string]$AutoModRoot = $env:STRE_AUTOMOD_ROOT,
     [string]$XEditPath = $env:STRE_XEDIT_PATH,
