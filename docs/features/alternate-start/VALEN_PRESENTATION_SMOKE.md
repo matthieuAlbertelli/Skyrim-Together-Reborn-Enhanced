@@ -45,80 +45,76 @@ The flag definitions are confirmed by [xEdit's SSE definitions](https://github.c
 and [Mutagen's Skyrim enum](https://github.com/Mutagen-Modding/Mutagen/blob/dev/Mutagen.Bethesda.Skyrim/Records/Major%20Records/DialogResponses.cs):
 Force Subtitle is `0x0200`, No LIP File is `0x0800`.
 
-## A and B history
+## D: native permission gate
 
-B changes only this INFO's flags from `0x0A00` to `0x0200`. Its text and all six
-WAVs are identical to private A. Other 159 INFO flags remain unchanged. After
-local tests/audits and new-candidate xEdit validation, use the established DEV
-build/deploy workflow, then STOP for the maintainer's manual launch. No full new
-Windows/Linux CI wait is required before this smoke.
+A, B and C all received a human manual-skip FAIL. The maintainer permanently
+abandons voice-asset experiments and engine instrumentation for this defect.
+The C receipt and historical implementation remain evidence only; do not generate
+or generalize further LIP/FUZ assets. Restore the existing private A ESP exactly
+(`31B8DD797A68BB51542F4C24986C82B21A2154E916B42D80B4574B1D7DB03471`),
+retain every existing WAV, and remove the six C FUZ from packaging and installed
+locations after byte-verified backups. The explicit authorization exempts this
+identical restoration from a new xEdit pass; no new attestation is asserted.
 
-The maintainer reported manual skip FAIL for both A and deployed B. No engine
-file-read capture was supplied. The later instruction explicitly abandons
-Process Monitor and authorizes the normal voice pipeline for C without that
-prerequisite. Do not resume instrumentation or infer an engine-load PASS.
+`DialogueProgressRuntime` is restricted to Steam **1.6.1170.0**. It chains the
+original Dialogue Menu AdvanceMovie, then observes the open menu, movie and live
+`MenuTopicManager.currentTopicInfo`. Both source-file origin and winning override
+must be `STRE_AlternateStart.esp`, with the corresponding loaded plugin index;
+vanilla-origin overrides and other mods are excluded. Unknown/temporary/ESL
+forms fail closed. No hard-coded loaded INFO prefix is used.
 
-## C: native voice prototype on this INFO only
+GFx GetVariable reads `DialogueMenu_mc.bAllowProgress` as a Boolean. False starts
+a monotonic 750 ms deadline for that menu/movie/INFO/segment/speaker/session.
+If the same response is active at expiry and still false, SetVariable writes
+true once with `kNormal`, never a sticky assignment. Re-read confirms the write.
+True cancels pending work. A new false edge after vanilla skip starts another
+750 ms deadline, including a skip between frame observations. A failed write is
+not retried every frame. Missing movie, INFO or variable and non-Boolean values
+reset the state and make no write.
 
-Keep the reviewed B ESP byte-identical: Force Subtitle on, No LIP File off.
-There is no VMAD/fragment timer on this INFO to remove. Its six existing silent
-PCM WAVs supply the duration and remain unchanged. Treat all six segments of
-this one INFO consistently; do not generate assets for any other INFO.
+Menu hide/show, identity changes, Main/Loading Menu opening, native load entry,
+and network connect/disconnect invalidate state. Session resets are serialized
+with the UI write. Borrowed native/GFx pointers never escape a frame. The native
+message handler always forwards to vanilla; no keys are intercepted, no SkipText
+is called, and no SWF or timed auto-advance is installed. Temporary logs record
+`INFO`, `plugin`, `allowProgress=false arm`, and confirmed `allowProgress=true`,
+with at most 128 transition events per process.
 
-Use the installed Skyrim `Tools/LipGen/LipGenerator` and `LipFuzer` tools in a
-private directory. The retained [asset receipt](VALEN_VOICE_C_PROTOTYPE.json)
-pins the tool/input/output hashes. For each exact serialized NAM1 transcript:
+The pure `ProgressGate` tests cover non-STRE and absent state, the exact 750 ms
+boundary, repeated true/false cycles, six consecutive segments, failed writes,
+and menu/INFO/movie/speaker/response/session resets. The adapter's actual GFx
+operation remains a human runtime gate.
 
-```text
-LipGenerator.exe <basename.wav> <NAM1 text> -Language:French -OutputFileName:<basename.lip>
-xWMAEncode.exe -b 48000 <basename.wav> <basename.xwm>
-LIPFuzer.exe -s <six-assets-directory\> -d <private-output-directory\> --norec -v 2
-```
+## Native ABI references
 
-Run LipGenerator with its private FonixData.cdf beside it. LIPFuzer's directory
-arguments require trailing separators; exit 0 alone is insufficient. Require
-exactly six outputs named `stre_quest_stre_dial_valen_000d6bc3_<1..6>.fuz` under
-`Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/`. Each FUZ embeds its genuine
-generated LIP and encoded silent XWM. Keep loose LIP/XWM and logs as private
-authoring evidence; import only the six FUZ through the existing CK importer.
-Append their manifest paths using the existing Windows `\` spelling returned
-by the DEV collector. Before build, apply the actual manifest helper to a private
-copy and require identical bytes; mixed separators otherwise create duplicates.
+The adapter uses the same guarded GFx ABI as the existing Main Menu adapter,
+without adding a CommonLib/SKSE dependency. Published CommonLibSSE-NG definitions:
 
-Audit FUZ headers, embedded hashes, native unpack round-trip, decoded mono
-44100 Hz/16-bit silence and duration, frozen corpus, unchanged ESP and original
-WAVs. `audit_valen_voice_prototype.py` checks the retained prototype bytes and
-scope. No ESP authoring occurs, so the unchanged B xEdit receipt still applies.
-After local audits/tests, build/deploy DEV and STOP for a human test. Do not
-trigger CI or push a PR synchronization during this diagnostic loop.
+- [MenuTopicManager](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/M/MenuTopicManager.h): AE singleton 401099, currentTopicInfo at 0x70;
+  lastSelectedDialogue at 0x38, parentTopicInfo/currentResponse at 0x30/0x40.
+- [DialogueMenu vtable](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/Offsets_VTABLE.h): AE 215255; inherited IMenu ProcessMessage/AdvanceMovie slots 4/5.
+- [GFxMovie](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/G/GFxMovie.h): SetVariable/GetVariable slots 0x10/0x11, normal set mode 0.
+- [TESForm](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/T/TESForm.h) and
+  [BSStaticArray](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/RE/B/BSTArray.h): source-file array at 0x08, data/size at 0x00/0x08.
 
-1. The maintainer launches Skyrim and selects the specified dialogue.
-2. Leave it untouched once: subtitles must remain readable, the audio silent,
-   and the response progression natural through all six segments.
-3. Repeat and tap the normal vanilla skip control once per segment. Require
-   immediate single-step advancement, a clean return to the menu, no hang and
-   no double progression. Record the control/device and observed results.
-4. Check runtime typography as well: ordinary apostrophes/quotes/dashes/ellipsis,
-   preserved French accents and guillemets. No runtime PASS is inferred from
-   the binary audit.
+Runtime version, memory readability, callable slots and target types are checked
+before access; unknown compatibility fails closed. Readable memory is not proof
+of runtime behavior, so the human smoke is mandatory.
 
-Do not generalize until the maintainer reports every criterion PASS. Only then
-apply the proven policy mechanically and rerun content audits. Full CI remains
-required on the later merge candidate.
+## Local workflow and human smoke
 
-## Private preparation
+Run local gate tests, content audits, client build, then the established DEV
+build/deploy and STOP. No CI or push during this loop. The internal collector and
+manifest helper must be byte-idempotent. Verify no experimental FUZ/LIP/XWM is
+reintroduced and the restored A ESP/WAV hashes match Data/Git/deployment.
 
-From a clean committed feature branch after `git fetch origin`:
+The maintainer launches Skyrim and selects the specified INFO. Leave it untouched
+once: require visible readable subtitles, silence and normal idle duration.
+Repeat and wait more than 750 ms before pressing the ordinary vanilla control
+used for other NPCs. Require each segment to skip, several successive skips,
+clean next-segment and menu return, and no double-skip. Confirm vanilla dialogues
+remain unchanged and French typography is preserved. Record actual control and
+observations; neither tests nor a successful GFx write constitutes runtime PASS.
 
-```powershell
-./Tools/Scripts/Invoke-StreModding.ps1 -Action Prepare -Operation FixValenPresentation -Variant A -ShowXEdit
-./Tools/Scripts/Invoke-StreModding.ps1 -Action Prepare -Operation FixValenPresentation -Variant B -ShowXEdit
-```
-
-The usual configured AutoMod/xEdit/Data paths apply. Each invocation preserves
-its own baseline, masters, companion hashes, plan and official xEdit script,
-executes an immutable dry-run, then creates an independently audited candidate.
-No Papyrus compilation, audio generation, manifest mutation or Data write occurs.
-Preparation stops at `HUMAN_XEDIT_REQUIRED`. The old c48be63 human receipt cannot
-validate new bytes: follow the [official xEdit boundary](../../development/MODDING_TOOLCHAIN.md#official-xedit-boundary)
-on each candidate that will be deployed. No receipt is synthesized by this tool.
+PR #97 stays DRAFT, #96 stays open. Runtime acceptance must precede the eventual
+merge candidate's full CI.

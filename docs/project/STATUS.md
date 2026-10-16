@@ -9,7 +9,57 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen presentation: human runtime FAIL, bounded correction (2026-10-16)
+## Valen D: native DialogueMenu gate, human smoke pending (2026-10-16)
+
+The maintainer reports **C runtime FAIL** on `STRE_INFO_VALEN_SELF_010_R /
+0D6BC3`: all six native FUZ/LIP response assets still leave manual skip blocked.
+Voice-asset experiments and Process Monitor are permanently abandoned for this
+defect. This supersedes the pending C smoke and any earlier conditional plan to
+generalize LIP/FUZ below. No additional runtime PASS is inferred.
+
+Experiment D adds a native client permission gate for exact Steam runtime
+**1.6.1170.0**. Only the open `Dialogue Menu` and a live `currentTopicInfo` whose
+origin and winning source file are `STRE_AlternateStart.esp` qualify. The native
+menu update reads `DialogueMenu_mc.bAllowProgress` through GFx. A false value
+arms a `steady_clock` deadline; after 750 ms the same response may receive one
+normal, non-sticky write to true if it is still false. True does nothing; a
+subsequent false after vanilla skip starts a fresh deadline. Menu/movie/INFO,
+segment token, speaker and session changes reset it. Missing/invalid native or
+GFx state fails closed. No input hook, SkipText call, automatic progression or
+SWF replacement is introduced. Scope, ABI sources and human criteria are in
+[`VALEN_PRESENTATION_SMOKE.md`](../features/alternate-start/VALEN_PRESENTATION_SMOKE.md).
+
+Native load entry, Main/Loading Menu opening and network connect/disconnect
+invalidate the pending gate under the same lock as GFx writes. Every native menu
+message still chains to the original handler. Temporary transition diagnostics
+include INFO, plugin, false/arm and confirmed true, capped at 128 events per
+process; no per-frame logging. The native hook itself remains untested in game.
+
+The content restoration is exact private A, SHA256
+`31B8DD797A68BB51542F4C24986C82B21A2154E916B42D80B4574B1D7DB03471`.
+This is the existing xEdit-authored candidate in session
+`d184bc1581e7492980e551c20b810adb`, not a newly edited ESP. It differs from B/C
+at one flag byte only: Force Subtitle + No LIP File (`0x0A00`) restored. All 392
+runtime typography substitutions remain; canonical corpus/fingerprint and WAVs
+are unchanged. The maintainer explicitly waives a new xEdit pass for this exact
+byte restoration; this is **not** a fabricated new human xEdit attestation.
+The six C FUZ were backed up and removed from repository, Data, local Vortex and
+Pc-vero. Packaging returns exactly to the pre-C manifest (697 files / 696
+companions); 549 ESP records and 393 canonical identities remain unchanged.
+
+Local gate tests pass: seven cases / 99 assertions, including non-STRE, absent
+menu/INFO/GFx, <750 ms, >=750 ms, true/false cycles, six successive skips,
+failed-write suppression and identity/session resets. Full TPTests passes
+440 cases / 45,505 assertions. The changed native client target compiles.
+Evidence: `_audit/valen-dialogue-gate-d-20261016/`. All nine content audits pass,
+including strict records, packaging, MQ101, catalogue, markers, serialized
+typography/graph/classes and all 100 survivor combinations. Seven Python tests
+and 22 PowerShell checks also pass. The actual DEV collector finds 695 owned
+files and 685 automatic imports identical to Git; its manifest update is
+byte-idempotent. DEV build/deploy remains pending. No CI, push, Skyrim launch or
+new audio generation.
+
+## Historical Valen A/B/C presentation experiments (2026-10-16)
 
 The maintainer tested `c48be632f4a3dbd3f37311fce369cda67c346ab6` and reported
 two failures: curly apostrophes render as squares, while French accents render

@@ -19,6 +19,7 @@
 #include <World.h>
 #include <BSInput/InputEvent.h>
 #include <Games/Skyrim/MainMenuRuntime.h>
+#include <Games/Skyrim/DialogueProgressRuntime.h>
 
 #include <array>
 #include <cstddef>
@@ -1848,6 +1849,8 @@ public:
 
         const bool journal = std::strcmp(pMenuName, "Journal Menu") == 0;
         const bool mainMenu = std::strcmp(pMenuName, "Main Menu") == 0;
+        if (apEvent->Opening && (mainMenu || std::strcmp(pMenuName, "Loading Menu") == 0))
+            DialogueProgressRuntime::ResetSession();
         if (!journal && !mainMenu)
             return BSTEventResult::kOk;
 
