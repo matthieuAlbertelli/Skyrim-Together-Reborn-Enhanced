@@ -106,7 +106,7 @@ unproven. The maintainer explicitly stopped Process Monitor/instrumentation and
 authorized a normal native voice prototype C on this one INFO, without a file-I/O
 capture prerequisite. B must not be generalized.
 
-**C assets imported; local audits PASS, build and human smoke pending.** Evidence is
+**C prototype deployed; local audits PASS, human smoke pending.** Evidence is
 retained under `_audit/valen-vanilla-c-20261016/`, with the portable hashes in
 [`VALEN_VOICE_C_PROTOTYPE.json`](../features/alternate-start/VALEN_VOICE_C_PROTOTYPE.json).
 The installed LipGenerator with FonixData generated six native LIPs using the
@@ -150,6 +150,27 @@ are normalized to the collector's existing spelling; the original 697 entries
 and all assets are unchanged. The second preflight additionally runs the actual
 manifest helper on a private copy and requires byte-identical output before the
 workflow may be repeated. No build-script or importer change is needed.
+
+**Accepted C DEV build/deploy SUCCESS** on local content HEAD
+`26c6f334e93b07b4d51b53c75f4a386ff8ae84b3` (exit 0,
+2026-10-16 14:56:57–14:58:42 UTC). Independent post-deploy verification passes:
+701 internal snapshot files; 691 IDENTICAL automatic imports, zero copied,
+zero Vortex backups; 703 managed files match installed Data, repository, local
+Vortex and Pc-vero. The six FUZ additionally match private source, asset snapshot
+and indexed Git blobs. The ESP still matches B's reviewed/validated snapshot and
+indexed blob. All original companions, protected tools and SkyrimTogether.esp
+remain unchanged. The manifest is unchanged by this build and Git is clean.
+Client/server/STServer.dll match distribution, Data and both deployment targets;
+the client SHA256 remains
+`C4FF4BAADD05D4CCF24D1371EBA3D9B4E3E35759CEBFD9D329F03765F8F540A3`.
+Accepted build log SHA256:
+`390AD53BA6E66C954A1BD99E36BB1A483B96E0ECC4327A415258760FA4CC4734`.
+The accepted execution/snapshot/final-gate receipts are in `build-attempt-2/`
+under the C evidence root; `deployment-verification.json` records all deployed
+hash checks. The following documentation commit changes no deployed content.
+No push, CI or Skyrim launch was performed. **STOP for the maintainer's C smoke**:
+visible subtitles, silence, sufficient idle duration, immediate vanilla skip,
+clean progression/menu return and no double advance remain unvalidated in game.
 
 ## Historical human-reviewed Valen matrix import (2026-10-16)
 

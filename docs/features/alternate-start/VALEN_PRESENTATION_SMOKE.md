@@ -81,6 +81,9 @@ exactly six outputs named `stre_quest_stre_dial_valen_000d6bc3_<1..6>.fuz` under
 `Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/`. Each FUZ embeds its genuine
 generated LIP and encoded silent XWM. Keep loose LIP/XWM and logs as private
 authoring evidence; import only the six FUZ through the existing CK importer.
+Append their manifest paths using the existing Windows `\` spelling returned
+by the DEV collector. Before build, apply the actual manifest helper to a private
+copy and require identical bytes; mixed separators otherwise create duplicates.
 
 Audit FUZ headers, embedded hashes, native unpack round-trip, decoded mono
 44100 Hz/16-bit silence and duration, frozen corpus, unchanged ESP and original
