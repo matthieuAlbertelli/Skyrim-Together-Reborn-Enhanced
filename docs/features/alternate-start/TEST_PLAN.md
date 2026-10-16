@@ -4,13 +4,22 @@
 
 ## Complete Valen matrix and discovery (issue #96; runtime pending)
 
-The complete corpus/condition checks and proposed discovery lifecycle are in
+The complete corpus/condition checks and discovery lifecycle are in
 [Valen dialogue matrix v1](VALEN_DIALOGUE_MATRIX_V1.md). Its generated 100-row
 survivor table is a required review before real CK authoring. Approved single-known
 survivor variants close the twelve former gaps: 32 automatic, 17 explicit,
 51 incoherent and 0 uncovered cases. Missing rules, overlaps or turning a repeatable
 state reply into a first report must reject authoring. Existing #94 acceptance
 below is not validation of any new matrix/discovery behavior.
+
+Before real preparation, run `test_valen_matrix*.py`, the existing Valen and
+Python suites, `Test-StreModding.ps1`, `Test-StreValenMatrix.ps1`, collector
+fixtures and read-only CK audits. Binary fixtures must reject altered discovery
+indices, stage completion flags, alias/QF/TIF bindings, class mappings, OR
+conditions, state conflation, text changes, graph changes and malformed field
+ordering. Reproduce official authoring with `Test-StreValenMatrixAuthor.ps1`.
+Verify the two generated scripts with direct PapyrusCompiler and all silent
+WAVs by reading their samples and metadata. These are static/toolchain checks.
 
 After authoring, human xEdit/import and explicitly authorized build/deploy, add
 human Solo and both roster-2 initiation directions with these required cases:

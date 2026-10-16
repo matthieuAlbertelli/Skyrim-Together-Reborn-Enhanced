@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Stre.ProcessGuard.ps1')
 $script:Masters = @('Skyrim.esm', 'Update.esm', 'Dragonborn.esm')
 . (Join-Path $PSScriptRoot 'Stre.ValenHelgen.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenMatrix.ps1')
 
 function Get-StreHash([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
@@ -254,6 +255,7 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
 }
 
 function New-StreSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
+    if ($Request.Operation -eq 'AddValenDialogueMatrixV1') { return New-StreValenMatrixSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenHelgen') { return New-StreValenSession $Config $Plugin $Request -DryRun:$DryRun }
     $git = Assert-StreMutationGit $Config $Plugin
     if (-not (Test-Path -LiteralPath $Config.ImportScript -PathType Leaf)) { throw 'Existing local CK importer is required.' }
@@ -325,6 +327,9 @@ function Import-StreValidated($Config, [string]$Session) {
     $sessionParent = Resolve-StrePath (Join-Path $Config.RepoRoot '_audit/modding')
     if ((Split-Path -Parent $root) -ine $sessionParent -or (Split-Path -Leaf $root) -notmatch '^[a-f0-9]{32}$') { throw 'Session must be an isolated _audit/modding/<id> directory in this repository.' }
     $state = Get-Content -LiteralPath (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
+    if ($state.Request.Operation -eq 'AddValenDialogueMatrixV1') {
+        throw 'HUMAN_XEDIT_REQUIRED: matrix preparation is private-only; no matrix import is authorized by this adapter.'
+    }
     if ($state.Schema -ne 1 -or $state.State -ne 'AwaitingHumanXEdit') { throw 'Session is not awaiting xEdit; failed/dry-run/imported sessions cannot be promoted.' }
     $git = Assert-StreMutationGit $Config $state.Plugin
     foreach ($key in @('Branch', 'Head')) { if ($git[$key] -cne $state.Git[$key]) { throw "Git $key changed since preparation." } }

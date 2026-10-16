@@ -8,7 +8,7 @@ param(
     [string]$XEditPath = $env:STRE_XEDIT_PATH,
     [string]$DataRoot = $env:STRE_SKYRIM_DATA,
     [string]$Plugin = 'STRE_AlternateStart.esp',
-    [ValidateSet('AddQuest', 'AddGlobal', 'AddValenHelgen')][string]$Operation = 'AddGlobal',
+    [ValidateSet('AddQuest', 'AddGlobal', 'AddValenHelgen', 'AddValenDialogueMatrixV1')][string]$Operation = 'AddGlobal',
     [switch]$ShowXEdit,
     [string]$EditorId,
     [string]$Name,

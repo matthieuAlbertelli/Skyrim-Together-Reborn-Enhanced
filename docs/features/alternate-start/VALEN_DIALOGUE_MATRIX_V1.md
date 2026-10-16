@@ -1,6 +1,6 @@
 # Valen free conversation matrix v1
 
-> Implementation contract and authoring proposal for [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96), under #20 / #19.
+> Implementation contract for [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96), under #20 / #19.
 > Actual implementation and validation status belongs in [STATUS](../../project/STATUS.md).
 
 ## Scope and editorial authority
@@ -51,7 +51,7 @@ met either actor. They cannot serve as discovery flags. No freely selectable
 claim of discovery is permitted. Both physical properties remain read-only
 inputs; the narrative quest must not maintain competing copies of them.
 
-The proposed minimal discovery representation uses two independently completed
+The minimal discovery representation uses two independently completed
 stages on the existing shared Side Quest `STRE_QUEST_ValenHelgen`:
 
 | Fact | Native quest runtime representation | CK condition |
@@ -69,7 +69,7 @@ the highest current stage. `TESQuest::ScriptSetStage` skips an equal/already-don
 stage, not an uncompleted lower-numbered stage. The existing server relay sends
 the requested stage to the group without comparing its numerical order.
 
-Consequently the proposed sequences are:
+Consequently the supported sequences are:
 
 | Discovery order | Requested stages after acceptance | Completed facts | Highest stage |
 |---|---|---|---|
@@ -81,7 +81,7 @@ This is a source-supported design, not a claim that Papyrus, the network, or sav
 restoration has passed a runtime test. No change to QuestService or its messages
 is proposed. Side Quest type 8 continues to avoid the experimental Misc/None gate.
 
-## Proposed triggers and lifecycle
+## Triggers and lifecycle
 
 Add one local-player alias to the narrative quest. A bound alias script handles
 OnLocationChange, OnPlayerLoadGame, and bounded single-update polling. Reuse the
@@ -100,7 +100,7 @@ the technical quest's T0/T+4.
    required. Evaluate already-in-location and post-load cases as well.
 3. For physical state 1 or 2, discover only an actual local-player observation:
    the bound survivor is enabled, alive, has loaded 3D, is in the same cell,
-   within a proposed 256 game units, and visible through `HasLOS`. Require the
+   within 256 game units, and visible through `HasLOS`. Require the
    player and survivor to be in the relevant Helgen location. Do not discover
    through a wall, by loading a distant cell, or by reading WoundedInCave.
 4. This observation follows the **actor's current projection**, including its
@@ -169,6 +169,42 @@ The authoring gate rejects any newly introduced overlap or uncovered coherent
 combination. Negative tests remove rules for both new and pre-existing cases;
 marking editorial decisions approved cannot bypass actual coverage checks.
 
+## Bounded record plan and class projection
+
+`Tools/Scripts/valen_matrix_plan.py` derives a complete plan from the frozen
+corpus before any ESP write. The plan concerns 300 records: two existing QUST,
+17 DLBR, 121 DIAL and 160 INFO. It permits 293 creations and updates only the
+seven existing #95 identities. The independent reader reports actual payload
+changes separately; an allowed update does not imply that its bytes changed.
+FormIDs come exclusively from official xEdit's allocator.
+
+Each root subject and each separate post-arrival explicit report has a top-level
+branch. The existing Helgen branch starts at one new DIAL, whose pre-acceptance
+and travel navigation INFOs override the player prompt with the approved labels.
+After arrival, that DIAL exposes only the ten approved generic state replies
+through their disjoint rule variants. It has no unconditional post-arrival
+fallback. First reports remain separate subjects. Links expose approved child,
+sibling and root subjects; no new player-facing return text is invented. Only
+the approved exit INFO has Goodbye. Navigation INFOs have no spoken response.
+The existing acceptance fragment remains byte-identical.
+
+`CharacterCreationService::FinalizeCompletedBuild` projects the validated
+ClassId once onto completed stages of local `STRE_QUEST_ValenDialogue`:
+101–121 follow the canonical class projection order, 100 records an unknown
+class, and 50 records a matching sealed campaign roster larger than one. The
+fallback INFO requires all 21 known-class stages to be absent. No GLOB, protocol
+field, native Papyrus API or hard-coded plugin FormID is added. Conflicting class
+stages are rejected and logged. Load/recovery does not replay a cached class:
+the native save restores the local quest bits. The owner stays excluded from
+QuestService synchronization and remains absent from the journal.
+
+The narrative alias binds `STRE_ValenHelgenObserver` to the player. Generated QF
+stage-10 code arms it; stage-20 code completes objective 10 and displays the
+approved objective 20. Ordinary source templates live under
+`Tools/Scripts/valen/matrix`; generated PSC/PEX and silent timing WAVs remain in
+the private preparation session. They are not imported or promoted into the
+canonical game-file tree by preparation. The existing SEQ and TIF are preserved.
+
 ## Validation required before a real candidate
 
 The implemented checks validate the editorial schema, frozen text fingerprint,
@@ -182,12 +218,14 @@ An independent test preserves the original editorial fingerprint, and the two
 approved additions have a separate approval hash. No Bethesda payload is copied
 into a test fixture.
 
-Still required: finalize CK graph/conditions and
-allocation plan; implement and test the class bridge and discovery scripts;
-official xEdit fixture authoring; direct PapyrusCompiler compilation; real
-private dry-run/prepare; independent binary reread; human xEdit review; validated
-import and all post-import audits. Build/deploy and human runtime remain later
-explicit gates. There is no candidate session to review yet.
+The implementation includes the bounded plan/writer, class bridge, observer/QF
+templates, direct compiler integration, silent-asset generation and independent
+binary/asset readers. Official xEdit output on invented masters is covered by
+positive and corrupted binary fixtures; the sorted-array insertion regression
+is preserved as a rejected fixture. Exact current evidence and remaining gates
+belong in STATUS. Real preparation requires successful Windows/Linux CI on its
+exact committed HEAD and stops at HUMAN_XEDIT_REQUIRED. Import, build/deploy and
+human runtime remain later explicit gates.
 
 Discovery acceptance must cover both orders, simultaneous observation of
 different actors, repeated observation, first discovery only after capture,

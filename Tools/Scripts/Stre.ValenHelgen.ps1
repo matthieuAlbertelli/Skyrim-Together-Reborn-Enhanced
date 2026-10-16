@@ -31,6 +31,11 @@ function Invoke-StreValenAuthor($Config, [string]$Root, [ValidateSet('DryRun','P
     # The caller explicitly opts into this UI. Only four private modules are listed.
     foreach ($arg in @('-SSE', "-D:$data", "-M:$Root", "-I:$Root\Skyrim.ini",
         "-P:$Root\plugins.txt", '-cp:1252', "-script:$Root\author.ssepas")) { $start.ArgumentList.Add($arg) }
+    Write-StreJson (Join-Path $Root "$Mode.xedit-command.json") @{
+        Executable=$start.FileName; Arguments=@($start.ArgumentList); Purpose='Official xEdit private ESP authoring, not Papyrus compilation'
+    }
+    Write-Host "Executable: $($start.FileName)"
+    Write-Host "Arguments: $($start.ArgumentList -join ' ')"
     Write-Host "xEdit ${Mode}: accept the private module selection, wait for script completion, then close xEdit. This is authoring, NOT human validation."
     $process = [Diagnostics.Process]::Start($start)
     try {

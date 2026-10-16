@@ -9,7 +9,7 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen dialogue matrix v1: complete editorial condition coverage (2026-10-16)
+## Valen dialogue matrix v1: implementation and synthetic authoring verified (2026-10-16)
 
 [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
 tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
@@ -28,7 +28,9 @@ from the existing Hadvar/Ralof physical states. The
 [implementation proposal](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md)
 uses completed stages 11/12 on the existing shared narrative quest, after arrival
 stage 20, with ordinary QuestService propagation and per-player native saves
-under ADR-0018. This discovery mechanism is **proposed, not implemented**.
+under ADR-0018. Its alias script and QF template are implemented in the bounded
+private preparation toolchain and compile successfully. They have not been
+imported, deployed or runtime-validated.
 
 The exhaustive 100-row table finds **32 generic-reply cases**, 17 separate explicit
 report/navigation cases, 51 inconsistent/transient cases rejected without speech,
@@ -42,9 +44,46 @@ intermediate preparation, not delivery of the whole feature.
 
 Local Preflight, read-only Inspect and PapyrusStatus succeeded. Baselines cover
 all 27 managed files in both Git/Data, both protected plugins, the canonical
-record manifest and tool executables. No ESP, Papyrus, manifest or runtime asset
-was changed; no xEdit writer, import, build/deploy or game process was launched.
-No new xEdit, Solo, roster-2, native save or recovery PASS is claimed.
+record manifest and tool executables. Production Git/Data content remains
+unchanged. Official xEdit and direct PapyrusCompiler were executed on invented
+private fixtures only; no import, build/deploy or game process was launched.
+No human xEdit, Solo, roster-2, native save or recovery PASS is claimed for #96.
+
+The bounded `AddValenDialogueMatrixV1` plan concerns 300 records: two QUST,
+17 DLBR, 121 DIAL and 160 INFO. Official synthetic output has exactly **293 new
+records**, **five changed existing payloads**, and **two planned updates whose
+payloads remain identical**. All seven #95 identities are preserved. The
+independent reader verifies the full graph, field order/multiplicity, VMAD,
+French strings, all 100 actual serialized survivor-condition cases and all
+22 class/fallback projections. The official positive fixture and the rejected
+sorted-array regression are versioned under `Tools/Scripts/valen/matrix/fixtures`.
+
+The class bridge runs only after validated Character Creation completion and
+projects local completed stages on ValenDialogue; it adds no protocol or native
+Papyrus API. The observer detects actual proximity/LOS in wounded or captured
+locations, fences campaign recovery, and uses independent completed stages 11/12
+after shared arrival stage 20. Freed and Departed remain distinct defensive
+future cases. Existing QuestService and technical Helgen implementation are
+unchanged. Runtime discovery/save/recovery remains pending.
+
+The generated synthetic QF and observer compile directly with PapyrusCompiler.exe
+with **zero errors and zero warnings**. **668 new silent PCM WAVs** total
+309,373,392 bytes; their names, timing, sample format, silence and hashes pass
+read-back verification. Existing synthetic TIF, SEQ and three WAVs are preserved.
+This is asset-pipeline evidence, not audible/runtime acceptance.
+
+Real preparation requires a clean committed feature HEAD, current origin/main
+ancestry and successful Windows/Linux CI on that exact HEAD. It runs private
+DryRun/Prepare, independent reread, compilation and asset verification, then
+stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
+at this preparation boundary. The canonical CK manifests remain unchanged.
+
+Implementation verification: **193 Python tests**, **66 PowerShell toolchain
+cases**, **9 matrix preparation guards**, **13 CK collector cases**, and the
+six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
+45,082 assertions**, including the class projection checks. `git diff --check`
+passes. This source checkpoint records preparation evidence; it grants neither
+human xEdit approval nor permission to import/deploy a private candidate.
 
 Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
 cases, 13 collector fixture cases and all six existing read-only CK audits. Its
@@ -52,8 +91,8 @@ source comparison verified all 140 original replies against the mission file.
 The approved additions are separately fingerprinted; a regression test proves
 the original editorial fingerprint is unchanged even if that external attachment
 is no longer available. Discovery order/idempotency evidence remains a
-completed-stage reference model plus source-path inspection, not implemented
-Papyrus or native save/recovery execution.
+completed-stage reference model plus source-path inspection; compiled Papyrus
+is not native save/recovery proof.
 
 After integrating the two approved replies, all 164 Python tests pass (25 for
 this matrix), generated views agree with the corpus, the authoring input gate

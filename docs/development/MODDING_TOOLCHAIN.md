@@ -186,6 +186,41 @@ uses tiny synthetic xEdit output, including corrupted contract cases.
 DryRun/Prepare on newly generated synthetic modules, with the same visible-window
 steps and before/after input/master hashes. Neither test grants human xEdit PASS.
 
+## Typed Valen matrix preparation (#96)
+
+`AddValenDialogueMatrixV1 -ShowXEdit` is a bounded preparation operation for
+[the complete matrix contract](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md).
+It requires a clean committed feature checkout and both Windows/Linux CI runs
+successful on that exact HEAD. Fetch origin before invoking it:
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop.' }
+& $tool -Action Prepare -Operation AddValenDialogueMatrixV1 -ShowXEdit
+```
+
+Preparation writes the exact 300-record plan before opening official xEdit.
+The same visible private DryRun/Prepare workflow applies. This adapter permits
+293 creations and updates only the seven existing Valen identities; the audit
+reports actual payload differences separately. No Python helper writes an ESP
+or assigns a FormID. The independent reader checks all serialized conditions,
+graph links, fields, VMAD and approved French text. Unknown additions fail closed.
+
+Only PapyrusCompiler.exe compiles the generated QF and observer. Its exact
+command and result are recorded; any warning/error fails preparation. The
+private companion inventory is checked against the original manifest plus the
+bounded generated paths. Only the existing narrative QF PSC/PEX may change;
+the TIF, SEQ, three existing WAVs and all unrelated companions remain identical.
+Every new WAV is checked for filename, PCM format, timing, silence and SHA-256.
+Git/Data originals, masters, tools, branch, HEAD and plan are checked again.
+
+Success is `HUMAN_XEDIT_REQUIRED`, with the session state `AwaitingHumanXEdit`.
+The draft validation JSON contains empty hashes/reviewer and false check flags;
+it is not an attestation. No human validation log is fabricated. Matrix
+`ImportValidated` is explicitly refused by this preparation-only adapter.
+Import/promotion, build/deploy and runtime require later maintainer authorization.
+Synthetic tests and automated UI authoring never satisfy the human boundary.
+
 ## Official xEdit boundary
 
 AutoMod/Mutagen can reorder masters. An AutoMod write is never ready for Git by
