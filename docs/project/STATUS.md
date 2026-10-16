@@ -79,7 +79,7 @@ stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
 at this preparation boundary. The canonical CK manifests remain unchanged.
 
 Implementation verification: **195 Python tests**, **66 PowerShell toolchain
-cases**, **18 matrix preparation guards**, **13 CK collector cases**, and the
+cases**, **21 matrix preparation guards**, **13 CK collector cases**, and the
 six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
 45,082 assertions**, including the class projection checks. `git diff --check`
 passes. This source checkpoint records preparation evidence; it grants neither
@@ -93,6 +93,14 @@ raw hashes separately, and still rejects every binary, BOM, text or final-newlin
 change. It copies repository bytes privately without normalizing any original.
 Regression fixtures cover those rejections; exact-HEAD CI must pass again before
 a fresh real preparation session can start.
+
+The next private session completed official DryRun/Prepare and the independent
+ESP audit, then stopped because the safe copier refuses an existing destination.
+The wrapper now archives the unchanged private writer input as `writer-input.esp`
+before copying the audited output to the private candidate path. Integration
+fixtures verify input/output preservation and reject changed input or an existing
+archive. Failed sessions remain terminal; originals and production content are
+unchanged, and a new exact-HEAD CI gate precedes the next session.
 
 Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
 cases, 13 collector fixture cases and all six existing read-only CK audits. Its

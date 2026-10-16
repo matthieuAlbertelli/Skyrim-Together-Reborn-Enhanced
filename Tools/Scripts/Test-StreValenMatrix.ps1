@@ -74,6 +74,23 @@ $module=Import-Module (Join-Path $PSScriptRoot 'Stre.Modding.psm1') -Force -Pass
         [IO.File]::WriteAllBytes($gitPath,([byte[]](0)+$crlf))
         [IO.File]::WriteAllBytes($livePath,([byte[]](0)+$lf))
         Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        $null=New-Item -ItemType Directory -Path (Join-Path $fixtureRoot 'Data')
+        $inputPath=Join-Path $fixtureRoot 'Data/STRE_AlternateStart.esp'
+        $outputPath=Join-Path $fixtureRoot 'authored.esp'
+        $archivePath=Join-Path $fixtureRoot 'writer-input.esp'
+        [IO.File]::WriteAllBytes($inputPath,[byte[]](1,2,3))
+        [IO.File]::WriteAllBytes($outputPath,[byte[]](4,5,6,7))
+        $inputHash=Get-StreHash $inputPath
+        $outputHash=Get-StreHash $outputPath
+        Reject { Copy-StreMatrixAuthoredOutput $fixtureRoot ('0'*64) } 'input changed before archival'
+        [IO.File]::WriteAllBytes($archivePath,[byte[]](8,9))
+        Reject { Copy-StreMatrixAuthoredOutput $fixtureRoot $inputHash } 'archive already exists'
+        if ((Get-StreHash $inputPath) -cne $inputHash -or (Get-StreHash $outputPath) -cne $outputHash) { throw 'Rejected archival changed an input.' }
+        Remove-Item -LiteralPath $archivePath
+        Copy-StreMatrixAuthoredOutput $fixtureRoot $inputHash
+        if ((Get-StreHash $archivePath) -cne $inputHash -or (Get-StreHash $inputPath) -cne $outputHash -or
+            (Get-StreHash $outputPath) -cne $outputHash) { throw 'Private candidate/input preservation failed.' }
+        $script:matrixPassed++
     } finally {
         if ([IO.Path]::GetFileName($fixtureRoot) -cne $fixtureName -or
             [IO.Path]::GetFullPath((Split-Path -Parent $fixtureRoot)).TrimEnd('\') -cne $temporaryParent.TrimEnd('\')) { throw 'Unsafe fixture cleanup path.' }

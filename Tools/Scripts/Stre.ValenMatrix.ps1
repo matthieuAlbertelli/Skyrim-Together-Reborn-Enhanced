@@ -65,6 +65,18 @@ function Get-StreMatrixCompanionIdentity([string]$GitPath, [string]$LivePath) {
     @{ GitSha256=$gitHash; DataSha256=$liveHash; Comparison=$comparison }
 }
 
+function Copy-StreMatrixAuthoredOutput([string]$Root, [string]$BeforeHash) {
+    $candidate = Join-Path $Root 'Data/STRE_AlternateStart.esp'
+    $archive = Join-Path $Root 'writer-input.esp'
+    if ((Get-StreHash $candidate) -cne $BeforeHash) { throw 'Private writer input changed before archival.' }
+    if (Test-Path -LiteralPath $archive) { throw 'Private writer input archive already exists.' }
+    # Copy-StreVerified deliberately uses CreateNew. Preserve the checked input
+    # beside before.esp before creating the separately audited candidate path.
+    [IO.File]::Move($candidate, $archive)
+    Copy-StreVerified (Join-Path $Root 'authored.esp') $candidate
+    if ((Get-StreHash $archive) -cne $BeforeHash) { throw 'Private writer input archive changed.' }
+}
+
 function New-StreValenMatrixSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
     if (-not $Request.ShowXEdit) { throw 'AddValenDialogueMatrixV1 needs -ShowXEdit for official private authoring.' }
     if ($Request.EditorId -and $Request.EditorId -cne 'STRE_QUEST_ValenHelgen') { throw 'Fixed matrix EditorID contract.' }
@@ -137,7 +149,7 @@ function New-StreValenMatrixSession($Config, [string]$Plugin, $Request, [switch]
         if ((Get-StreHash $candidate) -cne $before) { throw 'Writer modified immutable input.' }
         $authored = Join-Path $root 'authored.esp'
         $null = Invoke-StreMatrixAudit $Config $root $authored
-        Copy-StreVerified $authored $candidate
+        Copy-StreMatrixAuthoredOutput $root $before
         Assert-StreFormat (Get-StreHeader $candidate) $header -Normalized
         $assets = Invoke-StreMatrixPython $Config 'valen_matrix_assets.py' @('--root',$root)
         $imports = @((Join-Path $data 'Source/Scripts'),(Join-Path $Config.RepoRoot 'GameFiles/Skyrim/Source/Scripts'),
