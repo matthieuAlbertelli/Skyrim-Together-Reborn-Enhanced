@@ -143,6 +143,7 @@ private:
     void ShowBuildSummary() noexcept;
     void ShowBuildConfirmed() noexcept;
     void FinalizeCompletedBuild() noexcept;
+    void ProjectValenDialogueClass() noexcept;
     void Fail(std::string aMessage) noexcept;
 
     void ResetLoadoutState() noexcept;

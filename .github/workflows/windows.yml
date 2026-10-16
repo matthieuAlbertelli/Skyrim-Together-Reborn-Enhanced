@@ -52,7 +52,10 @@ jobs:
 
       - name: Test modding toolchain safeguards with disposable fixtures
         shell: pwsh
-        run: ./Tools/Scripts/Test-StreModding.ps1
+        run: |
+          ./Tools/Scripts/Test-StreModding.ps1
+          ./Tools/Scripts/Test-StreValenMatrix.ps1
+          ./Tools/Scripts/Test-StreValenMatrixImport.ps1
 
       - name: Checkout submodules
         shell: pwsh

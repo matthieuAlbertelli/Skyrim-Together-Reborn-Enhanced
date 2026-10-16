@@ -2,6 +2,53 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Complete Valen matrix and discovery (issue #96; runtime pending)
+
+The complete corpus/condition checks and discovery lifecycle are in
+[Valen dialogue matrix v1](VALEN_DIALOGUE_MATRIX_V1.md). Its generated 100-row
+survivor table is a required review before real CK authoring. Approved single-known
+survivor variants close the twelve former gaps: 32 automatic, 17 explicit,
+51 incoherent and 0 uncovered cases. Missing rules, overlaps or turning a repeatable
+state reply into a first report must reject authoring. Existing #94 acceptance
+below is not validation of any new matrix/discovery behavior.
+
+Before real preparation, run `test_valen_matrix*.py`, the existing Valen and
+Python suites, `Test-StreModding.ps1`, `Test-StreValenMatrix.ps1`, collector
+fixtures and read-only CK audits. Binary fixtures must reject altered discovery
+indices, stage completion flags, alias/QF/TIF bindings, class mappings, OR
+conditions, state conflation, text changes, graph changes and malformed field
+ordering. Reproduce official authoring with `Test-StreValenMatrixAuthor.ps1`.
+Verify the two generated scripts with direct PapyrusCompiler and all silent
+WAVs by reading their samples and metadata. These are static/toolchain checks.
+
+Before validated matrix import, also run `Test-StreValenMatrixImport.ps1` and
+`python -m unittest discover -s Tools/Scripts -p test_valen_matrix_import.py`.
+Cover an unchanged human-reviewed artifact imported from an ancestor preparation
+HEAD, receipt/log/plan/writer/audit/companion drift, missing assets, extra files,
+wrong branch, non-ancestor provenance, missing/failed import-HEAD CI, changed
+Git/Data originals and rejected reimport. The positive fixture must preserve
+historical evidence and prove the exact delta snapshot and three-way file hashes.
+
+After authoring, human xEdit/import and explicitly authorized build/deploy, add
+human Solo and both roster-2 initiation directions with these required cases:
+
+- Hadvar then Ralof, and Ralof then Hadvar, including different players discovering
+  each actor; both facts propagate without the receiver approaching either actor.
+- First discovery only after capture, both singly and in the opposite order.
+- Repeated and near-simultaneous discoveries; stage/objective 20 remains stable.
+- Reject remote-cell, disabled/dead, out-of-range and obstructed observations.
+- First-report Say Once remains local; the generic topic selects only safe,
+  exclusive physical-state replies, without disclosing an undiscovered survivor.
+- Native save/reload after only Hadvar, only Ralof and both; collective recovery
+  to checkpoints before/after each fact, with no partial-roster progression or
+  stage-only reconstruction. No new observation is committed while recovery or
+  checkpoint locks are active.
+- Future Freed/Departed scenarios receive structural tests only until their
+  gameplay exists. Their distinct conditions and defensive discovery requirement
+  must never be presented as an executed rescue/runtime PASS.
+
+The agent must not launch Skyrim, SkyrimTogether or a server for these tests.
+
 ## Shared Valen lead acceptance (issue #94)
 
 The maintainer attested complete Solo PASS on native revision

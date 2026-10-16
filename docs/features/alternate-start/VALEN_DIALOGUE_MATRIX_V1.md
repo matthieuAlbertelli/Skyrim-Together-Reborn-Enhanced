@@ -1,0 +1,254 @@
+# Valen free conversation matrix v1
+
+> Implementation contract for [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96), under #20 / #19.
+> Actual implementation and validation status belongs in [STATUS](../../project/STATUS.md).
+
+## Scope and editorial authority
+
+The whole approved free-conversation corpus is one increment. The collective
+introductory scene remains separate. The seven existing #94/#95 records retain
+their identities; the shared acceptance and the technical Helgen investigation
+remain intact. A general Shared / PlayerLocal / TechnicalProjection taxonomy is
+a later feature, not part of this increment.
+
+The sole editable editorial source is
+[VALEN_DIALOGUE_MATRIX_V1.json](../../narrative/valen/VALEN_DIALOGUE_MATRIX_V1.json),
+validated against its adjacent formal JSON schema. The adjacent Markdown review
+and survivor CSV/Markdown are generated views. The corpus preserves all 140
+Valen response blocks in section 19 of the approved mission, including the common
+recruitment introduction, 21 class variants and fallback. The maintainer's
+2026-10-16 amendment adds SINGLE_KNOWN_FREED and SINGLE_KNOWN_DEPARTED, bringing
+approved new response blocks to 142. Two existing #95 response blocks are
+additionally retained from the merged ESP. Existing ASCII
+apostrophes in that exchange remain byte-faithful to #95; new frozen French text
+keeps its original typographic apostrophes and accents. Paragraphs and all
+sentence-boundary segmentation are lossless.
+
+The editorial graph contains 133 semantic nodes and 144 response blocks
+including the shared recruitment introduction. These are **not record counts**:
+multiple semantic variants will share a DIAL, and allocated FormKeys do not yet
+exist. Performance directions are provisional metadata, not final voice acting.
+
+```powershell
+python Tools/Scripts/valen_matrix.py --check-generated
+python Tools/Scripts/valen_matrix.py --for-authoring
+python -m unittest discover -s Tools/Scripts -p 'test_valen_matrix.py'
+```
+
+The second command now passes the corpus/condition gate with
+`success: true, authoringReady: true`. Missing coherent-state coverage or an
+overlap still fails it. This checks the editorial input; it is not evidence that
+the CK writer, class bridge, discovery scripts or private candidate are ready.
+The bounded `AddValenDialogueMatrixV1` adapter must invoke this gate before
+launching the private xEdit writer. Implementation work is not represented as
+an invented pending human approval in the editorial decisions.
+
+## Maintainer correction: discovery is independent of physical state
+
+`HadvarState` and `RalofState` become `WoundedInCave` in
+`STRE_HelgenInvestigationController.BeginInvestigation`, before the player has
+met either actor. They cannot serve as discovery flags. No freely selectable
+claim of discovery is permitted. Both physical properties remain read-only
+inputs; the narrative quest must not maintain competing copies of them.
+
+The minimal discovery representation uses two independently completed
+stages on the existing shared Side Quest `STRE_QUEST_ValenHelgen`:
+
+| Fact | Native quest runtime representation | CK condition |
+|---|---|---|
+| HadvarDiscovered | stage 11 completed | GetStageDone(ValenHelgen, 11) = 1 |
+| RalofDiscovered | stage 12 completed | GetStageDone(ValenHelgen, 12) = 1 |
+| Arrived in Helgen | stage 20 completed | GetStageDone(ValenHelgen, 20) = 1 |
+
+There are no duplicated Boolean globals and no packed state overwritten by
+concurrent writers. Stages 11 and 12 have no journal entries or objective effects.
+The script must establish stage 20 before either discovery stage. Skyrim's
+`Quest.psc` defines GetStage as the **highest completed stage**, so the displayed
+progression remains 20. The client sends `TESQuestStageEvent.stageId`, not merely
+the highest current stage. `TESQuest::ScriptSetStage` skips an equal/already-done
+stage, not an uncompleted lower-numbered stage. The existing server relay sends
+the requested stage to the group without comparing its numerical order.
+
+Consequently the supported sequences are:
+
+| Discovery order | Requested stages after acceptance | Completed facts | Highest stage |
+|---|---|---|---|
+| Hadvar then Ralof | 20, 11, 12 | 11 and 12 | 20 |
+| Ralof then Hadvar | 20, 12, 11 | 11 and 12 | 20 |
+| Concurrent discoveries / duplicate delivery | 20, either ordering of 11/12 | union of both facts | 20 |
+
+This is a source-supported design, not a claim that Papyrus, the network, or save
+restoration has passed a runtime test. No change to QuestService or its messages
+is proposed. Side Quest type 8 continues to avoid the experimental Misc/None gate.
+
+## Triggers and lifecycle
+
+Add one local-player alias to the narrative quest. A bound alias script handles
+OnLocationChange, OnPlayerLoadGame, and bounded single-update polling. Reuse the
+technical controller's Hadvar/Ralof actor aliases and physical-state properties;
+do not create actor duplicates, change packages, place trigger boxes, or mutate
+the technical quest's T0/T+4.
+
+1. Require the narrative quest to be running with stage 10 completed. In Solo,
+   permit normal progression. For a connected or previously observed campaign,
+   require the existing `IsHelgenInvestigationStartAuthorized()` predicate,
+   which includes the runtime recovery/checkpoint lock. Losing connectivity
+   must never turn a campaign into standalone authority.
+2. At a local player's entry into the bound HelgenLocation, set stage 20 once.
+   Its fragment completes objective 10 and displays objective 20, without forcing
+   redisplay. Arrival by one roster member is enough; no physical gathering is
+   required. Evaluate already-in-location and post-load cases as well.
+3. For physical state 1 or 2, discover only an actual local-player observation:
+   the bound survivor is enabled, alive, has loaded 3D, is in the same cell,
+   within 256 game units, and visible through `HasLOS`. Require the
+   player and survivor to be in the relevant Helgen location. Do not discover
+   through a wall, by loading a distant cell, or by reading WoundedInCave.
+4. This observation follows the **actor's current projection**, including its
+   captured location. It is not restricted to the original cave marker.
+5. Once observed, recheck the progression gate and call SetStage(11) or
+   SetStage(12) only if that fact is not already complete. Every peer receives
+   that normal stage event; another peer need not be physically near the actor.
+6. Future rescue/liberation callers must mark the relevant discovery before
+   their own success transition. A defensive recheck of the trusted physical
+   states `Freed` and `Departed`, separately, establishes a missing discovery
+   when those future mechanics become implemented. This increment does not
+   implement rescue, movement home, faction choice, or MainQuestPath mutation.
+7. Resume polling after load; stop when both discoveries are complete. During
+   recovery/checkpoint lock, issue no new discovery or arrival stage. Pending
+   proximity is reevaluated after authorized recovery, never replayed from a
+   cached pre-load actor pointer.
+
+Completed-stage bits and alias/Papyrus state are stored in each player's native
+`.ess`. Recovery remains ADR-0018: the full sealed roster restores its own saves
+from the same committed CampaignCheckpoint together with the server snapshot.
+The server's ordinary quest-log latest-stage entry cannot reconstruct both
+completed-stage bits and must **not** be used as a save/catch-up substitute.
+Uncommitted observations after the checkpoint are discarded by recovery, then
+may be observed again normally. The model tests do not prove this engine path.
+
+## Dialogue routing and exhaustive conditions
+
+The maintainer explicitly assigned the eight initially unlabelled state responses
+and the two later single-known-survivor responses to the single generic subject:
+
+> Nous devons parler de ce que nous avons trouvé à Helgen.
+
+The player must select this topic. No unsolicited speech is triggered. Keep the
+explicit arrival, none-found, individual discovery, both-found and both-rescued
+prompts separate. Arrival is available after stage 20 only before any known
+discovery. Individual/both discovery reports use local **Say Once** INFO flags;
+they do not create shared `Reported` facts and are not permanent state containers.
+The both-rescued prompt allows exactly (Freed,Freed), (Freed,Departed),
+(Departed,Freed), (Departed,Departed), with both discoveries known.
+
+See the complete
+[100-row condition table](../../narrative/valen/VALEN_SURVIVOR_MATRIX_V1.generated.md)
+and [machine-readable CSV](../../narrative/valen/VALEN_SURVIVOR_MATRIX_V1.generated.csv).
+INFO names there are **semantic targets**, not allocated records. Specificity is
+explicit: both departed; one departed; both captured; captured/freed; remaining
+single capture; freed/wounded. States 3 and 4 are never merged in the generic
+conditions. The validator enumerates all rows and rejects overlap even if a
+first-match implementation would conceal it.
+
+Current coverage:
+
+- 32 combinations select one of the ten generic state replies.
+- 17 combinations use a separate approved explicit-report/navigation path,
+  with no generic state reply. First reports are subject to their local Say Once
+  condition; these table rows do not override it.
+- 51 combinations are inconsistent or transient (known + Uninitialized, or
+  Freed/Departed not yet discovered). They fail closed and must not disclose data.
+- **0 coherent combinations are uncovered.** The twelve former gaps now select
+  SINGLE_KNOWN_FREED or SINGLE_KNOWN_DEPARTED when exactly one discovered survivor
+  is respectively in state 3 or 4 and the other is undiscovered in state 0, 1 or 2.
+  Each text is shared symmetrically by the two directions, without naming or
+  implying the unknown survivor. They remain repeatable local generic-topic
+  variants, not first reports and not new `Reported` facts.
+
+The authoring gate rejects any newly introduced overlap or uncovered coherent
+combination. Negative tests remove rules for both new and pre-existing cases;
+marking editorial decisions approved cannot bypass actual coverage checks.
+
+## Bounded record plan and class projection
+
+`Tools/Scripts/valen_matrix_plan.py` derives a complete plan from the frozen
+corpus before any ESP write. The plan concerns 300 records: two existing QUST,
+17 DLBR, 121 DIAL and 160 INFO. It permits 293 creations and updates only the
+seven existing #95 identities. The independent reader reports actual payload
+changes separately; an allowed update does not imply that its bytes changed.
+FormIDs come exclusively from official xEdit's allocator.
+
+Each root subject and each separate post-arrival explicit report has a top-level
+branch. The existing Helgen branch starts at one new DIAL, whose pre-acceptance
+and travel navigation INFOs override the player prompt with the approved labels.
+After arrival, that DIAL exposes only the ten approved generic state replies
+through their disjoint rule variants. It has no unconditional post-arrival
+fallback. First reports remain separate subjects. Links expose approved child,
+sibling and root subjects; no new player-facing return text is invented. Only
+the approved exit INFO has Goodbye. Navigation INFOs have no spoken response.
+The existing acceptance fragment remains byte-identical.
+
+`CharacterCreationService::FinalizeCompletedBuild` projects the validated
+ClassId once onto completed stages of local `STRE_QUEST_ValenDialogue`:
+101–121 follow the canonical class projection order, 100 records an unknown
+class, and 50 records a matching sealed campaign roster larger than one. The
+fallback INFO requires all 21 known-class stages to be absent. No GLOB, protocol
+field, native Papyrus API or hard-coded plugin FormID is added. Conflicting class
+stages are rejected and logged. Load/recovery does not replay a cached class:
+the native save restores the local quest bits. The owner stays excluded from
+QuestService synchronization and remains absent from the journal.
+
+The narrative alias binds `STRE_ValenHelgenObserver` to the player. Generated QF
+stage-10 code arms it; stage-20 code completes objective 10 and displays the
+approved objective 20. Ordinary source templates live under
+`Tools/Scripts/valen/matrix`; generated PSC/PEX and silent timing WAVs remain in
+the private preparation session. They are not imported or promoted into the
+canonical game-file tree by preparation. The existing SEQ and TIF are preserved.
+
+## Validation required before a real candidate
+
+The post-c48be63 [presentation correction and ordered A/B smoke](VALEN_PRESENTATION_SMOKE.md)
+projects unsafe punctuation only at runtime authoring, preserving this contract's
+canonical editorial corpus. Its one-INFO skip experiment must pass in game before
+any matrix-wide audio/flag policy changes. STATUS records the reported failure
+and actual validation state; the smoke document defines the CI deferral for this
+specific content iteration.
+
+The implemented checks validate the editorial schema, frozen text fingerprint,
+all 21 classes/fallback, Solo/group partitions, stage-label boundaries, graph
+reachability/returns, reserved-node exclusion, effects, lossless segmentation,
+all 100 survivor combinations, name-disclosure guards and generated concordance.
+The original 140 responses were compared directly with the hashed mission
+attachment at preparation commit 414556a9. The optional approved-source check
+continues to check those original responses separately from the later amendment.
+An independent test preserves the original editorial fingerprint, and the two
+approved additions have a separate approval hash. No Bethesda payload is copied
+into a test fixture.
+
+The implementation includes the bounded plan/writer, class bridge, observer/QF
+templates, direct compiler integration, silent-asset generation and independent
+binary/asset readers. Official xEdit output on invented masters is covered by
+positive and corrupted binary fixtures; the sorted-array insertion regression
+is preserved as a rejected fixture. Exact current evidence and remaining gates
+belong in STATUS. Real preparation requires successful Windows/Linux CI on its
+exact committed HEAD and stops at HUMAN_XEDIT_REQUIRED. Import, build/deploy and
+human runtime remain later explicit gates.
+
+The dedicated validated-import adapter can promote the unchanged reviewed
+bundle on a later descendant of its preparation commit, on the same clean branch
+and only after exact import-HEAD Windows/Linux CI succeeds. It preserves the
+original preparation evidence, checks the current binary/asset reread against
+the historical results, and imports only the computed added/changed companion
+delta through the existing CK bridge. Records and packaging manifests follow
+that verified inventory. Other modding operations retain their exact-HEAD rule.
+Procedure and failure handling belong in the
+[modding runbook](../../development/MODDING_TOOLCHAIN.md#validated-matrix-import).
+This import capability does not grant runtime acceptance.
+
+Discovery acceptance must cover both orders, simultaneous observation of
+different actors, repeated observation, first discovery only after capture,
+same-cell/wall/disabled/dead/distance rejection, defensive Freed/Departed handling,
+one peer discovering while the other remains elsewhere, save/reload after each
+individual fact, and collective checkpoint recovery before and after either
+discovery. Both roster-2 directions use separate clean campaigns. Tests of the
+reference completed-stage set establish algebra only; they are not runtime PASS.

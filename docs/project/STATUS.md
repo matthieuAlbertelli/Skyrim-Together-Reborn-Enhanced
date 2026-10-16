@@ -1,13 +1,223 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 15, 2026.
+> **Last updated:** October 16, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Valen presentation: human runtime FAIL, bounded correction (2026-10-16)
+
+The maintainer tested `c48be632f4a3dbd3f37311fce369cda67c346ab6` and reported
+two failures: curly apostrophes render as squares, while French accents render
+correctly; silent replies cannot be advanced manually before their timing WAV
+ends. This supersedes the earlier pending runtime gate. It does not invalidate
+the historical xEdit/import checks below or establish a cause for the skip issue.
+
+The presentation adapter projects only the six approved punctuation substitutions
+into DIAL FULL, INFO RNAM/NAM1 and narrative objective NNAM. The canonical corpus
+and editorial fingerprint remain frozen. Its independent reader rejects every
+other record/field change, checks actual serialized text, and reevaluates the
+22 class contexts and 100 survivor combinations. Historical authoring plans,
+receipts and binary fixtures are retained unchanged.
+
+The bounded skip experiment targets `STRE_INFO_VALEN_SELF_010_R`, local FormID
+`0D6BC3`: “Parlez-moi de vous.” → “Qui êtes-vous vraiment ?”. This repeatable
+INFO has six response segments and no quest effect. A retains flags `0x0A00`;
+B clears only `No LIP File` (`0x0800`), retaining `Force Subtitle` (`0x0200`).
+Both private variants use identical punctuation projection and unchanged WAVs.
+No C/LIP generation or generalization to 668 assets is approved before the
+ordered human experiment. Static path/PCM verification is not engine-load proof.
+
+Full Windows/Linux CI is explicitly deferred until the merge HEAD for this
+content iteration. Local tests/audits, exact new-candidate xEdit review, DEV
+build/deploy and STOP before the human smoke remain distinct gates. PR #97 stays
+DRAFT; #96 stays open. Current preparation/results are recorded below when run.
+
+## Historical human-reviewed Valen matrix import (2026-10-16)
+
+The complete reviewed matrix is imported into `GameFiles/Skyrim` on
+`feat/valen-dialogue-matrix-v1`, PR #97 DRAFT. Session
+`63c81f61da724c01a6b561181457d3f1` is `Imported`. The ESP SHA256 remains exactly
+`2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E`.
+No reviewed candidate, graph, script, PEX or WAV was regenerated or edited.
+
+The maintainer attested Sort Masters, Check for Errors, save/close, reopen and a
+second Check for Errors with no errors. Warnings were not separately specified.
+`xedit-validation.log` is a transcript of that statement, not raw xEdit output;
+its SHA256 is `B99FA865F3D939D912635F91A08D698F778D704E103C9AC95B8EBEEC7F8D2E31`.
+The receipt identifies xEdit SHA256
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
+
+Preparation provenance remains `6a1694861af408c1a7c9d0eb690b69859714dbdf`.
+The first import on `24c981a958b789e0542886e6f319cc2cbe4e45c8` followed successful
+Windows/Linux CI and copied all 673 approved files, then failed when the existing
+importer's final native `git status` exceeded Windows' command-line limit.
+That `ImportFailed` result and the backups remain preserved. The original
+protected importer is unchanged; the tracked adapter now bounds each call to
+64 paths / 16000 characters, including the local build wrapper's existing call.
+
+Explicit no-copy completion succeeded on
+`9e18afcab5f8fc519c454a921b684ac72a0dc8d0`, after
+[Windows](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888661712)
+and [Linux](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888658121)
+CI SUCCESS on that exact HEAD. It revalidated all frozen evidence and copied-file
+hashes with current binary/asset auditors, required no staged/unrelated changes,
+and promoted the manifests without recopying content. PreparationHead, ImportHead
+and CompletionHead are distinct; `preparation-session.json` preserves the original
+session bytes. ImportValidated cannot replay a failed or imported session.
+
+The 300-record plan produced **293 additions, five changed existing payloads and
+two unchanged planned updates**. The plugin contains **549 records including TES4**;
+the canonical records manifest contains **393 identities**. It preserves the
+reviewed proposal's exact records and constraints; only its last explanatory note
+was updated to reflect completed import. The private proposal remains unchanged.
+The full graph, **22 class/fallback projections** and all **100 survivor cases**
+reproduce the historical audit exactly: **32 automatic / 17 explicit / 51
+incoherent / zero uncovered**.
+
+The imported delta is **672 companions plus the ESP**: two existing QF PSC/PEX
+replacements, observer PSC/PEX and **668 new timing WAVs**. The validated snapshot
+contains exactly those **673 files**. Packaging has **697 managed files** (ESP +
+696 companions). Snapshot, installed Data, repository and staged blob hashes match
+for the entire promoted delta; historical evidence and out-of-scope protected
+files remain unchanged. SkyrimTogether.esp retains SHA256
+`3196266AA29855574BDA48335DA9AB2F18AD33A80EEE116400DA7C5C81C93D7E`.
+No master, private audit/cache or `.vortex_backup` was imported.
+
+Post-import validation: packaging, strict records with reject-unexpected, MQ101
+structure/generated invariants, catalogue, markers, Valen binary graph/classes,
+generated corpus and survivor coverage all PASS. **208 Python tests**, **66 general
+PowerShell safeguards**, **21 preparation cases**, **21 import/completion cases**,
+**13 local collector cases**, and **TPTests: 433 cases / 45,406 assertions** PASS.
+`git diff --check` PASS. The 673-file regression exercises real native Git status;
+completion fixtures prove no recopy, preserved failure evidence and rejection of
+missing/red CI, staged/unrelated changes, drift and replay.
+
+Deployment requires clean content-HEAD Windows/Linux SUCCESS before the existing
+`build-and-deploy-dev.ps1`. The maintainer separately authorized only the installed
+`Source/Scripts/TIF_030D6B1A.psc` LF-to-CRLF alignment to its unchanged reviewed/Git
+bytes, after import and audits, with backup, normalized comparison and complete
+Data hash comparison. It is not a functional #96 change and requires no compilation
+or xEdit. Its execution receipt and the build/deployment receipts belong to this
+session; subsequent deployment results are reported in PR #97. Runtime validation
+remains pending, issue #96 stays open, and Skyrim must not be launched by this flow.
+
+## Historical matrix preparation evidence (2026-10-16)
+
+This section records the earlier private preparation checkpoints. Current import
+and validation state is described above; historical claims below retain their
+original checkpoint scope.
+
+[#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
+tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
+on main `bdedb163aa516dc28917b292caf9b869afda983c`. The canonical JSON, formal
+schema, linter, generated review and exhaustive survivor condition table are
+prepared. The source comparison accounts for all 140 original approved response
+blocks. The maintainer additionally approved SINGLE_KNOWN_FREED and
+SINGLE_KNOWN_DEPARTED on October 16; the two existing #95 response blocks preserve
+the actual ESP strings. The editorial graph has 133 semantic nodes, 144 response
+blocks including the common recruitment introduction, and 21 classes plus
+fallback. These counts
+are not CK record or allocated FormKey counts.
+
+The maintainer corrected discovery to two independent shared facts, distinct
+from the existing Hadvar/Ralof physical states. The
+[implementation proposal](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md)
+uses completed stages 11/12 on the existing shared narrative quest, after arrival
+stage 20, with ordinary QuestService propagation and per-player native saves
+under ADR-0018. Its alias script and QF template are implemented in the bounded
+private preparation toolchain and compile successfully. They have not been
+imported, deployed or runtime-validated.
+
+The exhaustive 100-row table finds **32 generic-reply cases**, 17 separate explicit
+report/navigation cases, 51 inconsistent/transient cases rejected without speech,
+and **0 uncovered cases**. The two approved additions cover all twelve former
+gaps symmetrically: one known survivor Freed or Departed while the other is
+undiscovered in state 0, 1 or 2. They remain repeatable generic-topic variants,
+with no shared effect, new first report or `Reported` fact. The corpus authoring
+gate now passes; negative tests still reject missing rules or overlaps.
+Technical implementation work is not an editorial approval gate. This is an
+intermediate preparation, not delivery of the whole feature.
+
+Local Preflight, read-only Inspect and PapyrusStatus succeeded. Baselines cover
+all 27 managed files in both Git/Data, both protected plugins, the canonical
+record manifest and tool executables. Production Git/Data content remains
+unchanged. Official xEdit and direct PapyrusCompiler were executed on invented
+private fixtures only; no import, build/deploy or game process was launched.
+No human xEdit, Solo, roster-2, native save or recovery PASS is claimed for #96.
+
+The bounded `AddValenDialogueMatrixV1` plan concerns 300 records: two QUST,
+17 DLBR, 121 DIAL and 160 INFO. Official synthetic output has exactly **293 new
+records**, **five changed existing payloads**, and **two planned updates whose
+payloads remain identical**. All seven #95 identities are preserved. The
+independent reader verifies the full graph, field order/multiplicity, VMAD,
+French strings, all 100 actual serialized survivor-condition cases and all
+22 class/fallback projections. The official positive fixture and the rejected
+sorted-array regression are versioned under `Tools/Scripts/valen/matrix/fixtures`.
+
+The class bridge runs only after validated Character Creation completion and
+projects local completed stages on ValenDialogue; it adds no protocol or native
+Papyrus API. The observer detects actual proximity/LOS in wounded or captured
+locations, fences campaign recovery, and uses independent completed stages 11/12
+after shared arrival stage 20. Freed and Departed remain distinct defensive
+future cases. Existing QuestService and technical Helgen implementation are
+unchanged. Runtime discovery/save/recovery remains pending.
+
+The generated synthetic QF and observer compile directly with PapyrusCompiler.exe
+with **zero errors and zero warnings**. **668 new silent PCM WAVs** total
+309,373,392 bytes; their names, timing, sample format, silence and hashes pass
+read-back verification. Existing synthetic TIF, SEQ and three WAVs are preserved.
+This is asset-pipeline evidence, not audible/runtime acceptance.
+
+Real preparation requires a clean committed feature HEAD, current origin/main
+ancestry and successful Windows/Linux CI on that exact HEAD. It runs private
+DryRun/Prepare, independent reread, compilation and asset verification, then
+stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
+at this preparation boundary. The canonical CK manifests remain unchanged.
+
+Implementation verification: **195 Python tests**, **66 PowerShell toolchain
+cases**, **21 matrix preparation guards**, **13 CK collector cases**, and the
+six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
+45,082 assertions**, including the class projection checks. `git diff --check`
+passes. This source checkpoint records preparation evidence; it grants neither
+human xEdit approval nor permission to import/deploy a private candidate.
+
+The first real preparation attempt stopped before xEdit because the two existing
+Valen QF/TIF PSC files use CRLF in the Git checkout and LF in Data, already present
+in the initial baseline. The source text and all 60 baseline hashes were unchanged.
+The guard now permits only that byte-preserving PSC comparison, records the two
+raw hashes separately, and still rejects every binary, BOM, text or final-newline
+change. It copies repository bytes privately without normalizing any original.
+Regression fixtures cover those rejections; exact-HEAD CI must pass again before
+a fresh real preparation session can start.
+
+The next private session completed official DryRun/Prepare and the independent
+ESP audit, then stopped because the safe copier refuses an existing destination.
+The wrapper now archives the unchanged private writer input as `writer-input.esp`
+before copying the audited output to the private candidate path. Integration
+fixtures verify input/output preservation and reject changed input or an existing
+archive. Failed sessions remain terminal; originals and production content are
+unchanged, and a new exact-HEAD CI gate precedes the next session.
+
+Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
+cases, 13 collector fixture cases and all six existing read-only CK audits. Its
+source comparison verified all 140 original replies against the mission file.
+The approved additions are separately fingerprinted; a regression test proves
+the original editorial fingerprint is unchanged even if that external attachment
+is no longer available. Discovery order/idempotency evidence remains a
+completed-stage reference model plus source-path inspection; compiled Papyrus
+is not native save/recovery proof.
+
+After integrating the two approved replies, all 164 Python tests pass (25 for
+this matrix), generated views agree with the corpus, the authoring input gate
+passes with 32/17/51/0 coverage, and `git diff --check` passes. All 60 protected
+Git/Data/tool baseline hashes remain unchanged. The external mission attachment
+is now absent; its original comparison remains historical evidence, with the
+original editorial fingerprint independently preserved by the regression test.
 
 ## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
 

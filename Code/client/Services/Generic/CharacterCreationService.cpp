@@ -11,6 +11,7 @@
 #include <Events/CampaignMainMenuEnteredEvent.h>
 #include <Services/CampaignRuntimeGateService.h>
 #include <CharacterCreation/StandingCreation.h>
+#include <CharacterCreation/ValenDialogueProjection.h>
 #include <CampaignStandingPlacement.h>
 
 #include <Services/OverlayService.h>
@@ -1616,6 +1617,7 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
     m_phaseElapsed = 0.0;
     m_suppressStageRecovery = true;
     m_error.clear();
+    ProjectValenDialogueClass();
     STRE::CreationSeating::FinalizeLocal(m_world, m_serverCharacterId, m_serverBuildRevision);
     m_helgenProjection.Finalize();
     ResetNetworkBuildState();
@@ -1626,6 +1628,45 @@ void CharacterCreationService::FinalizeCompletedBuild() noexcept
     spdlog::info(
         "[STRE][CharacterCreation] Character creation completed and controls unlocked classId={}",
         m_selectedClassId);
+}
+
+
+void CharacterCreationService::ProjectValenDialogueClass() noexcept
+{
+    // Called only after the existing validated build application completes, on
+    // the update path. It is not a projection of the current menu selection and
+    // is deliberately never called on load/recovery or with a cached class.
+    auto* mods = ModManager::Get();
+    if (!mods || !m_world.ctx().at<PapyrusService>().Get("Quest", "SetCurrentStageID"))
+    {
+        spdlog::warn("[STRE][Valen] Class projection unavailable; unknown-class dialogue remains the fallback");
+        return;
+    }
+    for (auto* quest : mods->quests)
+    {
+        const auto* editorId = quest ? quest->idName.AsAscii() : nullptr;
+        if (!editorId || std::strcmp(editorId, "STRE_QUEST_ValenDialogue") != 0)
+            continue;
+        const auto stage = STRE::Valen::ClassStage(m_selectedClassId);
+        for (std::uint16_t other = 100; other <= 121; ++other)
+        {
+            if (other != stage && quest->IsStageDone(other))
+            {
+                spdlog::error("[STRE][Valen] Refusing conflicting class projection existingStage={} requestedStage={}", other, stage);
+                return;
+            }
+        }
+        const auto& campaign = m_world.GetCampaignService();
+        const auto admission = campaign.GetAdmission();
+        const auto& snapshot = campaign.GetLatestSnapshot();
+        if (admission && snapshot && snapshot->CampaignId == admission->CampaignId.c_str() &&
+            snapshot->RosterSealed && snapshot->Roster.size() > 1)
+            quest->ScriptSetStage(STRE::Valen::kGroupStage);
+        quest->ScriptSetStage(stage);
+        spdlog::info("[STRE][Valen] Validated local class projected classId={} stage={}", m_selectedClassId, stage);
+        return;
+    }
+    spdlog::warn("[STRE][Valen] Dialogue owner unavailable; no class projection issued");
 }
 
 
