@@ -103,8 +103,14 @@ of runtime behavior, so the human smoke is mandatory.
 
 ## Local workflow and human smoke
 
-Run local gate tests, content audits, client build, then the established DEV
-build/deploy and STOP. No CI or push during this loop. The internal collector and
+Actual human acceptance belongs in [STATUS](../../project/STATUS.md). Preserve
+the accepted D gate, WAVs and flags unless a new reproducible defect appears;
+continue the [runtime finalization sequence](TEST_PLAN.md#runtime-finalization-sequence-for-96)
+on the existing build. Do not repeat completed voice-asset experiments.
+
+If a new bug requires a correction, run targeted local tests, content audits,
+client build, then the established DEV build/deploy and STOP. No CI or push during
+this loop. The internal collector and
 manifest helper must be byte-idempotent. Verify no experimental FUZ/LIP/XWM is
 reintroduced and the restored A ESP/WAV hashes match Data/Git/deployment.
 
@@ -116,5 +122,6 @@ clean next-segment and menu return, and no double-skip. Confirm vanilla dialogue
 remain unchanged and French typography is preserved. Record actual control and
 observations; neither tests nor a successful GFx write constitutes runtime PASS.
 
-PR #97 stays DRAFT, #96 stays open. Runtime acceptance must precede the eventual
-merge candidate's full CI.
+PR #97 stays DRAFT, #96 stays open. After runtime completion, report final local
+evidence and stop for explicit approval before push, full CI, Ready or merge.
+Do not change GitHub workflows as part of this mission.

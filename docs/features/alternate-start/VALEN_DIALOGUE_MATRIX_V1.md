@@ -207,12 +207,13 @@ canonical game-file tree by preparation. The existing SEQ and TIF are preserved.
 
 ## Validation required before a real candidate
 
-The post-c48be63 [presentation correction and ordered A/B smoke](VALEN_PRESENTATION_SMOKE.md)
+The post-c48be63 [presentation correction and bounded native gate](VALEN_PRESENTATION_SMOKE.md)
 projects unsafe punctuation only at runtime authoring, preserving this contract's
-canonical editorial corpus. Its one-INFO skip experiment must pass in game before
-any matrix-wide audio/flag policy changes. STATUS records the reported failure
-and actual validation state; the smoke document defines the CI deferral for this
-specific content iteration.
+canonical editorial corpus. A/B/C are historical voice-asset experiments and must
+not be repeated or generalized. Preserve D and existing audio/flags unless a new
+reproducible bug requires correction. STATUS owns actual human acceptance; the
+[test plan](TEST_PLAN.md#runtime-finalization-sequence-for-96) defines the remaining
+runtime sequence and final authorization gate. No CI or push during that loop.
 
 The implemented checks validate the editorial schema, frozen text fingerprint,
 all 21 classes/fallback, Solo/group partitions, stage-label boundaries, graph

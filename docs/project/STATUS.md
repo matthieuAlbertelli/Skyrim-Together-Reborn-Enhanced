@@ -9,7 +9,37 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen D: native DialogueMenu gate, human smoke pending (2026-10-16)
+## Valen D: human skip, three classes and Solo Helgen arrival accepted (2026-10-16)
+
+The maintainer's runtime-finalization mission and class follow-up attest the
+following on deployed D, build `7e0834906aeb4e41275cdd5dcdad2a280c562f58`:
+
+| Human scenario | Attested result and scope |
+|---|---|
+| Manual STRE skip | PASS: the ordinary vanilla control advances the STRE response after the configured delay. D is accepted; no measured timing or additional unreported subtest is inferred. |
+| “Pourquoi m’avez-vous fait venir, moi ?” | PASS for Mage, Thief / Voleur and Warrior / Guerrier. Exact follow-up: “J'ai testé les 3 classes actuellement implémentées: mage, voleur et guerrier et ça fonctionne”. The other 18 classes and fallback have structural evidence only. |
+| Solo Helgen lead and arrival | PASS for the tested flow: Valen dialogue, acceptance of “Les ruines de Helgen”, stage/objective 10, real travel and entry into Helgen, stage 20, objective 10 completed and objective 20 displayed. This validates arrival by the first player in Solo only. |
+
+Objective 20's expected wording is “Enquêter sur les ruines de Helgen.” No
+separate post-D typography check was explicitly attested, so global typography
+acceptance remains unconfirmed. Repeated skips, silence/idle duration, vanilla
+dialogue non-regression and menu behavior must not be promoted to separate human
+PASS claims merely from the accepted skip mechanism. Retain the GFx gate, WAVs,
+dialogue flags and skip behavior unless a new reproducible defect appears.
+
+Remaining runtime evidence is **NOT TESTED / not yet attested**: Solo individual
+and both-survivor discoveries without disclosure of the unknown survivor;
+native save/reload and local Say Once persistence; roster-2 stage-20/objective
+and discovery propagation in both initiation directions; presentation remaining
+local; representative SELF/GROUP/RECRUIT/DRAGONBORN/DRAGONS/HELGEN/HQ/SKYRIM/
+MISSION/PERSONAL/EXIT navigation. The earlier #95 stage-10 tests prove neither
+stage 20 nor discovery stages 11/12. A normal Solo reload will not establish
+ADR-0018 collective recovery. The focused sequence and reporting rules are in
+the [test plan](../features/alternate-start/TEST_PLAN.md#runtime-finalization-sequence-for-96).
+
+This update records human reports only. Source text and the exact class follow-up
+are retained in `_audit/valen-runtime-finalization-20261016/`; the original D
+deployment receipts remain unchanged as historical pre-smoke evidence.
 
 The maintainer reports **C runtime FAIL** on `STRE_INFO_VALEN_SELF_010_R /
 0D6BC3`: all six native FUZ/LIP response assets still leave manual skip blocked.
@@ -33,7 +63,8 @@ Native load entry, Main/Loading Menu opening and network connect/disconnect
 invalidate the pending gate under the same lock as GFx writes. Every native menu
 message still chains to the original handler. Temporary transition diagnostics
 include INFO, plugin, false/arm and confirmed true, capped at 128 events per
-process; no per-frame logging. The native hook itself remains untested in game.
+process; no per-frame logging. Human manual-skip acceptance is scoped above;
+the automated cases do not become individual human lifecycle attestations.
 
 The content restoration is exact private A, SHA256
 `31B8DD797A68BB51542F4C24986C82B21A2154E916B42D80B4574B1D7DB03471`.
@@ -74,12 +105,14 @@ unchanged. Repository clean after deployment.
 - Receipts: `build-execution.json`, `build-internal-snapshot-verification.json`,
   `deployment-verification.json` and `final-gates.json` in the evidence directory.
 
-**STOP for human D smoke** on the six segments of the selected INFO: wait more
-than 750 ms before each vanilla skip and check silence, untouched duration,
-successive skips, clean menu return, no double-skip and unchanged vanilla
-dialogues. Runtime D is **NOT TESTED**. No CI, push, Skyrim launch, new xEdit pass
-or new audio generation. PR #97 remains DRAFT at remote HEAD
-`54bcc6a2954a51da201f0fee043969203a755da2`; #96 remains OPEN.
+The build was handed off before human testing; its later scoped acceptance is
+recorded above. Continue with Solo discovery and reload on these same bytes.
+No new implementation, build or deployment is needed without a reproduced bug.
+No CI or push during runtime validation; no workflow changes. Once the requested
+runtime scenarios are complete, prepare the final local hashes, exact results,
+untested cases, local checks and unpushed commit list, then **STOP for explicit
+authorization before final push / CI / Ready / merge**. PR #97 remains DRAFT at
+remote HEAD `54bcc6a2954a51da201f0fee043969203a755da2`; #96 remains OPEN.
 
 ## Historical Valen A/B/C presentation experiments (2026-10-16)
 
