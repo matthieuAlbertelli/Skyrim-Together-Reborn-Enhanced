@@ -2,6 +2,13 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Navigation gate before Hadvar validation
+
+The maintainer reports root-reopen and missing-Helgen runtime FAILs on D.
+Pause Hadvar testing until the [Valen root-menu smoke](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke) passes.
+This content iteration requires local tests, a newly reviewed private ESP,
+validated import and DEV deploy; no CI or push.
+
 ## Complete Valen matrix and discovery (issue #96)
 
 The complete corpus/condition checks and discovery lifecycle are in

@@ -72,7 +72,8 @@ def voice_filename(quest, topic, form_id, response):
 def inspect_trial(plugin, data_root):
     """Static resolution is deliberately not reported as an engine load."""
     fid = plugin.ids[TRIAL_INFO]
-    topic = plugin.integer(fid, 'TPIC')
+    # INFO ownership is its type-7 GRUP. TPIC means Previous Topic in SSE.
+    topic = plugin.parents[fid]
     owner = plugin.integer(topic, 'QNAM')
     topic_name, owner_name = text(plugin.one(topic, 'EDID')), text(plugin.one(owner, 'EDID'))
     require(owner_name == OWNER, 'Trial dialogue owner changed')

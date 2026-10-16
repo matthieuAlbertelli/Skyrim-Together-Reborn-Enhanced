@@ -318,6 +318,22 @@ smoke. This exception does not alter the historical matrix import CI guards or
 the official xEdit human-review boundary below. The new private adapter stops at
 `HUMAN_XEDIT_REQUIRED`; its generated plan is not a human receipt.
 
+### Bounded navigation iteration after the D menu failure
+
+`FixValenNavigation -ShowXEdit` derives the corrected Player Dialogue topology
+from the frozen matrix, using exact deployed D as its Git/Data baseline. The
+[topology contract](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md)
+owns the vanilla evidence, four adapter records, blank Responses, explicit
+root return and stage-dependent Helgen starting topic. No companion changes
+are allowed. The wrapper uses the existing private authoring and validated
+import path; the record manifest receives exactly four allocated identities.
+
+The saved candidate requires a new human receipt, including Boolean
+`ReopenedSavedFile`, `SecondCheckForErrors` and `NoErrorsReported`, in addition
+to the existing checks and saved/log/tool hashes. This content iteration has
+**no CI and no push**: local tests/audits, human xEdit, validated import, DEV
+build/deploy, STOP for human menu smoke. Hadvar validation remains suspended.
+
 ## Official xEdit boundary
 
 AutoMod/Mutagen can reorder masters. An AutoMod write is never ready for Git by

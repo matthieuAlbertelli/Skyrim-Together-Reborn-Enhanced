@@ -257,7 +257,7 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
 }
 
 function New-StreSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
-    if ($Request.Operation -eq 'FixValenPresentation') { return New-StreValenPresentationSession $Config $Plugin $Request -DryRun:$DryRun }
+    if ($Request.Operation -in @('FixValenPresentation','FixValenNavigation')) { return New-StreValenPresentationSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenDialogueMatrixV1') { return New-StreValenMatrixSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenHelgen') { return New-StreValenSession $Config $Plugin $Request -DryRun:$DryRun }
     $git = Assert-StreMutationGit $Config $Plugin
@@ -333,7 +333,7 @@ function Import-StreValidated($Config, [string]$Session) {
     if ($state.Request.Operation -eq 'AddValenDialogueMatrixV1') {
         return Import-StreValenMatrixValidated $Config $root $state
     }
-    if ($state.Request.Operation -eq 'FixValenPresentation') {
+    if ($state.Request.Operation -in @('FixValenPresentation','FixValenNavigation')) {
         return Import-StrePresentationValidated $Config $root $state
     }
     if ($state.Schema -ne 1 -or $state.State -ne 'AwaitingHumanXEdit') { throw 'Session is not awaiting xEdit; failed/dry-run/imported sessions cannot be promoted.' }

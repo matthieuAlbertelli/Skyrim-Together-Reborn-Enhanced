@@ -9,6 +9,37 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Valen navigation: runtime FAIL on D, Hadvar validation suspended (2026-10-16)
+
+The maintainer reports two navigation failures on deployed D: after browsing,
+closing and reopening Valen, the root can contain only RECRUIT; the Helgen root
+entry never appears. These are human FAIL reports, not an inferred failure of
+the accepted native skip mechanism. Do not resume Hadvar validation until the
+[root-menu smoke](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
+passes. Earlier class and Solo-arrival attestations below retain their limited
+scope; they do not establish correct menu navigation.
+
+Read-only inspection confirms eleven zero-Response navigation INFOs, all eleven
+category branches already Top-Level, no explicit root-return topic and a mixed
+Helgen navigation/state-response starting topic. The
+[topology contract and vanilla evidence](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md)
+explain the generator correction and its limits. The adapter adds blank
+Responses without Force Subtitle, explicit submenu/root links and a dedicated
+three-stage Helgen root; it removes unintended TPIC previous-topic dependencies.
+Eleven categories remain Top-Level; six internal report branches become Normal.
+Four adapter records are new. Narrative conditions/effects, corpus/fingerprint,
+native gate D and all companions stay fixed.
+
+Implementation is local and not deployed. The synthetic xEdit output passes
+the topology reader, including 22 class contexts and 100 survivor combinations;
+107 Python Valen tests (including 11 navigation tests), 19 PowerShell navigation
+guards and 9 existing presentation guards pass. Official xEdit synthetic
+DryRun/Prepare and the independent audit pass in session
+`fe44f7c729fc45f2ac2f680a6e8eda31`, with original fixture/master hashes unchanged. Human
+xEdit on the new production candidate and root-menu runtime smoke are
+**NOT TESTED**. Automated results alone do not authorize import/build/deploy.
+This iteration has no CI and no push; PR #97 is DRAFT and #96 open.
+
 ## Valen D: human skip, three classes and Solo Helgen arrival accepted (2026-10-16)
 
 The maintainer's runtime-finalization mission and class follow-up attest the

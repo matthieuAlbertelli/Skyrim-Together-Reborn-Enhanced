@@ -1,6 +1,6 @@
 # Typed #96 private-only preparation. The common process/Git/format guards apply.
 function Invoke-StreMatrixPython($Config, [string]$Script, [string[]]$Arguments) {
-    if ($Script -notin @('valen_matrix_writer.py','valen_matrix_audit.py','valen_matrix_assets.py','valen_presentation.py')) { throw 'Unsupported matrix helper.' }
+    if ($Script -notin @('valen_matrix_writer.py','valen_matrix_audit.py','valen_matrix_assets.py','valen_presentation.py','valen_navigation.py')) { throw 'Unsupported matrix helper.' }
     $python = @(Get-Command python -CommandType Application -ErrorAction Stop)[0].Source
     $result = Invoke-StreProcess $python (@((Join-Path $Config.RepoRoot "Tools/Scripts/$Script")) + $Arguments) $Config.RepoRoot
     if ($result.ExitCode -ne 0 -or $result.Err.Trim()) { throw "Matrix helper failed: $($result.Out) $($result.Err)" }

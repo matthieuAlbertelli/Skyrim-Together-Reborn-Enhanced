@@ -1,6 +1,10 @@
 # Bounded content iteration; the full CI gate is deferred to the merge HEAD by
 # the maintainer's 2026-10-16 instruction. Human xEdit review is still required.
 function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
+    $navigation = $Request['Operation'] -ceq 'FixValenNavigation'
+    if ($navigation -and $Request.Variant -cne 'A') { throw 'Navigation has no A/B variants.' }
+    $helper = if ($navigation) { 'valen_navigation.py' } else { 'valen_presentation.py' }
+    $planFile = if ($navigation) { 'navigation-plan.json' } else { 'presentation-plan.json' }
     if (-not $Request.ShowXEdit) { throw 'FixValenPresentation needs -ShowXEdit.' }
     if ($Request.Variant -notin @('A','B')) { throw 'Only presentation variants A/B are supported.' }
     if ($Request.EditorId -or $Request.Name) { throw 'Presentation has no arbitrary record/text override.' }
@@ -8,8 +12,12 @@ function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [s
     $repoPlugin = Join-Path $Config.RepoRoot "GameFiles/Skyrim/$Plugin"
     $source = Join-Path $Config.DataRoot $Plugin
     $before = Get-StreHash $repoPlugin
-    if ($before -cne '2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E' -or
-        (Get-StreHash $source) -cne $before) { throw 'Presentation requires the identical tested c48be63 Git/Data baseline.' }
+    $baseline = if ($navigation) { '31B8DD797A68BB51542F4C24986C82B21A2154E916B42D80B4574B1D7DB03471' }
+        else { '2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E' }
+    if ($before -cne $baseline -or (Get-StreHash $source) -cne $before) {
+        if ($navigation) { throw 'Navigation requires the identical deployed D Git/Data baseline.' }
+        throw 'Presentation requires the identical tested c48be63 Git/Data baseline.'
+    }
     $root = Resolve-StrePath (Join-Path $Config.RepoRoot ('_audit/modding/' + [guid]::NewGuid().ToString('N')))
     $data = Join-Path $root 'Data'
     $null = New-Item -ItemType Directory -Path $data
@@ -50,9 +58,21 @@ function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [s
         }
         Copy-StreVerified $repoPlugin (Join-Path $root 'before.esp')
         Copy-StreVerified $repoPlugin (Join-Path $root 'repository-before.esp')
+        if ($navigation) {
+            Copy-StreVerified (Join-Path $Config.RepoRoot 'docs/features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json') (Join-Path $root 'records-before.json')
+            foreach ($relative in @('Tools/Scripts/valen_navigation.py','Tools/Scripts/xedit/STRE_ValenNavigation.pas',
+                'Tools/Scripts/valen_matrix.py','Tools/Scripts/valen_matrix_plan.py','Tools/Scripts/valen_matrix_audit.py',
+                'Tools/Scripts/valen_matrix_writer.py','Tools/Scripts/valen_helgen.py','Tools/Scripts/audit_mq101_quickstart5.py',
+                'Tools/Scripts/Stre.ValenPresentation.ps1','Tools/Scripts/Stre.Modding.psm1',
+                'Tools/Scripts/Stre.ValenHelgen.ps1','Tools/Scripts/Stre.ValenMatrix.ps1','build-and-deploy-dev.ps1')) {
+                $path=Join-Path $Config.RepoRoot $relative
+                $state.Protected[$path]=Get-StreHash $path
+            }
+            $state.Protected[(Join-Path $root 'records-before.json')]=Get-StreHash (Join-Path $root 'records-before.json')
+        }
         Initialize-StreValenPhase $Config $root
-        $null=Invoke-StreMatrixPython $Config 'valen_presentation.py' @('--root',$root,'--variant',$Request.Variant)
-        foreach ($name in @('presentation-plan.json','author.ssepas','before.esp','repository-before.esp')) {
+        $null=Invoke-StreMatrixPython $Config $helper @('--root',$root,'--variant',$Request.Variant)
+        foreach ($name in @($planFile,'author.ssepas','before.esp','repository-before.esp')) {
             $state.Protected[(Join-Path $root $name)]=Get-StreHash (Join-Path $root $name)
         }
         Write-StreJson $statePath $state
@@ -67,7 +87,8 @@ function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [s
         Assert-GameProcessesStopped
         Invoke-StreValenAuthor $Config $root Prepare
         if ((Get-StreHash (Join-Path $data $Plugin)) -cne $before) { throw 'Writer input changed.' }
-        $null=Invoke-StreMatrixPython $Config 'valen_presentation.py' @('--root',$root,'--variant',$Request.Variant,'--audit')
+        $null=Invoke-StreMatrixPython $Config $helper @('--root',$root,'--variant',$Request.Variant,'--audit')
+        if ($navigation) { $state.Protected[(Join-Path $root 'candidate-manifest.json')]=Get-StreHash (Join-Path $root 'candidate-manifest.json') }
         Copy-StreMatrixAuthoredOutput $root $before
         Assert-StreFormat (Get-StreHeader (Join-Path $data $Plugin)) $state.Header -Normalized
         foreach ($relative in $state.PrivateOriginals.Keys) {
@@ -78,7 +99,7 @@ function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [s
         $state.CandidateHash=Get-StreHash (Join-Path $data $Plugin)
         $state.State='AwaitingHumanXEdit'
         return @{Success=$true;Session=$root;State='HUMAN_XEDIT_REQUIRED';Variant=$Request.Variant;
-            CandidateSha256=$state.CandidateHash;Next='Review this exact new candidate in official xEdit; old receipt does not apply. Runtime A load evidence then B smoke; no C/generalization yet.'}
+            CandidateSha256=$state.CandidateHash;Next='Review these exact saved bytes in official xEdit, reopen and check again. New human attestation required before import; runtime remains untested.'}
     } catch { $state.State='Failed'; throw }
     finally {
         try { Assert-StreMatrixProtected $state } catch { $state.State='Failed'; throw }
@@ -87,8 +108,11 @@ function New-StreValenPresentationSession($Config, [string]$Plugin, $Request, [s
 }
 
 function Import-StrePresentationValidated($Config, [string]$Root, $State) {
+    $navigation = $State.Request.Operation -ceq 'FixValenNavigation'
+    $helper = if ($navigation) { 'valen_navigation.py' } else { 'valen_presentation.py' }
     if ($State.Schema -ne 1 -or $State.State -cne 'AwaitingHumanXEdit' -or
-        $State.Request.Operation -cne 'FixValenPresentation' -or $State.Request.Variant -notin @('A','B')) {
+        $State.Request.Operation -cnotin @('FixValenPresentation','FixValenNavigation') -or
+        $State.Request.Variant -notin @('A','B') -or ($navigation -and $State.Request.Variant -cne 'A')) {
         throw 'Presentation session is not awaiting human review.'
     }
     $git=Assert-StreMutationGit $Config $State.Plugin
@@ -101,7 +125,9 @@ function Import-StrePresentationValidated($Config, [string]$Root, $State) {
     $receiptPath=Join-Path $Root 'validation.json'
     if (-not (Test-Path -LiteralPath $receiptPath)) { throw 'HUMAN_XEDIT_REQUIRED: new presentation receipt missing.' }
     $receipt=Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json -AsHashtable
-    foreach ($field in @('SortMasters','CheckForErrors','SavedAndClosed')) {
+    $reviewFields=@('SortMasters','CheckForErrors','SavedAndClosed')
+    if ($navigation) { $reviewFields+=@('ReopenedSavedFile','SecondCheckForErrors','NoErrorsReported') }
+    foreach ($field in $reviewFields) {
         if ($receipt[$field] -isnot [bool] -or -not $receipt[$field]) { throw "HUMAN_XEDIT_REQUIRED: $field" }
     }
     if ($receipt.Schema -ne 1 -or [string]::IsNullOrWhiteSpace($receipt.Reviewer) -or
@@ -111,7 +137,7 @@ function Import-StrePresentationValidated($Config, [string]$Root, $State) {
     $log=Join-Path $Root 'xedit-validation.log'
     if (-not (Test-Path -LiteralPath $log) -or (Get-Item -LiteralPath $log).Length -eq 0 -or
         (Get-StreHash $log) -cne $receipt.LogSha256) { throw 'Presentation human log missing or changed.' }
-    $null=Invoke-StreMatrixPython $Config 'valen_presentation.py' @('--root',$Root,'--variant',$State.Request.Variant,'--audit','--saved')
+    $null=Invoke-StreMatrixPython $Config $helper @('--root',$Root,'--variant',$State.Request.Variant,'--audit','--saved')
     Assert-StreFormat (Get-StreHeader $candidate) $State.Header -Normalized
     foreach ($relative in $State.PrivateOriginals.Keys) {
         if ($relative -cne $State.Plugin -and (Get-StreHash (Join-Path $Root "Data/$relative")) -cne $State.PrivateOriginals[$relative]) {
@@ -123,6 +149,7 @@ function Import-StrePresentationValidated($Config, [string]$Root, $State) {
     $null=New-Item -ItemType Directory -Path $snapshot
     $frozen=Join-Path $snapshot $State.Plugin
     Copy-StreVerified $candidate $frozen
+    if ($navigation) { Copy-StreVerified (Join-Path $Root 'candidate-manifest.json') (Join-Path $snapshot 'candidate-manifest.json') }
     if ((Get-StreHash $frozen) -cne $receipt.PluginSha256) { throw 'Presentation changed while freezing.' }
     $null=Assert-StreMutationGit $Config $State.Plugin
     Assert-GameProcessesStopped
@@ -143,10 +170,21 @@ function Import-StrePresentationValidated($Config, [string]$Root, $State) {
         Write-StreJson (Join-Path $Root 'import-result.json') $import
         if ($import.ExitCode -ne 0 -or (Get-StreHash $repoPlugin) -cne $receipt.PluginSha256 -or
             (Get-StreHash $live) -cne $receipt.PluginSha256) { throw 'Presentation import failed; preserve backups and stop.' }
+        # Verify every protected original before the sole bounded manifest write.
         foreach ($path in $State.Protected.Keys) {
             if ($path -ine $live -and $path -ine $repoPlugin -and (Get-StreHash $path) -cne $State.Protected[$path]) {
                 throw "Unexpected protected change after presentation import: $path"
             }
+        }
+        if ($navigation) {
+            $frozenManifest=Join-Path $snapshot 'candidate-manifest.json'
+            if ((Get-StreHash $frozenManifest) -cne $State.Protected[(Join-Path $Root 'candidate-manifest.json')]) { throw 'Frozen navigation manifest changed.' }
+            $canonicalManifest=Join-Path $Config.RepoRoot 'docs/features/alternate-start/CK_RECORDS_M7_IMPLEMENTED.json'
+            $temporaryManifest=$canonicalManifest+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+            Copy-StreVerified $frozenManifest $temporaryManifest
+            if ((Get-StreHash $canonicalManifest) -cne $State.Protected[$canonicalManifest]) { throw 'Canonical manifest changed before promotion.' }
+            [IO.File]::Move($temporaryManifest,$canonicalManifest,$true)
+            if ((Get-StreHash $canonicalManifest) -cne (Get-StreHash $frozenManifest)) { throw 'Canonical manifest promotion failed.' }
         }
         $State.State='Imported'; $State.CandidateHash=$receipt.PluginSha256
         return @{Success=$true;State=$State.State;Session=$Root;Sha256=$receipt.PluginSha256;CompanionsChanged=0}
