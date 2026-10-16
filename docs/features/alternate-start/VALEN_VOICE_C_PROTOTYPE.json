@@ -1,0 +1,149 @@
+{
+  "success": true,
+  "info": "STRE_INFO_VALEN_SELF_010_R",
+  "formKey": "0D6BC3:STRE_AlternateStart.esp",
+  "pluginSha256": "852E2CF392CA64F7694C7C8914BF53D54D3C93BFEBF88F2EF84F3BF240934933",
+  "forceSubtitle": true,
+  "noLipFile": false,
+  "recordsChanged": 0,
+  "newFuzFiles": 6,
+  "otherInfosChanged": 0,
+  "lipGeneratorLanguage": "French",
+  "tools": [
+    {
+      "name": "LipGenerator.exe",
+      "sha256": "97B8518C09CA56CE7EE74A33130BF1DA875CDF12754BD0E210C1F92705A1B52E",
+      "role": "native generation/packaging tool or phoneme data"
+    },
+    {
+      "name": "FonixData.cdf",
+      "sha256": "F9EDCECF534F1C1BF187EE5EBF62B2856C574AF441F1A6B83A7FB639C6D27974",
+      "role": "native generation/packaging tool or phoneme data"
+    },
+    {
+      "name": "xWMAEncode.exe",
+      "sha256": "9E3004476DC47BEFAD3F884D2077F08C7DFD032333D65D979F4CB0B7EAAF5110",
+      "role": "native generation/packaging tool or phoneme data"
+    },
+    {
+      "name": "ffmpeg.exe",
+      "sha256": "26BFFBED0FEE73CB060DEC99766D96A3E9448951396C31A9F59BEA7BFE71C892",
+      "role": "available private dependency; not directly invoked"
+    },
+    {
+      "name": "LIPFuzer.exe",
+      "sha256": "209F341B08D36AAE892CE0BE52BAF58546840EF97CB0C2D37EED627E08343CFC",
+      "role": "native generation/packaging tool or phoneme data"
+    }
+  ],
+  "assets": [
+    {
+      "response": 1,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_1.fuz",
+      "wavSha256": "11A461AB182CF828A40013CE0D143ACD0C33E93B3FDB89251D9D653B4AF40323",
+      "lipSha256": "61D53D11BD74AF85881FBBB7E13C7F2093ADA2FD2D948A1EA8A5287C7DDEBDBA",
+      "xwmSha256": "AB2C5FD0F2630C71AB34A6A5AB28CA98B5C992C11791AB8A572332173110DA62",
+      "fuzSha256": "D05EAE90208DCC56A84F94EC2476C5FAF2DC232897D1707C6B85A87324F678B2",
+      "lipBytes": 682,
+      "xwmBytes": 24628,
+      "fuzBytes": 25322,
+      "pcmFrames": 165375,
+      "decodedFrames": 165888,
+      "decodedSeconds": 3.7616326530612243,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "C9E65DF4F0BDD1B3D199F650B5F8D9135F14DE85739EEE986A344E1CB4B40F57"
+    },
+    {
+      "response": 2,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_2.fuz",
+      "wavSha256": "1B99B8ADE90BB66EFFE036D4554B1FDE2E939BDCFE7D59667599FCCEDF70460F",
+      "lipSha256": "78191B5416CD89252F062668E84160A15AABC3B10F85444110C767DFF6B3AD98",
+      "xwmSha256": "CA2916F436CBC6CB3B56FA899606679A5574A802FFB279EB0433AD055E00AC4D",
+      "fuzSha256": "DFC2A43A11C2FC8AF13320D4D910B5946D4E4588336AFB32C65628F01FB6FB2F",
+      "lipBytes": 598,
+      "xwmBytes": 29096,
+      "fuzBytes": 29706,
+      "pcmFrames": 200655,
+      "decodedFrames": 200704,
+      "decodedSeconds": 4.551111111111111,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "D8E9A051AD2255BEDB89C07D96DF5D363EF23B620A333EBF51DC5B00F2074748"
+    },
+    {
+      "response": 3,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_3.fuz",
+      "wavSha256": "EA58AE04ACEBF361722C93516B3BF28DA4E7EE6FDEBFD556CC4FFC31D48C4DD1",
+      "lipSha256": "0C72B8BB89C153058CD58F7E5A0E72B16E77CD8594556A871981F49D840429B0",
+      "xwmSha256": "E786D8AC6B7018DEDD61730866413DC4EA4F85712EBDEF0E6231479D59EA9457",
+      "fuzSha256": "45EA0CDAB5E887C23A30CDCC95C460568FDC76D39DDFCE4FE244E946BCF04A6F",
+      "lipBytes": 3630,
+      "xwmBytes": 46968,
+      "fuzBytes": 50610,
+      "pcmFrames": 338835,
+      "decodedFrames": 339968,
+      "decodedSeconds": 7.7090249433106575,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "D9F0F6D10F7DDD9730DBEE9B73DB72C5677D44E3E9676F09275FF26913F5B024"
+    },
+    {
+      "response": 4,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_4.fuz",
+      "wavSha256": "EA58AE04ACEBF361722C93516B3BF28DA4E7EE6FDEBFD556CC4FFC31D48C4DD1",
+      "lipSha256": "8FDABA3C094BE96EC61A1652C877EA33492AF9434F86A45C7F2277E4CFA9AF42",
+      "xwmSha256": "E786D8AC6B7018DEDD61730866413DC4EA4F85712EBDEF0E6231479D59EA9457",
+      "fuzSha256": "F665C565718989D6A4F265D9918B085C689FEAD81349940852A0C6FE2BC128F4",
+      "lipBytes": 3506,
+      "xwmBytes": 46968,
+      "fuzBytes": 50486,
+      "pcmFrames": 338835,
+      "decodedFrames": 339968,
+      "decodedSeconds": 7.7090249433106575,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "C4907F0D6810D14BFBCFC6663DB84B690CBF8965020BF6FF8B44B52799163946"
+    },
+    {
+      "response": 5,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_5.fuz",
+      "wavSha256": "11A461AB182CF828A40013CE0D143ACD0C33E93B3FDB89251D9D653B4AF40323",
+      "lipSha256": "E987F7F906A55ED79D5A276533B1930CCD30D9050A58F51446038644D4E7F4B0",
+      "xwmSha256": "AB2C5FD0F2630C71AB34A6A5AB28CA98B5C992C11791AB8A572332173110DA62",
+      "fuzSha256": "FD78E017ED49CF994C16C96C3A3657BA9BFAAFAB1F868063E4A845489F20918D",
+      "lipBytes": 822,
+      "xwmBytes": 24628,
+      "fuzBytes": 25462,
+      "pcmFrames": 165375,
+      "decodedFrames": 165888,
+      "decodedSeconds": 3.7616326530612243,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "7CAA4F91B0E6C3DA5535A2CFAB7EC4FA9DD889279AAD82855A8A679F25499DDE"
+    },
+    {
+      "response": 6,
+      "path": "Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6bc3_6.fuz",
+      "wavSha256": "A58A8C2866DD97009122B57DE1E34D6291CE1F496203DBCA708C416FBB4EB8AB",
+      "lipSha256": "3C4642641A9C09D00D17E636B8F1E9A8B28215227105A73AF87B9E81A28F1382",
+      "xwmSha256": "884A1A6690ED3EF10E8678CEB094AABF45FE83CFFB73CA5E8BB4F23BF83246E8",
+      "fuzSha256": "AAC8A4AC6C0331902EA311C1CCB83986DA5373E1FD301666213A63ACAFA8A2DC",
+      "lipBytes": 2321,
+      "xwmBytes": 29096,
+      "fuzBytes": 31429,
+      "pcmFrames": 206535,
+      "decodedFrames": 206848,
+      "decodedSeconds": 4.690430839002268,
+      "decodedPcmAllZero": true,
+      "nativeUnpackIdentical": true,
+      "textSha256": "3901B18643E1A21F6A84FA557D928668291B5A481EB1565B45DB4307503F59F4"
+    }
+  ],
+  "packaging": "LIPFuzer native FUZ v1 containing generated LIP and xWMAEncode audio; original WAV retained unchanged",
+  "timing": "No VMAD on this INFO; no runtime script timer to remove. Audio duration retained.",
+  "engineLoad": "NOT_OBSERVED",
+  "runtimeC": "NOT_TESTED",
+  "initialPackagingAttempt": "Exit 0 but no files without trailing directory separators; rejected by exact-count guard. Corrected invocation generated six files.",
+  "privateEvidence": "_audit/valen-vanilla-c-20261016"
+}

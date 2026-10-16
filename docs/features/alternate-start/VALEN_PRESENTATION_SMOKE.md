@@ -21,7 +21,7 @@ The historical matrix writer/receipt auditor retain their original text contract
 so old review evidence can still be reproduced. Use the new bounded presentation
 adapter for this correction; it never edits those historical sessions.
 
-## One INFO, unchanged audio
+## One INFO, six response segments
 
 Use **Parlez-moi de vous. → Qui êtes-vous vraiment ?**. The INFO is
 `STRE_INFO_VALEN_SELF_010_R`, local FormID `0D6BC3` in STRE_AlternateStart.esp.
@@ -45,36 +45,7 @@ The flag definitions are confirmed by [xEdit's SSE definitions](https://github.c
 and [Mutagen's Skyrim enum](https://github.com/Mutagen-Modding/Mutagen/blob/dev/Mutagen.Bethesda.Skyrim/Records/Major%20Records/DialogResponses.cs):
 Force Subtitle is `0x0200`, No LIP File is `0x0800`.
 
-## A: current behavior and actual file reads
-
-The reported c48be63 failure establishes the general symptom; it does not supply
-a trace for this selected INFO. Obtain that trace before concluding the WAV is
-resolved by the engine. A can be measured on the deployed c48be63 baseline; the
-private A candidate additionally fixes typography while retaining every flag.
-
-1. The maintainer starts [Process Monitor](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon),
-   clears the capture and includes `Process Name is SkyrimSE.exe` plus paths
-   containing `\Sound\Voice\STRE_AlternateStart.esp\`. Capture before launching
-   a fresh Skyrim process, so a cached asset cannot hide the first read. The agent
-   does not launch Skyrim. Keep the capture bounded to this short test.
-2. Record the effective profile/load order and installed ESP/WAV hashes. If an
-   override changes Valen's VoiceType or the INFO, stop and resolve it first.
-   Navigate to the selected INFO, note the time, and leave response 1 untouched.
-   Compare its observed duration to the 3.75-second PCM duration.
-3. Require successful `CreateFile` and nonzero successful `ReadFile` activity for
-   the exact `_000d6bc3_1.wav` path by SkyrimSE.exe, correlated to this reply.
-   Search for failed alternate paths/extensions too. Preserve the PML and a
-   filtered CSV, including time, PID, operation, path, result and detail. A file
-   listing or an editor's read is insufficient. OS reads establish consumption
-   of bytes; duration/visual observation is still needed for playback behavior.
-4. Repeat the INFO and tap the ordinary vanilla dialogue-skip control once after
-   reading each segment. First verify that same binding advances a voiced vanilla
-   dialogue in this profile. Record actual control/device, durations and result;
-   do not substitute console stage changes or synthetic key spam.
-5. Exit Skyrim completely before changing variants. If the expected WAV is not
-   read, investigate resolution before B. Do not infer a No LIP File defect.
-
-## B, then C only if needed
+## A and B history
 
 B changes only this INFO's flags from `0x0A00` to `0x0200`. Its text and all six
 WAVs are identical to private A. Other 159 INFO flags remain unchanged. After
@@ -82,20 +53,55 @@ local tests/audits and new-candidate xEdit validation, use the established DEV
 build/deploy workflow, then STOP for the maintainer's manual launch. No full new
 Windows/Linux CI wait is required before this smoke.
 
-Repeat the same capture, untouched timing trial and single-tap skip trial. PASS
-requires sufficient idle subtitle time, immediate single-step vanilla skip,
-clean progression through the next response and back to the menu, silence,
-and no hang or double advance. Preserve exact ESP/WAV hashes and evidence for
-each variant. B is an experiment, not a proposed proven fix.
+The maintainer reported manual skip FAIL for both A and deployed B. No engine
+file-read capture was supplied. The later instruction explicitly abandons
+Process Monitor and authorizes the normal voice pipeline for C without that
+prerequisite. Do not resume instrumentation or infer an engine-load PASS.
 
-Only after a recorded B failure with confirmed WAV resolution may C generate
-a genuine SSE-compatible LIP for the **first response only**, with No LIP File
-still off. Keep other responses as controls; use an actual compatible generator,
-not an invented empty LIP or renamed arbitrary file. Its absence for the other
-five responses must not be mistaken for failure of the first-line experiment.
-Do not generalize until a variant satisfies every criterion in game. Then apply
-that proven presentation policy mechanically, generate only required assets,
-and rerun the full content audits. Full CI is required on the merge HEAD.
+## C: native voice prototype on this INFO only
+
+Keep the reviewed B ESP byte-identical: Force Subtitle on, No LIP File off.
+There is no VMAD/fragment timer on this INFO to remove. Its six existing silent
+PCM WAVs supply the duration and remain unchanged. Treat all six segments of
+this one INFO consistently; do not generate assets for any other INFO.
+
+Use the installed Skyrim `Tools/LipGen/LipGenerator` and `LipFuzer` tools in a
+private directory. The retained [asset receipt](VALEN_VOICE_C_PROTOTYPE.json)
+pins the tool/input/output hashes. For each exact serialized NAM1 transcript:
+
+```text
+LipGenerator.exe <basename.wav> <NAM1 text> -Language:French -OutputFileName:<basename.lip>
+xWMAEncode.exe -b 48000 <basename.wav> <basename.xwm>
+LIPFuzer.exe -s <six-assets-directory\> -d <private-output-directory\> --norec -v 2
+```
+
+Run LipGenerator with its private FonixData.cdf beside it. LIPFuzer's directory
+arguments require trailing separators; exit 0 alone is insufficient. Require
+exactly six outputs named `stre_quest_stre_dial_valen_000d6bc3_<1..6>.fuz` under
+`Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/`. Each FUZ embeds its genuine
+generated LIP and encoded silent XWM. Keep loose LIP/XWM and logs as private
+authoring evidence; import only the six FUZ through the existing CK importer.
+
+Audit FUZ headers, embedded hashes, native unpack round-trip, decoded mono
+44100 Hz/16-bit silence and duration, frozen corpus, unchanged ESP and original
+WAVs. `audit_valen_voice_prototype.py` checks the retained prototype bytes and
+scope. No ESP authoring occurs, so the unchanged B xEdit receipt still applies.
+After local audits/tests, build/deploy DEV and STOP for a human test. Do not
+trigger CI or push a PR synchronization during this diagnostic loop.
+
+1. The maintainer launches Skyrim and selects the specified dialogue.
+2. Leave it untouched once: subtitles must remain readable, the audio silent,
+   and the response progression natural through all six segments.
+3. Repeat and tap the normal vanilla skip control once per segment. Require
+   immediate single-step advancement, a clean return to the menu, no hang and
+   no double progression. Record the control/device and observed results.
+4. Check runtime typography as well: ordinary apostrophes/quotes/dashes/ellipsis,
+   preserved French accents and guillemets. No runtime PASS is inferred from
+   the binary audit.
+
+Do not generalize until the maintainer reports every criterion PASS. Only then
+apply the proven policy mechanically and rerun content audits. Full CI remains
+required on the later merge candidate.
 
 ## Private preparation
 
