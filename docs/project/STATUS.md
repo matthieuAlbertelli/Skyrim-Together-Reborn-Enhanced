@@ -79,7 +79,7 @@ stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
 at this preparation boundary. The canonical CK manifests remain unchanged.
 
 Implementation verification: **195 Python tests**, **66 PowerShell toolchain
-cases**, **17 matrix preparation guards**, **13 CK collector cases**, and the
+cases**, **18 matrix preparation guards**, **13 CK collector cases**, and the
 six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
 45,082 assertions**, including the class projection checks. `git diff --check`
 passes. This source checkpoint records preparation evidence; it grants neither

@@ -57,7 +57,7 @@ function Get-StreMatrixCompanionIdentity([string]$GitPath, [string]$LivePath) {
         $gitText = $bytes.GetString([IO.File]::ReadAllBytes($GitPath))
         $liveText = $bytes.GetString([IO.File]::ReadAllBytes($LivePath))
         if ($gitText.Contains([char]0) -or $liveText.Contains([char]0) -or
-            $gitText.Replace("`r`n","`n") -cne $liveText.Replace("`r`n","`n")) {
+            -not [String]::Equals($gitText.Replace("`r`n","`n"), $liveText.Replace("`r`n","`n"), [StringComparison]::Ordinal)) {
             throw "Git/Data companion differs beyond PSC line endings: $GitPath"
         }
         $comparison = 'PscCrLfOnly'

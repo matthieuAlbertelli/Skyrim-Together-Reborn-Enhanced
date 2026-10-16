@@ -56,6 +56,10 @@ $module=Import-Module (Join-Path $PSScriptRoot 'Stre.Modding.psm1') -Force -Pass
         $script:matrixPassed++
         [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Other`n; été`n"))
         Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        # PowerShell -ceq uses linguistic comparison and can ignore soft hyphen.
+        # The bytes must remain significant even when the script looks identical.
+        [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`n; été$([char]173)`n"))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
         [IO.File]::WriteAllBytes($livePath,([byte[]](239,187,191)+$lf))
         Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
         [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`r; été`r"))
