@@ -79,11 +79,20 @@ stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
 at this preparation boundary. The canonical CK manifests remain unchanged.
 
 Implementation verification: **195 Python tests**, **66 PowerShell toolchain
-cases**, **9 matrix preparation guards**, **13 CK collector cases**, and the
+cases**, **17 matrix preparation guards**, **13 CK collector cases**, and the
 six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
 45,082 assertions**, including the class projection checks. `git diff --check`
 passes. This source checkpoint records preparation evidence; it grants neither
 human xEdit approval nor permission to import/deploy a private candidate.
+
+The first real preparation attempt stopped before xEdit because the two existing
+Valen QF/TIF PSC files use CRLF in the Git checkout and LF in Data, already present
+in the initial baseline. The source text and all 60 baseline hashes were unchanged.
+The guard now permits only that byte-preserving PSC comparison, records the two
+raw hashes separately, and still rejects every binary, BOM, text or final-newline
+change. It copies repository bytes privately without normalizing any original.
+Regression fixtures cover those rejections; exact-HEAD CI must pass again before
+a fresh real preparation session can start.
 
 Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
 cases, 13 collector fixture cases and all six existing read-only CK audits. Its

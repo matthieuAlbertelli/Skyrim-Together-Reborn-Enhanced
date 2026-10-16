@@ -42,6 +42,29 @@ function Assert-StreMatrixProtected($State) {
     }
 }
 
+function Get-StreMatrixCompanionIdentity([string]$GitPath, [string]$LivePath) {
+    $gitHash = Get-StreHash $GitPath
+    $liveHash = Get-StreHash $LivePath
+    $comparison = 'ByteIdentical'
+    if ($gitHash -cne $liveHash) {
+        if ([IO.Path]::GetExtension($GitPath) -ine '.psc' -or [IO.Path]::GetExtension($LivePath) -ine '.psc') {
+            throw "Git/Data companion differs: $GitPath"
+        }
+        # Git text=auto/core.autocrlf can make the checkout CRLF while Data is LF.
+        # Latin1 is a bijection over bytes, not an encoding guess: only CRLF pairs
+        # are compared as LF. BOM, all other bytes and final-newline count matter.
+        $bytes = [Text.Encoding]::Latin1
+        $gitText = $bytes.GetString([IO.File]::ReadAllBytes($GitPath))
+        $liveText = $bytes.GetString([IO.File]::ReadAllBytes($LivePath))
+        if ($gitText.Contains([char]0) -or $liveText.Contains([char]0) -or
+            $gitText.Replace("`r`n","`n") -cne $liveText.Replace("`r`n","`n")) {
+            throw "Git/Data companion differs beyond PSC line endings: $GitPath"
+        }
+        $comparison = 'PscCrLfOnly'
+    }
+    @{ GitSha256=$gitHash; DataSha256=$liveHash; Comparison=$comparison }
+}
+
 function New-StreValenMatrixSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
     if (-not $Request.ShowXEdit) { throw 'AddValenDialogueMatrixV1 needs -ShowXEdit for official private authoring.' }
     if ($Request.EditorId -and $Request.EditorId -cne 'STRE_QUEST_ValenHelgen') { throw 'Fixed matrix EditorID contract.' }
@@ -63,7 +86,7 @@ function New-StreValenMatrixSession($Config, [string]$Plugin, $Request, [switch]
     $data = Join-Path $root 'Data'
     $null = New-Item -ItemType Directory -Path $data
     $state = @{ Schema=1; State='Started'; Plugin=$Plugin; Request=$Request; Git=$git; Config=$Config
-        BeforeHash=$before; Header=$header; Protected=@{}; PrivateMasters=@{}; PrivateOriginals=@{}; PreparationCI=$ci
+        BeforeHash=$before; Header=$header; Protected=@{}; PrivateMasters=@{}; PrivateOriginals=@{}; InputComparisons=@{}; PreparationCI=$ci
         XEditHash=(Get-StreHash $Config.XEditPath); AutoModHash=(Get-StreHash $Config.AutoModDll)
         ImportHash=(Get-StreHash $Config.ImportScript); CompilerHash=(Get-StreHash $compiler) }
     $statePath = Join-Path $root 'session.json'
@@ -74,11 +97,11 @@ function New-StreValenMatrixSession($Config, [string]$Plugin, $Request, [switch]
         foreach ($relative in $paths) {
             $gitPath = Resolve-StrePath (Join-Path $Config.RepoRoot "GameFiles/Skyrim/$relative")
             $livePath = Resolve-StrePath (Join-Path $Config.DataRoot $relative)
-            $hash = Get-StreHash $gitPath
-            if ($hash -cne (Get-StreHash $livePath)) { throw "Git/Data companion differs: $relative" }
-            $state.Protected[$gitPath] = $hash
-            $state.Protected[$livePath] = $hash
-            $state.PrivateOriginals[$relative.Replace('\','/')] = $hash
+            $identity = Get-StreMatrixCompanionIdentity $gitPath $livePath
+            $state.InputComparisons[$relative.Replace('\','/')] = $identity
+            $state.Protected[$gitPath] = $identity.GitSha256
+            $state.Protected[$livePath] = $identity.DataSha256
+            $state.PrivateOriginals[$relative.Replace('\','/')] = $identity.GitSha256
             $destination = Join-Path $data $relative
             $null = New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force
             Copy-StreVerified $gitPath $destination

@@ -188,6 +188,13 @@ steps and before/after input/master hashes. Neither test grants human xEdit PASS
 
 ## Typed Valen matrix preparation (#96)
 
+Preparation preserves each raw Git/Data hash independently. Binary companions
+must match byte for byte. For `.psc` only, the comparison permits CRLF versus LF
+introduced by Git's `text=auto` / `core.autocrlf`; all other bytes, BOM and final
+newline count must match. No original is normalized or rewritten. The private
+copy uses the repository bytes, and `InputComparisons` records both raw hashes
+and any `PscCrLfOnly` comparison. This does not change the CK importer's rules.
+
 `AddValenDialogueMatrixV1 -ShowXEdit` is a bounded preparation operation for
 [the complete matrix contract](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md).
 It requires a clean committed feature checkout and both Windows/Linux CI runs

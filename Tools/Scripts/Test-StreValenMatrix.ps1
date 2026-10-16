@@ -32,5 +32,48 @@ $module=Import-Module (Join-Path $PSScriptRoot 'Stre.Modding.psm1') -Force -Pass
     }
     $script:matrixRuns+=@{name='Build windows';headSha=$script:matrixHead;status='completed';conclusion='failure';createdAt='2026-10-16T01:00:00Z'}
     Reject { Assert-StreMatrixCI $config $script:matrixHead } 'CI must be green'
+    $temporaryParent=[IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    $fixtureName='stre-matrix-identity-'+[guid]::NewGuid().ToString('N')
+    $fixtureRoot=[IO.Path]::GetFullPath((Join-Path $temporaryParent $fixtureName))
+    $null=New-Item -ItemType Directory -Path $fixtureRoot
+    try {
+        $gitPath=Join-Path $fixtureRoot 'git.psc'
+        $livePath=Join-Path $fixtureRoot 'data.psc'
+        $lf=[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`n; été`n")
+        $crlf=[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`r`n; été`r`n")
+        [IO.File]::WriteAllBytes($gitPath,$lf)
+        [IO.File]::WriteAllBytes($livePath,$lf)
+        $identity=Get-StreMatrixCompanionIdentity $gitPath $livePath
+        if ($identity.Comparison -cne 'ByteIdentical' -or $identity.GitSha256 -cne $identity.DataSha256) { throw 'Exact identity failed.' }
+        $script:matrixPassed++
+        [IO.File]::WriteAllBytes($gitPath,$crlf)
+        $gitBefore=Get-StreHash $gitPath
+        $liveBefore=Get-StreHash $livePath
+        $identity=Get-StreMatrixCompanionIdentity $gitPath $livePath
+        if ($identity.Comparison -cne 'PscCrLfOnly' -or $identity.GitSha256 -ceq $identity.DataSha256 -or
+            $identity.GitSha256 -cne $gitBefore -or $identity.DataSha256 -cne $liveBefore -or
+            (Get-StreHash $gitPath) -cne $gitBefore -or (Get-StreHash $livePath) -cne $liveBefore) { throw 'PSC comparison must preserve both distinct raw hashes and files.' }
+        $script:matrixPassed++
+        [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Other`n; été`n"))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        [IO.File]::WriteAllBytes($livePath,([byte[]](239,187,191)+$lf))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`r; été`r"))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        [IO.File]::WriteAllBytes($livePath,[Text.Encoding]::UTF8.GetBytes("Scriptname STRE_Test`n; été"))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+        $gitBinary=Join-Path $fixtureRoot 'git.pex'
+        $liveBinary=Join-Path $fixtureRoot 'data.pex'
+        [IO.File]::WriteAllBytes($gitBinary,$crlf)
+        [IO.File]::WriteAllBytes($liveBinary,$lf)
+        Reject { Get-StreMatrixCompanionIdentity $gitBinary $liveBinary } 'companion differs'
+        [IO.File]::WriteAllBytes($gitPath,([byte[]](0)+$crlf))
+        [IO.File]::WriteAllBytes($livePath,([byte[]](0)+$lf))
+        Reject { Get-StreMatrixCompanionIdentity $gitPath $livePath } 'beyond PSC line endings'
+    } finally {
+        if ([IO.Path]::GetFileName($fixtureRoot) -cne $fixtureName -or
+            [IO.Path]::GetFullPath((Split-Path -Parent $fixtureRoot)).TrimEnd('\') -cne $temporaryParent.TrimEnd('\')) { throw 'Unsafe fixture cleanup path.' }
+        Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
+    }
     Write-Output "PASS: $script:matrixPassed matrix preparation safeguards"
 }
