@@ -12,7 +12,8 @@
     "Le mode strict rejette les doublons ou records STRE inattendus et tout override de master non explicitement autorisé.",
     "Les noms FULL ne doivent contenir aucun espace ni retour de ligne périphérique.",
     "Le record NAVI Skyrim.esm [00012FB4] est une exception de baseline préexistante sans EditorID, conservée explicitement par l’audit.",
-    "La projection post-Helgen nécessite plusieurs références vanilla promues en Persistent par le Creation Kit; leurs conteneurs WRLD/CELL structurels sont explicitement conservés et audités."
+    "La projection post-Helgen nécessite plusieurs références vanilla promues en Persistent par le Creation Kit; leurs conteneurs WRLD/CELL structurels sont explicitement conservés et audités.",
+    "293 Valen matrix records imported from human-reviewed session 63c81f61da724c01a6b561181457d3f1; runtime acceptance remains pending."
   ],
   "records": [
     {
@@ -562,6 +563,1471 @@
       "signature": "INFO",
       "editorId": "STRE_INFO_ValenHelgen_Accept",
       "expectedLocalFormId": "0x000D6B1A"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_SELF",
+      "expectedLocalFormId": "0x0D6B1B"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_GROUP",
+      "expectedLocalFormId": "0x0D6B1C"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_RECRUIT",
+      "expectedLocalFormId": "0x0D6B1D"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_DRAGONBORN",
+      "expectedLocalFormId": "0x0D6B1E"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_DRAGONS",
+      "expectedLocalFormId": "0x0D6B1F"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_HQ",
+      "expectedLocalFormId": "0x0D6B20"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_SKYRIM",
+      "expectedLocalFormId": "0x0D6B21"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_MISSION",
+      "expectedLocalFormId": "0x0D6B22"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_MENU_PERSONAL",
+      "expectedLocalFormId": "0x0D6B23"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_EXIT",
+      "expectedLocalFormId": "0x0D6B24"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_HELGEN_ARRIVAL_010",
+      "expectedLocalFormId": "0x0D6B25"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_SURVIVOR_NONE",
+      "expectedLocalFormId": "0x0D6B26"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_SURVIVOR_HADVAR",
+      "expectedLocalFormId": "0x0D6B27"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_SURVIVOR_RALOF",
+      "expectedLocalFormId": "0x0D6B28"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_SURVIVOR_BOTH",
+      "expectedLocalFormId": "0x0D6B29"
+    },
+    {
+      "signature": "DLBR",
+      "editorId": "STRE_DLBR_VALEN_SURVIVOR_BOTH_SAFE",
+      "expectedLocalFormId": "0x0D6B2A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_SELF",
+      "expectedLocalFormId": "0x0D6B2B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_GROUP",
+      "expectedLocalFormId": "0x0D6B2C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_RECRUIT",
+      "expectedLocalFormId": "0x0D6B2D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_DRAGONBORN",
+      "expectedLocalFormId": "0x0D6B2E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_DRAGONS",
+      "expectedLocalFormId": "0x0D6B2F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_Valen_Helgen",
+      "expectedLocalFormId": "0x0D6B30"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_HQ",
+      "expectedLocalFormId": "0x0D6B31"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_SKYRIM",
+      "expectedLocalFormId": "0x0D6B32"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_MISSION",
+      "expectedLocalFormId": "0x0D6B33"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_PERSONAL",
+      "expectedLocalFormId": "0x0D6B34"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_EXIT",
+      "expectedLocalFormId": "0x0D6B35"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_010",
+      "expectedLocalFormId": "0x0D6B36"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_020",
+      "expectedLocalFormId": "0x0D6B37"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_030",
+      "expectedLocalFormId": "0x0D6B38"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_040",
+      "expectedLocalFormId": "0x0D6B39"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_050",
+      "expectedLocalFormId": "0x0D6B3A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_060",
+      "expectedLocalFormId": "0x0D6B3B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SELF_060_FOLLOWUP_1",
+      "expectedLocalFormId": "0x0D6B3C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_010",
+      "expectedLocalFormId": "0x0D6B3D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_020",
+      "expectedLocalFormId": "0x0D6B3E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_030",
+      "expectedLocalFormId": "0x0D6B3F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_040",
+      "expectedLocalFormId": "0x0D6B40"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_050",
+      "expectedLocalFormId": "0x0D6B41"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_060",
+      "expectedLocalFormId": "0x0D6B42"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_GROUP_070",
+      "expectedLocalFormId": "0x0D6B43"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_ARCHER_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B44"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_BARBARIAN_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B45"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_CRUSADER_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B46"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_KNIGHT_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B47"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_ROGUE_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B48"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_SCOUT_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B49"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_WARRIOR_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_ACROBAT_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_AGENT_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_ASSASSIN_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_BARD_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_MONK_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B4F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_PILGRIM_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B50"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_THIEF_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B51"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_BATTLEMAGE_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B52"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_HEALER_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B53"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_MAGE_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B54"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_NIGHTBLADE_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B55"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_SORCERER_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B56"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_SPELLSWORD_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B57"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_CLASS_WITCHHUNTER_FOLLOWUP",
+      "expectedLocalFormId": "0x0D6B58"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_RECRUIT_COMMON_010",
+      "expectedLocalFormId": "0x0D6B59"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_RECRUIT_COMMON_020",
+      "expectedLocalFormId": "0x0D6B5A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_RECRUIT_COMMON_030",
+      "expectedLocalFormId": "0x0D6B5B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_RECRUIT_COMMON_040",
+      "expectedLocalFormId": "0x0D6B5C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_RECRUIT_COMMON_050",
+      "expectedLocalFormId": "0x0D6B5D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_010",
+      "expectedLocalFormId": "0x0D6B5E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_020",
+      "expectedLocalFormId": "0x0D6B5F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_030",
+      "expectedLocalFormId": "0x0D6B60"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_040",
+      "expectedLocalFormId": "0x0D6B61"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_050",
+      "expectedLocalFormId": "0x0D6B62"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_060",
+      "expectedLocalFormId": "0x0D6B63"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_070",
+      "expectedLocalFormId": "0x0D6B64"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_080",
+      "expectedLocalFormId": "0x0D6B65"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_090",
+      "expectedLocalFormId": "0x0D6B66"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_100",
+      "expectedLocalFormId": "0x0D6B67"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_110",
+      "expectedLocalFormId": "0x0D6B68"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_120",
+      "expectedLocalFormId": "0x0D6B69"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONBORN_130",
+      "expectedLocalFormId": "0x0D6B6A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONS_010",
+      "expectedLocalFormId": "0x0D6B6B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONS_020",
+      "expectedLocalFormId": "0x0D6B6C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONS_030",
+      "expectedLocalFormId": "0x0D6B6D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONS_040",
+      "expectedLocalFormId": "0x0D6B6E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_DRAGONS_050",
+      "expectedLocalFormId": "0x0D6B6F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_010",
+      "expectedLocalFormId": "0x0D6B70"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_020",
+      "expectedLocalFormId": "0x0D6B71"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_030",
+      "expectedLocalFormId": "0x0D6B72"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_040",
+      "expectedLocalFormId": "0x0D6B73"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_050",
+      "expectedLocalFormId": "0x0D6B74"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_060",
+      "expectedLocalFormId": "0x0D6B75"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HQ_070",
+      "expectedLocalFormId": "0x0D6B76"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_010",
+      "expectedLocalFormId": "0x0D6B77"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_020",
+      "expectedLocalFormId": "0x0D6B78"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_030",
+      "expectedLocalFormId": "0x0D6B79"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_040",
+      "expectedLocalFormId": "0x0D6B7A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_050",
+      "expectedLocalFormId": "0x0D6B7B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_060",
+      "expectedLocalFormId": "0x0D6B7C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_070",
+      "expectedLocalFormId": "0x0D6B7D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SKYRIM_080",
+      "expectedLocalFormId": "0x0D6B7E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_010",
+      "expectedLocalFormId": "0x0D6B7F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_020",
+      "expectedLocalFormId": "0x0D6B80"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_030",
+      "expectedLocalFormId": "0x0D6B81"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_040",
+      "expectedLocalFormId": "0x0D6B82"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_050",
+      "expectedLocalFormId": "0x0D6B83"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MISSION_060",
+      "expectedLocalFormId": "0x0D6B84"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_010",
+      "expectedLocalFormId": "0x0D6B85"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_020",
+      "expectedLocalFormId": "0x0D6B86"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_030",
+      "expectedLocalFormId": "0x0D6B87"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_040",
+      "expectedLocalFormId": "0x0D6B88"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_050",
+      "expectedLocalFormId": "0x0D6B89"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_060",
+      "expectedLocalFormId": "0x0D6B8A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_070",
+      "expectedLocalFormId": "0x0D6B8B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_080",
+      "expectedLocalFormId": "0x0D6B8C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_PERSONAL_090",
+      "expectedLocalFormId": "0x0D6B8D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_PRE_010",
+      "expectedLocalFormId": "0x0D6B8E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_PRE_020",
+      "expectedLocalFormId": "0x0D6B8F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_PRE_030",
+      "expectedLocalFormId": "0x0D6B90"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_PRE_040",
+      "expectedLocalFormId": "0x0D6B91"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_PRE_050",
+      "expectedLocalFormId": "0x0D6B92"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_ACTIVE_010",
+      "expectedLocalFormId": "0x0D6B93"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_ACTIVE_020",
+      "expectedLocalFormId": "0x0D6B94"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_ACTIVE_030",
+      "expectedLocalFormId": "0x0D6B95"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_HELGEN_ARRIVAL_010",
+      "expectedLocalFormId": "0x0D6B96"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_NONE",
+      "expectedLocalFormId": "0x0D6B97"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_HADVAR",
+      "expectedLocalFormId": "0x0D6B98"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_HADVAR_FOLLOWUP_1",
+      "expectedLocalFormId": "0x0D6B99"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_HADVAR_FOLLOWUP_2",
+      "expectedLocalFormId": "0x0D6B9A"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_RALOF",
+      "expectedLocalFormId": "0x0D6B9B"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_RALOF_FOLLOWUP_1",
+      "expectedLocalFormId": "0x0D6B9C"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_BOTH",
+      "expectedLocalFormId": "0x0D6B9D"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_BOTH_FOLLOWUP_1",
+      "expectedLocalFormId": "0x0D6B9E"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_BOTH_FOLLOWUP_2",
+      "expectedLocalFormId": "0x0D6B9F"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_BOTH_SAFE",
+      "expectedLocalFormId": "0x0D6BA0"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_SURVIVOR_BOTH_SAFE_FOLLOWUP_1",
+      "expectedLocalFormId": "0x0D6BA1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_SELF_R",
+      "expectedLocalFormId": "0x0D6BA2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_GROUP_R",
+      "expectedLocalFormId": "0x0D6BA3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_ARCHER",
+      "expectedLocalFormId": "0x0D6BA4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_BARBARIAN",
+      "expectedLocalFormId": "0x0D6BA5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_CRUSADER",
+      "expectedLocalFormId": "0x0D6BA6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_KNIGHT",
+      "expectedLocalFormId": "0x0D6BA7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_ROGUE",
+      "expectedLocalFormId": "0x0D6BA8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_SCOUT",
+      "expectedLocalFormId": "0x0D6BA9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_WARRIOR",
+      "expectedLocalFormId": "0x0D6BAA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_ACROBAT",
+      "expectedLocalFormId": "0x0D6BAB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_AGENT",
+      "expectedLocalFormId": "0x0D6BAC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_ASSASSIN",
+      "expectedLocalFormId": "0x0D6BAD"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_BARD",
+      "expectedLocalFormId": "0x0D6BAE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_MONK",
+      "expectedLocalFormId": "0x0D6BAF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_PILGRIM",
+      "expectedLocalFormId": "0x0D6BB0"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_THIEF",
+      "expectedLocalFormId": "0x0D6BB1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_BATTLEMAGE",
+      "expectedLocalFormId": "0x0D6BB2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_HEALER",
+      "expectedLocalFormId": "0x0D6BB3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_MAGE",
+      "expectedLocalFormId": "0x0D6BB4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_NIGHTBLADE",
+      "expectedLocalFormId": "0x0D6BB5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_SORCERER",
+      "expectedLocalFormId": "0x0D6BB6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_SPELLSWORD",
+      "expectedLocalFormId": "0x0D6BB7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_WITCHHUNTER",
+      "expectedLocalFormId": "0x0D6BB8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_RECRUIT_VALEN_CLASS_FALLBACK",
+      "expectedLocalFormId": "0x0D6BB9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_DRAGONBORN_R",
+      "expectedLocalFormId": "0x0D6BBA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_DRAGONS_R",
+      "expectedLocalFormId": "0x0D6BBB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_HELGEN_NAV_0",
+      "expectedLocalFormId": "0x0D6BBC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_HELGEN_NAV_1",
+      "expectedLocalFormId": "0x0D6BBD"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_HQ_R",
+      "expectedLocalFormId": "0x0D6BBE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_SKYRIM_R",
+      "expectedLocalFormId": "0x0D6BBF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_MISSION_R",
+      "expectedLocalFormId": "0x0D6BC0"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_PERSONAL_R",
+      "expectedLocalFormId": "0x0D6BC1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_EXIT_R",
+      "expectedLocalFormId": "0x0D6BC2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_010_R",
+      "expectedLocalFormId": "0x0D6BC3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_020_R",
+      "expectedLocalFormId": "0x0D6BC4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_030_R",
+      "expectedLocalFormId": "0x0D6BC5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_040_R",
+      "expectedLocalFormId": "0x0D6BC6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_050_R",
+      "expectedLocalFormId": "0x0D6BC7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_060_R",
+      "expectedLocalFormId": "0x0D6BC8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SELF_060_FOLLOWUP_1_R",
+      "expectedLocalFormId": "0x0D6BC9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_010_VALEN_GROUP_010_MULTI",
+      "expectedLocalFormId": "0x0D6BCA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_010_VALEN_GROUP_010_SOLO",
+      "expectedLocalFormId": "0x0D6BCB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_020_R",
+      "expectedLocalFormId": "0x0D6BCC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_030_R",
+      "expectedLocalFormId": "0x0D6BCD"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_040_R",
+      "expectedLocalFormId": "0x0D6BCE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_050_R",
+      "expectedLocalFormId": "0x0D6BCF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_060_R",
+      "expectedLocalFormId": "0x0D6BD0"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_GROUP_070_R",
+      "expectedLocalFormId": "0x0D6BD1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_ARCHER_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_BARBARIAN_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_CRUSADER_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_KNIGHT_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_ROGUE_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_SCOUT_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_WARRIOR_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_ACROBAT_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BD9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_AGENT_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_ASSASSIN_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_BARD_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_MONK_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDD"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_PILGRIM_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_THIEF_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BDF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_BATTLEMAGE_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE0"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_HEALER_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_MAGE_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_NIGHTBLADE_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_SORCERER_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_SPELLSWORD_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_CLASS_WITCHHUNTER_FOLLOWUP_R",
+      "expectedLocalFormId": "0x0D6BE6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_RECRUIT_COMMON_010_R",
+      "expectedLocalFormId": "0x0D6BE7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_RECRUIT_COMMON_020_R",
+      "expectedLocalFormId": "0x0D6BE8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_RECRUIT_COMMON_030_R",
+      "expectedLocalFormId": "0x0D6BE9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_RECRUIT_COMMON_040_R",
+      "expectedLocalFormId": "0x0D6BEA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_RECRUIT_COMMON_050_R",
+      "expectedLocalFormId": "0x0D6BEB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_010_R",
+      "expectedLocalFormId": "0x0D6BEC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_020_R",
+      "expectedLocalFormId": "0x0D6BED"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_030_R",
+      "expectedLocalFormId": "0x0D6BEE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_040_R",
+      "expectedLocalFormId": "0x0D6BEF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_050_R",
+      "expectedLocalFormId": "0x0D6BF0"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_060_R",
+      "expectedLocalFormId": "0x0D6BF1"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_070_R",
+      "expectedLocalFormId": "0x0D6BF2"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_080_R",
+      "expectedLocalFormId": "0x0D6BF3"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_090_R",
+      "expectedLocalFormId": "0x0D6BF4"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_100_R",
+      "expectedLocalFormId": "0x0D6BF5"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_110_R",
+      "expectedLocalFormId": "0x0D6BF6"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_120_R",
+      "expectedLocalFormId": "0x0D6BF7"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONBORN_130_R",
+      "expectedLocalFormId": "0x0D6BF8"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONS_010_R",
+      "expectedLocalFormId": "0x0D6BF9"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONS_020_R",
+      "expectedLocalFormId": "0x0D6BFA"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONS_030_R",
+      "expectedLocalFormId": "0x0D6BFB"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONS_040_R",
+      "expectedLocalFormId": "0x0D6BFC"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_DRAGONS_050_R",
+      "expectedLocalFormId": "0x0D6BFD"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_010_R",
+      "expectedLocalFormId": "0x0D6BFE"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_020_R",
+      "expectedLocalFormId": "0x0D6BFF"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_030_R",
+      "expectedLocalFormId": "0x0D6C00"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_040_R",
+      "expectedLocalFormId": "0x0D6C01"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_050_R",
+      "expectedLocalFormId": "0x0D6C02"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_060_R",
+      "expectedLocalFormId": "0x0D6C03"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HQ_070_R",
+      "expectedLocalFormId": "0x0D6C04"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_010_R",
+      "expectedLocalFormId": "0x0D6C05"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_020_R",
+      "expectedLocalFormId": "0x0D6C06"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_030_R",
+      "expectedLocalFormId": "0x0D6C07"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_040_R",
+      "expectedLocalFormId": "0x0D6C08"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_050_R",
+      "expectedLocalFormId": "0x0D6C09"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_060_R",
+      "expectedLocalFormId": "0x0D6C0A"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_070_R",
+      "expectedLocalFormId": "0x0D6C0B"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SKYRIM_080_R",
+      "expectedLocalFormId": "0x0D6C0C"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_010_R",
+      "expectedLocalFormId": "0x0D6C0D"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_020_R",
+      "expectedLocalFormId": "0x0D6C0E"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_030_R",
+      "expectedLocalFormId": "0x0D6C0F"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_040_R",
+      "expectedLocalFormId": "0x0D6C10"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_050_R",
+      "expectedLocalFormId": "0x0D6C11"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MISSION_060_R",
+      "expectedLocalFormId": "0x0D6C12"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_010_R",
+      "expectedLocalFormId": "0x0D6C13"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_020_R",
+      "expectedLocalFormId": "0x0D6C14"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_030_R",
+      "expectedLocalFormId": "0x0D6C15"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_040_R",
+      "expectedLocalFormId": "0x0D6C16"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_050_R",
+      "expectedLocalFormId": "0x0D6C17"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_060_R",
+      "expectedLocalFormId": "0x0D6C18"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_070_R",
+      "expectedLocalFormId": "0x0D6C19"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_080_R",
+      "expectedLocalFormId": "0x0D6C1A"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_PERSONAL_090_R",
+      "expectedLocalFormId": "0x0D6C1B"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_PRE_010_R",
+      "expectedLocalFormId": "0x0D6C1C"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_PRE_020_R",
+      "expectedLocalFormId": "0x0D6C1D"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_PRE_030_R",
+      "expectedLocalFormId": "0x0D6C1E"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_PRE_040_R",
+      "expectedLocalFormId": "0x0D6C1F"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_PRE_050_R",
+      "expectedLocalFormId": "0x0D6C20"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_ACTIVE_010_R",
+      "expectedLocalFormId": "0x0D6C21"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_ACTIVE_020_R",
+      "expectedLocalFormId": "0x0D6C22"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_ACTIVE_030_R",
+      "expectedLocalFormId": "0x0D6C23"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_HELGEN_ARRIVAL_010_R",
+      "expectedLocalFormId": "0x0D6C24"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_NONE_NONE_DISCOVERED",
+      "expectedLocalFormId": "0x0D6C25"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_HADVAR_ONLY_KNOWN_HADVAR_WOUNDED",
+      "expectedLocalFormId": "0x0D6C26"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_HADVAR_FOLLOWUP_1_R",
+      "expectedLocalFormId": "0x0D6C27"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_HADVAR_FOLLOWUP_2_R",
+      "expectedLocalFormId": "0x0D6C28"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_RALOF_ONLY_KNOWN_RALOF_WOUNDED",
+      "expectedLocalFormId": "0x0D6C29"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_RALOF_FOLLOWUP_1_R",
+      "expectedLocalFormId": "0x0D6C2A"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_BOTH_WOUNDED",
+      "expectedLocalFormId": "0x0D6C2B"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_FOLLOWUP_1_R",
+      "expectedLocalFormId": "0x0D6C2C"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_FOLLOWUP_2_R",
+      "expectedLocalFormId": "0x0D6C2D"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_DEPARTED_BOTH_DEPARTED",
+      "expectedLocalFormId": "0x0D6C2E"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_DEPARTED_HADVAR_DEPARTED",
+      "expectedLocalFormId": "0x0D6C2F"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_SAFE_R",
+      "expectedLocalFormId": "0x0D6C30"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_SAFE_FOLLOWUP_1_R",
+      "expectedLocalFormId": "0x0D6C31"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_DEPARTED_RALOF_DEPARTED",
+      "expectedLocalFormId": "0x0D6C32"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED_ONLY_KNOWN_HADVAR_DEPARTED",
+      "expectedLocalFormId": "0x0D6C33"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_SINGLE_KNOWN_DEPARTED_ONLY_KNOWN_RALOF_DEPARTED",
+      "expectedLocalFormId": "0x0D6C34"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_BOTH_CAPTURED_BOTH_CAPTURED",
+      "expectedLocalFormId": "0x0D6C35"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_HADVAR_CAPTURED_HADVAR_CAPTURED_RALOF_FREED",
+      "expectedLocalFormId": "0x0D6C36"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_RALOF_CAPTURED_RALOF_CAPTURED_HADVAR_FREED",
+      "expectedLocalFormId": "0x0D6C37"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_CAPTURED_HADVAR_CAPTURED_RALOF_WOUNDED",
+      "expectedLocalFormId": "0x0D6C38"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_CAPTURED_RALOF_CAPTURED_HADVAR_WOUNDED",
+      "expectedLocalFormId": "0x0D6C39"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_CAPTURED_ONLY_KNOWN_HADVAR_CAPTURED",
+      "expectedLocalFormId": "0x0D6C3A"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_ONE_CAPTURED_ONLY_KNOWN_RALOF_CAPTURED",
+      "expectedLocalFormId": "0x0D6C3B"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_HADVAR_SAFE_HADVAR_FREED_RALOF_WOUNDED",
+      "expectedLocalFormId": "0x0D6C3C"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_RALOF_SAFE_RALOF_FREED_HADVAR_WOUNDED",
+      "expectedLocalFormId": "0x0D6C3D"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_SINGLE_KNOWN_FREED_ONLY_KNOWN_HADVAR_FREED",
+      "expectedLocalFormId": "0x0D6C3E"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_SURVIVOR_SINGLE_KNOWN_FREED_ONLY_KNOWN_RALOF_FREED",
+      "expectedLocalFormId": "0x0D6C3F"
     }
   ],
   "spellEffectExpectations": {

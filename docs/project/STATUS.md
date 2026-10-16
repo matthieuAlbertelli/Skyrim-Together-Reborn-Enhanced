@@ -9,63 +9,80 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Validated Valen matrix import adapter (2026-10-16)
+## Human-reviewed Valen matrix imported (2026-10-16)
 
-The dedicated matrix import adapter is implemented on the existing #97 DRAFT
-branch. It preserves preparation provenance while allowing a later descendant
-import HEAD on the same clean branch, after exact-HEAD Windows/Linux CI. The
-ordinary AddGlobal/AddQuest/AddValenHelgen import rules retain exact-HEAD matching.
-The current binary and asset readers must reproduce the frozen review dossier;
-only the added/changed companion delta is promoted through the existing CK bridge.
-The snapshot excludes masters, audits, caches and Vortex backups. Historical
-session bytes are preserved separately from PreparationHead/ImportHead lifecycle
-metadata. The runbook owns the operational procedure.
-
-The maintainer explicitly attested all listed xEdit checks on session
-`63c81f61da724c01a6b561181457d3f1`: Sort Masters, Check for Errors, save/close,
-reopen and a second Check for Errors, with no errors. Warnings were not separately
-specified. The log is a transcript of that statement, not raw xEdit output.
-Preparation HEAD remains `6a1694861af408c1a7c9d0eb690b69859714dbdf`.
-The actual reviewed candidate is unchanged:
+The complete reviewed matrix is imported into `GameFiles/Skyrim` on
+`feat/valen-dialogue-matrix-v1`, PR #97 DRAFT. Session
+`63c81f61da724c01a6b561181457d3f1` is `Imported`. The ESP SHA256 remains exactly
 `2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E`.
-The human log SHA256 is
-`B99FA865F3D939D912635F91A08D698F778D704E103C9AC95B8EBEEC7F8D2E31`.
-The read-only import validator passes against that real session, reproducing
-300 planned identities, 293 additions, five changed payloads, two unchanged
-planned updates, 22 class/fallback projections and 32/17/51/0 survivor coverage.
-Its exact delta is 672 companions (two QF replacements, observer PSC/PEX and
-668 new WAVs), plus the ESP. All 696 private companions and protected originals
-remain unchanged. No new xEdit session or candidate generation was performed.
+No reviewed candidate, graph, script, PEX or WAV was regenerated or edited.
 
-The first import ran on `24c981a958b789e0542886e6f319cc2cbe4e45c8`, after
-[Windows](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38883485381)
-and [Linux](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38883485408)
-CI succeeded. It copied all 673 approved files, then the existing importer's final
-`git status` exceeded Windows' native command-line limit. The wrapper recorded
-`ImportFailed`; no manifest promotion, content commit, build or deployment followed.
-Read-only checks confirmed all 673 snapshot/Data/repository triples, unchanged
-review evidence and protected out-of-scope files. The failure log and backups are
-retained. The original protected importer is unchanged.
+The maintainer attested Sort Masters, Check for Errors, save/close, reopen and a
+second Check for Errors with no errors. Warnings were not separately specified.
+`xedit-validation.log` is a transcript of that statement, not raw xEdit output;
+its SHA256 is `B99FA865F3D939D912635F91A08D698F778D704E103C9AC95B8EBEEC7F8D2E31`.
+The receipt identifies xEdit SHA256
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
 
-The follow-up implementation bounds each importer call to 64 files and 16000
-characters. An explicit `FinalizeInterrupted` action accepts only a fully copied,
-exactly verified failed transaction, with unchanged original manifests and no
-unrelated or staged changes. It rereads the frozen review using current auditors,
-requires exact-completion-HEAD CI, promotes the manifests without recopying content,
-and records completion provenance separately from the original import attempt.
-Tests cover the 673-file native Git command regression, no-copy completion, missing
-or red CI, staged/unrelated changes, copied-file drift, replay refusal and preserved
-historical evidence. Completion and its CI remain pending at this checkpoint.
+Preparation provenance remains `6a1694861af408c1a7c9d0eb690b69859714dbdf`.
+The first import on `24c981a958b789e0542886e6f319cc2cbe4e45c8` followed successful
+Windows/Linux CI and copied all 673 approved files, then failed when the existing
+importer's final native `git status` exceeded Windows' command-line limit.
+That `ImportFailed` result and the backups remain preserved. The original
+protected importer is unchanged; the tracked adapter now bounds each call to
+64 paths / 16000 characters, including the local build wrapper's existing call.
 
-The initial source checkpoint passed 207 Python tests and PowerShell fixtures
-(66 general, 21 matrix preparation, 11 import and 13 local collector cases).
-The corrected checkpoint passes 208 Python tests and 21 import orchestration
-cases, plus the unchanged 66/21/13 general, preparation and collector suites.
-The quest-sync assertion now accepts the declared Papyrus default `abDisplayed=true`
-as well as explicit `True`; reviewed QF/PEX bytes were not edited.
-Runtime remains unvalidated; #96 is open and #97 remains DRAFT. No Skyrim launch.
+Explicit no-copy completion succeeded on
+`9e18afcab5f8fc519c454a921b684ac72a0dc8d0`, after
+[Windows](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888661712)
+and [Linux](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888658121)
+CI SUCCESS on that exact HEAD. It revalidated all frozen evidence and copied-file
+hashes with current binary/asset auditors, required no staged/unrelated changes,
+and promoted the manifests without recopying content. PreparationHead, ImportHead
+and CompletionHead are distinct; `preparation-session.json` preserves the original
+session bytes. ImportValidated cannot replay a failed or imported session.
 
-## Valen dialogue matrix v1: implementation and synthetic authoring verified (2026-10-16)
+The 300-record plan produced **293 additions, five changed existing payloads and
+two unchanged planned updates**. The plugin contains **549 records including TES4**;
+the canonical records manifest contains **393 identities**. It preserves the
+reviewed proposal's exact records and constraints; only its last explanatory note
+was updated to reflect completed import. The private proposal remains unchanged.
+The full graph, **22 class/fallback projections** and all **100 survivor cases**
+reproduce the historical audit exactly: **32 automatic / 17 explicit / 51
+incoherent / zero uncovered**.
+
+The imported delta is **672 companions plus the ESP**: two existing QF PSC/PEX
+replacements, observer PSC/PEX and **668 new timing WAVs**. The validated snapshot
+contains exactly those **673 files**. Packaging has **697 managed files** (ESP +
+696 companions). Snapshot, installed Data, repository and staged blob hashes match
+for the entire promoted delta; historical evidence and out-of-scope protected
+files remain unchanged. SkyrimTogether.esp retains SHA256
+`3196266AA29855574BDA48335DA9AB2F18AD33A80EEE116400DA7C5C81C93D7E`.
+No master, private audit/cache or `.vortex_backup` was imported.
+
+Post-import validation: packaging, strict records with reject-unexpected, MQ101
+structure/generated invariants, catalogue, markers, Valen binary graph/classes,
+generated corpus and survivor coverage all PASS. **208 Python tests**, **66 general
+PowerShell safeguards**, **21 preparation cases**, **21 import/completion cases**,
+**13 local collector cases**, and **TPTests: 433 cases / 45,406 assertions** PASS.
+`git diff --check` PASS. The 673-file regression exercises real native Git status;
+completion fixtures prove no recopy, preserved failure evidence and rejection of
+missing/red CI, staged/unrelated changes, drift and replay.
+
+Deployment requires clean content-HEAD Windows/Linux SUCCESS before the existing
+`build-and-deploy-dev.ps1`. The maintainer separately authorized only the installed
+`Source/Scripts/TIF_030D6B1A.psc` LF-to-CRLF alignment to its unchanged reviewed/Git
+bytes, after import and audits, with backup, normalized comparison and complete
+Data hash comparison. It is not a functional #96 change and requires no compilation
+or xEdit. Its execution receipt and the build/deployment receipts belong to this
+session; subsequent deployment results are reported in PR #97. Runtime validation
+remains pending, issue #96 stays open, and Skyrim must not be launched by this flow.
+
+## Historical matrix preparation evidence (2026-10-16)
+
+This section records the earlier private preparation checkpoints. Current import
+and validation state is described above; historical claims below retain their
+original checkpoint scope.
 
 [#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
 tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
