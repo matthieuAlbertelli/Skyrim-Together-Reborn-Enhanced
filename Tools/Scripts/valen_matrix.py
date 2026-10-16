@@ -169,12 +169,11 @@ def survivor_selection(data, hadvar_discovered, ralof_discovered, hadvar_state, 
 
 
 def survivor_rows(data):
-    reports = data['survivors']['firstReports']
     rescued = data['survivors']['bothRescuedPairs']
     for hd, rd, hs, rs in itertools.product((False, True), (False, True), range(5), range(5)):
         selected = survivor_selection(data, hd, rd, hs, rs)
         consistent = selected['kind'] != 'incoherent'
-        report = reports[f'{int(hd)}{int(rd)}'] if selected['kind'] == 'explicit' else ''
+        report = selected['node'] if selected['kind'] == 'explicit' else ''
         yield {'HadvarDiscovered': int(hd), 'RalofDiscovered': int(rd),
                'HadvarState': hs, 'RalofState': rs,
                'genericINFO': selected['node'] if selected['kind'] == 'automatic' else 'UNAVAILABLE',

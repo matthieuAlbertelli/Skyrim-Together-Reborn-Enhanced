@@ -105,7 +105,7 @@ The both-rescued topic is separately eligible for exactly (3,3), (3,4), (4,3), (
 | 1 | 1 | 3 | 0 | UNAVAILABLE |  | 0 | incoherent |
 | 1 | 1 | 3 | 1 | VALEN_SURVIVOR_HADVAR_SAFE |  | 0 | automatic |
 | 1 | 1 | 3 | 2 | VALEN_SURVIVOR_RALOF_CAPTURED |  | 0 | automatic |
-| 1 | 1 | 3 | 3 | UNAVAILABLE | VALEN_SURVIVOR_BOTH | 1 | explicit |
+| 1 | 1 | 3 | 3 | UNAVAILABLE | VALEN_SURVIVOR_BOTH_SAFE | 1 | explicit |
 | 1 | 1 | 3 | 4 | VALEN_SURVIVOR_ONE_DEPARTED |  | 1 | automatic |
 | 1 | 1 | 4 | 0 | UNAVAILABLE |  | 0 | incoherent |
 | 1 | 1 | 4 | 1 | VALEN_SURVIVOR_ONE_DEPARTED |  | 0 | automatic |

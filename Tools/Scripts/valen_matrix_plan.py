@@ -159,6 +159,14 @@ def build_plan(data):
                               flags=0xA00 | (1 if node['kind']=='exit' else 0) |
                                     (4 if node['repeatability']=='OncePerLocalSave' else 0),
                               fragment='legacy-acceptance' if id_=='VALEN_HELGEN_ACCEPT' else None))
+    # Preserve the approved specificity order in the actual INFO/PNAM chain,
+    # independently of the editorial node order. Conditions remain disjoint.
+    ranks = {'STRE_INFO_'+r['node']+'_'+r['id'].replace('-','_').upper(): i for i,r in enumerate(rules)}
+    generic = sorted((r for r in infos if r['topic']==GENERIC),
+                     key=lambda r: -2 if r['edid'].endswith('_NAV_0') else
+                                   -1 if r['edid'].endswith('_NAV_1') else ranks[r['edid']])
+    ordered = iter(generic)
+    infos = [next(ordered) if r['topic']==GENERIC else r for r in infos]
     records += list(topics.values()) + infos
     ids = [r['edid'] for r in records]
     corpus.require(len(ids) == len(set(ids)), 'Duplicate planned EditorID')

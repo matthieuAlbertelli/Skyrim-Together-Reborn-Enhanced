@@ -78,7 +78,7 @@ DryRun/Prepare, independent reread, compilation and asset verification, then
 stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
 at this preparation boundary. The canonical CK manifests remain unchanged.
 
-Implementation verification: **193 Python tests**, **66 PowerShell toolchain
+Implementation verification: **195 Python tests**, **66 PowerShell toolchain
 cases**, **9 matrix preparation guards**, **13 CK collector cases**, and the
 six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
 45,082 assertions**, including the class projection checks. `git diff --check`

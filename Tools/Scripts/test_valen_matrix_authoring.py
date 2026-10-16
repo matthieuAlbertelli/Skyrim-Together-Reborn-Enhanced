@@ -20,6 +20,19 @@ ROOT=corpus.ROOT
 
 
 class AuthoringPlanTests(unittest.TestCase):
+    def test_generic_info_chain_follows_approved_specificity_order(self):
+        actual=[r['edid'] for r in PLAN['records'] if r.get('topic')==GENERIC and '_NAV_' not in r['edid']]
+        expected=['STRE_INFO_'+r['node']+'_'+r['id'].replace('-','_').upper()
+                  for r in DATA['survivors']['rules'] if
+                  next(n for n in DATA['nodes'] if n['id']==r['node']).get('route')=='generic-survivor-topic']
+        self.assertEqual(actual,expected)
+
+    def test_both_freed_table_names_the_actual_explicit_reply(self):
+        row=next(r for r in corpus.survivor_rows(DATA) if
+                 (r['HadvarDiscovered'],r['RalofDiscovered'],r['HadvarState'],r['RalofState'])==(1,1,3,3))
+        self.assertEqual(row['result'],'explicit')
+        self.assertEqual(row['explicitReport'],'VALEN_SURVIVOR_BOTH_SAFE')
+
     def test_real_xedit_sorted_array_failure_is_rejected(self):
         before=(ROOT/'Tools/Scripts/valen/fixtures/authored.esp').read_bytes()
         rejected=(ROOT/'Tools/Scripts/valen/matrix/fixtures/rejected-sorted-array.esp').read_bytes()
