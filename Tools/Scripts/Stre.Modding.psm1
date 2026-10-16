@@ -6,6 +6,7 @@ $script:Masters = @('Skyrim.esm', 'Update.esm', 'Dragonborn.esm')
 . (Join-Path $PSScriptRoot 'Stre.ValenHelgen.ps1')
 . (Join-Path $PSScriptRoot 'Stre.ValenMatrix.ps1')
 . (Join-Path $PSScriptRoot 'Stre.ValenMatrixImport.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenPresentation.ps1')
 
 function Get-StreHash([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
@@ -256,6 +257,7 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
 }
 
 function New-StreSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
+    if ($Request.Operation -eq 'FixValenPresentation') { return New-StreValenPresentationSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenDialogueMatrixV1') { return New-StreValenMatrixSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenHelgen') { return New-StreValenSession $Config $Plugin $Request -DryRun:$DryRun }
     $git = Assert-StreMutationGit $Config $Plugin
@@ -330,6 +332,9 @@ function Import-StreValidated($Config, [string]$Session) {
     $state = Get-Content -LiteralPath (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
     if ($state.Request.Operation -eq 'AddValenDialogueMatrixV1') {
         return Import-StreValenMatrixValidated $Config $root $state
+    }
+    if ($state.Request.Operation -eq 'FixValenPresentation') {
+        return Import-StrePresentationValidated $Config $root $state
     }
     if ($state.Schema -ne 1 -or $state.State -ne 'AwaitingHumanXEdit') { throw 'Session is not awaiting xEdit; failed/dry-run/imported sessions cannot be promoted.' }
     $git = Assert-StreMutationGit $Config $state.Plugin

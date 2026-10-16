@@ -303,6 +303,21 @@ After import run every feature audit/test, commit and push the content, wait for
 Windows/Linux CI on that new HEAD, then perform an authorized build/deploy.
 Never launch Skyrim as part of this workflow.
 
+### Bounded presentation iteration after the c48be63 runtime failure
+
+`FixValenPresentation -Variant A|B -ShowXEdit` prepares a separate, private
+presentation-only candidate from the exact tested c48be63 ESP. The
+[presentation smoke contract](../features/alternate-start/VALEN_PRESENTATION_SMOKE.md)
+owns the six text substitutions, frozen corpus, one-INFO experiment and ordered
+engine-load/skip evidence. No records or companions are added; no WAV or Papyrus
+artifact is regenerated. All existing import evidence is retained unchanged.
+
+For this iteration the maintainer explicitly defers new full Windows/Linux CI
+until the merge HEAD: local tests/audits → DEV build/deploy → STOP → human Skyrim
+smoke. This exception does not alter the historical matrix import CI guards or
+the official xEdit human-review boundary below. The new private adapter stops at
+`HUMAN_XEDIT_REQUIRED`; its generated plan is not a human receipt.
+
 ## Official xEdit boundary
 
 AutoMod/Mutagen can reorder masters. An AutoMod write is never ready for Git by

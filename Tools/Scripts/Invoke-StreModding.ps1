@@ -8,7 +8,8 @@ param(
     [string]$XEditPath = $env:STRE_XEDIT_PATH,
     [string]$DataRoot = $env:STRE_SKYRIM_DATA,
     [string]$Plugin = 'STRE_AlternateStart.esp',
-    [ValidateSet('AddQuest', 'AddGlobal', 'AddValenHelgen', 'AddValenDialogueMatrixV1')][string]$Operation = 'AddGlobal',
+    [ValidateSet('AddQuest', 'AddGlobal', 'AddValenHelgen', 'AddValenDialogueMatrixV1', 'FixValenPresentation')][string]$Operation = 'AddGlobal',
+    [ValidateSet('A','B')][string]$Variant = 'A',
     [switch]$ShowXEdit,
     [string]$EditorId,
     [string]$Name,
@@ -22,7 +23,7 @@ Import-Module (Join-Path $PSScriptRoot 'Stre.Modding.psm1') -Force
 try {
     $config = Resolve-StreConfiguration -RepoRoot (Join-Path $PSScriptRoot '../..') `
         -AutoModRoot $AutoModRoot -XEditPath $XEditPath -DataRoot $DataRoot
-    $request = @{ Operation = $Operation; EditorId = $EditorId; Name = $Name; Priority = $Priority; Value = $Value; ShowXEdit = [bool]$ShowXEdit }
+    $request = @{ Operation = $Operation; EditorId = $EditorId; Name = $Name; Priority = $Priority; Value = $Value; ShowXEdit = [bool]$ShowXEdit; Variant = $Variant }
     Invoke-StreModding -Config $config -Action $Action -Plugin $Plugin -Request $request `
         -Session $Session -RecordType $RecordType | ConvertTo-Json -Depth 32
 }

@@ -207,6 +207,13 @@ canonical game-file tree by preparation. The existing SEQ and TIF are preserved.
 
 ## Validation required before a real candidate
 
+The post-c48be63 [presentation correction and ordered A/B smoke](VALEN_PRESENTATION_SMOKE.md)
+projects unsafe punctuation only at runtime authoring, preserving this contract's
+canonical editorial corpus. Its one-INFO skip experiment must pass in game before
+any matrix-wide audio/flag policy changes. STATUS records the reported failure
+and actual validation state; the smoke document defines the CI deferral for this
+specific content iteration.
+
 The implemented checks validate the editorial schema, frozen text fingerprint,
 all 21 classes/fallback, Solo/group partitions, stage-label boundaries, graph
 reachability/returns, reserved-node exclusion, effects, lossless segmentation,

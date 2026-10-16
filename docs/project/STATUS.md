@@ -9,7 +9,35 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Human-reviewed Valen matrix imported (2026-10-16)
+## Valen presentation: human runtime FAIL, bounded correction (2026-10-16)
+
+The maintainer tested `c48be632f4a3dbd3f37311fce369cda67c346ab6` and reported
+two failures: curly apostrophes render as squares, while French accents render
+correctly; silent replies cannot be advanced manually before their timing WAV
+ends. This supersedes the earlier pending runtime gate. It does not invalidate
+the historical xEdit/import checks below or establish a cause for the skip issue.
+
+The presentation adapter projects only the six approved punctuation substitutions
+into DIAL FULL, INFO RNAM/NAM1 and narrative objective NNAM. The canonical corpus
+and editorial fingerprint remain frozen. Its independent reader rejects every
+other record/field change, checks actual serialized text, and reevaluates the
+22 class contexts and 100 survivor combinations. Historical authoring plans,
+receipts and binary fixtures are retained unchanged.
+
+The bounded skip experiment targets `STRE_INFO_VALEN_SELF_010_R`, local FormID
+`0D6BC3`: “Parlez-moi de vous.” → “Qui êtes-vous vraiment ?”. This repeatable
+INFO has six response segments and no quest effect. A retains flags `0x0A00`;
+B clears only `No LIP File` (`0x0800`), retaining `Force Subtitle` (`0x0200`).
+Both private variants use identical punctuation projection and unchanged WAVs.
+No C/LIP generation or generalization to 668 assets is approved before the
+ordered human experiment. Static path/PCM verification is not engine-load proof.
+
+Full Windows/Linux CI is explicitly deferred until the merge HEAD for this
+content iteration. Local tests/audits, exact new-candidate xEdit review, DEV
+build/deploy and STOP before the human smoke remain distinct gates. PR #97 stays
+DRAFT; #96 stays open. Current preparation/results are recorded below when run.
+
+## Historical human-reviewed Valen matrix import (2026-10-16)
 
 The complete reviewed matrix is imported into `GameFiles/Skyrim` on
 `feat/valen-dialogue-matrix-v1`, PR #97 DRAFT. Session
