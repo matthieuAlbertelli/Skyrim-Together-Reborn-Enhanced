@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 16, 2026.
+> **Last updated:** October 18, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -9,14 +9,106 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Valen navigation: runtime FAIL on D, Hadvar validation suspended (2026-10-16)
+## Valen exact-byte promotion and local DEV verification (2026-10-18)
+
+The maintainer explicitly authorizes versioning the runtime-accepted ESP,
+SHA256 `61C4426840ED7697706E25B0C5E826B85B722F4174A82DC3A71DD3DC12C1883E`,
+without regenerating it or requesting another human xEdit review. GameFiles,
+installed Data, local Vortex staging and Pc-vero already contained these exact
+bytes at preflight. No ESP recopy into GameFiles, authoring or rewrite was needed.
+The original preparation session and its review state remain historical;
+this authorization is not a fabricated xEdit attestation or ImportValidated run.
+
+Six residual C FUZ assets were found at all four locations and in the packaging
+manifest. Following explicit authorization, all 24 file entries were backed up
+and removed, and only their six packaging lines were removed. Packaging is again
+697 files: one ESP and 696 companions, each byte-identical to the preparation
+inventory at all four locations. No FUZ/LIP/XWM remains under this plugin's voice
+directory. The canonical record manifest adds only four navigation identities,
+393 to 397; the unchanged ESP contains 553 records including TES4, four more
+than the preceding D candidate.
+
+Local content checks pass: strict records/reject-unexpected, MQ101 structure and
+generated invariants, character catalogue, seat markers, corpus/generated review,
+serialized topology, 22 class contexts, 100 survivor states and 812 runtime text
+fields. The corpus/editorial fingerprint, native D source, SkyrimTogether.esp
+and protected build/import scripts are unchanged. All 226 Python tests,
+149 PowerShell checks and TPTests (440 cases / 45,505 assertions) pass.
+DEV build/deploy has not yet run at this pre-build checkpoint.
+
+The normal CK collector finds 695 owned files and 685 auto-importable files,
+all identical between Data and GameFiles. Its packaging update is byte-idempotent.
+Private cleanup backups, hashes, audit/test logs and preflight receipts are in
+`_audit/valen-promotion-20261018/`. The human Solo, save/reload and roster-2
+acceptances below retain only their reported scope. No push, CI, Ready or merge
+is authorized by this local promotion; PR #97 remains DRAFT and #96 open.
+
+## Valen corrected candidate: scoped human roster-2 and save/reload PASS (2026-10-18)
+
+The maintainer reports **runtime roster-2 PASS** on the corrected candidate,
+limited to the tested scenario and these five human observations:
+
+- Valen dialogues function in multiplayer.
+- Helgen progression is shared.
+- Hadvar discovery is shared.
+- Ralof discovery is shared.
+- Valen dialogues evolve correspondingly.
+
+The maintainer subsequently confirms: "Save/reload et scénarios testés PASS".
+**Native save/reload and the scenarios actually tested are therefore accepted
+as human PASS.** This follow-up supersedes the previously pending save/reload
+status; it does not extend acceptance to untested cases.
+
+The reports do not detail the initiating player, discovery order, both A-to-B
+and B-to-A permutations, individual Say Once persistence checks or presentation
+isolation. Those details are not separately established. ADR-0018 collective
+recovery is not established by a save/reload PASS. No new binary fingerprint
+was supplied with these reports; the earlier temporary-deployment identity
+and evidence remain recorded below.
+
+This update records the maintainer's scoped report in STATUS only. It does not
+authorize further push or CI, or extend the prior review/import authorization.
+
+## Valen temporary candidate: scoped human runtime PASS (2026-10-16)
+
+The maintainer explicitly reports runtime PASS on the temporarily installed ESP
+SHA256 `61C4426840ED7697706E25B0C5E826B85B722F4174A82DC3A71DD3DC12C1883E`,
+from private session `10ba31de6cad4839ae0b8d5c85aaf89a`, with the existing D client.
+The acceptance covers only the six observations supplied:
+
+- Valen's root menu is corrected.
+- Helgen is visible.
+- Navigation works correctly.
+- Hadvar discovery passes.
+- Ralof discovery passes.
+- Valen's dialogue evolves correctly with the discoveries.
+
+No discovery order, individual stage-label check, undiscovered-survivor
+non-disclosure case, exhaustive category traversal or multiplayer role is
+separately attested by this October 16 report. Native save/reload persistence
+and roster-2 were then pending. The October 18 reports above add scoped roster-2
+and save/reload acceptance for the scenarios actually tested, without extending
+that evidence to unreported permutations or ADR-0018 collective recovery.
+
+This is acceptance of a temporary Data-only smoke, not a validated import or
+merge approval. The maintainer explicitly deferred human xEdit review and
+ImportValidated; GameFiles, manifests, Vortex staging and the D client were not
+changed by the smoke deployment. The deployment receipt and the subsequent
+verbatim human report/attestation are retained separately in
+`_audit/valen-topology-smoke-20261016/20261016T175538Z-149dedb9cc5b42c1bb77a36892705265/`.
+Earlier deployment/preparation receipts retain their original pre-test state.
+No new build, deployment, commit, push, CI or formal import accompanies this
+evidence update; PR #97 remains DRAFT and #96 open.
+
+## Historical D navigation failure and pre-smoke correction (2026-10-16)
 
 The maintainer reports two navigation failures on deployed D: after browsing,
 closing and reopening Valen, the root can contain only RECRUIT; the Helgen root
 entry never appears. These are human FAIL reports, not an inferred failure of
-the accepted native skip mechanism. Do not resume Hadvar validation until the
+the accepted native skip mechanism. Hadvar validation was paused until the
 [root-menu smoke](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
-passes. Earlier class and Solo-arrival attestations below retain their limited
+passed; the later temporary-candidate report above supersedes that pause.
+Earlier class and Solo-arrival attestations below retain their limited
 scope; they do not establish correct menu navigation.
 
 Read-only inspection confirms eleven zero-Response navigation INFOs, all eleven
@@ -30,14 +122,16 @@ Eleven categories remain Top-Level; six internal report branches become Normal.
 Four adapter records are new. Narrative conditions/effects, corpus/fingerprint,
 native gate D and all companions stay fixed.
 
-Implementation is local and not deployed. The synthetic xEdit output passes
+At this pre-smoke checkpoint implementation was local and not deployed.
+The synthetic xEdit output passes
 the topology reader, including 22 class contexts and 100 survivor combinations;
 107 Python Valen tests (including 11 navigation tests), 19 PowerShell navigation
 guards and 9 existing presentation guards pass. Official xEdit synthetic
 DryRun/Prepare and the independent audit pass in session
 `fe44f7c729fc45f2ac2f680a6e8eda31`, with original fixture/master hashes unchanged. Human
-xEdit on the new production candidate and root-menu runtime smoke are
-**NOT TESTED**. Automated results alone do not authorize import/build/deploy.
+xEdit on the new production candidate and root-menu runtime smoke were
+**NOT TESTED** at that checkpoint. Automated results alone do not authorize
+import/build/deploy.
 This iteration has no CI and no push; PR #97 is DRAFT and #96 open.
 
 ## Valen D: human skip, three classes and Solo Helgen arrival accepted (2026-10-16)
@@ -58,12 +152,14 @@ dialogue non-regression and menu behavior must not be promoted to separate human
 PASS claims merely from the accepted skip mechanism. Retain the GFx gate, WAVs,
 dialogue flags and skip behavior unless a new reproducible defect appears.
 
-Remaining runtime evidence is **NOT TESTED / not yet attested**: Solo individual
+At this D checkpoint, remaining runtime evidence was **NOT TESTED / not yet
+attested**: Solo individual
 and both-survivor discoveries without disclosure of the unknown survivor;
 native save/reload and local Say Once persistence; roster-2 stage-20/objective
 and discovery propagation in both initiation directions; presentation remaining
 local; representative SELF/GROUP/RECRUIT/DRAGONBORN/DRAGONS/HELGEN/HQ/SKYRIM/
-MISSION/PERSONAL/EXIT navigation. The earlier #95 stage-10 tests prove neither
+MISSION/PERSONAL/EXIT navigation. The later temporary-candidate report above
+updates only its six attested observations. The earlier #95 stage-10 tests prove neither
 stage 20 nor discovery stages 11/12. A normal Solo reload will not establish
 ADR-0018 collective recovery. The focused sequence and reporting rules are in
 the [test plan](../features/alternate-start/TEST_PLAN.md#runtime-finalization-sequence-for-96).
@@ -137,8 +233,8 @@ unchanged. Repository clean after deployment.
   `deployment-verification.json` and `final-gates.json` in the evidence directory.
 
 The build was handed off before human testing; its later scoped acceptance is
-recorded above. Continue with Solo discovery and reload on these same bytes.
-No new implementation, build or deployment is needed without a reproduced bug.
+recorded above. The temporary-candidate checkpoint now identifies the tested
+content and remaining follow-up; this D deployment receipt remains historical.
 No CI or push during runtime validation; no workflow changes. Once the requested
 runtime scenarios are complete, prepare the final local hashes, exact results,
 untested cases, local checks and unpushed commit list, then **STOP for explicit

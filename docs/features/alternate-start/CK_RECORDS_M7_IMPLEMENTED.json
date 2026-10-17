@@ -2028,6 +2028,28 @@
       "signature": "INFO",
       "editorId": "STRE_INFO_VALEN_SURVIVOR_SINGLE_KNOWN_FREED_ONLY_KNOWN_RALOF_FREED",
       "expectedLocalFormId": "0x0D6C3F"
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_VALEN_MENU_HELGEN_NAV_2",
+      "expectedLocalFormId": "0x000D6C42"
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_VALEN_MENU_HELGEN",
+      "expectedLocalFormId": "0x000D6C40",
+      "displayName": "Nous devons parler de ce que nous avons trouvé à Helgen."
+    },
+    {
+      "signature": "DIAL",
+      "editorId": "STRE_DIAL_Valen_ReturnRoot",
+      "expectedLocalFormId": "0x000D6C41",
+      "displayName": "Revenons à autre chose."
+    },
+    {
+      "signature": "INFO",
+      "editorId": "STRE_INFO_Valen_ReturnRoot",
+      "expectedLocalFormId": "0x000D6C43"
     }
   ],
   "spellEffectExpectations": {

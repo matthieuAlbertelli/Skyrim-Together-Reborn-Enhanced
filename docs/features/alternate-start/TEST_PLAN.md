@@ -4,10 +4,10 @@
 
 ## Navigation gate before Hadvar validation
 
-The maintainer reports root-reopen and missing-Helgen runtime FAILs on D.
-Pause Hadvar testing until the [Valen root-menu smoke](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke) passes.
-This content iteration requires local tests, a newly reviewed private ESP,
-validated import and DEV deploy; no CI or push.
+Require the [Valen root-menu smoke](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
+before Hadvar testing. [STATUS](../../project/STATUS.md) records the exact tested
+candidate, scoped human results and the explicitly authorized temporary
+Data-only deployment before review/import. No CI or push during this loop.
 
 ## Complete Valen matrix and discovery (issue #96)
 
@@ -59,7 +59,7 @@ The agent must not launch Skyrim, SkyrimTogether or a server for these tests.
 ### Runtime finalization sequence for #96
 
 Current human results belong only in [STATUS](../../project/STATUS.md). Use the
-existing deployed D build for the following focused sequence. Preserve the
+tested ESP and D client identified there for the focused sequence. Preserve the
 accepted gate, silent WAVs, INFO flags and canonical corpus unless a reproducible
 bug requires a correction. Do not repeat A/B/C, generate LIP/FUZ, instrument the
 engine with Process Monitor, replace the SWF or intercept dialogue controls.

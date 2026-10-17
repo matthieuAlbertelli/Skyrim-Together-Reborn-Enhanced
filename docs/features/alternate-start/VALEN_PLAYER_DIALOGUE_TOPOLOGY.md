@@ -1,7 +1,8 @@
 # Valen Player Dialogue topology
 
-[STATUS](../../project/STATUS.md) owns validation results. The navigation failure
-reported on D suspends Hadvar testing until the menu smoke below passes.
+[STATUS](../../project/STATUS.md) owns validation results, the exact tested
+candidate and remaining runtime checks. The menu smoke below defines the
+navigation gate before discovery testing.
 
 ## Diagnosis before mutation
 
@@ -113,8 +114,8 @@ Check for Errors before `ImportValidated`. The receipt requires all those
 Booleans and exact saved/log/tool hashes. Previous attestations do not apply.
 
 After import: local content audits, DEV build/deploy, then STOP for human smoke.
-No push, full CI, automatic Skyrim launch or Hadvar continuation in this
-iteration. PR #97 remains DRAFT and issue #96 remains open.
+No push, full CI or automatic Skyrim launch in this iteration. Hadvar discovery
+testing follows the root-menu smoke. PR #97 remains DRAFT and issue #96 remains open.
 
 ## Required human menu smoke
 
