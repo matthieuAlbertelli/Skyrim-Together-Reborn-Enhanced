@@ -18,6 +18,8 @@ installed Data, local Vortex staging and Pc-vero already contained these exact
 bytes at preflight. No ESP recopy into GameFiles, authoring or rewrite was needed.
 The original preparation session and its review state remain historical;
 this authorization is not a fabricated xEdit attestation or ImportValidated run.
+Local content commit `dea9f8f87eca7874f56c655c9f9b80babcb5d999` now versions
+those exact bytes and the four navigation identities.
 
 Six residual C FUZ assets were found at all four locations and in the packaging
 manifest. Following explicit authorization, all 24 file entries were backed up
@@ -34,7 +36,22 @@ serialized topology, 22 class contexts, 100 survivor states and 812 runtime text
 fields. The corpus/editorial fingerprint, native D source, SkyrimTogether.esp
 and protected build/import scripts are unchanged. All 226 Python tests,
 149 PowerShell checks and TPTests (440 cases / 45,505 assertions) pass.
-DEV build/deploy has not yet run at this pre-build checkpoint.
+`git diff --check` passes.
+
+The normal `build-and-deploy-dev.ps1` completed successfully (exit 0) from
+content HEAD `dea9f8f87eca7874f56c655c9f9b80babcb5d999`, at
+`2026-10-17T22:48:10.2881885Z`--`2026-10-17T22:49:47.8184979Z` (October 18
+in Europe/Paris). Its snapshot contains 695 files; all 685 automatic imports
+are IDENTICAL, zero copied and zero Vortex backups imported. Independent
+post-deploy verification confirms the accepted ESP hash in the Git index,
+GameFiles, Data, local Vortex and Pc-vero, plus all 696 unchanged companions.
+The client/server/DLL hashes match the distribution, Data and both stagings;
+the deployed D binaries are unchanged. Repository clean after deployment.
+
+- Deployed client SHA256: `992BA1F9B83A36D58600AC3AA31F92C1F46A635649847E4ED80E884A51671EF0`.
+- Build/deploy log SHA256: `E14ABDE39AEC14129501F7186FBE95CFD2C2B916280767975EFB88AFB57C176C`.
+- Evidence: `build-execution.json`, `build-internal-snapshot-verification.json`,
+  `deployed-content.json` and `final-gates.json` in the private directory below.
 
 The normal CK collector finds 695 owned files and 685 auto-importable files,
 all identical between Data and GameFiles. Its packaging update is byte-idempotent.
@@ -42,6 +59,8 @@ Private cleanup backups, hashes, audit/test logs and preflight receipts are in
 `_audit/valen-promotion-20261018/`. The human Solo, save/reload and roster-2
 acceptances below retain only their reported scope. No push, CI, Ready or merge
 is authorized by this local promotion; PR #97 remains DRAFT and #96 open.
+Skyrim and CK were not launched. Stop for explicit authorization before push
+and final CI.
 
 ## Valen corrected candidate: scoped human roster-2 and save/reload PASS (2026-10-18)
 
