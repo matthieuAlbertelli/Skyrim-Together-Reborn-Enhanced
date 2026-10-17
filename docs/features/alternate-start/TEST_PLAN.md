@@ -2,6 +2,122 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Navigation gate before Hadvar validation
+
+Require the [Valen root-menu smoke](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
+before Hadvar testing. [STATUS](../../project/STATUS.md) records the exact tested
+candidate, scoped human results and the explicitly authorized temporary
+Data-only deployment before review/import. No CI or push during this loop.
+
+## Complete Valen matrix and discovery (issue #96)
+
+The complete corpus/condition checks and discovery lifecycle are in
+[Valen dialogue matrix v1](VALEN_DIALOGUE_MATRIX_V1.md). Its generated 100-row
+survivor table is a required review before real CK authoring. Approved single-known
+survivor variants close the twelve former gaps: 32 automatic, 17 explicit,
+51 incoherent and 0 uncovered cases. Missing rules, overlaps or turning a repeatable
+state reply into a first report must reject authoring. Existing #94 acceptance
+below is not validation of any new matrix/discovery behavior.
+
+Before real preparation, run `test_valen_matrix*.py`, the existing Valen and
+Python suites, `Test-StreModding.ps1`, `Test-StreValenMatrix.ps1`, collector
+fixtures and read-only CK audits. Binary fixtures must reject altered discovery
+indices, stage completion flags, alias/QF/TIF bindings, class mappings, OR
+conditions, state conflation, text changes, graph changes and malformed field
+ordering. Reproduce official authoring with `Test-StreValenMatrixAuthor.ps1`.
+Verify the two generated scripts with direct PapyrusCompiler and all silent
+WAVs by reading their samples and metadata. These are static/toolchain checks.
+
+Before validated matrix import, also run `Test-StreValenMatrixImport.ps1` and
+`python -m unittest discover -s Tools/Scripts -p test_valen_matrix_import.py`.
+Cover an unchanged human-reviewed artifact imported from an ancestor preparation
+HEAD, receipt/log/plan/writer/audit/companion drift, missing assets, extra files,
+wrong branch, non-ancestor provenance, missing/failed import-HEAD CI, changed
+Git/Data originals and rejected reimport. The positive fixture must preserve
+historical evidence and prove the exact delta snapshot and three-way file hashes.
+
+After authoring, human xEdit/import and explicitly authorized build/deploy, add
+human Solo and both roster-2 initiation directions with these required cases:
+
+- Hadvar then Ralof, and Ralof then Hadvar, including different players discovering
+  each actor; both facts propagate without the receiver approaching either actor.
+- First discovery only after capture, both singly and in the opposite order.
+- Repeated and near-simultaneous discoveries; stage/objective 20 remains stable.
+- Reject remote-cell, disabled/dead, out-of-range and obstructed observations.
+- First-report Say Once remains local; the generic topic selects only safe,
+  exclusive physical-state replies, without disclosing an undiscovered survivor.
+- Native save/reload after only Hadvar, only Ralof and both; collective recovery
+  to checkpoints before/after each fact, with no partial-roster progression or
+  stage-only reconstruction. No new observation is committed while recovery or
+  checkpoint locks are active.
+- Future Freed/Departed scenarios receive structural tests only until their
+  gameplay exists. Their distinct conditions and defensive discovery requirement
+  must never be presented as an executed rescue/runtime PASS.
+
+The agent must not launch Skyrim, SkyrimTogether or a server for these tests.
+
+### Runtime finalization sequence for #96
+
+Current human results belong only in [STATUS](../../project/STATUS.md). Use the
+tested ESP and D client identified there for the focused sequence. Preserve the
+accepted gate, silent WAVs, INFO flags and canonical corpus unless a reproducible
+bug requires a correction. Do not repeat A/B/C, generate LIP/FUZ, instrument the
+engine with Process Monitor, replace the SWF or intercept dialogue controls.
+
+1. **Solo, Hadvar only.** From a clean stage-20 scenario with neither survivor
+   discovered, approach Hadvar physically, close enough and in clear view;
+   observation polls once per second. Do not approach Ralof. Return to Valen:
+   require the appropriate first Hadvar report, no name/existence/state disclosure
+   of Ralof, and subsequent replies matching the one-known-survivor case.
+2. **Solo native save/reload.** With only Hadvar known and the first report
+   already used, save and quit/reload normally. Require stage 20, Hadvar known,
+   Ralof unknown, appropriate dialogue and no incorrect replay of that local
+   Say Once report. Then physically discover Ralof and return: require both
+   known, preserved Hadvar fact and no problematic first-report duplication.
+   Prefer a separate clean Solo run for Ralof then Hadvar, including reload with
+   only Ralof known; optionally reload after both. No `setstage` or forced fact
+   mutation may establish acceptance. This does not validate ADR-0018 recovery.
+3. **Roster-2 A to B.** Both sealed-roster members stay connected; both start
+   with the narrative quest at stage 10. A enters Helgen while B remains elsewhere.
+   Require both at stage 20, objective 20 on B without B entering, no duplicate
+   transition or regression. A discovers Hadvar with B elsewhere: B must later
+   obtain the matching Valen dialogue, without unknown Ralof disclosure. B then
+   discovers Ralof with A elsewhere: both discovery facts must converge on A/B.
+4. **Roster-2 B to A.** In a distinct clean campaign, B initiates arrival/stage 20
+   and at least one discovery while A remains elsewhere. Require the same
+   propagation and objective behavior. Historical #95 stage-10 acceptance is
+   not evidence for either of these new paths.
+5. **Local presentation while roster-2 is active.** Ordinary Valen topics,
+   including SELF, GROUP, RECRUIT, DRAGONBORN and DRAGONS, must neither open or
+   control the other player's menu, relay local choices, nor arbitrarily advance
+   shared state. Shared propagation is limited to the designed ValenHelgen
+   narrative facts: acceptance/stage 10, arrival/stage 20, HadvarDiscovered/11
+   and RalofDiscovered/12 through the existing mechanisms.
+6. **Representative navigation.** Sample SELF, GROUP, RECRUIT, DRAGONBORN,
+   DRAGONS, HELGEN, HQ, SKYRIM, MISSION, PERSONAL and EXIT. Check available menus,
+   correct submenus/returns, readable French text, D skip on long replies, no
+   obvious dead end, and EXIT closing the conversation. Do not require manual
+   traversal of all 160 INFOs: exhaustive graph proof comes from structural
+   audits. Observe accents, apostrophes and other typography naturally here,
+   and record only the text actually checked.
+
+For each human result, record the build, scenario, Solo/roster roles, discovery
+order, observed outcomes and failures or omitted checks. A brief "works" applies
+only to the scenario explicitly requested immediately beforehand; it does not
+validate unmentioned classes, both roster directions, all glyphs or lifecycle
+permutations. Broader negative/discovery/recovery cases above remain untested
+unless independently exercised; future rescue/Freed/Departed gameplay remains
+out of scope.
+
+During this loop use diagnostic -> local correction -> targeted tests/audits ->
+DEV build/deploy -> human smoke only when a bug is found. No intermediate
+Windows/Linux CI, push for synchronization, or workflow edits. When the requested
+Solo discoveries, reload, roster-2 arrival/discoveries in both directions and
+representative smoke are complete, prepare the #96 final report with local HEAD,
+ESP/client hashes, exact runtime results, untested cases, final local checks,
+clean-tree evidence and commits awaiting push. **Stop for explicit approval
+before final push, final CI, Ready or merge.** Keep #97 DRAFT and #96 OPEN.
+
 ## Shared Valen lead acceptance (issue #94)
 
 The maintainer attested complete Solo PASS on native revision

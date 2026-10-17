@@ -3,6 +3,7 @@
 #include <CampaignLoadPolicy.h>
 #include <CampaignNativeLoad.h>
 #include <CampaignSaveTrace.h>
+#include <Games/Skyrim/DialogueProgressRuntime.h>
 #include <Misc/BSFixedString.h>
 #include <Services/CampaignNativeLoadService.h>
 #include <Services/CampaignResumeService.h>
@@ -648,6 +649,7 @@ bool TP_MAKE_THISCALL(
         return false;
     }
 
+    DialogueProgressRuntime::ResetSession();
     const bool result = TiltedPhoques::ThisCall(
         s_realLoadGame,
         apThis,

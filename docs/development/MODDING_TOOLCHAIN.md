@@ -186,6 +186,154 @@ uses tiny synthetic xEdit output, including corrupted contract cases.
 DryRun/Prepare on newly generated synthetic modules, with the same visible-window
 steps and before/after input/master hashes. Neither test grants human xEdit PASS.
 
+## Typed Valen matrix preparation (#96)
+
+Preparation preserves each raw Git/Data hash independently. Binary companions
+must match byte for byte. For `.psc` only, the comparison permits CRLF versus LF
+introduced by Git's `text=auto` / `core.autocrlf`; all other bytes, BOM and final
+newline count must match. No original is normalized or rewritten. The private
+copy uses the repository bytes, and `InputComparisons` records both raw hashes
+and any `PscCrLfOnly` comparison. This does not change the CK importer's rules.
+
+`AddValenDialogueMatrixV1 -ShowXEdit` is a bounded preparation operation for
+[the complete matrix contract](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md).
+It requires a clean committed feature checkout and both Windows/Linux CI runs
+successful on that exact HEAD. Fetch origin before invoking it:
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Fetch failed; stop.' }
+& $tool -Action Prepare -Operation AddValenDialogueMatrixV1 -ShowXEdit
+```
+
+Preparation writes the exact 300-record plan before opening official xEdit.
+The same visible private DryRun/Prepare workflow applies. This adapter permits
+293 creations and updates only the seven existing Valen identities; the audit
+reports actual payload differences separately. No Python helper writes an ESP
+or assigns a FormID. The independent reader checks all serialized conditions,
+graph links, fields, VMAD and approved French text. Unknown additions fail closed.
+
+Only PapyrusCompiler.exe compiles the generated QF and observer. Its exact
+command and result are recorded; any warning/error fails preparation. The
+private companion inventory is checked against the original manifest plus the
+bounded generated paths. Only the existing narrative QF PSC/PEX may change;
+the TIF, SEQ, three existing WAVs and all unrelated companions remain identical.
+Every new WAV is checked for filename, PCM format, timing, silence and SHA-256.
+Git/Data originals, masters, tools, branch, HEAD and plan are checked again.
+
+Success is `HUMAN_XEDIT_REQUIRED`, with the session state `AwaitingHumanXEdit`.
+The draft validation JSON contains empty hashes/reviewer and false check flags;
+it is not an attestation. No human validation log is fabricated.
+Import/promotion, build/deploy and runtime require later maintainer authorization.
+Synthetic tests and automated UI authoring never satisfy the human boundary.
+
+### Validated matrix import
+
+`Import-StreValenMatrixValidated` handles only `AddValenDialogueMatrixV1`.
+Other operations retain their exact preparation-HEAD requirement. The matrix
+may be imported on a later committed HEAD on the same branch only when its
+preparation HEAD is an ancestor, current origin/main is an ancestor, the checkout
+is clean, and both Windows/Linux CI runs succeed on that exact import HEAD.
+The session must still be `AwaitingHumanXEdit`. A changed candidate, script,
+companion, plan, writer, reviewed graph, audit or protected original stops import.
+An unchanged candidate does not need another human review merely because the
+import implementation advanced. A changed artifact requires a new review.
+
+Retain the original review dossier, including `review-evidence-hashes.json`,
+`review-private-hashes.json`, `review-graph.json`, and the proposed record
+manifest. After the actual human receipt/log is complete, pin their existing
+bytes once with the known reviewed candidate hash and preparation commit:
+
+```powershell
+python -B Tools/Scripts/valen_matrix_import.py --root $session --seal-review `
+  --expected-candidate-sha256 $reviewedSha256 --expected-preparation-head $preparationHead
+```
+
+This creates only `import-evidence.json`, refuses replacement, verifies the
+historical hashes, and never creates a human verdict. It preserves the receipt,
+log, ESP and historical evidence unchanged. The checksum inventory is not a
+cryptographic signature. Existing xEdit `.refcache` files are pinned separately
+as non-import files; new/unexpected private files fail closed.
+
+Before promotion, the current binary auditor must reproduce `candidate-audit.json`
+semantically, including the complete graph, 22 class/fallback contexts and all
+100 survivor cases (32/17/51/0). The current asset reader verifies the original
+PCM bytes, timing, names, scripts and hashes without rewriting `assets-audit.json`.
+All originals, private masters, tools, receipts and target collisions are checked.
+
+The delta is computed from `PrivateOriginals`, `Companions` and `assets-audit`.
+`validated/` contains only the reviewed ESP and added/changed companions, never
+masters, audit files, caches, `.vortex_backup` or `SkyrimTogether.esp`. Existing
+targets are backed up with their separate Git/Data bytes. The wrapper rereads
+the candidate immediately before promotion, uses the existing explicit CK
+importer in batches of at most 64 paths and 16000 native-command characters, and requires snapshot = Data = repository SHA256
+for every promoted file. Ordinary scripts are explicitly imported once here;
+their later authority remains the repository, not automatic Data collection.
+
+The exact proposed record manifest must preserve every existing constraint and
+add only audited identities. Packaging uses the existing local helper with the
+explicit import inventory, and verifies the resulting exact union. It never
+loads the build/deploy entry point. `preparation-session.json` preserves the
+original session bytes; lifecycle state records `PreparationHead`, `ImportHead`,
+CI and inventory hashes separately. Partial promotion is terminal `ImportFailed`;
+retain backups and investigate instead of retrying. `Imported` cannot be replayed.
+
+One explicit completion action exists for a failed matrix transaction whose entire
+content delta is already present, byte-identical in snapshot, Data and repository:
+`Invoke-StreModding.ps1 -Action FinalizeInterrupted -Session <session>`. It does not
+copy content or rerun the importer. It requires the original frozen evidence,
+both original manifests, no staged files and no dirty path outside the exact
+approved content delta. Preparation and original import HEADs must be ancestors
+of the same branch's current HEAD, with current main ancestry and Windows/Linux
+SUCCESS on that exact completion HEAD. The current binary/asset auditors rerun
+before manifest promotion. Missing or differing files are rejected, not repaired.
+`CompletionHead`/`CompletionCI` are recorded separately; the failed result and
+preparation evidence remain intact.
+
+The local build workflow uses `Stre.CkImportBatches.ps1` around its existing CK
+importer call as well, preserving its existing snapshot and dirty-target policy.
+This avoids the same Windows argument limit when collecting the complete bundle.
+The underlying workstation importer remains unchanged.
+
+Run `Test-StreValenMatrixImport.ps1` and `test_valen_matrix_import.py` before real
+import. Their receipts, tools and content are explicitly synthetic. The former
+uses real disposable Git ancestry and the CK bridge; the latter independently
+rereads invented official-xEdit binary fixtures, PCM assets and review evidence.
+After import run every feature audit/test, commit and push the content, wait for
+Windows/Linux CI on that new HEAD, then perform an authorized build/deploy.
+Never launch Skyrim as part of this workflow.
+
+### Bounded presentation iteration after the c48be63 runtime failure
+
+`FixValenPresentation -Variant A|B -ShowXEdit` prepares a separate, private
+presentation-only candidate from the exact tested c48be63 ESP. The
+[presentation smoke contract](../features/alternate-start/VALEN_PRESENTATION_SMOKE.md)
+owns the six text substitutions, frozen corpus, one-INFO experiment and ordered
+engine-load/skip evidence. No records or companions are added; no WAV or Papyrus
+artifact is regenerated. All existing import evidence is retained unchanged.
+
+For this iteration the maintainer explicitly defers new full Windows/Linux CI
+until the merge HEAD: local tests/audits → DEV build/deploy → STOP → human Skyrim
+smoke. This exception does not alter the historical matrix import CI guards or
+the official xEdit human-review boundary below. The new private adapter stops at
+`HUMAN_XEDIT_REQUIRED`; its generated plan is not a human receipt.
+
+### Bounded navigation iteration after the D menu failure
+
+`FixValenNavigation -ShowXEdit` derives the corrected Player Dialogue topology
+from the frozen matrix, using exact deployed D as its Git/Data baseline. The
+[topology contract](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md)
+owns the vanilla evidence, four adapter records, blank Responses, explicit
+root return and stage-dependent Helgen starting topic. No companion changes
+are allowed. The wrapper uses the existing private authoring and validated
+import path; the record manifest receives exactly four allocated identities.
+
+The saved candidate requires a new human receipt, including Boolean
+`ReopenedSavedFile`, `SecondCheckForErrors` and `NoErrorsReported`, in addition
+to the existing checks and saved/log/tool hashes. This content iteration has
+**no CI and no push**: local tests/audits, human xEdit, validated import, DEV
+build/deploy, STOP for human menu smoke. Hadvar validation remains suspended.
+
 ## Official xEdit boundary
 
 AutoMod/Mutagen can reorder masters. An AutoMod write is never ready for Git by
@@ -256,7 +404,7 @@ git status --short
 ./build-and-deploy-dev.ps1
 ```
 
-Resume requires the same branch/HEAD, tools, configuration, unchanged original
+Except for the bounded matrix descendant rule above, resume requires the same branch/HEAD, tools, configuration, unchanged original
 Data/Git ESP, backups and matching human receipt/log. It independently rereads
 the saved TES4 master order and AutoMod master list, format and expected record.
 The validated copy is frozen into `validated/`. Only then is Data updated to

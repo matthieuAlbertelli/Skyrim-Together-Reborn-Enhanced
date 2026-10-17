@@ -1,4 +1,5 @@
 #include <NativeLifetimeProbe.h>
+#include <Games/Skyrim/DialogueProgressRuntime.h>
 #include <Services/RemoteSeatingProbe.h>
 #include <Services/RemoteRespawnLab.h>
 #include <Services/RemoteActorProjection.h>
@@ -318,6 +319,7 @@ void CharacterService::OnUpdate(const UpdateEvent& acUpdateEvent) noexcept
 
 void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const noexcept
 {
+    DialogueProgressRuntime::ResetSession();
     AnimationSystem::InvalidateReplayContexts(m_world, "new-session");
     // Go through all the forms that were previously detected
     auto view = m_world.view<FormIdComponent>(entt::exclude<ObjectComponent>);
@@ -342,6 +344,7 @@ void CharacterService::OnConnected(const ConnectedEvent& acConnectedEvent) const
 
 void CharacterService::OnDisconnected(const DisconnectedEvent& acDisconnectedEvent) noexcept
 {
+    DialogueProgressRuntime::ResetSession();
     AnimationSystem::InvalidateReplayContexts(m_world, "disconnect");
     NativeLifetimeDisconnect();
     ResetAppearanceTrace(m_world);

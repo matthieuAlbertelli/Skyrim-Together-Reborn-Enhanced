@@ -1,13 +1,609 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 15, 2026.
+> **Last updated:** October 18, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Valen exact-byte promotion and local DEV verification (2026-10-18)
+
+The maintainer explicitly authorizes versioning the runtime-accepted ESP,
+SHA256 `61C4426840ED7697706E25B0C5E826B85B722F4174A82DC3A71DD3DC12C1883E`,
+without regenerating it or requesting another human xEdit review. GameFiles,
+installed Data, local Vortex staging and Pc-vero already contained these exact
+bytes at preflight. No ESP recopy into GameFiles, authoring or rewrite was needed.
+The original preparation session and its review state remain historical;
+this authorization is not a fabricated xEdit attestation or ImportValidated run.
+Local content commit `dea9f8f87eca7874f56c655c9f9b80babcb5d999` now versions
+those exact bytes and the four navigation identities.
+
+Six residual C FUZ assets were found at all four locations and in the packaging
+manifest. Following explicit authorization, all 24 file entries were backed up
+and removed, and only their six packaging lines were removed. Packaging is again
+697 files: one ESP and 696 companions, each byte-identical to the preparation
+inventory at all four locations. No FUZ/LIP/XWM remains under this plugin's voice
+directory. The canonical record manifest adds only four navigation identities,
+393 to 397; the unchanged ESP contains 553 records including TES4, four more
+than the preceding D candidate.
+
+Local content checks pass: strict records/reject-unexpected, MQ101 structure and
+generated invariants, character catalogue, seat markers, corpus/generated review,
+serialized topology, 22 class contexts, 100 survivor states and 812 runtime text
+fields. The corpus/editorial fingerprint, native D source, SkyrimTogether.esp
+and protected build/import scripts are unchanged. All 226 Python tests,
+149 PowerShell checks and TPTests (440 cases / 45,505 assertions) pass.
+`git diff --check` passes.
+
+The normal `build-and-deploy-dev.ps1` completed successfully (exit 0) from
+content HEAD `dea9f8f87eca7874f56c655c9f9b80babcb5d999`, at
+`2026-10-17T22:48:10.2881885Z`--`2026-10-17T22:49:47.8184979Z` (October 18
+in Europe/Paris). Its snapshot contains 695 files; all 685 automatic imports
+are IDENTICAL, zero copied and zero Vortex backups imported. Independent
+post-deploy verification confirms the accepted ESP hash in the Git index,
+GameFiles, Data, local Vortex and Pc-vero, plus all 696 unchanged companions.
+The client/server/DLL hashes match the distribution, Data and both stagings;
+the deployed D binaries are unchanged. Repository clean after deployment.
+
+- Deployed client SHA256: `992BA1F9B83A36D58600AC3AA31F92C1F46A635649847E4ED80E884A51671EF0`.
+- Build/deploy log SHA256: `E14ABDE39AEC14129501F7186FBE95CFD2C2B916280767975EFB88AFB57C176C`.
+- Evidence: `build-execution.json`, `build-internal-snapshot-verification.json`,
+  `deployed-content.json` and `final-gates.json` in the private directory below.
+
+The normal CK collector finds 695 owned files and 685 auto-importable files,
+all identical between Data and GameFiles. Its packaging update is byte-idempotent.
+Private cleanup backups, hashes, audit/test logs and preflight receipts are in
+`_audit/valen-promotion-20261018/`. The human Solo, save/reload and roster-2
+acceptances below retain only their reported scope. No push, CI, Ready or merge
+is authorized by this local promotion; PR #97 remains DRAFT and #96 open.
+Skyrim and CK were not launched. Stop for explicit authorization before push
+and final CI.
+
+## Valen corrected candidate: scoped human roster-2 and save/reload PASS (2026-10-18)
+
+The maintainer reports **runtime roster-2 PASS** on the corrected candidate,
+limited to the tested scenario and these five human observations:
+
+- Valen dialogues function in multiplayer.
+- Helgen progression is shared.
+- Hadvar discovery is shared.
+- Ralof discovery is shared.
+- Valen dialogues evolve correspondingly.
+
+The maintainer subsequently confirms: "Save/reload et scénarios testés PASS".
+**Native save/reload and the scenarios actually tested are therefore accepted
+as human PASS.** This follow-up supersedes the previously pending save/reload
+status; it does not extend acceptance to untested cases.
+
+The reports do not detail the initiating player, discovery order, both A-to-B
+and B-to-A permutations, individual Say Once persistence checks or presentation
+isolation. Those details are not separately established. ADR-0018 collective
+recovery is not established by a save/reload PASS. No new binary fingerprint
+was supplied with these reports; the earlier temporary-deployment identity
+and evidence remain recorded below.
+
+This update records the maintainer's scoped report in STATUS only. It does not
+authorize further push or CI, or extend the prior review/import authorization.
+
+## Valen temporary candidate: scoped human runtime PASS (2026-10-16)
+
+The maintainer explicitly reports runtime PASS on the temporarily installed ESP
+SHA256 `61C4426840ED7697706E25B0C5E826B85B722F4174A82DC3A71DD3DC12C1883E`,
+from private session `10ba31de6cad4839ae0b8d5c85aaf89a`, with the existing D client.
+The acceptance covers only the six observations supplied:
+
+- Valen's root menu is corrected.
+- Helgen is visible.
+- Navigation works correctly.
+- Hadvar discovery passes.
+- Ralof discovery passes.
+- Valen's dialogue evolves correctly with the discoveries.
+
+No discovery order, individual stage-label check, undiscovered-survivor
+non-disclosure case, exhaustive category traversal or multiplayer role is
+separately attested by this October 16 report. Native save/reload persistence
+and roster-2 were then pending. The October 18 reports above add scoped roster-2
+and save/reload acceptance for the scenarios actually tested, without extending
+that evidence to unreported permutations or ADR-0018 collective recovery.
+
+This is acceptance of a temporary Data-only smoke, not a validated import or
+merge approval. The maintainer explicitly deferred human xEdit review and
+ImportValidated; GameFiles, manifests, Vortex staging and the D client were not
+changed by the smoke deployment. The deployment receipt and the subsequent
+verbatim human report/attestation are retained separately in
+`_audit/valen-topology-smoke-20261016/20261016T175538Z-149dedb9cc5b42c1bb77a36892705265/`.
+Earlier deployment/preparation receipts retain their original pre-test state.
+No new build, deployment, commit, push, CI or formal import accompanies this
+evidence update; PR #97 remains DRAFT and #96 open.
+
+## Historical D navigation failure and pre-smoke correction (2026-10-16)
+
+The maintainer reports two navigation failures on deployed D: after browsing,
+closing and reopening Valen, the root can contain only RECRUIT; the Helgen root
+entry never appears. These are human FAIL reports, not an inferred failure of
+the accepted native skip mechanism. Hadvar validation was paused until the
+[root-menu smoke](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
+passed; the later temporary-candidate report above supersedes that pause.
+Earlier class and Solo-arrival attestations below retain their limited
+scope; they do not establish correct menu navigation.
+
+Read-only inspection confirms eleven zero-Response navigation INFOs, all eleven
+category branches already Top-Level, no explicit root-return topic and a mixed
+Helgen navigation/state-response starting topic. The
+[topology contract and vanilla evidence](../features/alternate-start/VALEN_PLAYER_DIALOGUE_TOPOLOGY.md)
+explain the generator correction and its limits. The adapter adds blank
+Responses without Force Subtitle, explicit submenu/root links and a dedicated
+three-stage Helgen root; it removes unintended TPIC previous-topic dependencies.
+Eleven categories remain Top-Level; six internal report branches become Normal.
+Four adapter records are new. Narrative conditions/effects, corpus/fingerprint,
+native gate D and all companions stay fixed.
+
+At this pre-smoke checkpoint implementation was local and not deployed.
+The synthetic xEdit output passes
+the topology reader, including 22 class contexts and 100 survivor combinations;
+107 Python Valen tests (including 11 navigation tests), 19 PowerShell navigation
+guards and 9 existing presentation guards pass. Official xEdit synthetic
+DryRun/Prepare and the independent audit pass in session
+`fe44f7c729fc45f2ac2f680a6e8eda31`, with original fixture/master hashes unchanged. Human
+xEdit on the new production candidate and root-menu runtime smoke were
+**NOT TESTED** at that checkpoint. Automated results alone do not authorize
+import/build/deploy.
+This iteration has no CI and no push; PR #97 is DRAFT and #96 open.
+
+## Valen D: human skip, three classes and Solo Helgen arrival accepted (2026-10-16)
+
+The maintainer's runtime-finalization mission and class follow-up attest the
+following on deployed D, build `7e0834906aeb4e41275cdd5dcdad2a280c562f58`:
+
+| Human scenario | Attested result and scope |
+|---|---|
+| Manual STRE skip | PASS: the ordinary vanilla control advances the STRE response after the configured delay. D is accepted; no measured timing or additional unreported subtest is inferred. |
+| “Pourquoi m’avez-vous fait venir, moi ?” | PASS for Mage, Thief / Voleur and Warrior / Guerrier. Exact follow-up: “J'ai testé les 3 classes actuellement implémentées: mage, voleur et guerrier et ça fonctionne”. The other 18 classes and fallback have structural evidence only. |
+| Solo Helgen lead and arrival | PASS for the tested flow: Valen dialogue, acceptance of “Les ruines de Helgen”, stage/objective 10, real travel and entry into Helgen, stage 20, objective 10 completed and objective 20 displayed. This validates arrival by the first player in Solo only. |
+
+Objective 20's expected wording is “Enquêter sur les ruines de Helgen.” No
+separate post-D typography check was explicitly attested, so global typography
+acceptance remains unconfirmed. Repeated skips, silence/idle duration, vanilla
+dialogue non-regression and menu behavior must not be promoted to separate human
+PASS claims merely from the accepted skip mechanism. Retain the GFx gate, WAVs,
+dialogue flags and skip behavior unless a new reproducible defect appears.
+
+At this D checkpoint, remaining runtime evidence was **NOT TESTED / not yet
+attested**: Solo individual
+and both-survivor discoveries without disclosure of the unknown survivor;
+native save/reload and local Say Once persistence; roster-2 stage-20/objective
+and discovery propagation in both initiation directions; presentation remaining
+local; representative SELF/GROUP/RECRUIT/DRAGONBORN/DRAGONS/HELGEN/HQ/SKYRIM/
+MISSION/PERSONAL/EXIT navigation. The later temporary-candidate report above
+updates only its six attested observations. The earlier #95 stage-10 tests prove neither
+stage 20 nor discovery stages 11/12. A normal Solo reload will not establish
+ADR-0018 collective recovery. The focused sequence and reporting rules are in
+the [test plan](../features/alternate-start/TEST_PLAN.md#runtime-finalization-sequence-for-96).
+
+This update records human reports only. Source text and the exact class follow-up
+are retained in `_audit/valen-runtime-finalization-20261016/`; the original D
+deployment receipts remain unchanged as historical pre-smoke evidence.
+
+The maintainer reports **C runtime FAIL** on `STRE_INFO_VALEN_SELF_010_R /
+0D6BC3`: all six native FUZ/LIP response assets still leave manual skip blocked.
+Voice-asset experiments and Process Monitor are permanently abandoned for this
+defect. This supersedes the pending C smoke and any earlier conditional plan to
+generalize LIP/FUZ below. No additional runtime PASS is inferred.
+
+Experiment D adds a native client permission gate for exact Steam runtime
+**1.6.1170.0**. Only the open `Dialogue Menu` and a live `currentTopicInfo` whose
+origin and winning source file are `STRE_AlternateStart.esp` qualify. The native
+menu update reads `DialogueMenu_mc.bAllowProgress` through GFx. A false value
+arms a `steady_clock` deadline; after 750 ms the same response may receive one
+normal, non-sticky write to true if it is still false. True does nothing; a
+subsequent false after vanilla skip starts a fresh deadline. Menu/movie/INFO,
+segment token, speaker and session changes reset it. Missing/invalid native or
+GFx state fails closed. No input hook, SkipText call, automatic progression or
+SWF replacement is introduced. Scope, ABI sources and human criteria are in
+[`VALEN_PRESENTATION_SMOKE.md`](../features/alternate-start/VALEN_PRESENTATION_SMOKE.md).
+
+Native load entry, Main/Loading Menu opening and network connect/disconnect
+invalidate the pending gate under the same lock as GFx writes. Every native menu
+message still chains to the original handler. Temporary transition diagnostics
+include INFO, plugin, false/arm and confirmed true, capped at 128 events per
+process; no per-frame logging. Human manual-skip acceptance is scoped above;
+the automated cases do not become individual human lifecycle attestations.
+
+The content restoration is exact private A, SHA256
+`31B8DD797A68BB51542F4C24986C82B21A2154E916B42D80B4574B1D7DB03471`.
+This is the existing xEdit-authored candidate in session
+`d184bc1581e7492980e551c20b810adb`, not a newly edited ESP. It differs from B/C
+at one flag byte only: Force Subtitle + No LIP File (`0x0A00`) restored. All 392
+runtime typography substitutions remain; canonical corpus/fingerprint and WAVs
+are unchanged. The maintainer explicitly waives a new xEdit pass for this exact
+byte restoration; this is **not** a fabricated new human xEdit attestation.
+The six C FUZ were backed up and removed from repository, Data, local Vortex and
+Pc-vero. Packaging returns exactly to the pre-C manifest (697 files / 696
+companions); 549 ESP records and 393 canonical identities remain unchanged.
+
+Local gate tests pass: seven cases / 99 assertions, including non-STRE, absent
+menu/INFO/GFx, <750 ms, >=750 ms, true/false cycles, six successive skips,
+failed-write suppression and identity/session resets. Full TPTests passes
+440 cases / 45,505 assertions. The changed native client target compiles.
+Evidence: `_audit/valen-dialogue-gate-d-20261016/`. All nine content audits pass,
+including strict records, packaging, MQ101, catalogue, markers, serialized
+typography/graph/classes and all 100 survivor combinations. Seven Python tests
+and 22 PowerShell checks also pass. The actual DEV collector finds 695 owned
+files and 685 automatic imports identical to Git; its manifest update is
+byte-idempotent.
+
+DEV build/deploy **PASS** from local implementation HEAD
+`7e0834906aeb4e41275cdd5dcdad2a280c562f58`, exit 0,
+`2026-10-16T15:28:59.2642917Z`–`2026-10-16T15:31:01.9328535Z`.
+The internal snapshot contains 695 files; 685 automatic imports are IDENTICAL,
+zero copied and zero Vortex backups. Independent verification confirms all 697
+managed files across Git/index, installed Data, local Vortex and Pc-vero, with
+the restored ESP also matching the private A and internal snapshot. The six C
+FUZ are absent everywhere. Client/server/DLL hashes match the distribution and
+all three installed destinations; SkyrimTogether.esp and protected tools remain
+unchanged. Repository clean after deployment.
+
+- Deployed client SHA256: `992BA1F9B83A36D58600AC3AA31F92C1F46A635649847E4ED80E884A51671EF0`.
+- Build/deploy log SHA256: `FD546BBC65466FF20A844F0D7FB90EB2CACF134694F134DAE67F95B01A128346`.
+- Receipts: `build-execution.json`, `build-internal-snapshot-verification.json`,
+  `deployment-verification.json` and `final-gates.json` in the evidence directory.
+
+The build was handed off before human testing; its later scoped acceptance is
+recorded above. The temporary-candidate checkpoint now identifies the tested
+content and remaining follow-up; this D deployment receipt remains historical.
+No CI or push during runtime validation; no workflow changes. Once the requested
+runtime scenarios are complete, prepare the final local hashes, exact results,
+untested cases, local checks and unpushed commit list, then **STOP for explicit
+authorization before final push / CI / Ready / merge**. PR #97 remains DRAFT at
+remote HEAD `54bcc6a2954a51da201f0fee043969203a755da2`; #96 remains OPEN.
+
+## Historical Valen A/B/C presentation experiments (2026-10-16)
+
+The maintainer tested `c48be632f4a3dbd3f37311fce369cda67c346ab6` and reported
+two failures: curly apostrophes render as squares, while French accents render
+correctly; silent replies cannot be advanced manually before their timing WAV
+ends. This supersedes the earlier pending runtime gate. It does not invalidate
+the historical xEdit/import checks below or establish a cause for the skip issue.
+
+The presentation adapter projects only the six approved punctuation substitutions
+into DIAL FULL, INFO RNAM/NAM1 and narrative objective NNAM. The canonical corpus
+and editorial fingerprint remain frozen. Its independent reader rejects every
+other record/field change, checks actual serialized text, and reevaluates the
+22 class contexts and 100 survivor combinations. Historical authoring plans,
+receipts and binary fixtures are retained unchanged.
+
+The bounded skip experiment targets `STRE_INFO_VALEN_SELF_010_R`, local FormID
+`0D6BC3`: “Parlez-moi de vous.” → “Qui êtes-vous vraiment ?”. This repeatable
+INFO has six response segments and no quest effect. A retains flags `0x0A00`;
+B clears only `No LIP File` (`0x0800`), retaining `Force Subtitle` (`0x0200`).
+Both private variants use identical punctuation projection and unchanged WAVs.
+C is now authorized only on this INFO after the reported B failure; no
+generalization to 668 assets is approved. Static asset checks are not engine-load
+or runtime skip proof.
+
+Full Windows/Linux CI is explicitly deferred until the merge HEAD for this
+content iteration. Local tests/audits, exact new-candidate xEdit review, DEV
+build/deploy and STOP before the human smoke remain distinct gates. PR #97 stays
+DRAFT; #96 stays open.
+
+**Reviewed B imported; human skip FAIL.** Preparation/import HEAD is
+`54bcc6a2954a51da201f0fee043969203a755da2`, session
+`3505022e7434419188eb6f4b1a02b2b1`. The maintainer's exact reply, “tout est PASS
+sans error”, attests the requested Sort Masters, Check for Errors, save/close,
+reopen and second Check for Errors. Warnings were not separately specified.
+The saved ESP SHA256 is
+`852E2CF392CA64F7694C7C8914BF53D54D3C93BFEBF88F2EF84F3BF240934933`;
+the transcription log SHA256 is
+`E750C56E942E1D229120B995EE26578795341EE074BD55830E5104E9A1F3D466`.
+The receipt pins xEdit
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
+No raw xEdit output is inferred from this attestation.
+
+Official `ImportValidated` succeeded with the ESP alone: zero companions copied
+or changed. Saved candidate, validated snapshot, installed Data and repository
+hashes agree. The plugin still contains 549 records including TES4, with 172
+changed payloads, 392 text substitutions and exactly one INFO flag change.
+The audit checks 796 serialized text fields (121 FULL, two RNAM, 671 NAM1,
+two NNAM), the graph, 22 class contexts and all 100 survivor combinations.
+All 696 companions, canonical corpus/fingerprint, both manifests and
+SkyrimTogether.esp are unchanged. Packaging remains 697 files; the canonical
+record manifest remains 393 identities. Nine post-import audits passed.
+
+The maintainer subsequently confirmed the selected INFO's **A skip FAIL** on
+the tested baseline: subtitles display apart from the reported typography defect,
+advance automatically after their delay, and cannot be skipped manually.
+No Process Monitor capture or exact timing/control was supplied. The maintainer
+initially directed continuation of the A/B diagnosis with WAV resolution
+**unproven**. That diagnostic prerequisite was subsequently withdrawn in favor
+of C below. No engine-read evidence or additional runtime PASS is inferred.
+
+Post-import local tests passed: 215 Python tests, 130 PowerShell checks
+(66 general, 21 matrix preparation, 21 matrix import, 13 collector and nine
+presentation guards), and TPTests 433 cases / 45,406 assertions. The actual
+build collector finds 695 owned files and 685 auto-importable files, all
+byte-identical between Data and the repository. `git diff --check` passed.
+The diagnostic content commit is retained locally because synchronizing the PR
+would automatically trigger Windows/Linux CI. The maintainer explicitly forbids
+that CI for this iteration; it is reserved for the merge candidate after runtime
+validation.
+
+**DEV build and deployment SUCCESS** on local content HEAD
+`ffaf089dbfec3e3eb233f0047fcbf846e4cd5634` (exit 0,
+2026-10-16 13:16:00–13:17:53 UTC). The existing workstation workflow deployed to
+local Vortex and its configured Pc-vero share. Independent verification confirms
+all 697 managed files in Data/repository/both destinations and the ESP's indexed
+blob match the reviewed bytes. Its internal snapshot contains 695 files; all 685
+automatic imports were IDENTICAL, zero copied, zero Vortex backups. Both manifests
+and SkyrimTogether.esp remain unchanged; Git was clean after deployment. The
+client, server and STServer.dll match distribution = installed Data = local
+Vortex = Pc-vero. Native binaries are unchanged from c48be63; client SHA256:
+`C4FF4BAADD05D4CCF24D1371EBA3D9B4E3E35759CEBFD9D329F03765F8F540A3`.
+Build/deploy log SHA256:
+`13D7C4531468B192C0D7158D0D8269CF5647544B3D83933B1DECE6B15481E6B4`.
+Receipts are retained in the B session (`build-execution.json`,
+`build-internal-snapshot-verification.json`, `deployment-verification.json`,
+`final-gates.json`). The following documentation commit records these observations;
+it does not change deployed content. Neither local commit is pushed, so no new
+Windows/Linux CI is triggered. The agent stopped before Skyrim.
+
+The maintainer then tested deployed B on “Parlez-moi de vous.” → “Qui êtes-vous
+vraiment ?” and explicitly reported **B runtime FAIL**: the response still cannot
+be advanced manually. This supersedes the pending B skip result above; no new
+typography, timing or transition PASS is inferred. Effective WAV loading remains
+unproven. The maintainer explicitly stopped Process Monitor/instrumentation and
+authorized a normal native voice prototype C on this one INFO, without a file-I/O
+capture prerequisite. B must not be generalized.
+
+**C prototype deployed; local audits PASS, human smoke pending.** Evidence is
+retained under `_audit/valen-vanilla-c-20261016/`, with the portable hashes in
+[`VALEN_VOICE_C_PROTOTYPE.json`](../features/alternate-start/VALEN_VOICE_C_PROTOTYPE.json).
+The installed LipGenerator with FonixData generated six native LIPs using the
+exact runtime NAM1 transcripts and French language. xWMAEncode encoded the six
+unchanged silent WAVs; LIPFuzer packed each LIP/XWM pair into a FUZ with the
+implicit voice basename for MaleWarlock and INFO `000d6bc3`, responses 1–6.
+Only these six FUZ were imported; loose LIP/XWM remain private evidence.
+Native unpacking restores the exact generated bytes. All six decoded PCM streams
+are mono 44100 Hz/16-bit, every sample zero; codec padding is at most 26 ms.
+The first packaging invocation returned exit 0 but no output without trailing
+directory separators; the exact-count guard rejected it. The corrected invocation
+produced the six audited assets. No failed output is included.
+
+The ESP remains byte-identical to reviewed B (`852E2CF3…40934933`), so its xEdit
+receipt remains applicable: 549 records, no new record or flag changes. This INFO
+has no VMAD/fragment timer to remove; duration is carried by its voice assets.
+All 696 existing companions, the frozen corpus/fingerprint, canonical record
+manifest and SkyrimTogether.esp remain unchanged. No Papyrus compilation or
+other INFO asset generation is required. C runtime skip/silence/timing/menu
+criteria remain **NOT TESTED**; no Skyrim launch or CI is authorized in this pass.
+
+The explicit CK importer copied exactly six FUZ from the audited private snapshot
+to the repository; Data contains the same six new files. Packaging adds only
+these six paths: 703 managed files, comprising the ESP and 702 companions.
+The canonical record manifest remains 393 identities. Ten targeted audits pass,
+including typography/graph/22 class contexts/100 survivor combinations and the
+native voice prototype; seven Python presentation tests and 22 PowerShell checks
+(13 collector, nine presentation guards) pass. `git diff --check` passes.
+The actual DEV collector finds 701 owned files and 691 automatic imports, all
+byte-identical between Data and the repository, with no Vortex backup selected.
+The historical misplaced PEX in Data/Scripts/Source is ignored by the collector
+and is not imported. Protected tools and the original 697 managed files retain
+their before-import hashes. Local commits are retained without push to avoid CI.
+
+The first C build/deploy on `658a1b90bbc45845e6fb660365624a3a3b3b1a32`
+returned exit 0 but is **not accepted as a clean deployment**: the local collector
+appended six duplicate manifest entries because the new paths used `/` while its
+paths use `\`. The 691 imports were identical and all deployed assets match, but
+the repository was dirty. Its log/receipt are preserved. Only the six new entries
+are normalized to the collector's existing spelling; the original 697 entries
+and all assets are unchanged. The second preflight additionally runs the actual
+manifest helper on a private copy and requires byte-identical output before the
+workflow may be repeated. No build-script or importer change is needed.
+
+**Accepted C DEV build/deploy SUCCESS** on local content HEAD
+`26c6f334e93b07b4d51b53c75f4a386ff8ae84b3` (exit 0,
+2026-10-16 14:56:57–14:58:42 UTC). Independent post-deploy verification passes:
+701 internal snapshot files; 691 IDENTICAL automatic imports, zero copied,
+zero Vortex backups; 703 managed files match installed Data, repository, local
+Vortex and Pc-vero. The six FUZ additionally match private source, asset snapshot
+and indexed Git blobs. The ESP still matches B's reviewed/validated snapshot and
+indexed blob. All original companions, protected tools and SkyrimTogether.esp
+remain unchanged. The manifest is unchanged by this build and Git is clean.
+Client/server/STServer.dll match distribution, Data and both deployment targets;
+the client SHA256 remains
+`C4FF4BAADD05D4CCF24D1371EBA3D9B4E3E35759CEBFD9D329F03765F8F540A3`.
+Accepted build log SHA256:
+`390AD53BA6E66C954A1BD99E36BB1A483B96E0ECC4327A415258760FA4CC4734`.
+The accepted execution/snapshot/final-gate receipts are in `build-attempt-2/`
+under the C evidence root; `deployment-verification.json` records all deployed
+hash checks. The following documentation commit changes no deployed content.
+No push, CI or Skyrim launch was performed. **STOP for the maintainer's C smoke**:
+visible subtitles, silence, sufficient idle duration, immediate vanilla skip,
+clean progression/menu return and no double advance remain unvalidated in game.
+
+## Historical human-reviewed Valen matrix import (2026-10-16)
+
+The complete reviewed matrix is imported into `GameFiles/Skyrim` on
+`feat/valen-dialogue-matrix-v1`, PR #97 DRAFT. Session
+`63c81f61da724c01a6b561181457d3f1` is `Imported`. The ESP SHA256 remains exactly
+`2ECEA346231CF6F6453205948FEF4E6C5CE5882C19C1F9141D9873A41DEE355E`.
+No reviewed candidate, graph, script, PEX or WAV was regenerated or edited.
+
+The maintainer attested Sort Masters, Check for Errors, save/close, reopen and a
+second Check for Errors with no errors. Warnings were not separately specified.
+`xedit-validation.log` is a transcript of that statement, not raw xEdit output;
+its SHA256 is `B99FA865F3D939D912635F91A08D698F778D704E103C9AC95B8EBEEC7F8D2E31`.
+The receipt identifies xEdit SHA256
+`CCB7CA9E6D826868B186B0B9A0FC012AFFB3FDC9688250583353E6D84E6A2545`.
+
+Preparation provenance remains `6a1694861af408c1a7c9d0eb690b69859714dbdf`.
+The first import on `24c981a958b789e0542886e6f319cc2cbe4e45c8` followed successful
+Windows/Linux CI and copied all 673 approved files, then failed when the existing
+importer's final native `git status` exceeded Windows' command-line limit.
+That `ImportFailed` result and the backups remain preserved. The original
+protected importer is unchanged; the tracked adapter now bounds each call to
+64 paths / 16000 characters, including the local build wrapper's existing call.
+
+Explicit no-copy completion succeeded on
+`9e18afcab5f8fc519c454a921b684ac72a0dc8d0`, after
+[Windows](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888661712)
+and [Linux](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/38888658121)
+CI SUCCESS on that exact HEAD. It revalidated all frozen evidence and copied-file
+hashes with current binary/asset auditors, required no staged/unrelated changes,
+and promoted the manifests without recopying content. PreparationHead, ImportHead
+and CompletionHead are distinct; `preparation-session.json` preserves the original
+session bytes. ImportValidated cannot replay a failed or imported session.
+
+The 300-record plan produced **293 additions, five changed existing payloads and
+two unchanged planned updates**. The plugin contains **549 records including TES4**;
+the canonical records manifest contains **393 identities**. It preserves the
+reviewed proposal's exact records and constraints; only its last explanatory note
+was updated to reflect completed import. The private proposal remains unchanged.
+The full graph, **22 class/fallback projections** and all **100 survivor cases**
+reproduce the historical audit exactly: **32 automatic / 17 explicit / 51
+incoherent / zero uncovered**.
+
+The imported delta is **672 companions plus the ESP**: two existing QF PSC/PEX
+replacements, observer PSC/PEX and **668 new timing WAVs**. The validated snapshot
+contains exactly those **673 files**. Packaging has **697 managed files** (ESP +
+696 companions). Snapshot, installed Data, repository and staged blob hashes match
+for the entire promoted delta; historical evidence and out-of-scope protected
+files remain unchanged. SkyrimTogether.esp retains SHA256
+`3196266AA29855574BDA48335DA9AB2F18AD33A80EEE116400DA7C5C81C93D7E`.
+No master, private audit/cache or `.vortex_backup` was imported.
+
+Post-import validation: packaging, strict records with reject-unexpected, MQ101
+structure/generated invariants, catalogue, markers, Valen binary graph/classes,
+generated corpus and survivor coverage all PASS. **208 Python tests**, **66 general
+PowerShell safeguards**, **21 preparation cases**, **21 import/completion cases**,
+**13 local collector cases**, and **TPTests: 433 cases / 45,406 assertions** PASS.
+`git diff --check` PASS. The 673-file regression exercises real native Git status;
+completion fixtures prove no recopy, preserved failure evidence and rejection of
+missing/red CI, staged/unrelated changes, drift and replay.
+
+Deployment requires clean content-HEAD Windows/Linux SUCCESS before the existing
+`build-and-deploy-dev.ps1`. The maintainer separately authorized only the installed
+`Source/Scripts/TIF_030D6B1A.psc` LF-to-CRLF alignment to its unchanged reviewed/Git
+bytes, after import and audits, with backup, normalized comparison and complete
+Data hash comparison. It is not a functional #96 change and requires no compilation
+or xEdit. Its execution receipt and the build/deployment receipts belong to this
+session; subsequent deployment results are reported in PR #97. Runtime validation
+remains pending, issue #96 stays open, and Skyrim must not be launched by this flow.
+
+## Historical matrix preparation evidence (2026-10-16)
+
+This section records the earlier private preparation checkpoints. Current import
+and validation state is described above; historical claims below retain their
+original checkpoint scope.
+
+[#96](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/96)
+tracks the complete matrix under #20/#19 on `feat/valen-dialogue-matrix-v1`, based
+on main `bdedb163aa516dc28917b292caf9b869afda983c`. The canonical JSON, formal
+schema, linter, generated review and exhaustive survivor condition table are
+prepared. The source comparison accounts for all 140 original approved response
+blocks. The maintainer additionally approved SINGLE_KNOWN_FREED and
+SINGLE_KNOWN_DEPARTED on October 16; the two existing #95 response blocks preserve
+the actual ESP strings. The editorial graph has 133 semantic nodes, 144 response
+blocks including the common recruitment introduction, and 21 classes plus
+fallback. These counts
+are not CK record or allocated FormKey counts.
+
+The maintainer corrected discovery to two independent shared facts, distinct
+from the existing Hadvar/Ralof physical states. The
+[implementation proposal](../features/alternate-start/VALEN_DIALOGUE_MATRIX_V1.md)
+uses completed stages 11/12 on the existing shared narrative quest, after arrival
+stage 20, with ordinary QuestService propagation and per-player native saves
+under ADR-0018. Its alias script and QF template are implemented in the bounded
+private preparation toolchain and compile successfully. They have not been
+imported, deployed or runtime-validated.
+
+The exhaustive 100-row table finds **32 generic-reply cases**, 17 separate explicit
+report/navigation cases, 51 inconsistent/transient cases rejected without speech,
+and **0 uncovered cases**. The two approved additions cover all twelve former
+gaps symmetrically: one known survivor Freed or Departed while the other is
+undiscovered in state 0, 1 or 2. They remain repeatable generic-topic variants,
+with no shared effect, new first report or `Reported` fact. The corpus authoring
+gate now passes; negative tests still reject missing rules or overlaps.
+Technical implementation work is not an editorial approval gate. This is an
+intermediate preparation, not delivery of the whole feature.
+
+Local Preflight, read-only Inspect and PapyrusStatus succeeded. Baselines cover
+all 27 managed files in both Git/Data, both protected plugins, the canonical
+record manifest and tool executables. Production Git/Data content remains
+unchanged. Official xEdit and direct PapyrusCompiler were executed on invented
+private fixtures only; no import, build/deploy or game process was launched.
+No human xEdit, Solo, roster-2, native save or recovery PASS is claimed for #96.
+
+The bounded `AddValenDialogueMatrixV1` plan concerns 300 records: two QUST,
+17 DLBR, 121 DIAL and 160 INFO. Official synthetic output has exactly **293 new
+records**, **five changed existing payloads**, and **two planned updates whose
+payloads remain identical**. All seven #95 identities are preserved. The
+independent reader verifies the full graph, field order/multiplicity, VMAD,
+French strings, all 100 actual serialized survivor-condition cases and all
+22 class/fallback projections. The official positive fixture and the rejected
+sorted-array regression are versioned under `Tools/Scripts/valen/matrix/fixtures`.
+
+The class bridge runs only after validated Character Creation completion and
+projects local completed stages on ValenDialogue; it adds no protocol or native
+Papyrus API. The observer detects actual proximity/LOS in wounded or captured
+locations, fences campaign recovery, and uses independent completed stages 11/12
+after shared arrival stage 20. Freed and Departed remain distinct defensive
+future cases. Existing QuestService and technical Helgen implementation are
+unchanged. Runtime discovery/save/recovery remains pending.
+
+The generated synthetic QF and observer compile directly with PapyrusCompiler.exe
+with **zero errors and zero warnings**. **668 new silent PCM WAVs** total
+309,373,392 bytes; their names, timing, sample format, silence and hashes pass
+read-back verification. Existing synthetic TIF, SEQ and three WAVs are preserved.
+This is asset-pipeline evidence, not audible/runtime acceptance.
+
+Real preparation requires a clean committed feature HEAD, current origin/main
+ancestry and successful Windows/Linux CI on that exact HEAD. It runs private
+DryRun/Prepare, independent reread, compilation and asset verification, then
+stops at **HUMAN_XEDIT_REQUIRED**. Matrix ImportValidated is explicitly refused
+at this preparation boundary. The canonical CK manifests remain unchanged.
+
+Implementation verification: **195 Python tests**, **66 PowerShell toolchain
+cases**, **21 matrix preparation guards**, **13 CK collector cases**, and the
+six read-only CK audits pass. The rebuilt TPTests target passes **417 cases /
+45,082 assertions**, including the class projection checks. `git diff --check`
+passes. This source checkpoint records preparation evidence; it grants neither
+human xEdit approval nor permission to import/deploy a private candidate.
+
+The first real preparation attempt stopped before xEdit because the two existing
+Valen QF/TIF PSC files use CRLF in the Git checkout and LF in Data, already present
+in the initial baseline. The source text and all 60 baseline hashes were unchanged.
+The guard now permits only that byte-preserving PSC comparison, records the two
+raw hashes separately, and still rejects every binary, BOM, text or final-newline
+change. It copies repository bytes privately without normalizing any original.
+Regression fixtures cover those rejections; exact-HEAD CI must pass again before
+a fresh real preparation session can start.
+
+The next private session completed official DryRun/Prepare and the independent
+ESP audit, then stopped because the safe copier refuses an existing destination.
+The wrapper now archives the unchanged private writer input as `writer-input.esp`
+before copying the audited output to the private candidate path. Integration
+fixtures verify input/output preservation and reject changed input or an existing
+archive. Failed sessions remain terminal; originals and production content are
+unchanged, and a new exact-HEAD CI gate precedes the next session.
+
+Initial preparation at 414556a9 passed 160 Python tests, 66 PowerShell toolchain
+cases, 13 collector fixture cases and all six existing read-only CK audits. Its
+source comparison verified all 140 original replies against the mission file.
+The approved additions are separately fingerprinted; a regression test proves
+the original editorial fingerprint is unchanged even if that external attachment
+is no longer available. Discovery order/idempotency evidence remains a
+completed-stage reference model plus source-path inspection; compiled Papyrus
+is not native save/recovery proof.
+
+After integrating the two approved replies, all 164 Python tests pass (25 for
+this matrix), generated views agree with the corpus, the authoring input gate
+passes with 32/17/51/0 coverage, and `git diff --check` passes. All 60 protected
+Git/Data/tool baseline hashes remain unchanged. The external mission attachment
+is now absent; its original comparison remains historical evidence, with the
+original editorial fingerprint independently preserved by the regression test.
 
 ## Valen's shared Helgen lead: Solo and both roster-2 directions accepted (2026-10-15)
 

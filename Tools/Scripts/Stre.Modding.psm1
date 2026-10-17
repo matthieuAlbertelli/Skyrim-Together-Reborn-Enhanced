@@ -4,6 +4,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Stre.ProcessGuard.ps1')
 $script:Masters = @('Skyrim.esm', 'Update.esm', 'Dragonborn.esm')
 . (Join-Path $PSScriptRoot 'Stre.ValenHelgen.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenMatrix.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenMatrixImport.ps1')
+. (Join-Path $PSScriptRoot 'Stre.ValenPresentation.ps1')
 
 function Get-StreHash([string]$Path) {
     (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash
@@ -22,7 +25,7 @@ function Resolve-StrePath([string]$Path) {
     $full
 }
 
-function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Directory, [hashtable]$Environment = @{}) {
+function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Directory, [hashtable]$Environment = @{}, [int]$TimeoutMilliseconds = 120000) {
     $start = [Diagnostics.ProcessStartInfo]::new($File)
     $start.WorkingDirectory = $Directory
     $start.UseShellExecute = $false
@@ -37,7 +40,7 @@ function Invoke-StreProcess([string]$File, [string[]]$Arguments, [string]$Direct
         if (-not $process.Start()) { throw "Could not start $File" }
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(120000)) {
+        if (-not $process.WaitForExit($TimeoutMilliseconds)) {
             $process.Kill($true)
             $process.WaitForExit()
             throw "Tool timed out: $File"
@@ -254,6 +257,8 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
 }
 
 function New-StreSession($Config, [string]$Plugin, $Request, [switch]$DryRun) {
+    if ($Request.Operation -in @('FixValenPresentation','FixValenNavigation')) { return New-StreValenPresentationSession $Config $Plugin $Request -DryRun:$DryRun }
+    if ($Request.Operation -eq 'AddValenDialogueMatrixV1') { return New-StreValenMatrixSession $Config $Plugin $Request -DryRun:$DryRun }
     if ($Request.Operation -eq 'AddValenHelgen') { return New-StreValenSession $Config $Plugin $Request -DryRun:$DryRun }
     $git = Assert-StreMutationGit $Config $Plugin
     if (-not (Test-Path -LiteralPath $Config.ImportScript -PathType Leaf)) { throw 'Existing local CK importer is required.' }
@@ -325,6 +330,12 @@ function Import-StreValidated($Config, [string]$Session) {
     $sessionParent = Resolve-StrePath (Join-Path $Config.RepoRoot '_audit/modding')
     if ((Split-Path -Parent $root) -ine $sessionParent -or (Split-Path -Leaf $root) -notmatch '^[a-f0-9]{32}$') { throw 'Session must be an isolated _audit/modding/<id> directory in this repository.' }
     $state = Get-Content -LiteralPath (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
+    if ($state.Request.Operation -eq 'AddValenDialogueMatrixV1') {
+        return Import-StreValenMatrixValidated $Config $root $state
+    }
+    if ($state.Request.Operation -in @('FixValenPresentation','FixValenNavigation')) {
+        return Import-StrePresentationValidated $Config $root $state
+    }
     if ($state.Schema -ne 1 -or $state.State -ne 'AwaitingHumanXEdit') { throw 'Session is not awaiting xEdit; failed/dry-run/imported sessions cannot be promoted.' }
     $git = Assert-StreMutationGit $Config $state.Plugin
     foreach ($key in @('Branch', 'Head')) { if ($git[$key] -cne $state.Git[$key]) { throw "Git $key changed since preparation." } }
@@ -414,6 +425,7 @@ function Invoke-StreModdingCore {
         'DryRun' { return New-StreSession $Config $Plugin $Request -DryRun }
         'Prepare' { return New-StreSession $Config $Plugin $Request }
         'ImportValidated' { return Import-StreValidated $Config $Session }
+        'FinalizeInterrupted' { return Complete-StreValenMatrixInterrupted $Config $Session }
         default { throw 'Unknown action.' }
     }
 }
@@ -422,7 +434,7 @@ function Invoke-StreModding {
     param($Config, [string]$Action, [string]$Plugin = 'STRE_AlternateStart.esp', $Request = @{}, [string]$Session, [string]$RecordType = 'quest')
     $lock = $null
     try {
-        if ($Action -in @('DryRun', 'Prepare', 'ImportValidated')) {
+        if ($Action -in @('DryRun', 'Prepare', 'ImportValidated', 'FinalizeInterrupted')) {
             $audit = Resolve-StrePath (Join-Path $Config.RepoRoot '_audit')
             $null = New-Item -ItemType Directory -Path $audit -Force
             $lock = [IO.File]::Open((Join-Path $audit 'modding-operation.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
