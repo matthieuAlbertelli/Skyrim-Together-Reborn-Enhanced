@@ -9,6 +9,17 @@ isIdleSitting gate, 40-second minimum after Enter and reopened capture below.
 It does not validate remote seating, persistent control blocking or CK geometry.
 Implementation and executed results belong only in [STATUS](../../project/STATUS.md).
 
+**Executed and accepted on 2026-10-18:** the focused PC A smoke in two fresh
+sealed-roster-2 runs, A-FIRST and A-SECOND, passed local sitting, normal controls,
+chair exit, walking and ordinary inn exit without crash or recovery lock.
+A-FIRST has supplied PC A/server log evidence; A-SECOND is explicitly
+maintainer-attested, without an invented log chronology. Exact source/client
+identity, Enter +5-second closure and absence of false timeout/second activation
+are recorded in [the canonical acceptance](../../project/STATUS.md#human-local-runtime-acceptance-2026-10-18).
+No PC B log is required for this increment. This does not close the remaining
+scenarios of #91 or extend acceptance to remote seating, other ranks/rosters,
+the race/sex matrix or checkpoint/reload of the historical intermittent block.
+
 Automated behavioral coverage in `Code/tests/creation_seating.cpp` must include:
 
 - Correct chair, sitState 3, matching actor/token/seat Enter, root, ready graph,
@@ -35,7 +46,9 @@ Character Creation/seating/replay/appearance tests, all TPTests, targeted
 `test_creation_seating.py`, `test_remote_seating_projection.py` and
 `test_animation_binding_replay.py`, all Python tests and the Windows client build.
 
-Future human validation, after separately authorized build/deploy:
+Regression procedure and remaining matrix, after separately authorized
+build/deploy when needed (the focused acceptance above does not execute every
+scenario below):
 
 1. Record exact client/plugin hashes and local durable rank. Use fresh Solo and
    a full sealed roster of two with both completion orders; inspect each native
@@ -59,9 +72,12 @@ Future human validation, after separately authorized build/deploy:
    cell departure/re-entry, recovery or a duplicate Applied must not reseat a
    terminal intent. Do not force actor state, graph flags or control repair.
 
-No game, server, CK, xEdit, deployment or remote visual PASS is part of the
-automated local mission. The maintainer's supplied run did not reproduce the
-persistent control block; this correction must not be presented as fixing it.
+Automated checks do not establish gameplay PASS. The accepted smoke above was
+performed by the maintainer, not the agent, and adds no remote visual acceptance.
+Normal controls in those runs do not prove the historical intermittent block's
+cause permanently fixed. Solo, broader permutations, negative/lifecycle cases
+and checkpoint/reload of that old block require their own evidence; #91 remains
+open for its remaining scope.
 
 ## Navigation gate before Hadvar validation
 
