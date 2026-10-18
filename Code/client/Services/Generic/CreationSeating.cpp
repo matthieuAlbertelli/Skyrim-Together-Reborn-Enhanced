@@ -2,6 +2,7 @@
 #include <Services/CreationSeating.h>
 #include <Services/RemoteSeatingProbe.h>
 #include <CharacterCreation/SeatingLifetime.h>
+#include <CharacterCreation/SeatingIntentRegistry.h>
 #include <CharacterCreation/CreationSeating.h>
 #include <CharacterCreation/SeatingEntryEvidence.h>
 #include <CharacterCreation/SeatingObservationWindow.h>
@@ -50,8 +51,8 @@ struct Intent
     SeatProjection Projection;
     SeatingLifetime Lifetime;
     std::string LastReason;
-    std::chrono::steady_clock::time_point IssuedAt{};
-    int64_t LastSampleMs{}, LastClosedDeadline{};
+    int64_t IssuedAt{};
+    SeatingObservationWindow Observation;
     bool SoloProbeStarted{};
 #ifndef MASTER
     LocalSeatApproach Approach;
@@ -68,6 +69,7 @@ uint64_t s_engineUpdate{};
 // tokens only filter observations; they are not dereferenced later.
 struct SoloObservation
 {
+    std::atomic<uint32_t> ActorForm{}, SeatForm{};
     std::atomic<uintptr_t> ActorToken{}, SeatToken{};
     std::atomic<bool> Entered{};
     std::atomic<unsigned> EventLogs{}, ActionsDropped{};
@@ -102,6 +104,8 @@ void BeginSoloObservation(const Intent& aIntent, Actor* apActor, TESObjectREFR* 
 {
     s_solo.ActorToken = 0;
     s_observationContext.store(std::make_shared<const std::string>(IntentContext(aIntent)));
+    s_solo.ActorForm = apActor->formID;
+    s_solo.SeatForm = apSeat->formID;
     s_solo.SeatToken = reinterpret_cast<uintptr_t>(apSeat);
     s_solo.Entered = false;
     s_solo.EventLogs = s_solo.ActionsDropped = 0;
@@ -126,7 +130,7 @@ struct SoloSample
     int InFurniture{-1}, IdleSitting{-1}, AnimationDriven{-1}, MotionDriven{-1}, Synced{-1};
 };
 
-SoloSample ReadSoloSample(Actor* apActor, bool aCorrect, bool aSeated)
+SoloSample ReadSoloSample(Actor* apActor, TESObjectREFR* apSeat, bool aCorrect, bool aSeated)
 {
     SoloSample sample;
     sample.Root = reinterpret_cast<uintptr_t>(apActor->GetNiNode());
@@ -135,7 +139,12 @@ SoloSample ReadSoloSample(Actor* apActor, bool aCorrect, bool aSeated)
     evidence.LogicalSitState = aSeated;
     evidence.RootReady = sample.Root != 0;
     evidence.GraphReady = apActor->animationGraphHolder.IsReady();
-    evidence.EnterEvent = s_solo.ActorToken == reinterpret_cast<uintptr_t>(apActor) && s_solo.Entered;
+    const SeatingEntryIdentity current{apActor->formID, apSeat->formID,
+        reinterpret_cast<uintptr_t>(apActor), reinterpret_cast<uintptr_t>(apSeat)};
+    const SeatingEntryIdentity observed{s_solo.ActorForm.load(), s_solo.SeatForm.load(),
+        s_solo.ActorToken.load(), s_solo.SeatToken.load()};
+    evidence.IdentityMatches = current.Matches(observed);
+    evidence.EnterEvent = s_solo.Entered;
     if (evidence.GraphReady)
     {
         // Names from the existing Master_Behavior descriptor; failed reads stay
@@ -163,14 +172,14 @@ void LogSoloSample(const char* apPhase, Actor* apActor, TESObjectREFR* apSeat, T
     const auto distance = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
     spdlog::info("[STRE][CreationSeating][LocalProbe] phase={} actor={:X} actorToken={:X} seat={:X} seatToken={:X} "
                  "elapsedMs={} sinceEnterMs={} distance={} yawDelta={} "
-                 "occupied={:X} sitState={} logicalSeated={} enterEvent={} animationObserved={} visualConfirmation=human-required "
+                 "occupied={:X} sitState={} logicalSeated={} enterEvent={} entryConfirmed={} identityMatches={} visualConfirmation=human-required "
                  "root={:X} graphReady={} isInFurniture={} isIdleSitting={} bAnimationDriven={} bMotionDriven={} bIsSynced={} "
                  "actorPosition=({},{},{}) seatPosition=({},{},{}) actorRotation=({},{},{}) seatRotation=({},{},{}) "
                  "actorCell={:X} seatCell={:X} actorState1={:08X} actorState2={:08X} actorRemote={} {}",
                  apPhase, apActor->formID, reinterpret_cast<uintptr_t>(apActor), apSeat->formID, reinterpret_cast<uintptr_t>(apSeat),
                  now - started, entered ? now - entered : -1, distance, apActor->rotation.z - apSeat->rotation.z,
                  apOccupied == apSeat ? apSeat->formID : 0, aSitState, aSample.Evidence.LogicalSeated(), aSample.Evidence.EnterEvent,
-                 aSample.Evidence.AnimationObserved(), aSample.Root, aSample.Evidence.GraphReady, aSample.InFurniture,
+                 aSample.Evidence.EntryConfirmed(), aSample.Evidence.IdentityMatches, aSample.Root, aSample.Evidence.GraphReady, aSample.InFurniture,
                  aSample.IdleSitting, aSample.AnimationDriven, aSample.MotionDriven, aSample.Synced,
                  apActor->position.x, apActor->position.y, apActor->position.z, apSeat->position.x, apSeat->position.y, apSeat->position.z,
                  apActor->rotation.x, apActor->rotation.y, apActor->rotation.z, apSeat->rotation.x, apSeat->rotation.y, apSeat->rotation.z,
@@ -188,30 +197,38 @@ void CaptureSoloSample(const char* apPhase, Actor* apActor, TESObjectREFR* apSea
     const auto* sitState = s_solo.SitStateFunction.load();
     const auto state = sitState && GameVM::Get() && GameVM::Get()->virtualMachine ?
                            PapyrusFunction<int32_t, Actor>(sitState)(apActor) : -1;
-    LogSoloSample(apPhase, apActor, apSeat, occupied, state, ReadSoloSample(apActor, occupied == apSeat, state == 3));
+    LogSoloSample(apPhase, apActor, apSeat, occupied, state, ReadSoloSample(apActor, apSeat, occupied == apSeat, state == 3));
 }
 
-void PollSoloObservation(Intent& aIntent)
+bool PollSoloObservation(Intent& aIntent)
 {
     const auto now = NowMilliseconds();
     const auto start = s_solo.StartedAt.load();
     const auto entered = s_solo.FirstEnterAt.load();
-    const auto deadline = SeatingObservationWindow::Deadline(start, entered);
-    const bool active = SeatingObservationWindow::Active(now, start, entered);
-    if ((active && now - aIntent.LastSampleMs < SeatingObservationWindow::SampleMs) ||
-        (!active && aIntent.LastClosedDeadline == deadline))
-        return;
-    aIntent.LastSampleMs = now;
-    if (!active)
-        aIntent.LastClosedDeadline = deadline;
+    const auto action = aIntent.Observation.Poll(now, start, entered);
+    if (action == SeatingObservationAction::End)
+    {
+        // Close even when native readiness is lost. The final line uses values
+        // only, and the retained intent prevents a duplicate Applied rearming it.
+        aIntent.Lifetime.Terminal = true;
+        s_solo.ActorToken = s_solo.SeatToken = 0;
+        spdlog::info("[STRE][CreationSeating][LocalProbe] phase=observation-window-ended outcome={} "
+                     "elapsedMs={} sinceEnterMs={} actionsDropped={} {}",
+                     aIntent.Projection.Completed ? "entry-confirmed" : "entry-unconfirmed-timeout",
+                     now - start, entered ? now - entered : -1, s_solo.ActionsDropped.load(), IntentContext(aIntent));
+        return false;
+    }
+    if (action != SeatingObservationAction::Sample)
+        return !aIntent.Observation.Closed;
     // Re-resolve each tick: diagnostic tokens are never dereferenced. This
     // observer intentionally precedes readiness/unsafe-state/completion exits.
     auto* actor = PlayerCharacter::Get();
     auto* seat = Cast<TESObjectREFR>(TESForm::GetById(aIntent.SeatForm));
     if (!actor || TESForm::GetById(actor->formID) != actor || !seat ||
         s_solo.ActorToken != reinterpret_cast<uintptr_t>(actor) || s_solo.SeatToken != reinterpret_cast<uintptr_t>(seat))
-        return;
-    CaptureSoloSample(active ? (entered ? "post-enter-sample" : "pending-entry-sample") : "observation-window-ended", actor, seat);
+        return true;
+    CaptureSoloSample(entered ? "post-enter-sample" : "pending-entry-sample", actor, seat);
+    return true;
 }
 
 void Log(Intent& aIntent, const char* aReason)
@@ -352,33 +369,19 @@ void Receive(World& aWorld, const NotifyCharacterBuildState& aState) noexcept
     const auto& snapshot = aWorld.GetCampaignService().GetLatestSnapshot();
     if (snapshot && snapshot->CampaignId != aState.SeatingCampaignId)
         return;
-    for (auto& [server, intent] : s_intents)
-        if (server != aState.ServerId && intent.Campaign == aState.SeatingCampaignId.c_str() &&
-            intent.DurablePlayer == aState.SeatingPlayerId.c_str())
-        {
-            Log(intent, "rejected-duplicate-durable-binding");
-            return;
-        }
-    const auto existing = s_intents.find(aState.ServerId);
-    if (existing != s_intents.end())
-    {
-        // Never let a duplicate or contradictory identity rearm native activation.
-        auto& intent = existing->second;
-        if (intent.Revision != aState.Revision || intent.Player != aState.PlayerId ||
-            intent.Campaign != aState.SeatingCampaignId.c_str() || intent.DurablePlayer != aState.SeatingPlayerId.c_str())
-            Log(intent, "rejected-identity-or-revision");
-        return;
-    }
-    if (s_intents.size() >= 10)
-        return;
     Intent intent;
     intent.Server = aState.ServerId;
     intent.Player = aState.PlayerId;
     intent.Revision = aState.Revision;
     intent.Campaign = aState.SeatingCampaignId.c_str();
     intent.DurablePlayer = aState.SeatingPlayerId.c_str();
-    s_intents.emplace(intent.Server, std::move(intent));
-    RemoteSeatingProbe::Applied(aWorld, aState);
+    const auto result = AdmitSeatingIntent(s_intents, std::move(intent));
+    if (result.Admission == SeatingIntentAdmission::DuplicatePlayer)
+        Log(*result.Intent, "rejected-duplicate-durable-binding");
+    else if (result.Admission == SeatingIntentAdmission::IdentityConflict)
+        Log(*result.Intent, "rejected-identity-or-revision");
+    else if (result.Admission == SeatingIntentAdmission::Added)
+        RemoteSeatingProbe::Applied(aWorld, aState);
 }
 
 void FinalizeLocal(World& aWorld, uint32_t aServerId, uint64_t aRevision) noexcept
@@ -419,7 +422,7 @@ void Tick(World& aWorld) noexcept
             intent.Lifetime.Terminal = true;
             RemoteSeatingProbe::End(intent.Server);
             if (intent.Local) s_solo.ActorToken = s_solo.SeatToken = 0;
-            Log(intent, "pending-recovery-lock");
+            Log(intent, "recovery-lock-terminal");
             continue;
         }
         if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
@@ -494,8 +497,13 @@ void Tick(World& aWorld) noexcept
         }
         // Keep the passive window through native pending/completed states, but
         // only after the session, recovery, campaign and local identity fences.
-        if (observeLocal && intent.SoloProbeStarted)
-            PollSoloObservation(intent);
+        if (observeLocal && intent.SoloProbeStarted && !PollSoloObservation(intent))
+            continue;
+        // Completion is latched for this native identity. Only the short passive
+        // tail remains; later posture/readiness changes cannot create a timeout.
+        if (observeLocal && intent.Projection.Completed && observer &&
+            intent.Projection.Actor == observer->formID && intent.Projection.Token == reinterpret_cast<uintptr_t>(observer))
+            continue;
         auto* actor = intent.Local ? PlayerCharacter::Get() : RemoteRespawnLab::CommittedActor(aWorld, intent.Server, intent.Revision);
         if (!intent.Local)
         {
@@ -571,23 +579,19 @@ void Tick(World& aWorld) noexcept
         {
             BeginSoloObservation(intent, actor, seat, sitState);
             intent.SoloProbeStarted = true;
-            intent.LastSampleMs = intent.LastClosedDeadline = 0;
+            intent.Observation = {};
         }
-        const auto sample = observeLocal ? ReadSoloSample(actor, correct, seated) : SoloSample{};
+        const auto sample = observeLocal ? ReadSoloSample(actor, seat, correct, seated) : SoloSample{};
         // Connected local non-MASTER uses the same engine evidence as Solo.
         // Existing remote projection remains unchanged; rendered pose needs a human.
-        const bool entryConfirmed = observeLocal ? sample.Evidence.AnimationObserved() : seated;
+        const bool entryConfirmed = observeLocal ? sample.Evidence.EntryConfirmed() : seated;
         const auto action = intent.Projection.Observe(actor->formID, reinterpret_cast<uintptr_t>(actor), true,
                                                       correct, entryConfirmed, occupied && !correct, used);
         if (action == SeatAction::Complete)
         {
-            if (!SeatingObservationWindow::Active(NowMilliseconds(), s_solo.StartedAt, s_solo.FirstEnterAt))
-            {
+            if (!observeLocal)
                 intent.Lifetime.Terminal = true;
-                s_solo.ActorToken = s_solo.SeatToken = 0;
-            }
-            Log(intent, observeLocal ? (sample.Evidence.AnimationObserved() ? "entry-animation-observed" : "projection-already-completed") :
-                           (correct && seated ? "furniture-state-confirmed" : "projection-already-completed"));
+            Log(intent, observeLocal ? "local-entry-confirmed" : "furniture-state-confirmed");
             continue;
         }
         if (action == SeatAction::Conflict)
@@ -597,10 +601,9 @@ void Tick(World& aWorld) noexcept
         }
         if (action == SeatAction::AwaitEntry)
         {
-            const auto now = std::chrono::steady_clock::now();
             // Keep the existing request-status timeout. It no longer owns the
             // diagnostic window, which continues through a late Enter + 5 s.
-            const bool timeout = intent.Projection.Issued && now - intent.IssuedAt > std::chrono::seconds(10);
+            const bool timeout = intent.Projection.PendingEntryTimedOut(NowMilliseconds(), intent.IssuedAt);
             Log(intent, timeout ? "pending-entry-timeout-no-reactivation" :
                            (observeLocal && sample.Evidence.LogicalSeated() ? "furniture-logical-only" : "pending-entry"));
             continue;
@@ -614,13 +617,13 @@ void Tick(World& aWorld) noexcept
         // One native request per current Actor token. The existing wrapper calls
         // RealActivate under ScopedActivateOverride; no ActivateRequest is sent.
         intent.Projection.Issued = true;
-        intent.IssuedAt = std::chrono::steady_clock::now();
+        intent.IssuedAt = NowMilliseconds();
         if (observeLocal)
         {
             // A chair can become available after a long occupancy wait. Bound
             // action capture from the actual request, not the earlier wait.
             BeginSoloObservation(intent, actor, seat, sitState);
-            intent.LastSampleMs = intent.LastClosedDeadline = 0;
+            intent.Observation = {};
             LogSoloSample("before-activation", actor, seat, occupied, nativeSitState, sample);
         }
         const bool accepted = seat->Activate(actor, 0, nullptr, 1, 0);
@@ -631,7 +634,7 @@ void Tick(World& aWorld) noexcept
             auto* afterOccupied = afterProcess && afterProcess->middleProcess ?
                                       TESObjectREFR::GetByHandle(afterProcess->middleProcess->occupiedFurniture.handle.iBits) : nullptr;
             const auto afterSit = PapyrusFunction<int32_t, Actor>(sitState)(actor);
-            LogSoloSample("after-activation", actor, seat, afterOccupied, afterSit, ReadSoloSample(actor, afterOccupied == seat, afterSit == 3));
+            LogSoloSample("after-activation", actor, seat, afterOccupied, afterSit, ReadSoloSample(actor, seat, afterOccupied == seat, afterSit == 3));
         }
     }
 }
@@ -643,6 +646,8 @@ void ObserveFurnitureEvent(const TESFurnitureEvent* apEvent) noexcept
         return;
     bool firstEnter = false;
     const auto now = NowMilliseconds();
+    if (!SeatingObservationWindow::Active(now, s_solo.StartedAt, s_solo.FirstEnterAt))
+        return;
     if (apEvent->state == TESFurnitureEvent::State::Enter)
     {
         s_solo.Entered = true;

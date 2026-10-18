@@ -856,10 +856,12 @@ Actor/cell/seat, root, current binding, process, exact runtime and registered
 Papyrus functions must be available. Dead/disabled/combat/mounted or unsafe
 life/knock/attack states wait. Another occupant/reservation is never ejected.
 There is one activation per Actor FormID/token; a pending animation is observed,
-not repeatedly activated. After ten seconds, log pending-entry-timeout-no-reactivation.
+not repeatedly activated. An issued request still unconfirmed after ten seconds
+logs pending-entry-timeout-no-reactivation; a confirmed entry cannot time out.
 A rejected activation is not retried on that same token. Confirmed seating is
 terminal for that token, so voluntary later movement does not force reseating.
-A new committed Actor token permits a fresh projection.
+A new ready Actor token permits a fresh projection only while the intent is not
+terminal. Duplicate Applied never replaces that intent or its terminal tombstone.
 
 No PSC/PEX/ESP change is needed. Posture queries exist only here, after completion.
 Collective sequencing, Valen, ready/departure and furniture lifetime are out of scope.
@@ -956,16 +958,39 @@ sessionConnected, localPlayer, durablePlayerId, creationPositionIndex, assigned
 Seat and Marker names/IDs; approach-target includes actorRemote, exact position,
 rotation and cell. Native event callbacks share immutable diagnostic context.
 
-The passive capture still covers Activate +40 s or first Enter +5 s, whichever
-ends later, and snapshots Furniture Enter immediately. Engine entry evidence
-requires the matching event/root/graph and valid true furniture/sitting reads;
-camera or logical furniture state alone is insufficient. Rendered pose still
-requires human confirmation. Historical Seat01 prototype evidence is in STATUS.
+Local entry confirmation requires the same Actor FormID/token and assigned seat
+FormID/token as the observation, actual occupation of that seat, GetSitState == 3,
+a matching Furniture Enter, a current root, a ready graph and an available true
+isInFurniture read. isIdleSitting remains diagnostic, including false or unknown;
+it is not a completion gate. Enter alone or logical seating alone is insufficient.
+The confirmation is latched once as local-entry-confirmed. Later posture/readiness
+changes on that token cannot produce another activation or an entry timeout.
+Rendered pose and camera behavior still require human confirmation.
+
+The local passive window waits at most 40 seconds without Enter. A first matching
+Enter within that window replaces the deadline with Enter +5 seconds, including
+an early Enter; it does not retain a 40-second minimum. Samples remain at most
+one per 500 ms through that deadline. The first update beyond it logs one
+observation-window-ended with outcome entry-confirmed or entry-unconfirmed-timeout,
+marks the intent terminal and clears the callback tokens even if native readiness
+is lost. No late Enter or duplicate Applied can reopen the closed window. Cell
+departure and recovery terminate it earlier. The ten-second pending status does
+not reactivate or prevent confirmation by an Enter before the window closes.
+
+Furniture callbacks retain only matching token/state evidence; native snapshots
+run on the game update, not in callbacks. Periodic logs are bounded diagnostic
+evidence, not gameplay authority or a requirement to keep the player seated.
+This local contract applies to Solo and connected non-MASTER observation;
+the existing connected MASTER path and remote replay policy remain unchanged.
+Historical Seat01 prototype evidence is in STATUS.
 
 #### Earlier observation-only implementation
 
-Historical diagnostic rationale follows; current placement/activation behavior
-is the MarkerXX pipeline above, and current validation is recorded in STATUS.
+Historical diagnostic rationale follows; the 2026-10-11 callback/lifetime
+correction and the current local confirmation/window contract above supersede
+its isIdleSitting gate, long/reopened capture and native callback snapshots.
+Current placement/activation uses the MarkerXX pipeline above; validation is
+recorded only in STATUS. The earlier observations below retain their original scope.
 
 The Solo runtime reported on 0e421a99 has logical furniture state with a standing
 pose. Manual activation of the same chair works (maintainer report). The old

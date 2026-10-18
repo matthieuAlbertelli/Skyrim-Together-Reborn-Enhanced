@@ -9,6 +9,127 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Local Character Creation seating termination correction (2026-10-18, Refs #91)
+
+The pre-correction maintainer-supplied roster-2 PC A/rank-0/Seat01 trace shows one activation,
+matching Furniture Enter, correct occupied chair, sitState 3, available root,
+ready graph and isInFurniture=1, while isIdleSitting remains 0. The previous
+AnimationObserved predicate therefore stayed false, the projection remained
+AwaitEntry and logged a ten-second pending timeout. Its max(Activate +40 s,
+Enter +5 s) deadline kept early-Enter samples running for 40 seconds; closing
+the diagnostic did not terminate an unconfirmed local intent. These are supplied
+runtime observations and source findings, not a game run performed by the agent.
+The supplied run did not reproduce persistent control blocking.
+
+The local correction confirms the composite current actor/token/assigned-chair
+evidence without requiring isIdleSitting, which remains logged. Success is
+latched and logged once; subsequent updates cannot time it out or reactivate the
+same token. The observation deadline is now 40 seconds without Enter, replaced
+by first matching Enter +5 seconds when received before closure. One final log
+distinguishes confirmed entry from a real unconfirmed timeout, marks the intent
+terminal and clears callback tokens even if native readiness is lost. Duplicate
+Applied retains that tombstone; a late Enter cannot reopen it. Constants remain
+40,000/5,000/500 ms. The existing ten-second unconfirmed request-status timeout
+remains visible without authorizing a retry.
+
+Admission checks were extracted without changing their identity/roster rules so
+behavioral tests exercise duplicate Applied against pending, confirmed and
+terminal state. Native local-only MoveTo/Activate, rank mapping, final appearance,
+MASTER/non-MASTER and Solo scope, session/campaign/recovery fences and ordinary
+cell-transition boundaries remain in place. Remote action replay, server/wire
+formats, control primitives, CK/ESP/PSC/PEX and checkpoint recovery are unchanged.
+This realigns the existing local lifecycle contract; no new ADR is needed.
+
+Executed locally on Windows x64/debug from base
+`d7275f08889b79fa2ab10d6ee05067ed5c7f9271`:
+
+- `xmake build TPTests`: exit 0.
+- `TPTests.exe '[creation-seating],[character-creation],[seating],[animation-replay],[appearance-apply],[final-respawn],[helgen]' --reporter compact`:
+  90 cases / 37,112 assertions passed.
+- `TPTests.exe --reporter compact`: all 447 cases / 45,866 assertions passed.
+  Executable for both runs: `build/windows/x64/debug/TPTests.exe`.
+- `python -m unittest discover -s Tools/Scripts -p 'test_creation_seating.py' -v`:
+  18 tests passed. Equivalent targeted commands for
+  `test_remote_seating_projection.py` and `test_animation_binding_replay.py`:
+  7 tests passed each.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
+  all 227 tests passed.
+- `xmake build -j 2 SkyrimTogetherClient`: exit 0; native static client library
+  and the target's automatic Angular production build succeeded. The existing
+  xmake warning that `-fPIC` is ignored remains; no compiler error or missing
+  prerequisite blocked validation. This build did not run install/deploy.
+- `git diff --check`: exit 0; final diff inspection found only local seating,
+  its tests and the four affected canonical documents.
+
+Initial automated outputs are retained in the ignored directory
+`_audit/local-seating-lifecycle-20261018/`. Git submodule inspection required
+normal host access after the sandbox denied `.git/modules/Libraries/TiltedConnect`;
+the authorized host check found a clean starting tree. That implementation phase
+did not execute gameplay or deploy. Subsequent publication, deployment and human
+acceptance are recorded below; the earlier human checkpoints retain their scope.
+
+### Human local runtime acceptance (2026-10-18)
+
+The maintainer accepts source candidate
+`c3560f387a43531b070331364e9a8d08e019c20f`, based directly on
+`d7275f08889b79fa2ab10d6ee05067ed5c7f9271`, with tested client SHA-256
+`D68205CA0BFC545C48A059D08FCC0CC75B2D1EB5CBE8D00D40E500E819C9AD08`.
+Two fresh runs used a sealed full roster of two players. On PC A, both A-FIRST
+(A completes Character Creation first) and A-SECOND (A completes second) pass
+local sitting, normal controls, ordinary chair exit, walking and the ordinary
+inn exit, with no crash or recovery lock.
+
+**A-FIRST is log-backed and human-observed.** The supplied PC A log covers only
+this run. Its reported October 18 chronology is:
+
+- `19:27:03.534`: exactly one `phase=activation-issued`.
+- `19:27:04.629`: `furniture-event event=enter`, `firstEnter=true`.
+- `19:27:04.630`: exactly one `phase=local-entry-confirmed`.
+- Subsequent samples show the assigned chair occupied, `sitState=3`,
+  `logicalSeated=true`, `enterEvent=true`, `entryConfirmed=true`,
+  `identityMatches=true`, `graphReady=true`, `isInFurniture=1` and
+  `isIdleSitting=0`; the latter is now diagnostic only.
+- `19:27:09.633`: `phase=observation-window-ended outcome=entry-confirmed`,
+  `sinceEnterMs=5004`, closing at Enter +5 seconds without the old 40-second
+  sampling tail.
+- No `pending-entry-timeout-no-reactivation`, `entry-unconfirmed-timeout` or
+  second activation occurs in the supplied log.
+
+The supplied server evidence establishes A-FIRST: A Applied at `19:27:03.441`,
+B Applied at `19:27:40.934`, followed by authorization of the collective 2/2
+barrier, with no relevant server error. Local entry therefore precedes the
+other player's Applied, as required by individual seating.
+
+**A-SECOND is an explicit maintainer attestation of the same human outcomes.**
+No PC A trace for that run is supplied; no timestamp, serverId or log-backed
+chronology is attributed to it. No PC B log is required for this local increment.
+These are human executions and supplied evidence, not Skyrim runs by the agent.
+
+Before the human smoke, both automatic `pull_request` workflows passed on the
+exact candidate SHA, attempt 1:
+[Build windows 39145911254](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/39145911254)
+and
+[Build linux 39145911222](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/actions/runs/39145911222).
+The automated local tests listed above also passed. The authorized normal
+`build-and-deploy-dev.ps1` exited 0 on October 18, 19:00:11--19:02:39 Paris time;
+distribution, local staging, Pc-vero and installed Data had the same client hash.
+The 698 expected content files, protected scripts and manifest stayed unchanged;
+685 CK import checks were identical and none copied content into the repository.
+Publication/deployment receipts remain in ignored
+`_audit/local-seating-publish-20261018/`. The generated BuildInfo retains its
+historical version tag; source HEAD and the client hash above identify the tested
+candidate, and this increment does not correct BuildInfo.
+
+The acceptance-recording commit changes canonical documentation only; runtime
+code/content remains strictly identical to the tested candidate. It introduces
+no new build/deploy or Skyrim/CK/xEdit execution. This acceptance does not cover
+general remote seating, other ranks/rosters or the race/sex matrix. Normal controls
+in these two runs do not establish that the historical intermittent control-block
+cause is permanently fixed; no checkpoint/reload test of that old block was
+performed. Checkpoint/recovery behavior is unchanged. This is an increment
+referencing #91, whose remaining remote-seating and historical control-block
+scope stays open.
+
 ## Valen exact-byte promotion and local DEV verification (2026-10-18)
 
 The maintainer explicitly authorizes versioning the runtime-accepted ESP,

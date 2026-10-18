@@ -2,6 +2,83 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Local seating lifecycle regression (issue #91, 2026-10-18)
+
+This is the current local termination procedure, superseding the historical
+isIdleSitting gate, 40-second minimum after Enter and reopened capture below.
+It does not validate remote seating, persistent control blocking or CK geometry.
+Implementation and executed results belong only in [STATUS](../../project/STATUS.md).
+
+**Executed and accepted on 2026-10-18:** the focused PC A smoke in two fresh
+sealed-roster-2 runs, A-FIRST and A-SECOND, passed local sitting, normal controls,
+chair exit, walking and ordinary inn exit without crash or recovery lock.
+A-FIRST has supplied PC A/server log evidence; A-SECOND is explicitly
+maintainer-attested, without an invented log chronology. Exact source/client
+identity, Enter +5-second closure and absence of false timeout/second activation
+are recorded in [the canonical acceptance](../../project/STATUS.md#human-local-runtime-acceptance-2026-10-18).
+No PC B log is required for this increment. This does not close the remaining
+scenarios of #91 or extend acceptance to remote seating, other ranks/rosters,
+the race/sex matrix or checkpoint/reload of the historical intermittent block.
+
+Automated behavioral coverage in `Code/tests/creation_seating.cpp` must include:
+
+- Correct chair, sitState 3, matching actor/token/seat Enter, root, ready graph,
+  available true isInFurniture and false isIdleSitting confirm entry. Unknown
+  isIdleSitting also remains diagnostic. Completion permits no second activation
+  and no later pending-entry-timeout-no-reactivation on that token.
+- Reject each missing required observation separately, including wrong actor,
+  actor token, chair or chair token. Neither Enter alone nor sitState alone passes.
+- Without Enter, close at the first update beyond InitialMs (40,000 ms). Early
+  and late Enter use Enter + AfterEnterMs (5,000 ms), with 500 ms sample spacing.
+  Emit exactly one End and no periodic sample afterwards; no late event reopens it.
+- Applied replay retains projection, observation and lifetime in pending,
+  confirmed, timed-out, cell-departure and recovery-terminal states. Contradictory
+  identity/revision and duplicate durable bindings cannot replace the tombstone.
+  A new token resets projection only when ready and admitted by the existing
+  lifetime/context gates. Timeout never enables a second Activate on the same token.
+
+Source checks additionally verify actual adapter wiring: recovery/cell departure
+set the terminal guard before native observation, closure stops Tick, callbacks
+do not walk native objects, and the existing MASTER/Solo scope remains intact.
+Keep remote MoveTo/Activate absent, one local call site each, no ActorState write,
+no new control/animation primitive and no protocol change. Run targeted C++
+Character Creation/seating/replay/appearance tests, all TPTests, targeted
+`test_creation_seating.py`, `test_remote_seating_projection.py` and
+`test_animation_binding_replay.py`, all Python tests and the Windows client build.
+
+Regression procedure and remaining matrix, after separately authorized
+build/deploy when needed (the focused acceptance above does not execute every
+scenario below):
+
+1. Record exact client/plugin hashes and local durable rank. Use fresh Solo and
+   a full sealed roster of two with both completion orders; inspect each native
+   local player independently. Keep the existing marker/seat geometry.
+2. Record video before final confirmation and remain hands-off through
+   observation-window-ended. Require one MoveTo and one Activate per attempt/token,
+   then Furniture Enter for the assigned chair. A local completion must not wait
+   for another member's Applied.
+3. Reproduce the supplied Seat01 case with correct occupation, sitState 3,
+   root/graph ready, matching Enter, isInFurniture=1 and isIdleSitting=0.
+   Require local-entry-confirmed once, no later pending-entry-timeout-no-reactivation,
+   and one observation-window-ended outcome=entry-confirmed at the first update
+   beyond Enter +5 seconds. No 500 ms sample may continue after closure.
+4. In an unconfirmed run preserve the real ten-second pending timeout, if an
+   activation was issued, and the terminal entry-unconfirmed-timeout outcome.
+   Without Enter the window closes after 40 seconds; Enter at +30.750 seconds
+   closes after +35.750 seconds, Enter at +39 seconds after +44 seconds. A first
+   Enter after closure cannot reopen it. No automatic reactivation is permitted.
+5. Preserve full logs through closure and verify visible sitting separately.
+   Only afterwards test ordinary chair exit and controls. Later voluntary motion,
+   cell departure/re-entry, recovery or a duplicate Applied must not reseat a
+   terminal intent. Do not force actor state, graph flags or control repair.
+
+Automated checks do not establish gameplay PASS. The accepted smoke above was
+performed by the maintainer, not the agent, and adds no remote visual acceptance.
+Normal controls in those runs do not prove the historical intermittent block's
+cause permanently fixed. Solo, broader permutations, negative/lifecycle cases
+and checkpoint/reload of that old block require their own evidence; #91 remains
+open for its remaining scope.
+
 ## Navigation gate before Hadvar validation
 
 Require the [Valen root-menu smoke](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md#required-human-menu-smoke)
@@ -1514,8 +1591,9 @@ Local marker approach (non-MASTER, existing Marker01..10 / Seat01..10):
   an approach-* reason. No second move, fallback activation or unsafe repair.
 - Occupied/reserved seat: wait; no ejection or remote MoveTo. Recovery/identity
   guards continue to apply. Repeated Applied/Tick must not rearm the operation.
-- Keep all keyboard/mouse input released for at least 45 seconds after build
-  validation (up to 5 s preparation plus 40 s capture), or Enter+5 s if later.
+- Keep all keyboard/mouse input released through observation-window-ended:
+  at most 40 seconds without Enter, or five seconds after the first matching
+  Enter before closure, following the preparation interval.
   Record video beforehand. Require visible native movement/sit animation and a
   truly seated body plus Furniture Enter. Engine/camera/logical state alone is
   insufficient. Old Seat01 geometry PASS does not validate the marker flow.
@@ -1523,8 +1601,13 @@ Local marker approach (non-MASTER, existing Marker01..10 / Seat01..10):
   automated ten-rank support does not claim ten-seat runtime acceptance.
   Remote observer projection remains a separate validation, not this mission.
 
-Solo and B-local marker runs are accepted by the maintainer; the steps below
-remain a regression procedure, not an outstanding acceptance gate.
+### Historical long-capture diagnostic procedure
+
+Solo and B-local marker acceptance below retains its original scope. The
+2026-10-11 callback/lifetime correction and the current local lifecycle regression
+at the top of this plan supersede the immediate native callback/process snapshots,
+isIdleSitting gate and long/reopened window in these earlier steps. They are
+historical diagnostic instructions, not the current regression procedure.
 With the diagnostic build:
 1. Start fresh connected creation: B must have durable rank 1 and Marker02.
    Keep A connected; B may finish first and must not wait for A's Applied.
@@ -1623,8 +1706,9 @@ Human roster-2 acceptance (not performed by the implementation agent):
    correct (race/sex/face/tints), local seating intact, remote seating if observable.
    candidate-commit alone is not human visual proof or native memory-release proof.
 7. Save both clients' complete tp_client.log and tp_client.1.log..tp_client.3.log
-   after terminal admission/commit and the seating observation window (40 seconds,
-   or Furniture Enter + 5 seconds if later), before restarting. Server logger uses
+   after terminal admission/commit and the seating observation windows (local:
+   at most 40 seconds without Enter, or the first matching Enter +5 seconds;
+   remote: 40 seconds after committed binding), before restarting. Server logger uses
    logs/STServerOut.log relative to its launch working directory, with rotations
    STServerOut.1.log..STServerOut.3.log; preserve the same run from that directory.
    On the currently audited installation it is under

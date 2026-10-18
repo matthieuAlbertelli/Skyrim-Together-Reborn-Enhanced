@@ -6,18 +6,23 @@ from test_remote_respawn_lab import read, body, ROOT, CREATION, LAB
 SEATING = read("Code/client/Services/Generic/CreationSeating.cpp")
 
 class CreationSeating(unittest.TestCase):
-    def test_local_completion_requires_animation_observation_not_sit_state(self):
-        self.assertIn('observeLocal ? sample.Evidence.AnimationObserved() : seated', SEATING)
+    def test_local_completion_requires_composite_current_identity_evidence(self):
+        self.assertIn('observeLocal ? sample.Evidence.EntryConfirmed() : seated', SEATING)
         self.assertIn('bool observeLocal = intent.Solo;', SEATING)
         self.assertIn('#ifndef MASTER\n        observeLocal = intent.Local;\n#endif', SEATING)
         self.assertIn('correct, entryConfirmed, occupied && !correct, used', SEATING)
         self.assertIn('furniture-logical-only', SEATING)
-        self.assertIn('entry-animation-observed', SEATING)
+        self.assertIn('local-entry-confirmed', SEATING)
         self.assertNotIn('? "seated"', SEATING)
         self.assertIn('visualConfirmation=human-required', SEATING)
         for name in ('isInFurniture', 'isIdleSitting', 'bAnimationDriven', 'bMotionDriven', 'bIsSynced'):
             self.assertIn(f'GraphBool(apActor, "{name}")', SEATING)
-        self.assertIn('SeatingObservationWindow::SampleMs', SEATING)
+        sample = body(SEATING, 'SoloSample ReadSoloSample(')
+        self.assertIn('evidence.IdentityMatches = current.Matches(observed)', sample)
+        for field in ('apActor->formID', 'apSeat->formID', 's_solo.ActorForm.load()', 's_solo.SeatForm.load()',
+                      'reinterpret_cast<uintptr_t>(apActor)', 'reinterpret_cast<uintptr_t>(apSeat)',
+                      's_solo.ActorToken.load()', 's_solo.SeatToken.load()'):
+            self.assertIn(field, sample)
 
     def test_native_events_cover_post_creation_and_never_mutate_the_engine(self):
         event = body(CREATION, 'BSTEventResult CharacterCreationService::OnEvent(const TESFurnitureEvent*')
@@ -36,7 +41,7 @@ class CreationSeating(unittest.TestCase):
         for forbidden in ('SendAnimationEvent(', 'SetVariableBool(', 'SetVariableInt(', 'ForceAction(', 'SetDontMove', 'PlayIdle('):
             self.assertNotIn(forbidden, SEATING)
 
-    def test_long_capture_survives_entry_completion_and_native_pending_guards(self):
+    def test_bounded_capture_survives_native_pending_guards_but_cannot_reopen(self):
         tick = body(SEATING, 'void Tick(')
         for exit_guard in ('pending-actor', 'pending-unsafe-actor-state', 'SeatAction::Complete', 'SeatAction::AwaitEntry'):
             self.assertLess(tick.index('PollSoloObservation(intent)'), tick.index(exit_guard))
@@ -46,8 +51,28 @@ class CreationSeating(unittest.TestCase):
         self.assertIn('FirstEnterAt.compare_exchange_strong', event)
         self.assertNotIn('CaptureSoloSample(', event)
         self.assertNotIn('Cast<Actor>', event)
-        self.assertNotIn('GetRunner', event)  # snapshot is synchronous, not next tick
-        self.assertNotIn('SeatingObservationWindow::Active', event)  # first late Enter can reopen
+        self.assertNotIn('GetRunner', event)  # callback retains only token/state evidence
+        self.assertLess(event.index('SeatingObservationWindow::Active'), event.index('s_solo.Entered = true'))
+
+    def test_observation_end_is_terminal_without_a_native_snapshot_or_another_activation(self):
+        poll = body(SEATING, 'bool PollSoloObservation(')
+        closed = body(poll, 'if (action == SeatingObservationAction::End)')
+        self.assertIn('aIntent.Observation.Poll(now, start, entered)', poll)
+        self.assertIn('aIntent.Lifetime.Terminal = true', closed)
+        self.assertIn('s_solo.ActorToken = s_solo.SeatToken = 0', closed)
+        self.assertIn('phase=observation-window-ended outcome={}', closed)
+        self.assertIn('"entry-confirmed" : "entry-unconfirmed-timeout"', closed)
+        self.assertIn('return false;', closed)
+        for native_read in ('CaptureSoloSample(', 'GetByHandle(', 'GraphBool(', 'GetById('):
+            self.assertNotIn(native_read, closed)
+        tick = body(SEATING, 'void Tick(')
+        self.assertIn('!PollSoloObservation(intent))\n            continue;', tick)
+        complete = body(tick, 'if (action == SeatAction::Complete)')
+        self.assertIn('"local-entry-confirmed"', complete)
+        self.assertIn('continue;', complete)
+        self.assertIn('intent.Projection.PendingEntryTimedOut(', tick)
+        self.assertNotIn('projection-already-completed', tick)
+        self.assertLess(tick.index('observeLocal && intent.Projection.Completed'), tick.index('pending-actor'))
 
     def test_removed_diagnostic_pointer_walks_cannot_run_in_callbacks(self):
         for field in ('runOncePackage', 'packageProcedureIndex', 'runOnceTargetHandle',
@@ -100,6 +125,7 @@ class CreationSeating(unittest.TestCase):
         self.assertIn("occupiedFurniture.handle.iBits", SEATING)
         for forbidden in ("SetPosition(", "SetStage(", "SetActorState", ".Send(", "SwitchRace", "Reset3D"):
             self.assertNotIn(forbidden, SEATING)
+        self.assertNotRegex(SEATING, r'actorState\.flags[12]\s*=(?!=)')
         tick = body(SEATING, "void Tick(")
         self.assertIn('#ifndef MASTER\n        if (intent.Local && !PrepareLocalApproach(intent, actor, seat))', tick)
         self.assertLess(tick.index('PrepareLocalApproach(intent'), tick.index('->Activate('))
@@ -162,7 +188,7 @@ class CreationSeating(unittest.TestCase):
 
     def test_connected_local_fences_precede_observation_and_approach(self):
         tick = body(SEATING, 'void Tick(')
-        for guard in ('pending-recovery-lock', 'pending-session-changed', 'pending-disconnected',
+        for guard in ('recovery-lock-terminal', 'pending-session-changed', 'pending-disconnected',
                       'pending-campaign', 'rejected-player-id', 'pending-local-finalization',
                       'rejected-local-transport-identity', 'rejected-local-identity'):
             self.assertLess(tick.index(guard), tick.index('PollSoloObservation(intent)'))
@@ -204,7 +230,17 @@ class CreationSeating(unittest.TestCase):
         self.assertNotIn("kBuildSealSeconds", CREATION)
 
     def test_recovery_disconnect_and_duplicate_are_fenced(self):
-        self.assertIn("pending-recovery-lock", SEATING)
+        tick = body(SEATING, 'void Tick(')
+        self.assertIn('if (intent.Lifetime.Terminal) continue;', tick)
+        for condition in ('if (gate && gate->IsLocked())', 'if (creationCell && observerCell != creationCell)'):
+            terminal = body(tick, condition)
+            self.assertIn('intent.Lifetime.Terminal = true', terminal)
+            self.assertIn('s_solo.ActorToken = s_solo.SeatToken = 0', terminal)
+            self.assertIn('continue;', terminal)
+        receive = body(SEATING, 'void Receive(')
+        self.assertIn('AdmitSeatingIntent(s_intents, std::move(intent))', receive)
+        self.assertNotIn('s_intents.emplace', receive)
+        self.assertNotIn('s_intents.erase', receive)
         self.assertIn("rejected-identity-or-revision", SEATING)
         self.assertIn("rejected-duplicate-durable-binding", SEATING)
         self.assertIn("pending-entry-timeout-no-reactivation", SEATING)
