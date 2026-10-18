@@ -9,6 +9,67 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Local Character Creation seating termination correction (2026-10-18, Refs #91)
+
+The maintainer-supplied roster-2 PC A/rank-0/Seat01 trace shows one activation,
+matching Furniture Enter, correct occupied chair, sitState 3, available root,
+ready graph and isInFurniture=1, while isIdleSitting remains 0. The previous
+AnimationObserved predicate therefore stayed false, the projection remained
+AwaitEntry and logged a ten-second pending timeout. Its max(Activate +40 s,
+Enter +5 s) deadline kept early-Enter samples running for 40 seconds; closing
+the diagnostic did not terminate an unconfirmed local intent. These are supplied
+runtime observations and source findings, not a game run performed by the agent.
+The supplied run did not reproduce persistent control blocking.
+
+The local correction confirms the composite current actor/token/assigned-chair
+evidence without requiring isIdleSitting, which remains logged. Success is
+latched and logged once; subsequent updates cannot time it out or reactivate the
+same token. The observation deadline is now 40 seconds without Enter, replaced
+by first matching Enter +5 seconds when received before closure. One final log
+distinguishes confirmed entry from a real unconfirmed timeout, marks the intent
+terminal and clears callback tokens even if native readiness is lost. Duplicate
+Applied retains that tombstone; a late Enter cannot reopen it. Constants remain
+40,000/5,000/500 ms. The existing ten-second unconfirmed request-status timeout
+remains visible without authorizing a retry.
+
+Admission checks were extracted without changing their identity/roster rules so
+behavioral tests exercise duplicate Applied against pending, confirmed and
+terminal state. Native local-only MoveTo/Activate, rank mapping, final appearance,
+MASTER/non-MASTER and Solo scope, session/campaign/recovery fences and ordinary
+cell-transition boundaries remain in place. Remote action replay, server/wire
+formats, control primitives, CK/ESP/PSC/PEX and checkpoint recovery are unchanged.
+This realigns the existing local lifecycle contract; no new ADR is needed.
+
+Executed locally on Windows x64/debug from base
+`d7275f08889b79fa2ab10d6ee05067ed5c7f9271`:
+
+- `xmake build TPTests`: exit 0.
+- `TPTests.exe '[creation-seating],[character-creation],[seating],[animation-replay],[appearance-apply],[final-respawn],[helgen]' --reporter compact`:
+  90 cases / 37,112 assertions passed.
+- `TPTests.exe --reporter compact`: all 447 cases / 45,866 assertions passed.
+  Executable for both runs: `build/windows/x64/debug/TPTests.exe`.
+- `python -m unittest discover -s Tools/Scripts -p 'test_creation_seating.py' -v`:
+  18 tests passed. Equivalent targeted commands for
+  `test_remote_seating_projection.py` and `test_animation_binding_replay.py`:
+  7 tests passed each.
+- `python -m unittest discover -s Tools/Scripts -p 'test_*.py'`:
+  all 227 tests passed.
+- `xmake build -j 2 SkyrimTogetherClient`: exit 0; native static client library
+  and the target's automatic Angular production build succeeded. The existing
+  xmake warning that `-fPIC` is ignored remains; no compiler error or missing
+  prerequisite blocked validation. This build did not run install/deploy.
+- `git diff --check`: exit 0; final diff inspection found only local seating,
+  its tests and the four affected canonical documents.
+
+Exact local outputs are retained in the ignored directory
+`_audit/local-seating-lifecycle-20261018/`. Git submodule inspection required
+normal host access after the sandbox denied `.git/modules/Libraries/TiltedConnect`;
+the authorized host check found a clean starting tree. No gameplay, Skyrim/CK/xEdit
+launch, DEV build-and-deploy, Data/GameFiles edit, remote visual validation,
+push, PR or CI accompanies this correction. Remote seating defects and persistent
+control blocking remain open/unvalidated; neither is declared fixed. The earlier
+human checkpoints below retain only their original scope.
+
 ## Valen exact-byte promotion and local DEV verification (2026-10-18)
 
 The maintainer explicitly authorizes versioning the runtime-accepted ESP,

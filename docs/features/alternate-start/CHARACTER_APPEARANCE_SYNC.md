@@ -43,8 +43,16 @@ The native effect of this target completion remains part of human seating tests.
 Remote seating observation stops on observer/actor departure, committed-binding
 loss, recovery, or 40 seconds after the first committed binding. Terminal intents
 remain bounded tombstones, so duplicate Applied cannot rearm them. Local
-observation stops on departure/recovery, or after confirmed entry plus its passive
-capture window. Remote diagnostics read only message/ECS values and comparison
+observation stops on departure/recovery or expiry, whether entry was confirmed or
+not: at most 40 seconds without Enter, then only five seconds after the first
+matching Enter received before closure. An early Enter shortens the window.
+Confirmation requires the current actor/token/assigned seat, correct occupation,
+sitState 3, matching Enter, root, ready graph and available true isInFurniture;
+isIdleSitting is diagnostic only. Success is latched, so it cannot later time out
+or reactivate. Closure logs once and retains the terminal tombstone; duplicate
+Applied and a late Enter cannot reopen it. See the
+[local pipeline contract](CK_IMPLEMENTATION.md#native-pipeline-and-diagnostics).
+Remote diagnostics read only message/ECS values and comparison
 tokens; they no longer walk native actors, graphs, packages, handles or furniture.
 Local furniture callbacks retain token/state evidence and local action callbacks
 retain result/token evidence. Native local seating checks run on the game update;

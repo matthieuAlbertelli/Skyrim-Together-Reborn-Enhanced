@@ -1,23 +1,39 @@
 #pragma once
-#include <algorithm>
 #include <atomic>
 #include <cstdint>
 
 namespace STRE::CharacterCreation
 {
+enum class SeatingObservationAction { None, Sample, End };
 struct SeatingObservationWindow
 {
     static constexpr int64_t InitialMs = 40000;
     static constexpr int64_t AfterEnterMs = 5000;
     static constexpr int64_t SampleMs = 500;
+    int64_t LastSampleMs{};
+    bool Closed{};
 
     static int64_t Deadline(int64_t aStart, int64_t aFirstEnter) noexcept
     {
-        return std::max(aStart + InitialMs, aFirstEnter ? aFirstEnter + AfterEnterMs : int64_t{});
+        return aFirstEnter ? aFirstEnter + AfterEnterMs : aStart + InitialMs;
     }
     static bool Active(int64_t aNow, int64_t aStart, int64_t aFirstEnter) noexcept
     {
-        return aStart > 0 && aNow <= Deadline(aStart, aFirstEnter);
+        return aStart > 0 && aNow >= aStart && aNow <= Deadline(aStart, aFirstEnter);
+    }
+    SeatingObservationAction Poll(int64_t aNow, int64_t aStart, int64_t aFirstEnter) noexcept
+    {
+        if (Closed || aStart <= 0 || aNow < aStart)
+            return SeatingObservationAction::None;
+        if (!Active(aNow, aStart, aFirstEnter))
+        {
+            Closed = true;
+            return SeatingObservationAction::End;
+        }
+        if (LastSampleMs && aNow - LastSampleMs < SampleMs)
+            return SeatingObservationAction::None;
+        LastSampleMs = aNow;
+        return SeatingObservationAction::Sample;
     }
 };
 

@@ -7,6 +7,8 @@
 #include <CharacterCreation/CreationSeating.h>
 #include <CharacterCreation/SeatingEntryEvidence.h>
 #include <CharacterCreation/SeatingObservationWindow.h>
+#include <CharacterCreation/SeatingIntentRegistry.h>
+#include <CharacterCreation/SeatingLifetime.h>
 #include <CharacterCreation/SeatApproach.h>
 #include <CharacterCreation/StandingCreation.h>
 #include <Messages/NotifyCharacterBuildState.h>
@@ -136,21 +138,21 @@ TEST_CASE("Local marker approach fails closed on lost binding timeout drift or f
     }
 }
 
-TEST_CASE("Solo capture covers the 30.75 second runtime entry and at least 40 seconds", "[creation-seating]")
-{
-    constexpr int64_t start = 1000, enter = start + 30750;
-    REQUIRE(SeatingObservationWindow::Active(start + 10001, start, 0));
-    REQUIRE(SeatingObservationWindow::Active(enter, start, 0));
-    REQUIRE(SeatingObservationWindow::Active(enter + 5000, start, enter));
-    REQUIRE(SeatingObservationWindow::Deadline(start, enter) == start + 40000);
-    REQUIRE(SeatingObservationWindow::Active(start + 40000, start, enter));
-    REQUIRE_FALSE(SeatingObservationWindow::Active(start + 40001, start, enter));
-}
-
-TEST_CASE("Late Enter extends or reopens capture without reactivating the chair", "[creation-seating]")
+TEST_CASE("Local observation waits at most InitialMs without Enter", "[creation-seating]")
 {
     constexpr int64_t start = 1000;
-    for (const auto elapsed : {39000, 40000, 45000})
+    REQUIRE(SeatingObservationWindow::Deadline(start, 0) == start + SeatingObservationWindow::InitialMs);
+    REQUIRE(SeatingObservationWindow::Active(start + 40000, start, 0));
+    REQUIRE_FALSE(SeatingObservationWindow::Active(start + 40001, start, 0));
+    REQUIRE_FALSE(SeatingObservationWindow::Active(start - 1, start, 0));
+    REQUIRE_FALSE(SeatingObservationWindow::Active(start, 0, 0));
+}
+
+TEST_CASE("Early and late Enter each leave only AfterEnterMs of local observation", "[creation-seating]")
+{
+    constexpr int64_t start = 1000;
+    // Includes the old +30.75s diagnostic and an Enter on the initial deadline.
+    for (const auto elapsed : {1, 1000, 30750, 39000, 40000})
     {
         const auto enter = start + elapsed;
         REQUIRE(SeatingObservationWindow::Deadline(start, enter) == enter + 5000);
@@ -158,15 +160,32 @@ TEST_CASE("Late Enter extends or reopens capture without reactivating the chair"
         REQUIRE(SeatingObservationWindow::Active(enter + 5000, start, enter));
         REQUIRE_FALSE(SeatingObservationWindow::Active(enter + 5001, start, enter));
     }
-    REQUIRE_FALSE(SeatingObservationWindow::Active(1000, 0, 0));
-    REQUIRE_FALSE(SeatingObservationWindow::Active(start + 40001, start, 0));
-    SeatProjection p;
-    REQUIRE(p.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Activate);
-    p.Issued = true;
-    REQUIRE(p.Observe(0x14, 11, true, false, false, false, false) == SeatAction::AwaitEntry);
-    REQUIRE(p.Observe(0x14, 11, true, true, true, false, true) == SeatAction::Complete);
-    // Diagnostic duration is independent of the terminal projection state.
-    REQUIRE(SeatingObservationWindow::Active(start + 43000, start, start + 39000));
+    REQUIRE(SeatingObservationWindow::Deadline(start, start + 1000) < start + SeatingObservationWindow::InitialMs);
+    REQUIRE(SeatingObservationWindow::Deadline(start, start + 39000) > start + SeatingObservationWindow::InitialMs);
+}
+
+TEST_CASE("Observation closes once with no periodic samples or late Enter reopening", "[creation-seating]")
+{
+    constexpr int64_t start = 1000;
+    const auto enter = GENERATE(int64_t{0}, int64_t{2000}, int64_t{40000});
+    const auto deadline = SeatingObservationWindow::Deadline(start, enter);
+    SeatingObservationWindow window;
+    unsigned samples{}, endings{}, samplesAfterEnd{};
+    for (auto now = start; now <= deadline + 2000; ++now)
+    {
+        // Events are not visible before their actual timestamp.
+        const auto action = window.Poll(now, start, now >= enter ? enter : 0);
+        if (action == SeatingObservationAction::Sample) ++samples;
+        if (action == SeatingObservationAction::End) ++endings;
+        if (now > deadline && action == SeatingObservationAction::Sample) ++samplesAfterEnd;
+    }
+    REQUIRE(samples == static_cast<unsigned>((deadline - start) / SeatingObservationWindow::SampleMs + 1));
+    REQUIRE(endings == 1);
+    REQUIRE(samplesAfterEnd == 0);
+    REQUIRE(window.Closed);
+    // A callback after closure cannot extend an already terminal observation.
+    REQUIRE(window.Poll(deadline + 3000, start, deadline + 3000) == SeatingObservationAction::None);
+    REQUIRE(window.Poll(deadline + 9000, start, deadline + 3000) == SeatingObservationAction::None);
 }
 
 TEST_CASE("Animation trace budget renews after early movement spam", "[creation-seating]")
@@ -183,46 +202,107 @@ TEST_CASE("Animation trace budget renews after early movement spam", "[creation-
     REQUIRE(budget.Admit(41000));
 }
 
-TEST_CASE("Solo logical furniture state never certifies animation entry", "[creation-seating]")
+TEST_CASE("Local entry requires composite native evidence and not logical state or Enter alone", "[creation-seating]")
 {
     SeatingEntryEvidence e;
+    e.IdentityMatches = true;
     e.CorrectFurniture = e.LogicalSitState = true;
     REQUIRE(e.LogicalSeated());
-    REQUIRE_FALSE(e.AnimationObserved());
+    REQUIRE_FALSE(e.EntryConfirmed());
     SeatProjection p;
-    REQUIRE(p.Observe(0x14, 11, true, true, e.AnimationObserved(), false, true) == SeatAction::AwaitEntry);
+    REQUIRE(p.Observe(0x14, 11, true, true, e.EntryConfirmed(), false, true) == SeatAction::AwaitEntry);
     REQUIRE_FALSE(p.Completed);
     REQUIRE_FALSE(p.Issued); // an occupied chair must not be activated again
     e.RootReady = e.GraphReady = e.EnterEvent = true;
-    REQUIRE_FALSE(e.AnimationObserved()); // event/root alone cannot prove animation
+    REQUIRE_FALSE(e.EntryConfirmed()); // event/root alone cannot confirm entry
     e.FurnitureVariableValid = e.InFurniture = true;
-    REQUIRE_FALSE(e.AnimationObserved()); // unknown sitting graph variable
+    REQUIRE(e.EntryConfirmed()); // unknown sitting graph variable is diagnostic
     e.SittingVariableValid = true;
-    REQUIRE_FALSE(e.AnimationObserved()); // explicitly false isIdleSitting
+    REQUIRE(e.EntryConfirmed()); // explicitly false isIdleSitting
     e.IdleSitting = true;
-    REQUIRE(e.AnimationObserved());
-    REQUIRE(p.Observe(0x14, 11, true, true, e.AnimationObserved(), false, true) == SeatAction::Complete);
+    REQUIRE(e.EntryConfirmed());
+    REQUIRE(p.Observe(0x14, 11, true, true, e.EntryConfirmed(), false, true) == SeatAction::Complete);
+    SeatingEntryEvidence enterOnly;
+    enterOnly.IdentityMatches = enterOnly.EnterEvent = true;
+    REQUIRE_FALSE(enterOnly.EntryConfirmed());
 }
 
-TEST_CASE("Solo animation evidence fails closed on every missing observation", "[creation-seating]")
+TEST_CASE("Local entry with isIdleSitting false rejects each missing required observation", "[creation-seating]")
 {
-    const SeatingEntryEvidence complete{true, true, true, true, true, true, true, true, true};
-    const std::array<bool SeatingEntryEvidence::*, 9> fields{
+    const SeatingEntryEvidence complete{true, true, true, true, true, true, true, true, false, true};
+    REQUIRE(complete.EntryConfirmed());
+    const std::array<bool SeatingEntryEvidence::*, 8> fields{
         &SeatingEntryEvidence::CorrectFurniture, &SeatingEntryEvidence::LogicalSitState,
         &SeatingEntryEvidence::RootReady, &SeatingEntryEvidence::GraphReady, &SeatingEntryEvidence::EnterEvent,
         &SeatingEntryEvidence::FurnitureVariableValid, &SeatingEntryEvidence::InFurniture,
-        &SeatingEntryEvidence::SittingVariableValid, &SeatingEntryEvidence::IdleSitting};
+        &SeatingEntryEvidence::IdentityMatches};
     for (const auto field : fields)
     {
         auto missing = complete;
         missing.*field = false;
-        REQUIRE_FALSE(missing.AnimationObserved());
+        REQUIRE_FALSE(missing.EntryConfirmed());
+        SeatProjection pending;
+        REQUIRE(pending.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Activate);
+        pending.Issued = true;
+        REQUIRE(pending.Observe(0x14, 11, true, missing.CorrectFurniture, missing.EntryConfirmed(), false, true) == SeatAction::AwaitEntry);
+        REQUIRE_FALSE(pending.Completed);
     }
     SeatProjection p;
-    REQUIRE(p.Observe(0x14, 11, true, true, complete.AnimationObserved(), false, true) == SeatAction::Complete);
+    REQUIRE(p.Observe(0x14, 11, true, true, complete.EntryConfirmed(), false, true) == SeatAction::Complete);
     REQUIRE(p.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Complete);
     REQUIRE(p.Observe(0x14, 22, true, true, false, false, true) == SeatAction::AwaitEntry);
     REQUIRE_FALSE(p.Completed); // old token's completion is not reused
+}
+
+TEST_CASE("Furniture evidence belongs to the current actor token and assigned seat", "[creation-seating]")
+{
+    const SeatingEntryIdentity observed{0x14, 0xBF3DD, 11, 100};
+    auto current = observed;
+    SECTION("matching identity") { REQUIRE(current.Matches(observed)); return; }
+    SECTION("other actor") { current.Actor = 0x15; }
+    SECTION("new token for same actor") { current.ActorToken = 22; }
+    SECTION("other chair") { current.Seat = 0xBF3DC; }
+    SECTION("replaced chair token") { current.SeatToken = 101; }
+    SECTION("no actor") { current.Actor = 0; }
+    SECTION("no actor token") { current.ActorToken = 0; }
+    SECTION("no chair") { current.Seat = 0; }
+    SECTION("no chair token") { current.SeatToken = 0; }
+    REQUIRE_FALSE(current.Matches(observed));
+    SeatingEntryEvidence evidence{true, true, true, true, true, true, true, true, false, current.Matches(observed)};
+    REQUIRE_FALSE(evidence.EntryConfirmed());
+    SeatProjection projection;
+    REQUIRE(projection.Observe(current.Actor, current.ActorToken, true, true, evidence.EntryConfirmed(), false, true) != SeatAction::Complete);
+    REQUIRE_FALSE(projection.Completed);
+}
+
+TEST_CASE("Confirmed local entry can never time out or activate again on the same token", "[creation-seating]")
+{
+    SeatProjection projection;
+    REQUIRE(projection.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Activate);
+    projection.Issued = true;
+    const SeatingEntryEvidence evidence{true, true, true, true, true, true, true, true, false, true};
+    REQUIRE(projection.Observe(0x14, 11, true, true, evidence.EntryConfirmed(), false, true) == SeatAction::Complete);
+    // Later voluntary exit or loss of graph/readiness cannot undo completion.
+    for (const auto now : {2000, 11001, 41001, 100000})
+    {
+        REQUIRE_FALSE(projection.PendingEntryTimedOut(now, 1000));
+        REQUIRE(projection.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Complete);
+        REQUIRE(projection.Observe(0x14, 11, false, false, false, false, false) != SeatAction::Activate);
+    }
+}
+
+TEST_CASE("An unconfirmed entry retains the real timeout without permitting reactivation", "[creation-seating]")
+{
+    SeatProjection projection;
+    REQUIRE_FALSE(projection.PendingEntryTimedOut(50000, 1000));
+    REQUIRE(projection.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Activate);
+    projection.Issued = true;
+    REQUIRE_FALSE(projection.PendingEntryTimedOut(11000, 1000));
+    REQUIRE(projection.PendingEntryTimedOut(11001, 1000));
+    REQUIRE(projection.Observe(0x14, 11, true, false, false, false, false) == SeatAction::AwaitEntry);
+    // A late native entry within the observation window may still confirm.
+    REQUIRE(projection.Observe(0x14, 11, true, true, true, false, true) == SeatAction::Complete);
+    REQUIRE_FALSE(projection.PendingEntryTimedOut(40000, 1000));
 }
 
 TEST_CASE("Individual seating never waits for another build", "[creation-seating]")
@@ -294,7 +374,132 @@ TEST_CASE("Seating identity rejects oversized output", "[creation-seating]")
 
 }
 
-#include <CharacterCreation/SeatingLifetime.h>
+namespace
+{
+struct AppliedSeatingIntent
+{
+    uint32_t Server{7}, Player{4};
+    uint64_t Revision{2};
+    std::string Campaign{"campaign"}, DurablePlayer{"durable-player"};
+    SeatProjection Projection;
+    SeatingLifetime Lifetime;
+    SeatingObservationWindow Observation;
+};
+}
+
+TEST_CASE("Applied replay retains the same seating attempt and terminal tombstone", "[creation-seating]")
+{
+    std::map<uint32_t, AppliedSeatingIntent> intents;
+    const auto added = AdmitSeatingIntent(intents, AppliedSeatingIntent{});
+    REQUIRE(added.Admission == SeatingIntentAdmission::Added);
+    auto& intent = *added.Intent;
+    REQUIRE(intent.Projection.Observe(0x14, 11, true, false, false, false, false) == SeatAction::Activate);
+    intent.Projection.Issued = true;
+    REQUIRE(intent.Observation.Poll(1000, 1000, 0) == SeatingObservationAction::Sample);
+
+    SECTION("pending entry") {}
+    SECTION("entry confirmed with a passive tail")
+    {
+        REQUIRE(intent.Projection.Observe(0x14, 11, true, true, true, false, true) == SeatAction::Complete);
+    }
+    SECTION("confirmed observation ended")
+    {
+        REQUIRE(intent.Projection.Observe(0x14, 11, true, true, true, false, true) == SeatAction::Complete);
+        REQUIRE(intent.Observation.Poll(7001, 1000, 2000) == SeatingObservationAction::End);
+        intent.Lifetime.Terminal = true;
+    }
+    SECTION("unconfirmed observation timed out")
+    {
+        REQUIRE(intent.Projection.PendingEntryTimedOut(41001, 1000));
+        REQUIRE(intent.Observation.Poll(41001, 1000, 0) == SeatingObservationAction::End);
+        intent.Lifetime.Terminal = true;
+    }
+    SECTION("creation cell left")
+    {
+        REQUIRE_FALSE(intent.Lifetime.Observe(10, 20, 10, true, 2000));
+        REQUIRE(intent.Lifetime.Terminal);
+    }
+    SECTION("recovery lock")
+    {
+        // The native gate writes this tombstone before any observation or
+        // activation; the adapter's ordering is checked in test_creation_seating.
+        intent.Lifetime.Terminal = true;
+    }
+    const auto before = intent;
+    for (int n = 0; n < 3; ++n)
+    {
+        const auto replay = AdmitSeatingIntent(intents, AppliedSeatingIntent{});
+        REQUIRE(replay.Admission == SeatingIntentAdmission::Duplicate);
+        REQUIRE(replay.Intent == added.Intent);
+        REQUIRE(intents.size() == 1);
+        REQUIRE(intent.Projection.Actor == before.Projection.Actor);
+        REQUIRE(intent.Projection.Token == before.Projection.Token);
+        REQUIRE(intent.Projection.Issued);
+        REQUIRE(intent.Projection.Completed == before.Projection.Completed);
+        REQUIRE(intent.Lifetime.Terminal == before.Lifetime.Terminal);
+        REQUIRE(intent.Observation.Closed == before.Observation.Closed);
+        REQUIRE(intent.Observation.LastSampleMs == before.Observation.LastSampleMs);
+        REQUIRE(intent.Projection.Observe(0x14, 11, true, false, false, false, false) != SeatAction::Activate);
+    }
+}
+
+TEST_CASE("Applied admission cannot replace an existing identity or exceed the sealed roster bound", "[creation-seating]")
+{
+    std::map<uint32_t, AppliedSeatingIntent> intents;
+    const auto first = AdmitSeatingIntent(intents, AppliedSeatingIntent{});
+    REQUIRE(first.Admission == SeatingIntentAdmission::Added);
+    first.Intent->Lifetime.Terminal = true;
+    auto incoming = AppliedSeatingIntent{};
+    SECTION("changed revision") { ++incoming.Revision; }
+    SECTION("changed transport player") { ++incoming.Player; }
+    SECTION("changed campaign") { incoming.Campaign = "other-campaign"; }
+    SECTION("changed durable player") { incoming.DurablePlayer = "other-player"; }
+    SECTION("same durable player on another server binding") { ++incoming.Server; }
+    SECTION("ten distinct players is the limit")
+    {
+        for (uint32_t n = 1; n < 10; ++n)
+        {
+            incoming.Server = 7 + n;
+            incoming.DurablePlayer = "player-" + std::to_string(n);
+            REQUIRE(AdmitSeatingIntent(intents, incoming).Admission == SeatingIntentAdmission::Added);
+        }
+        REQUIRE(AdmitSeatingIntent(intents, AppliedSeatingIntent{}).Admission == SeatingIntentAdmission::Duplicate);
+        incoming.Server = 99;
+        incoming.DurablePlayer = "eleventh-player";
+        REQUIRE(AdmitSeatingIntent(intents, incoming).Admission == SeatingIntentAdmission::Full);
+        REQUIRE(intents.size() == 10);
+        return;
+    }
+    const auto rejected = AdmitSeatingIntent(intents, incoming);
+    REQUIRE(rejected.Admission == (incoming.Server == 7 ? SeatingIntentAdmission::IdentityConflict : SeatingIntentAdmission::DuplicatePlayer));
+    REQUIRE(rejected.Intent == first.Intent);
+    REQUIRE(first.Intent->Lifetime.Terminal);
+    REQUIRE(first.Intent->Revision == 2);
+    REQUIRE(first.Intent->Server == 7);
+    REQUIRE(first.Intent->Campaign == "campaign");
+    REQUIRE(first.Intent->DurablePlayer == "durable-player");
+    REQUIRE(intents.size() == 1);
+}
+
+TEST_CASE("A new native token resets projection only after readiness and before lifetime termination", "[creation-seating]")
+{
+    SeatProjection projection;
+    REQUIRE(projection.Observe(0x14, 11, true, true, true, false, true) == SeatAction::Complete);
+    REQUIRE(projection.Observe(0x14, 22, false, false, false, false, false) == SeatAction::Pending);
+    REQUIRE(projection.Token == 11);
+    REQUIRE(projection.Completed);
+    REQUIRE(projection.Observe(0x14, 22, true, false, false, false, false) == SeatAction::Activate);
+    REQUIRE(projection.Token == 22);
+    REQUIRE_FALSE(projection.Completed);
+    REQUIRE_FALSE(projection.Issued);
+    projection.Issued = true;
+    REQUIRE(projection.Observe(0x14, 22, true, false, false, false, false) == SeatAction::AwaitEntry);
+    // The existing lifetime gate suppresses even a new token after cell exit.
+    SeatingLifetime lifetime;
+    REQUIRE_FALSE(lifetime.Observe(10, 20, 10, true, 2000));
+    REQUIRE_FALSE(lifetime.Observe(10, 10, 10, true, 3000));
+    REQUIRE(lifetime.Terminal);
+}
 
 TEST_CASE("Creation seating observation is terminal on cell exit and cannot rearm", "[seating]")
 {

@@ -21,6 +21,11 @@ struct SeatProjection
     bool Issued{};
     bool Completed{};
 
+    bool PendingEntryTimedOut(int64_t aNow, int64_t aIssuedAt) const noexcept
+    {
+        return Issued && !Completed && aNow - aIssuedAt > 10000;
+    }
+
     SeatAction Observe(uint32_t aActor, uintptr_t aToken, bool aReady, bool aCorrectFurniture,
                        bool aEntryConfirmed, bool aOtherFurniture, bool aOccupied) noexcept
     {
