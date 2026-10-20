@@ -1,154 +1,87 @@
-
-#include <ScriptExtender.h>
 #include <TiltedOnlinePCH.h>
-#include <VersionDb.h>
+#include <ScriptExtender.h>
+#include <Runtime/Compatibility.h>
 
 namespace
 {
-constexpr wchar_t kScriptExtenderName[] = L"skse64";
-
-constexpr char kScriptExtenderEntrypoint[] = "StartSKSE";
-
-constexpr size_t kScriptExtenderNameLength = sizeof(kScriptExtenderName) / sizeof(wchar_t) - 1;
-
-// AE+ only
-// Use this to raise the SKSE baseline
-constexpr int kSKSEMinBuild = 20100;
-
 HMODULE g_SKSEModuleHandle{nullptr};
+bool g_startupHooksInstalled{};
 
-struct FileVersion
+bool ReadFileVersion(const std::filesystem::path& aPath, STRE::Runtime::Version& aVersion)
 {
-    static constexpr uint8_t scVersionSize = 4;
-    DWORD versions[scVersionSize];
-};
-
-int GetFileVersion(const std::filesystem::path& acFilePath, FileVersion& aVersion)
-{
-    const auto filename = acFilePath.c_str();
-
-    DWORD dwHandle = 0, sz = GetFileVersionInfoSizeW(filename, &dwHandle);
-    if (0 == sz)
-    {
-        return 1;
-    }
-    std::string buf(sz, '\0');
-    if (!GetFileVersionInfoW(filename, dwHandle, sz, &buf[0]))
-    {
-        return 2;
-    }
-    VS_FIXEDFILEINFO* pvi;
-    sz = sizeof(VS_FIXEDFILEINFO);
-    if (!VerQueryValueA(&buf[0], "\\", reinterpret_cast<LPVOID*>(&pvi), reinterpret_cast<unsigned int*>(&sz)))
-    {
-        return 3;
-    }
-
-    aVersion.versions[0] = pvi->dwProductVersionMS >> 16;
-    aVersion.versions[1] = pvi->dwFileVersionMS & 0xFFFF;
-    aVersion.versions[2] = pvi->dwFileVersionLS >> 16;
-    aVersion.versions[3] = pvi->dwFileVersionLS & 0xFFFF;
-
-    return 0;
-}
-
-std::string GetSKSEStyleExeVersion()
-{
-    // make sure newer than anniversary!
-    auto exeBuild = VersionDb::Get().GetLoadedVersionString();
-    std::replace(exeBuild.begin(), exeBuild.end(), '.', '_');
-
-    // chop off empty patch numbers for instance "1.6.323.0 becomes "1_6_323"
-    auto patchPos = exeBuild.find_last_of("_0");
-    if (patchPos != std::string::npos)
-    {
-        exeBuild.erase(exeBuild.begin() + (patchPos - 1), exeBuild.end());
-    }
-
-    return exeBuild;
+    DWORD ignored{};
+    const auto size = GetFileVersionInfoSizeW(aPath.c_str(), &ignored);
+    if (size == 0 || size > 1024 * 1024)
+        return false;
+    std::vector<char> buffer(size);
+    if (!GetFileVersionInfoW(aPath.c_str(), 0, size, buffer.data()))
+        return false;
+    VS_FIXEDFILEINFO* info{};
+    UINT length{};
+    if (!VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<void**>(&info), &length) ||
+        !info || length < sizeof(*info) || info->dwSignature != 0xFEEF04BD)
+        return false;
+    aVersion = {info->dwFileVersionMS >> 16, info->dwFileVersionMS & 0xFFFF,
+                info->dwFileVersionLS >> 16, info->dwFileVersionLS & 0xFFFF};
+    return true;
 }
 } // namespace
 
 bool IsScriptExtenderLoaded()
 {
-    return g_SKSEModuleHandle;
+    // Existing AuthenticationRequest field means DLL presence. Plugin admission
+    // still enumerates loaded modules separately; no ready signal is fabricated.
+    return g_SKSEModuleHandle != nullptr;
 }
 
-void LoadScriptExender()
+bool ValidateScriptExtender(const std::filesystem::path& aGamePath, std::string& aError)
 {
-    const auto exeVerson{GetSKSEStyleExeVersion()};
-
-    // Get the path of the game, where the Script Extender dll resides
-    const auto gameDir = std::filesystem::current_path();
-
-    std::list<std::filesystem::path> dllMatches;
-    for (const auto& dirEntry : std::filesystem::directory_iterator(gameDir))
+    aError.clear();
+    const auto path = aGamePath / STRE::Runtime::RequiredSkseDll;
+    STRE::Runtime::Version version{};
+    if (!ReadFileVersion(path, version))
     {
-        const auto& path = dirEntry.path();
-        if (path.extension() != L".dll")
-            continue;
-
-        auto fileName = path.filename().wstring();
-        if (fileName.length() < kScriptExtenderNameLength)
-            continue;
-
-        if (fileName.substr(0, kScriptExtenderNameLength) == kScriptExtenderName)
-        {
-            dllMatches.push_back(path);
-        }
+        aError = "Missing/unreadable SKSE dependency: " + path.string();
+        return false;
     }
-
-    // and before you ask, no, they dont expose it via file version info
-    std::filesystem::path* needle = nullptr;
-    for (auto& match : dllMatches)
+    if (version != STRE::Runtime::RequiredSkseFileVersion)
     {
-        auto fname = match.filename().string();
-        auto ptr = &fname[kScriptExtenderNameLength + 1];
-        // make extra sure!
-        if (std::strncmp(ptr, exeVerson.c_str(), exeVerson.length()) == 0)
-        {
-            needle = &match;
-            break;
-        }
+        aError = fmt::format("Incompatible SKSE dependency: {} has file version {}.{}.{}.{}; expected 0.2.3.1.",
+                            path.string(), version[0], version[1], version[2], version[3]);
+        return false;
     }
+    return true;
+}
 
-    if (!needle)
-        return;
-
-    FileVersion fileVersion;
-    if (GetFileVersion(*needle, fileVersion) != 0)
+bool LoadScriptExtender(const std::filesystem::path& aGamePath)
+{
+    if (g_startupHooksInstalled)
+        return true;
+    std::string error;
+    if (!ValidateScriptExtender(aGamePath, error))
     {
-        spdlog::error("Unable to verify Script Extender version");
-        return;
+        spdlog::error("[STRE][Dependency] {}", error);
+        return false;
     }
-
-    auto skseVersion = fmt::format("v{}.{}.{}.{}", fileVersion.versions[0], fileVersion.versions[1], fileVersion.versions[2], fileVersion.versions[3]);
-
-    // nice try.
-    int SkseVCum = fileVersion.versions[0] * 1000000 + fileVersion.versions[1] * 10000 + fileVersion.versions[2] * 100 + fileVersion.versions[3];
-    if (SkseVCum < kSKSEMinBuild)
+    const auto path = aGamePath / STRE::Runtime::RequiredSkseDll;
+    g_SKSEModuleHandle = LoadLibraryW(path.c_str());
+    if (!g_SKSEModuleHandle)
     {
-        spdlog::error("Pre anniversary Script Extender is unsupported");
-        return;
+        spdlog::error("[STRE][Dependency] SKSE DLL load failed path={} win32Error={}", path.string(), GetLastError());
+        return false;
     }
-
-    if (g_SKSEModuleHandle = LoadLibraryW(needle->c_str()))
+    const auto start = reinterpret_cast<void (*)()>(GetProcAddress(g_SKSEModuleHandle, "StartSKSE"));
+    if (!start)
     {
-        if (auto* pStartSKSE = reinterpret_cast<void (*)()>(GetProcAddress(g_SKSEModuleHandle, kScriptExtenderEntrypoint)))
-        {
-            spdlog::info(
-                "Starting SKSE {}... be aware that messages that start without a colored [timestamp] prefix are "
-                "logs from the "
-                "Script Extender and its loaded mods.",
-                skseVersion);
-            pStartSKSE();
-            spdlog::info("SKSE is active");
-        }
-        else
-            spdlog::warn("SKSE dll doesn't expose StartSKSE(), it may be outdated.");
+        spdlog::error("[STRE][Dependency] SKSE DLL loaded but StartSKSE export is missing");
+        FreeLibrary(g_SKSEModuleHandle);
+        g_SKSEModuleHandle = nullptr;
+        return false;
     }
-    else
-    {
-        spdlog::error("Failed to load {}! Check your privileges or re-download the Script Extender files.", needle->string());
-    }
+    // TiltedEvolution PR #885 / 6f963497: install before entering Skyrim CRT.
+    spdlog::info("SKSE 2.3.1 DLL loaded; installing startup hooks");
+    start();
+    g_startupHooksInstalled = true;
+    spdlog::info("SKSE startup hooks installed; plugin initialization continues during game startup");
+    return true;
 }

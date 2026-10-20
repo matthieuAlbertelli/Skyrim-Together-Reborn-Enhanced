@@ -18,11 +18,13 @@
 #include "utils/Registry.h"
 
 #include <BranchInfo.h>
+#include <Runtime/Executable.h>
 
 // These symbols are defined within the client code skyrimtogetherclient
 extern void InstallStartHook();
 extern void RunTiltedApp();
 extern void RunTiltedInit(const std::filesystem::path& acGamePath, const TiltedPhoques::String& aExeVersion);
+extern bool RunTiltedPreflight(const std::filesystem::path& aGamePath, const TiltedPhoques::String& aExeVersion, uint32_t aImageSize);
 
 // Defined in EarlyLoad.dll
 bool __declspec(dllimport) EarlyInstallSucceeded();
@@ -105,10 +107,6 @@ int StartUp(int argc, char** argv)
     if (!oobe::SelectInstall(askSelect))
         DIE_NOW(L"Failed to select game install.");
 
-    // Bind path environment.
-    loader::InstallPathRouting(LC->gamePath);
-    steam::Load(LC->gamePath);
-
     if (!LoadProgram(*LC))
         return 3;
 
@@ -124,13 +122,31 @@ int StartUp(int argc, char** argv)
 
 bool LoadProgram(LaunchContext& LC)
 {
+    LC.Version = QueryFileVersion(LC.exePath.c_str());
+    if (LC.Version != STRE::Runtime::TargetVersionString)
+    {
+        const std::wstring message =
+            L"Incompatible runtime: this experimental STRE branch requires Steam Skyrim 1.7.104.0. Detected: " +
+            std::wstring(LC.Version.begin(), LC.Version.end());
+        Die(message.c_str());
+        return false;
+    }
     auto content = TiltedPhoques::LoadFile(LC.exePath);
     if (content.empty())
         DIE_NOW(L"Failed to mount game executable");
 
-    LC.Version = QueryFileVersion(LC.exePath.c_str());
-    if (LC.Version.empty())
-        DIE_NOW(L"Failed to query game version");
+    STRE::Runtime::Executable executable;
+    if (!STRE::Runtime::InspectExecutable(
+            {reinterpret_cast<const uint8_t*>(content.data()), content.size()}, executable) ||
+        !STRE::Runtime::Supports(LC.Version.c_str(), executable.Store))
+        DIE_NOW(L"Incompatible executable/distribution: a checked Steam x64 Skyrim executable is required. GOG and unknown images are not supported.");
+
+    // Before path routing, dependency loading, executable mapping, its sentinel,
+    // InstallStartHook and all client initializers. None may assume this ABI early.
+    if (!RunTiltedPreflight(LC.gamePath, LC.Version, executable.ImageSize))
+        return false;
+    loader::InstallPathRouting(LC.gamePath);
+    steam::Load(LC.gamePath);
     LC.SetLoaded();
 
     ExeLoader loader(CurrentTarget.exeLoadSz);

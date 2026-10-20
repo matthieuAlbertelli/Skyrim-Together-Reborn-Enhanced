@@ -1,331 +1,142 @@
 #pragma once
 
+#include <Runtime/AddressLibrary.h>
 #include <Windows.h>
+#include <charconv>
+#include <filesystem>
 #include <fstream>
-#include <map>
-#include <stdio.h>
-
-#pragma comment(lib, "version.lib")
+#include <limits>
+#include <string_view>
+#include <vector>
 
 class VersionDb
 {
 public:
-    VersionDb() { Clear(); }
-    ~VersionDb() {}
-
     static VersionDb& Get();
 
-private:
-    std::map<unsigned long long, unsigned long long> _data;
-    std::map<unsigned long long, unsigned long long> _rdata;
-    int _ver[4];
-    std::string _verStr;
-    std::string _moduleName;
-    unsigned long long _base;
+    const std::string& GetModuleName() const { return m_library.ModuleName(); }
+    const std::string& GetLoadedVersionString() const { return m_versionString; }
+    const std::string& GetError() const { return m_error; }
+    std::uint64_t Generation() const { return m_generation; }
+    const STRE::Runtime::OffsetMap& GetOffsetMap() const { return m_library.Offsets(); }
 
-    template <typename T> static T read(std::ifstream& file)
+    void* FindAddressById(unsigned long long aId) const
     {
-        T v;
-        file.read((char*)&v, sizeof(T));
-        return v;
+        unsigned long long offset{};
+        if (!m_base || !FindOffsetById(aId, offset) || offset > std::numeric_limits<std::uintptr_t>::max() - m_base)
+            return nullptr;
+        return reinterpret_cast<void*>(m_base + offset);
     }
 
-    static void* ToPointer(unsigned long long v) { return (void*)v; }
-
-    static unsigned long long FromPointer(void* ptr) { return (unsigned long long)ptr; }
-
-    static bool ParseVersionFromString(const char* ptr, int& major, int& minor, int& revision, int& build) { return sscanf_s(ptr, "%d.%d.%d.%d", &major, &minor, &revision, &build) == 4 && ((major != 1 && major != 0) || minor != 0 || revision != 0 || build != 0); }
-
-public:
-    const std::string& GetModuleName() const { return _moduleName; }
-    const std::string& GetLoadedVersionString() const { return _verStr; }
-
-    const std::map<unsigned long long, unsigned long long>& GetOffsetMap() const { return _data; }
-
-    void* FindAddressById(unsigned long long id) const
+    bool FindOffsetById(unsigned long long aId, unsigned long long& aResult) const
     {
-        unsigned long long b = _base;
-        if (b == 0)
-            return NULL;
-
-        unsigned long long offset = 0;
-        if (!FindOffsetById(id, offset))
-            return NULL;
-
-        return ToPointer(b + offset);
+        return m_library.FindOffset(aId, aResult);
     }
 
-    bool FindOffsetById(unsigned long long id, unsigned long long& result) const
+    bool FindIdByAddress(void* apAddress, unsigned long long& aResult) const
     {
-        auto itr = _data.find(id);
-        if (itr != _data.end())
-        {
-            result = itr->second;
-            return true;
-        }
-        return false;
+        const auto address = reinterpret_cast<std::uintptr_t>(apAddress);
+        aResult = 0;
+        return m_base && address >= m_base && FindIdByOffset(address - m_base, aResult);
     }
 
-    bool FindIdByAddress(void* ptr, unsigned long long& result) const
+    bool FindIdByOffset(unsigned long long aOffset, unsigned long long& aResult) const
     {
-        unsigned long long b = _base;
-        if (b == 0)
+        aResult = 0;
+        const auto it = m_reverse.find(aOffset);
+        if (it == m_reverse.end())
             return false;
-
-        unsigned long long addr = FromPointer(ptr);
-        return FindIdByOffset(addr - b, result);
-    }
-
-    bool FindIdByOffset(unsigned long long offset, unsigned long long& result) const
-    {
-        auto itr = _rdata.find(offset);
-        if (itr == _rdata.end())
-            return false;
-
-        result = itr->second;
+        aResult = it->second;
         return true;
     }
 
-    bool GetExecutableVersion(int& major, int& minor, int& revision, int& build) const
+    void GetLoadedVersion(int& aMajor, int& aMinor, int& aRevision, int& aBuild) const
     {
-        TCHAR szVersionFile[MAX_PATH];
-        GetModuleFileName(NULL, szVersionFile, MAX_PATH);
-
-        DWORD verHandle = 0;
-        UINT size = 0;
-        LPBYTE lpBuffer = NULL;
-        DWORD verSize = GetFileVersionInfoSize(szVersionFile, &verHandle);
-
-        if (verSize != NULL)
-        {
-            LPSTR verData = new char[verSize];
-
-            if (GetFileVersionInfo(szVersionFile, verHandle, verSize, verData))
-            {
-                {
-                    char* vstr = NULL;
-                    UINT vlen = 0;
-                    if (VerQueryValueA(verData, "\\StringFileInfo\\040904B0\\ProductVersion", (LPVOID*)&vstr, &vlen) && vlen && vstr && *vstr)
-                    {
-                        if (ParseVersionFromString(vstr, major, minor, revision, build))
-                        {
-                            delete[] verData;
-                            return true;
-                        }
-                    }
-                }
-
-                {
-                    char* vstr = NULL;
-                    UINT vlen = 0;
-                    if (VerQueryValueA(verData, "\\StringFileInfo\\040904B0\\FileVersion", (LPVOID*)&vstr, &vlen) && vlen && vstr && *vstr)
-                    {
-                        if (ParseVersionFromString(vstr, major, minor, revision, build))
-                        {
-                            delete[] verData;
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            delete[] verData;
-        }
-
-        return false;
-    }
-
-    void GetLoadedVersion(int& major, int& minor, int& revision, int& build) const
-    {
-        major = _ver[0];
-        minor = _ver[1];
-        revision = _ver[2];
-        build = _ver[3];
+        const auto& version = m_library.LoadedVersion();
+        aMajor = version[0];
+        aMinor = version[1];
+        aRevision = version[2];
+        aBuild = version[3];
     }
 
     void Clear()
     {
-        _data.clear();
-        _rdata.clear();
-        for (int i = 0; i < 4; i++)
-            _ver[i] = 0;
-        _moduleName = std::string();
-        _base = 0;
+        ++m_generation;
+        m_library.Clear();
+        m_reverse.clear();
+        m_versionString.clear();
+        m_error.clear();
+        m_base = 0;
     }
 
-    bool Load(const std::filesystem::path& acGamePath, const TiltedPhoques::String& acExeVersion)
-    {
-        int major, minor, revision, build;
-
-        if (!ParseVersionFromString(acExeVersion.c_str(), major, minor, revision, build))
-        {
-            return false;
-        }
-
-        return Load(acGamePath, major, minor, revision, build);
-    }
-
-    bool Load(const std::filesystem::path& acGamePath, int major, int minor, int revision, int build)
+    // aImageSize comes from the checked on-disk executable, before mapping.
+    bool Load(const std::filesystem::path& aGamePath, std::string_view aExeVersion, std::uint32_t aImageSize)
     {
         Clear();
-
-        char fileName[256];
-        _snprintf_s(fileName, 256, "versionlib-%d-%d-%d-%d.bin", major, minor, revision, build);
-
-        std::ifstream file(acGamePath / "Data" / "SKSE" / "Plugins" / fileName, std::ios::binary);
-        if (!file.good())
-            return false;
-
-        int format = read<int>(file);
-
-        if (format != 2)
-            return false;
-
-        for (int i = 0; i < 4; i++)
-            _ver[i] = read<int>(file);
-
+        STRE::Runtime::Version version{};
+        auto remaining = aExeVersion;
+        for (std::size_t i = 0; i < version.size(); ++i)
         {
-            char verName[64];
-            _snprintf_s(verName, 64, "%d.%d.%d.%d", _ver[0], _ver[1], _ver[2], _ver[3]);
-            _verStr = verName;
-        }
-
-        int tnLen = read<int>(file);
-
-        if (tnLen < 0 || tnLen >= 0x10000)
-            return false;
-
-        if (tnLen > 0)
-        {
-            char* tnbuf = (char*)malloc(tnLen + 1);
-            file.read(tnbuf, tnLen);
-            tnbuf[tnLen] = '\0';
-            _moduleName = tnbuf;
-            free(tnbuf);
-        }
-
-        {
-            HMODULE handle = GetModuleHandleA(NULL);
-            _base = (unsigned long long)handle;
-        }
-
-        int ptrSize = read<int>(file);
-
-        int addrCount = read<int>(file);
-
-        unsigned char type, low, high;
-        unsigned char b1, b2;
-        unsigned short w1, w2;
-        unsigned int d1, d2;
-        unsigned long long q1, q2;
-        unsigned long long pvid = 0;
-        unsigned long long poffset = 0;
-        unsigned long long tpoffset;
-        for (int i = 0; i < addrCount; i++)
-        {
-            type = read<unsigned char>(file);
-            low = type & 0xF;
-            high = type >> 4;
-
-            switch (low)
+            const auto [end, error] = std::from_chars(remaining.data(), remaining.data() + remaining.size(), version[i]);
+            if (error != std::errc{} || (i < 3 && (end == remaining.data() + remaining.size() || *end != '.')) ||
+                (i == 3 && end != remaining.data() + remaining.size()))
             {
-            case 0: q1 = read<unsigned long long>(file); break;
-            case 1: q1 = pvid + 1; break;
-            case 2:
-                b1 = read<unsigned char>(file);
-                q1 = pvid + b1;
-                break;
-            case 3:
-                b1 = read<unsigned char>(file);
-                q1 = pvid - b1;
-                break;
-            case 4:
-                w1 = read<unsigned short>(file);
-                q1 = pvid + w1;
-                break;
-            case 5:
-                w1 = read<unsigned short>(file);
-                q1 = pvid - w1;
-                break;
-            case 6:
-                w1 = read<unsigned short>(file);
-                q1 = w1;
-                break;
-            case 7:
-                d1 = read<unsigned int>(file);
-                q1 = d1;
-                break;
-            default:
-            {
-                Clear();
+                m_error = "invalid executable version";
                 return false;
             }
-            }
-
-            tpoffset = (high & 8) != 0 ? (poffset / (unsigned long long)ptrSize) : poffset;
-
-            switch (high & 7)
-            {
-            case 0: q2 = read<unsigned long long>(file); break;
-            case 1: q2 = tpoffset + 1; break;
-            case 2:
-                b2 = read<unsigned char>(file);
-                q2 = tpoffset + b2;
-                break;
-            case 3:
-                b2 = read<unsigned char>(file);
-                q2 = tpoffset - b2;
-                break;
-            case 4:
-                w2 = read<unsigned short>(file);
-                q2 = tpoffset + w2;
-                break;
-            case 5:
-                w2 = read<unsigned short>(file);
-                q2 = tpoffset - w2;
-                break;
-            case 6:
-                w2 = read<unsigned short>(file);
-                q2 = w2;
-                break;
-            case 7:
-                d2 = read<unsigned int>(file);
-                q2 = d2;
-                break;
-            default: throw std::exception();
-            }
-
-            if ((high & 8) != 0)
-                q2 *= (unsigned long long)ptrSize;
-
-            _data[q1] = q2;
-            _rdata[q2] = q1;
-
-            poffset = q2;
-            pvid = q1;
+            remaining.remove_prefix(static_cast<std::size_t>(end - remaining.data()) + (i < 3 ? 1 : 0));
         }
-
-        return true;
-    }
-
-    bool DumpToTextFile(const std::string& path)
-    {
-        std::ofstream f = std::ofstream(path.c_str());
-        if (!f.good())
-            return false;
-
-        for (auto itr = _data.begin(); itr != _data.end(); itr++)
+        std::string fileName = "versionlib";
+        for (const auto part : version)
+            fileName += "-" + std::to_string(part);
+        std::ifstream file(aGamePath / "Data" / "SKSE" / "Plugins" / (fileName + ".bin"), std::ios::binary | std::ios::ate);
+        if (!file)
         {
-            f << std::dec;
-            f << itr->first;
-            f << '\t';
-            f << std::hex;
-            f << itr->second + 0x140000000;
-            f << '\n';
+            m_error = "missing/unreadable Address Library: " + fileName + ".bin";
+            return false;
         }
-
+        const std::streamoff size = file.tellg();
+        if (size <= 0 || size > static_cast<std::streamoff>(STRE::Runtime::AddressLibrary::MaxFileBytes))
+        {
+            m_error = "invalid Address Library file size";
+            return false;
+        }
+        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
+        file.seekg(0);
+        if (!file.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size())))
+        {
+            m_error = "truncated Address Library read";
+            return false;
+        }
+        // Minimum bootstrap dependencies. This is not an ABI/signature attestation.
+        constexpr std::array<std::uint32_t, 4> requiredIds{36544, 36564, 53926, 40412};
+        if (!m_library.Load(bytes, version, aImageSize, requiredIds))
+        {
+            m_error = m_library.Error();
+            return false;
+        }
+        for (const auto& [id, offset] : m_library.Offsets())
+            m_reverse[offset] = id;
+        m_versionString = aExeVersion;
+        m_base = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
         return true;
     }
+
+    bool DumpToTextFile(const std::string& aPath)
+    {
+        std::ofstream file(aPath);
+        for (const auto& [id, offset] : m_library.Offsets())
+            file << std::dec << id << '\t' << std::hex << offset + 0x140000000 << '\n';
+        return file.good();
+    }
+
+private:
+    STRE::Runtime::AddressLibrary m_library;
+    STRE::Runtime::OffsetMap m_reverse;
+    std::string m_versionString;
+    std::string m_error;
+    std::uintptr_t m_base{};
+    std::uint64_t m_generation{};
 };
 
 template <class T> struct VersionDbPtr
@@ -348,13 +159,18 @@ template <class T> struct VersionDbPtr
 
     void* GetPtr() const noexcept
     {
-        if (m_pPtr == nullptr)
-            m_pPtr = VersionDb::Get().FindAddressById(m_id);
+        const auto& database = VersionDb::Get();
+        if (m_generation != database.Generation() || m_pPtr == nullptr)
+        {
+            m_pPtr = database.FindAddressById(m_id);
+            m_generation = database.Generation();
+        }
 
         return m_pPtr;
     }
 
 private:
     mutable void* m_pPtr;
+    mutable std::uint64_t m_generation{};
     uint32_t m_id;
 };

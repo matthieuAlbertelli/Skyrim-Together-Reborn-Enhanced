@@ -2123,3 +2123,35 @@ neither automated checks nor the later roster-2 partial acceptance validates Sol
    run. If projection or T0 fails, preserve the failing save/logs without manual
    quest repair. Report FAIL with the first missing transition. Only a successful
    real run can add new PASS evidence to STATUS; retain the earlier diagnostic.
+
+## Steam 1.7.104.0 experimental lot
+
+This protocol is **prepared, not executed**. Use a new campaign and isolated
+profiles/state from the [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
+The current source gate blocks game entry; every scenario below remains blocked
+until native creation, save/load and recovery prerequisites are proved and a
+follow-up candidate is explicitly authorized for in-game testing.
+
+1. Run a fresh Solo campaign, then a fresh two-player roster with P1 finishing
+   creation first, then another with P2 first. Record both observers throughout
+   race/sex/appearance edits, final projection, seating, standing, control
+   restoration and the exit from the inn. Check terminal seating fences,
+   duplicate finalization and remote appearance, preserving recent corrections.
+   Neither a successful menu nor one order resolves the historical intermittent
+   controls defect.
+2. On each side, exercise Valen's dialogue navigation, back/cancel/re-entry and
+   progression into the Hadvar/Ralof investigation. Capture the existing
+   continuity, cleanup and T0 evidence without console quest repair. Verify the
+   dialogue progress native callback separately from visible dialogue text.
+3. Commit a collective checkpoint with the full sealed roster. Disconnect each
+   member in turn: progression must lock. Reconnect the same full roster and
+   collectively restore the same committed CampaignCheckpoint, with each
+   player's own native `.ess`. Observe both server state and local
+   Skyrim/Papyrus/quest runtime; quest stages alone cannot establish recovery.
+4. Repeat after a client restart and a server restart using only the isolated
+   test database/saves. Test missing/mismatched native save and incomplete-roster
+   failures. No replacement, campaign late join, host persistence authority,
+   partial-roster continuation or old-1.6 campaign migration is allowed.
+5. Retain candidate hashes, server/client/Papyrus logs, checkpoint identity,
+   ordered observations and per-case PASS/FAIL/BLOCKED. Only real evidence can
+   update STATUS; ADR-0018 remains the authority contract.

@@ -143,15 +143,19 @@ void PlayerCharacter::PayCrimeGoldToAllFactions() noexcept
 
 bool PlayerCharacter::TryEndGrabObject() noexcept
 {
+    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+    {
+        spdlog::error("[STRE][WorldSync] forced_grab_release_failed reason=unverified-destroy-mouse-springs-abi");
+        return false;
+    }
     int major = 0;
     int minor = 0;
     int revision = 0;
     int build = 0;
     VersionDb::Get().GetLoadedVersion(major, minor, revision, build);
 
-    // Address Library IDs used by CommonLibSSE-NG for
-    // PlayerCharacter::DestroyMouseSprings(). Skyrim 1.6+ uses the AE ID.
-    const uint32_t addressId = (major > 1 || (major == 1 && minor >= 6)) ? 40557u : 39480u;
+    // Proven 1.6.1170 wrapper only. ID presence is not evidence for a newer ABI.
+    const uint32_t addressId = 40557u;
     VersionDbPtr<TDestroyMouseSprings> destroyMouseSprings{addressId};
     if (!destroyMouseSprings.Get())
     {

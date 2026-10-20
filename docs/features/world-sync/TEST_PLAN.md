@@ -160,3 +160,26 @@ Validate before extending support:
 - cells that reset.
 
 These cases must not be advertised as guaranteed before specific validation.
+
+## Steam 1.7.104.0 experimental lot
+
+These are **future checks**, blocked by the current campaign ABI startup gate.
+Follow the [isolated experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md)
+and use a new two-player campaign with a complete sealed roster.
+
+1. Record the exact Better Grabbing 2.0 package and loaded DLL hashes/versions.
+   Its author's 1.7 announcement is not STRE multiplayer acceptance. Exercise
+   required-plugin absent/incompatible cases under the existing admission
+   policy; do not weaken the policy to make the candidate connect.
+2. In both P1-authority/P2-observer and the reverse direction, test grab,
+   rotation, release, settle, remote pickup and interruption by dialogue.
+   Verify forced release calls the proved target ABI, stops local constraints
+   and leaves a consistent server/remote entity. An explicit unavailable
+   wrapper is a blocked test, never a successful release.
+3. Repeat rapid release, simultaneous grab attempts and cell transitions from
+   the existing protocol. Disconnect during grab must enter campaign recovery
+   lock; resume only through the collective committed checkpoint protocol.
+4. Check WorldEntity late materialization with the existing campaign roster.
+   It does not authorize campaign late join or player replacement. Archive
+   paired logs, captures, entity/checkpoint identity and candidate hashes with
+   PASS/FAIL/BLOCKED for every case.

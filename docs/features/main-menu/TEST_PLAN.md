@@ -153,3 +153,26 @@ SHA256, H.264/MP4 format and absence of audio with `ffprobe -v error -show_forma
 <file> -f null NUL` on Windows. These are offline checks, not runtime dependencies.
 No po3 DLL/prototype config or intermediate forward/reverse/pingpong export may
 enter the package. No deployment or in-game PASS may be inferred from a build.
+
+## Steam 1.7.104.0 experimental lot
+
+These are **future manual checks**, not new PASS evidence. Follow the isolated
+[native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
+The partial candidate explicitly refuses game startup while campaign ABI is
+unverified; do not bypass that source gate to run the remaining scenarios.
+
+1. In a separately authorized environment, record the exact EXE, SKSE, Address
+   Library, native plugin and client/server hashes. Verify distinct early
+   diagnostics for 1.6.1170, 1.7.99, another 1.7 patch, GOG/unknown distribution,
+   missing/truncated/wrong-version Address Library and absent/wrong SKSE.
+   The currently expected result with all dependencies present is explicit
+   **STRE native capability unavailable**, before game mapping or hooks.
+2. Only after the required ABI evidence and a reviewed follow-up candidate:
+   verify startup ordering and SKSE plugin initialization independently of DLL
+   load; reject missing required plugins without weakening admission policy.
+3. Run the existing intro/menu/skip scenarios with separately permitted media,
+   keyboard/controller input, load/new game, and repeated return from gameplay.
+   Record the intended vanilla fallback for each still-disabled optional
+   presentation path. An absent custom intro/subtitle is not proof of a port.
+4. Archive logs, captures, exact candidate identity and PASS/FAIL/BLOCKED per
+   scenario. Historical 1.6 acceptance and an offline build cannot fill this lot.

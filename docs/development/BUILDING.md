@@ -54,6 +54,10 @@ The generated UI is written under `Code/skyrim_ui/dist`. Local deployment script
 
 ## Tests
 
+The native-only Steam 1.7.104 experiment has a separate
+[build/isolation procedure](EXPERIMENTAL_RUNTIME_1_7.md). It does not authorize
+the CK/AutoMod toolchain or ordinary deployment paths to migrate from 1.6.1170.
+
 For CK/AutoMod authoring, official xEdit validation and the existing local import/
 deployment boundary, follow [the modding toolchain runbook](MODDING_TOOLCHAIN.md).
 Its fixture checks run with `pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1`.

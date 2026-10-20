@@ -31,6 +31,11 @@ static_assert(offsetof(SkyrimMainResetBoundary, FullReset) == 0x12);
 
 bool RequestSkyrimMainMenu() noexcept
 {
+    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+    {
+        spdlog::error("[STRE][MainMenuRuntime] REQUEST_FAILED reason=unverified-reset-boundary-abi");
+        return false;
+    }
     // CommonLibSSE-NG RE::Offset::Main::Singleton, AE Address Library ID.
     POINTER_SKYRIMSE(SkyrimMainResetBoundary*, s_pMain, 403449);
     SkyrimMainResetBoundary** const ppMain = s_pMain.Get();

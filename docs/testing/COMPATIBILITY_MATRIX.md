@@ -1,7 +1,7 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: September 19, 2026**
+> **Last updated: October 20, 2026**
 
 ## Reference platform
 
@@ -21,6 +21,25 @@
 These are the **`0.4.0-alpha.1` release targets**. Other Skyrim runtimes,
 stores, operating systems, SKSE/Address Library combinations, or dependency
 versions are not part of this release's supported matrix.
+
+## Steam 1.7.104 native experiment
+
+This is separate from the released reference platform above. It is **not a
+playable compatibility claim** and does not inherit historical 1.6 validations.
+See [STATUS](../project/STATUS.md) for executed evidence and the
+[experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md) for isolation.
+
+| Component/domain | Experimental boundary |
+|---|---|
+| Runtime | Exactly Steam `1.7.104.0`; 1.7.99, 1.6, other builds, GOG/EOS/unknown distributions rejected |
+| Bootstrap | Native source port; startup refuses to enter Skyrim while required STRE campaign ABI remains unverified |
+| Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
+| SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
+| Better Grabbing | 2.0 candidate announced for 1.7; STRE manipulation/interruption validation pending; required native-plugin policy retained |
+| Main menu, appearance, seating, dialogue, save/load/recovery | Unproved native paths remain disabled or blocked; no 1.7 in-game PASS |
+| CK/Papyrus/content | Existing 1.6.1170 authoring restrictions preserved; no conversion or content edits |
+| Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
+| Linux/CI | No Linux execution or manually triggered CI in this mission |
 
 ## Fireplace dependency and evidence
 
