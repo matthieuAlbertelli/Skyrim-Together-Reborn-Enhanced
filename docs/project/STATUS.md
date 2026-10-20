@@ -11,19 +11,19 @@ and technical detail belongs in each feature's documentation.
 
 ## Steam 1.7.104 static native qualification (2026-10-20, Refs #99)
 
-Lot3 continues `feat/skyrim-1.7-runtime` from
+Lot 3 continues `feat/skyrim-1.7-runtime` from
 `90da92ccdb097d2520b86631ce42e0e56fc455d6`, retaining all five earlier local
 commits and their artifacts. The maintainer deliberately updated Steam and
-activated SKSE before this lot. Independently copied Skyrim1.7.104.0,
-SKSE0.2.3.1 and matching AL104 were inspected without executing the game.
+activated SKSE before this lot. Independently copied Skyrim 1.7.104.0,
+SKSE 0.2.3.1 and matching AL104 were inspected without executing the game.
 Exact paths/hashes, native instructions, ownership boundaries and divergences
 are recorded in the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md).
 
 The [finite register](../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) now has
-**18/18 mandatory static qualifications**: ten ExactSource from lot2 and eight
+**18/18 mandatory static qualifications**: ten ExactSource from lot 2 and eight
 ExactBinary (B02/B03/C06/C07/C08/C09/C12/C13). Consequently the unchanged
 `NativeAdmissionReady(NativeContracts)` expression evaluates true. This prepares
-an experimental candidate for a separately authorized smoke; **no1.7 engine
+an experimental candidate for a separately authorized smoke; **no 1.7 engine
 validation or global compatibility claim exists**. The version/store/AL/SKSE
 preflight and missing-evidence fail-closed policy remain in place.
 
@@ -32,24 +32,44 @@ length248 rather than list[0]; shared bounded manual index mapping and regressio
 tests; trace names reflect that BSString; MenuControls byte83 is correctly named
 inputProcessingBlocked without changing toggle values; SkillsMenu's four-plus-two
 NOP writes become one complete six-byte instruction. Production FinalAppearance
-and LocalSeating guards admit the exact qualified1.7.104 target. Life9, native
+and LocalSeating guards admit the exact qualified 1.7.104 target. Life9, native
 ownership/retirement boundaries and furniture events were inspected; real
 destruction/private-base reclamation, visual appearance and controls are still
 unvalidated. O02/O03/D01 retain their guarded fallback/disabled behavior.
 
-The three dormant RTTI conclusions and 45-initializer lot2 inventory stand.
+The three dormant RTTI conclusions and 45-initializer lot 2 inventory stand.
 No ADR-0018 authority, sealed roster, per-player native save, collective recovery,
 Valen/content, Better Grabbing admission or network/schema rule changed.
 
-Lot3 automated/build verification is being recorded in the independent
-`_audit/rt17-lot3` receipts; historical counts below are not new PASS results.
-Final source identity, executed counts, artifact hashes and protected-file
-comparison will be added after compilation.
+Executed lot-3 Windows x64 Debug evidence, source
+`b07bf205adc5bb3693d079ad2dc854e9c57ac59b`:
 
-Historical evidence remains unchanged: lot2 source
-`faed1a01e5390ac6e5ddfd4735073cd1653d1123`, receipt90da92cc,456 C++ cases /
-49,256 assertions and233 Python tests; lot1 sourcecf207f69/97779fbf,
-receipt824ddd37,454 C++ cases /49,109 assertions and232 Python tests.
+- Targeted TPTests: **12 cases / 3,421 assertions PASS**; full TPTests:
+  **459 cases / 49,287 assertions PASS**.
+- Full Python discovery: **234 tests PASS**. An initial sandbox run failed
+  on temporary-fixture permissions; the complete host run passed.
+- Actual client/launcher, EarlyLoad, TPProcess and server DLL/launcher linked;
+  Angular production build succeeded. **51 UI files** are independently retained.
+- Client EXE and server DLL both embed `runtime17-b07bf205adc5bb3693d079ad2dc854e9c57ac59b`.
+  The new six-binary SHA-256 manifest is `_audit/rt17-lot3/candidate-manifest.json`;
+  human-readable receipts are `BINARIES.md` and `DELIVERY.md` there.
+- Static receipt: exact three input hashes/PEs, **319 literal references**,
+  nine reviewed byte anchors and all **256 CRC entries** checked. This does
+  not substitute for the per-contract signature/ownership analysis.
+- **9,329 protected records unchanged**, including prior lot artifacts and
+  the bounded installed-content/save/state inventory. Primary HEAD, main,
+  primary pre-existing dirty STATUS and unrelated STATUS sections are preserved.
+  Coverage is explicit local paths, not an exhaustive personal/remote scan.
+
+Toolchain: VS2022 BuildTools / MSVC14.44.35207 / SDK10.0.26100.0 /
+xmake3.0.9+HEAD.2b184e178; Node20.19.5 / pnpm8.15.9; Python3.14.
+No source changed after this compiled identity; the later receipt commit is
+documentation only. Warnings in successful builds are retained in the logs.
+
+Historical evidence remains unchanged: lot 2 source
+`faed1a01e5390ac6e5ddfd4735073cd1653d1123`, receipt 90da92cc, 456 C++ cases /
+49,256 assertions and 233 Python tests; lot 1 source cf207f69/97779fbf,
+receipt 824ddd37, 454 C++ cases /49,109 assertions and 232 Python tests.
 Their binaries retain their own source identities and manifests.
 
 No deployment, installed Steam/Vortex mutation, Skyrim/server/CK/xEdit launch,
