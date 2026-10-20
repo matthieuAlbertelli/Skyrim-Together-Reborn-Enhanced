@@ -108,10 +108,23 @@ rename the compiled source commit. Record both commits, mode/toolchain,
 commands/exits, UI output and binary SHA-256 in ignored audit receipts.
 Unchanged historical `GIT_TAG` alone is not candidate identity.
 
-## Future isolated environment, not executed by this mission
+## Isolated environment and scoped runtime authorization
 
-The following preparation and game runs require a later authorization. A Git
-branch or Vortex profile is not evidence of filesystem isolation.
+Lot 4 authorizes isolated preparation and the first **main-PC main-menu-only**
+smoke. It does not authorize the server, a second PC, new game, save load,
+campaign, creation, appearance or checkpoint scenarios below. General launch
+permission need not be requested again. Executed evidence and any stop reason
+belong in [STATUS](../project/STATUS.md).
+
+A Git branch or Vortex profile is not evidence of filesystem isolation.
+The existing `--exePath` option writes the normal per-user launcher registry
+selection; `InstallPathRouting` only changes CWD/DLL search/PATH. SKSE known-folder
+logs/dumps, Skyrim INIs/saves, local AppData plugin order, STRE identity and CEF
+child/temp paths need independent isolation. Environment-variable overrides
+alone are insufficient. Do not launch with shared writable paths or change
+current-user Known Folders/HKCU to manufacture a pass. Account/credentials setup
+needs maintainer intervention; shared-environment changes need a precise
+separate authorization. Stop before launch when these boundaries cannot be proved.
 The maintainer has already deliberately updated the installed Steam game and
 activated SKSE. Preserve that state; it does not itself isolate saves, plugins,
 server state or test outputs.
@@ -149,7 +162,8 @@ server state or test outputs.
    every copy's resolved source/destination and lack of links. The ordinary local
    build/deploy script references the primary checkout, installed Data, local
    Vortex staging and `\\Pc-vero\STRE-Dev-Initial`; it is unsuitable here.
-8. Start a **new** solo save and a **new** fixed-roster test campaign. Resuming
+8. Only in a later, separately authorized gameplay lot, start a **new** solo
+   save and a **new** fixed-roster test campaign. Resuming
    1.6 saves/campaigns is a separate migration subject with no guarantee.
    Preserve ADR-0018 throughout: full sealed roster, persistent server authority,
    recovery lock, one committed checkpoint, each player's own `.ess + .skse`.
@@ -161,7 +175,10 @@ and [World Sync](../features/world-sync/TEST_PLAN.md#steam-171040-experimental-l
 Do not run those gameplay scenarios while the native-capability gate rejects
 startup. Record blocked, failed, not run and human PASS separately.
 
-For the first authorized lot, advance one stage at a time:
+For the first authorized lot, use the
+[main-menu-only gate](../features/main-menu/TEST_PLAN.md#first-main-menu-only-runtime-gate)
+and stop after normal exit and evidence collection. The following wider sequence
+requires later maintainer authorization after startup acceptance:
 
 1. Record exact candidate/source and EXE/SKSE/AL/plugin hashes, then test
    startup ordering and plugin initialization without loading an existing save.

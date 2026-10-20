@@ -155,8 +155,11 @@ exact qualified versions; overall executable admission remains1.7.104 Steam only
 The binary qualification applies to the hashes in the lot3 report. It is not
 runtime acceptance or a per-launch hash allowlist. A changed input with the same
 version must be requalified before experiment deployment. O02/O03/D01 remain
-unavailable on1.7.104. Deployment and game/server execution require a separate
-maintainer authorization.
+unavailable on1.7.104. Static qualification does not establish write isolation
+or authorize a server.
+Runtime work requires a verified isolated environment and scoped maintainer
+authorization; the [runbook](EXPERIMENTAL_RUNTIME_1_7.md) distinguishes the
+authorized main-menu-only smoke from later gameplay/server scenarios.
 
 After static obligations are closed, follow the existing alternate-start,
 world-sync, native save/load and collective recovery test plans in a separately

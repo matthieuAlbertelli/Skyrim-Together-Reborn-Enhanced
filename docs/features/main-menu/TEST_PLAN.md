@@ -156,11 +156,42 @@ enter the package. No deployment or in-game PASS may be inferred from a build.
 
 ## Steam 1.7.104.0 experimental lot
 
-These are **future manual checks**, not new PASS evidence. Follow the isolated
+These are **prepared checks**, not PASS evidence. Follow the isolated
 [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
-Lot 3 satisfies the static campaign ABI gate. These scenarios still require
-explicit maintainer authorization and isolated deployment; never bypass a
-subsequently missing prerequisite.
+Lot 3 satisfies the static campaign ABI gate. Isolation is an additional
+prerequisite; never bypass a subsequently missing condition.
+
+### First main-menu-only runtime gate
+
+The lot-4 authorization covers only the main PC and this bounded procedure:
+
+1. Rehash exact runtime/SKSE/AL and candidate; verify a coherent independent
+   game, Data/plugins, Documents/INI/saves, AppData/STRE identity, launcher HKCU,
+   CEF/temp paths and no dangerous links. Inventory processes and exit access.
+   Check actual native plugin metadata; installed/activated does not mean
+   compatible. Record a fresh automatic preflight, and stop if any required
+   isolation/dependency check fails. Never run the ordinary DEV deploy script.
+2. Use the supported STRE launcher against that verified environment. Its
+   `--exePath` option persists registry selection, so it requires isolated HKCU.
+   Record process creation, mapping, native initialization, SKSE startup/plugin
+   initialization and CEF readiness as separate milestones.
+3. Observe the actual main menu and harmless navigation, then Quit normally.
+   Do not select New, Continue or Load, start a server, or enter gameplay.
+   Record usable inputs and normal exit; an active process or black screen
+   cannot be PASS. Ask only for necessary human visual evidence if unavailable.
+4. Collect bounded logs/exits/dumps and compare protected paths after exit.
+   Stop on wrong installation, unexpected hash, isolation breach, native
+   exception, initialization loop or persistent lost input. Diagnose before
+   any further same-scope launch; no blind restart loop.
+5. PASS requires every startup milestone, observed usable menu, normal exit,
+   no critical native log failure and intact isolation. A failed preflight is
+   BLOCKED / NOT RUN, not a runtime FAIL. O02/O03/D01's controlled fallback is
+   expected. Stop here and await maintainer validation before extending scope.
+
+### Later expanded scenarios
+
+The following broader scenarios require separate authorization after startup
+acceptance; they are not included in the main-menu-only gate.
 
 1. In a separately authorized environment, record the exact EXE, SKSE, Address
    Library, native plugin and client/server hashes. Verify distinct early

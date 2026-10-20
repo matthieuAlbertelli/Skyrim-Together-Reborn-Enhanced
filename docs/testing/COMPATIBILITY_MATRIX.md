@@ -33,6 +33,7 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 |---|---|
 | Runtime | Exactly Steam `1.7.104.0`; 1.7.99, 1.6, other builds, GOG/EOS/unknown distributions rejected |
 | Bootstrap | All 18 static native prerequisites qualified in lot 3; derived admission open for the exact inspected material; no engine-entry PASS |
+| Experimental deployment | Independent Windows profile/registry, game/Data, plugins, logs/cache and saves are required in addition to static admission; EXE copy or Vortex profile alone is insufficient |
 | Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
 | Better Grabbing | 2.0 candidate announced for 1.7; STRE manipulation/interruption validation pending; required native-plugin policy retained |

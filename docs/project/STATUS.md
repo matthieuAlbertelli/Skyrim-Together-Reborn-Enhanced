@@ -9,6 +9,58 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Steam 1.7.104 isolated-startup preparation (2026-10-20, Refs #99)
+
+Lot 4 has explicit authorization for an isolated main-PC main-menu smoke.
+**Preflight BLOCKED before launch; runtime smoke NOT RUN**, not a runtime FAIL.
+The [dated evidence](../audit/2026-10-20-runtime-1.7.104-lot4.md) establishes that
+the existing launch path shares Windows Documents/AppData and the launcher's
+HKCU selection: `--exePath` persists TitlePath/TitleExe, path routing only
+changes CWD/DLL directories/PATH, and SKSE writes under CSIDL_MYDOCUMENTS.
+General launch permission is not missing; a verified independent profile is.
+
+The exact three lot-3 input hashes, six binary hashes and 51 UI hashes match.
+Compiled source remains `b07bf205adc5bb3693d079ad2dc854e9c57ac59b`, identity
+`runtime17-b07bf205adc5bb3693d079ad2dc854e9c57ac59b` in client and server.
+All seven prior commits and their receipts are retained; no rebuild, gate,
+gameplay, protocol or content change. The 18 static qualifications remain valid
+for the same inspected bytes; no new engine compatibility is established.
+
+Executed offline: 12 TPTests cases / 3,421 assertions PASS; 7 bootstrap source
+checks PASS; 4 SKSE resource checks PASS using exact extracted production
+function bodies and private fixtures (no DLL execution); 16 assembled main-menu
+package checks PASS. An independent payload contains 1,205 files / 824,987,268
+bytes, including the exact three client binaries, UI, CEF/Discord dependencies
+and unchanged tracked Data. All copies have matching SHA256, one hardlink and
+no symlink/junction ancestors. No full game, effective load order or Windows
+test account was provisioned; this is an offline payload, not a deployment.
+
+Installed BetterGrabbing resource0.1.12.0 and CCExtender fixed resource1.12.0.0
+are statically predicted to be rejected by the exact SKSE2.3.1 V5 metadata
+policy. The installed `winhttp.dll` imports CKPE.dll and is another source
+contamination risk. These files are untouched and excluded from the payload.
+No multiplayer Better Grabbing admission requirement was relaxed.
+
+The automatic receipt has 14 offline PASS checks and 5 blocked environment/
+isolation conditions, with `launch_allowed=false`. No Skyrim/STRE/SKSE-loader/
+server process, native initialization, visible menu, input or normal-exit
+acceptance exists for this lot. No user visual attestation was requested or
+invented. The precise remaining preparation is a separate maintainer-provisioned
+Windows test profile and coherent legitimate Steam environment on this PC,
+followed by a fresh preflight. See the [runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md)
+and [menu-only procedure](../features/main-menu/TEST_PLAN.md#first-main-menu-only-runtime-gate).
+Save/Continue, creation, appearance, seating and campaign tests remain outside
+the authorization and unvalidated on 1.7.
+
+Receipts: `_audit/rt17-lot4/DELIVERY.md`, `inputs.json`,
+`candidate-verification.json`, `packaging-manifest.json`, `preflight.json`,
+host/path/plugin inventories and protected before/after comparison. All 11,360
+protected file records match; metadata for 21,087 installed files and the
+226-file profile set also match. Registry selection, prior artifacts, primary
+dirty STATUS and main remain preserved within that bounded scope. No shared profile
+redirection, production/Vortex/Pc-vero deployment, Steam update, push, PR,
+manual CI, merge or release occurred.
+
 ## Steam 1.7.104 static native qualification (2026-10-20, Refs #99)
 
 Lot 3 continues `feat/skyrim-1.7-runtime` from
