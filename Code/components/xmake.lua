@@ -8,7 +8,7 @@ function component(name)
       ".",
       "../",
       "../../", 
-      "../../../build", 
+      path.absolute(get_config("builddir") or "build", os.projectdir()),
       {public = true})
     add_headerfiles("**.h")
     add_files("**.cpp")
@@ -29,7 +29,7 @@ function unittest(name)
         ".",
         "../",
         "../../", 
-        "../../../build", 
+        path.absolute(get_config("builddir") or "build", os.projectdir()),
         {public = true})
       add_headerfiles(
           "**.h")

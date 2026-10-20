@@ -54,13 +54,44 @@ class RuntimePortBootstrap(unittest.TestCase):
     def test_unproven_native_paths_are_guarded_before_layout_access(self):
         reset = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
         reset = reset[reset.index("bool RequestSkyrimMainMenu()"):]
-        self.assertLess(reset.index('!= "1.6.1170.0"'), reset.index("POINTER_SKYRIMSE"))
+        self.assertLess(reset.index("SupportsQualifiedNativeAccess"), reset.index("POINTER_SKYRIMSE"))
+        self.assertIn("NativeContract::ResetMain", reset)
         camera = read("Code/client/Games/Skyrim/Interface/Menus/RaceSexMenu.h")
         camera = camera[camera.index("GetRaceSexMenuCamera("):]
         self.assertLess(camera.index('!= "1.6.1170.0"'), camera.index("Cast<RaceSexMenu>"))
         grab = read("Code/client/Games/Skyrim/PlayerCharacter.cpp")
         grab = grab[grab.index("bool PlayerCharacter::TryEndGrabObject()"):]
-        self.assertLess(grab.index('!= "1.6.1170.0"'), grab.index("VersionDbPtr"))
+        self.assertLess(grab.index("SupportsQualifiedNativeAccess"), grab.index("VersionDbPtr"))
+        self.assertIn("NativeContract::GrabRelease", grab)
+
+    def test_missing_rtti_remain_lazy_and_have_no_new_native_consumers(self):
+        # A new consumer must reopen B04; inherited base declarations alone do
+        # not instantiate Cast<NiObjectNET> or resolve its RttiLocator.
+        source = read("Code/client/Games/Skyrim/RTTI.cpp")
+        constructor = source[source.index("RttiLocator<T>::RttiLocator"):source.index("template <class T> const void*")]
+        self.assertNotIn(".Get(", constructor)
+        self.assertNotIn("GetPtr(", constructor)
+        self.assertNotIn("FindAddress", constructor)
+        for name, address_id in (("NiObjectNET", 392519), ("CreationClubMenu", 394235), ("NiParticleSystem", 398437)):
+            self.assertIn(f"registerRtti_{name}({address_id})", source)
+        allowed = {
+            "Games/Skyrim/RTTI.h", "Games/Skyrim/RTTI.cpp",
+            "Games/Skyrim/NetImmerse/NiObjectNET.h",
+            "Games/Skyrim/NetImmerse/NiAVObject.h",
+            "Games/Skyrim/NetImmerse/NiProperty.h",
+        }
+        for path in (ROOT / "Code/client").rglob("*"):
+            if path.suffix not in {".h", ".cpp"}:
+                continue
+            relative = path.relative_to(ROOT / "Code/client").as_posix()
+            if relative not in allowed:
+                text = path.read_text(encoding="utf-8-sig")
+                for name in ("NiObjectNET", "CreationClubMenu", "NiParticleSystem"):
+                    self.assertNotIn(name, text, relative)
+        for relative in allowed - {"Games/Skyrim/RTTI.h", "Games/Skyrim/RTTI.cpp"}:
+            text = read("Code/client/" + relative)
+            self.assertNotIn("Cast<", text)
+            self.assertNotIn("RttiLocator<", text)
 
 
 if __name__ == "__main__":

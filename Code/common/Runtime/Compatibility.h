@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Runtime/AddressLibrary.h>
+#include <Runtime/NativeContracts.h>
 #include <string_view>
 
 namespace STRE::Runtime
@@ -18,11 +19,11 @@ inline constexpr bool Supports(std::string_view aVersion, Distribution aDistribu
     return aVersion == TargetVersionString && aDistribution == Distribution::Steam;
 }
 
-// This partial port must not enter Skyrim while campaign-critical native
-// save/load, creation and recovery boundaries still have only 1.6 ABI evidence.
-// No INI/debug override: complete the audit and its tests before changing this.
-inline constexpr bool CampaignAbiVerified = false;
+// No runtime/INI override. Every mandatory obligation must be qualified.
+// The current evidence table deliberately keeps this false.
+inline constexpr bool CampaignAbiVerified = NativeAdmissionReady(NativeContracts);
 inline constexpr std::string_view CampaignAbiUnavailable =
-    "STRE 1.7.104 experimental port: campaign native save/load, creation and recovery ABI is not verified. "
-    "Game startup is unavailable in this partial candidate. See issue #99.";
+    "STRE 1.7.104 experimental port: native admission is incomplete "
+    "(target binaries, save selection/Continue callbacks, pause menu, final appearance and seating). "
+    "Game startup is unavailable. See issue #99 and RUNTIME_1_7_NATIVE_CONTRACTS.md.";
 } // namespace STRE::Runtime

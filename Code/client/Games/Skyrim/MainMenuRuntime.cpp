@@ -6,6 +6,7 @@
 #include <Interface/UI.h>
 #include <MainMenu/MainMenuPresentation.h>
 #include <MainMenu/Localization.h>
+#include <Runtime/NativeContracts.h>
 #include <Games/TES.h>
 #include "../../../immersive_launcher/Launcher.h"
 
@@ -15,8 +16,8 @@
 
 namespace
 {
-// CommonLibSSE-NG RE::Main layout (AE 1.6.1170): two event-sink bases occupy
-// 0x10 bytes, followed by the three distinct runtime request flags.
+// CommonLibSSE-NG 12d61f3c (1.7.104), RE::Main flat layout: two event-sink
+// bases occupy 0x10 bytes, followed by three distinct runtime request flags.
 struct SkyrimMainResetBoundary
 {
     std::byte EventSinkBases[0x10];
@@ -31,7 +32,7 @@ static_assert(offsetof(SkyrimMainResetBoundary, FullReset) == 0x12);
 
 bool RequestSkyrimMainMenu() noexcept
 {
-    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+    if (!STRE::Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), STRE::Runtime::NativeContract::ResetMain))
     {
         spdlog::error("[STRE][MainMenuRuntime] REQUEST_FAILED reason=unverified-reset-boundary-abi");
         return false;

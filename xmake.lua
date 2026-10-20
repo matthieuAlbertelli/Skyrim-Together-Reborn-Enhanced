@@ -85,7 +85,7 @@ before_build(function (target)
     bool_to_number[branch == "prerel"])
 
     -- fix always-compiles problem by updating the file only if content has changed.
-    local filepath = "build/BranchInfo.h"
+    local filepath = path.join(get_config("builddir") or "build", "BranchInfo.h")
     local old_content = nil
     if os.exists(filepath) then
         old_content = io.readfile(filepath)
