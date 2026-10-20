@@ -163,7 +163,8 @@ These cases must not be advertised as guaranteed before specific validation.
 
 ## Steam 1.7.104.0 experimental lot
 
-These are **future checks**, blocked by the current campaign ABI startup gate.
+These are **future checks**, pending explicit authorization for isolated
+deployment and execution after lot 3's static ABI qualification.
 Follow the [isolated experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md)
 and use a new two-player campaign with a complete sealed roster.
 

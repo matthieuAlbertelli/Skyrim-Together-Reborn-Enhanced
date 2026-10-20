@@ -7,6 +7,15 @@ camera or campaign recovery authority. ADR-0022 makes entry and final
 rematerialization independent of posture; collective seating is a future phase.
 ADR-0023 makes the official final flow automatic in every build, including MASTER.
 
+The experimental Steam 1.7.104 branch now admits the production final
+rematerialization and local seating paths after the exact binary qualification
+in [lot 3](../../audit/2026-10-20-runtime-1.7.104-lot3.md). This extends the native
+adapter guard, not the historical gameplay acceptance below. Life9 remains
+DontMove; identity/weapon/state/recovery fences, deferred retirement and
+local-only furniture activation are unchanged. Private-base reclamation,
+appearance and controls still require the authorized 1.7 smoke. Optional live
+appearance probes retain their 1.6 guards.
+
 ## Creation-cell lifetime and transition regression (2026-10-11)
 
 Remote seating is transient presentation in the creation cell. A final appearance
@@ -247,11 +256,13 @@ and cannot be reported as a fixed placeholder. The upstream state producer and
 resolution remain unknown until correlated runtime evidence establishes them.
 No forced ActorState, animation, sheathing, protocol change or hot apply is used.
 
-### LAB ActorState policy (1.6.1170 only)
+### Final rematerialization ActorState policy
 
 `FinalRespawnActorStateSafe` now uses a read-only decoder and named predicates.
 The field layout follows [CommonLibSSE-NG ActorState](https://raw.githubusercontent.com/CharmedBaryon/CommonLibSSE-NG/main/include/RE/A/ActorState.h);
 life 9 is established separately by exact-build evidence below.
+The 1.7.104 chain A02B60 → 687BA0 → 693200 and its matching mask/clearer are
+recorded in lot 3; the runtime adapter checks the qualified exact-version helper.
 The supplied `01200041 / 00001008` decodes to life=9, knock=0, attack=0,
 fly=0, weapon=0, recoil=0, stagger=false, sprint=false, swim=false.
 Its only former veto was the life field; moving-back/walking, head tracking and

@@ -11,6 +11,8 @@ namespace STRE::Runtime
 // IDs and proof obligations: docs/development/RUNTIME_1_7_NATIVE_CONTRACTS.md.
 // ExactSource means the cited exact-target implementation covers the access.
 // Partial source evidence is Missing when the remaining obligation needs RE.
+// ExactBinary receipts: docs/audit/2026-10-20-runtime-1.7.104-lot3.md.
+// Engine acceptance, including deferred retirement, remains untested.
 enum class NativeContract : std::size_t
 {
     Loader, TargetImage, SkseBinary, RttiRegistration, UpstreamHooks, PapyrusVm,
@@ -43,8 +45,8 @@ struct NativeContractRequirement
 
 inline constexpr std::array NativeContracts{
     NativeContractRequirement{NativeContract::Loader, "B01-loader", NativeScope::Bootstrap, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
-    NativeContractRequirement{NativeContract::TargetImage, "B02-target-image", NativeScope::Bootstrap, NativeEvidence::ExactBinary, NativeEvidence::Missing},
-    NativeContractRequirement{NativeContract::SkseBinary, "B03-skse-binary", NativeScope::Bootstrap, NativeEvidence::ExactBinary, NativeEvidence::Missing},
+    NativeContractRequirement{NativeContract::TargetImage, "B02-target-image", NativeScope::Bootstrap, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
+    NativeContractRequirement{NativeContract::SkseBinary, "B03-skse-binary", NativeScope::Bootstrap, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::RttiRegistration, "B04-rtti-registration", NativeScope::Bootstrap, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::UpstreamHooks, "B05-upstream-hooks", NativeScope::Bootstrap, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::PapyrusVm, "C01-papyrus-vm", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
@@ -52,14 +54,14 @@ inline constexpr std::array NativeContracts{
     NativeContractRequirement{NativeContract::LoadFunction, "C03-load-function", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::SaveProcessBoundary, "C04-save-process", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::SavePath, "C05-save-path", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
-    NativeContractRequirement{NativeContract::SaveSelection, "C06-save-selection", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
-    NativeContractRequirement{NativeContract::ContinueDispatch, "C07-continue-dispatch", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
-    NativeContractRequirement{NativeContract::SaveLoadCallbacks, "C08-save-load-callbacks", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
-    NativeContractRequirement{NativeContract::PauseMenu, "C09-pause-menu", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
+    NativeContractRequirement{NativeContract::SaveSelection, "C06-save-selection", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
+    NativeContractRequirement{NativeContract::ContinueDispatch, "C07-continue-dispatch", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
+    NativeContractRequirement{NativeContract::SaveLoadCallbacks, "C08-save-load-callbacks", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
+    NativeContractRequirement{NativeContract::PauseMenu, "C09-pause-menu", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::ResetMain, "C10-reset-main", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::CreationConsole, "C11-creation-console", NativeScope::Campaign, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
-    NativeContractRequirement{NativeContract::FinalAppearance, "C12-final-appearance", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
-    NativeContractRequirement{NativeContract::LocalSeating, "C13-local-seating", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::Missing},
+    NativeContractRequirement{NativeContract::FinalAppearance, "C12-final-appearance", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
+    NativeContractRequirement{NativeContract::LocalSeating, "C13-local-seating", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::GrabRelease, "O01-grab-release", NativeScope::Optional, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
     NativeContractRequirement{NativeContract::MenuPresentation, "O02-menu-presentation", NativeScope::Optional, NativeEvidence::ExactBinary, NativeEvidence::Missing},
     NativeContractRequirement{NativeContract::DialogueProgress, "O03-dialogue-progress", NativeScope::Optional, NativeEvidence::ExactBinary, NativeEvidence::Missing},
@@ -85,7 +87,8 @@ constexpr bool NativeAdmissionReady(std::span<const NativeContractRequirement> a
 constexpr bool SupportsQualifiedNativeAccess(std::string_view aVersion, NativeContract aContract)
 {
     // Narrow wrappers only. Never use this to admit the entire executable.
-    if (aContract != NativeContract::ResetMain && aContract != NativeContract::GrabRelease)
+    if (aContract != NativeContract::ResetMain && aContract != NativeContract::GrabRelease &&
+        aContract != NativeContract::FinalAppearance && aContract != NativeContract::LocalSeating)
         return false;
     return aVersion == "1.6.1170.0" ||
            (aVersion == "1.7.104.0" && NativeContracts[static_cast<std::size_t>(aContract)].Qualified());

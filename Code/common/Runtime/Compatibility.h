@@ -20,10 +20,10 @@ inline constexpr bool Supports(std::string_view aVersion, Distribution aDistribu
 }
 
 // No runtime/INI override. Every mandatory obligation must be qualified.
-// The current evidence table deliberately keeps this false.
+// Static qualification only: engine acceptance requires a separate smoke.
 inline constexpr bool CampaignAbiVerified = NativeAdmissionReady(NativeContracts);
 inline constexpr std::string_view CampaignAbiUnavailable =
     "STRE 1.7.104 experimental port: native admission is incomplete "
-    "(target binaries, save selection/Continue callbacks, pause menu, final appearance and seating). "
+    "(one or more mandatory contracts lack their required evidence). "
     "Game startup is unavailable. See issue #99 and RUNTIME_1_7_NATIVE_CONTRACTS.md.";
 } // namespace STRE::Runtime

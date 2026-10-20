@@ -5,7 +5,8 @@ This is the build and future environment procedure for
 [STATUS](../project/STATUS.md) owns executed results and the
 [compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) owns support claims.
 The dated [lot-1 audit](../audit/2026-10-20-runtime-1.7.104.md) and
-[lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md) record provenance.
+[lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md) record provenance;
+the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md) adds exact binary qualification.
 The [native contract register](RUNTIME_1_7_NATIVE_CONTRACTS.md) owns the finite
 admission conditions and supersedes the original broad blocker classification.
 
@@ -37,6 +38,12 @@ replace a required target-binary proof. The contract register distinguishes
 inherited hooks, STRE additions, optional features and diagnostics. No fake success, partial campaign
 activation, server authority change or partial-roster continuation is permitted.
 Optional presentation may retain vanilla fallback once gameplay is admissible.
+
+Lot 3 closes all 18 static prerequisites on the exact inspected bytes, so this
+derived gate is now open. Runtime acceptance is still absent. The gate is not
+a per-launch SHA-256 allowlist: compare the EXE/SKSE/AL to the lot-3 receipt
+before preparing a smoke, and requalify any difference. Passing version checks
+alone does not extend this binary evidence to patched or different images.
 
 Address Library parsing bounds the file at 32 MiB and the table at 1,048,576
 slots/records, checks module/version/pointer width, all reads, compression
@@ -74,7 +81,8 @@ When retaining an earlier candidate, choose a new ordinary output directory
 with `xmake config -P . -m debug -y -o <new-absolute-build-directory>`.
 Generated BuildInfo/BranchInfo include paths honor that selection. Inspect it
 before building, retain new logs/manifest, and never overwrite earlier receipts
-or reuse their binary hashes. Lot 2 uses `_audit/rt17-lot2/build`.
+or reuse their binary hashes. Lot 2 uses `_audit/rt17-lot2/build`;
+lot 3 uses `_audit/rt17-lot3/build`.
 
 `SkyrimTogetherClient` alone is a static library. The actual client executable is
 `SkyrimTogether.exe` from `SkyrimImmersiveLauncher`, with `EarlyLoad.dll` and
@@ -104,6 +112,9 @@ Unchanged historical `GIT_TAG` alone is not candidate identity.
 
 The following preparation and game runs require a later authorization. A Git
 branch or Vortex profile is not evidence of filesystem isolation.
+The maintainer has already deliberately updated the installed Steam game and
+activated SKSE. Preserve that state; it does not itself isolate saves, plugins,
+server state or test outputs.
 
 1. Provision a complete, legitimately obtained Steam **1.7.104.0** installation
    with matching data/masters in a separate environment. Prefer a dedicated
@@ -149,3 +160,22 @@ Use the feature-owned protocols for the later human lot:
 and [World Sync](../features/world-sync/TEST_PLAN.md#steam-171040-experimental-lot).
 Do not run those gameplay scenarios while the native-capability gate rejects
 startup. Record blocked, failed, not run and human PASS separately.
+
+For the first authorized lot, advance one stage at a time:
+
+1. Record exact candidate/source and EXE/SKSE/AL/plugin hashes, then test
+   startup ordering and plugin initialization without loading an existing save.
+2. On fresh isolated saves, compare ordinary manual load, quick load and
+   Continue. Deliberately make the remembered target differ from the first
+   native-list entry; record the copied canonical identity and actual loaded save.
+3. Run new solo and two-player creation in both completion orders, capturing
+   final actor/base identities, retirement/destructor observations, private-base
+   lifetime and local/remote seating. A delete request is not retirement PASS.
+4. Exercise Valen, required-plugin/Better Grabbing behavior and pause/input/
+   CEF/network coexistence; preserve vanilla fallback for disabled presentation.
+5. Commit a new full-roster checkpoint, disconnect/restart, then collectively
+   recover each player's own native save plus shared server state.
+
+Stop on a wrong save target, native exception, stale/reused binding, duplicate
+retirement, lost guard menu or incomplete roster. None of these stages was run
+by lot 3; no deployment or launch follows automatically from static admission.

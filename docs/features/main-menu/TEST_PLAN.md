@@ -158,16 +158,18 @@ enter the package. No deployment or in-game PASS may be inferred from a build.
 
 These are **future manual checks**, not new PASS evidence. Follow the isolated
 [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
-The partial candidate explicitly refuses game startup while campaign ABI is
-unverified; do not bypass that source gate to run the remaining scenarios.
+Lot 3 satisfies the static campaign ABI gate. These scenarios still require
+explicit maintainer authorization and isolated deployment; never bypass a
+subsequently missing prerequisite.
 
 1. In a separately authorized environment, record the exact EXE, SKSE, Address
    Library, native plugin and client/server hashes. Verify distinct early
    diagnostics for 1.6.1170, 1.7.99, another 1.7 patch, GOG/unknown distribution,
    missing/truncated/wrong-version Address Library and absent/wrong SKSE.
-   The currently expected result with all dependencies present is explicit
-   **STRE native capability unavailable**, before game mapping or hooks.
-2. Only after the required ABI evidence and a reviewed follow-up candidate:
+   With the exact lot-3 dependencies and all 18 static contracts satisfied,
+   admission may proceed; removing required evidence must still reject before
+   game mapping or hooks.
+2. Only with the reviewed, explicitly authorized candidate:
    verify startup ordering and SKSE plugin initialization independently of DLL
    load; reject missing required plugins without weakening admission policy.
 3. Run the existing intro/menu/skip scenarios with separately permitted media,

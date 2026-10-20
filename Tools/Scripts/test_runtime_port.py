@@ -63,6 +63,26 @@ class RuntimePortBootstrap(unittest.TestCase):
         grab = grab[grab.index("bool PlayerCharacter::TryEndGrabObject()"):]
         self.assertLess(grab.index("SupportsQualifiedNativeAccess"), grab.index("VersionDbPtr"))
         self.assertIn("NativeContract::GrabRelease", grab)
+        appearance = read("Code/client/Services/Generic/RemoteRespawnLab.cpp")
+        appearance = appearance[appearance.index("FinalRespawnAdmissionDecision Capture("):]
+        self.assertLess(appearance.index("SupportsQualifiedNativeAccess"), appearance.index("auto observed = ObserveBinding"))
+        self.assertIn("NativeContract::FinalAppearance", appearance)
+        seating = read("Code/client/Services/Generic/CreationSeating.cpp")
+        self.assertIn("NativeContract::LocalSeating", seating)
+
+    def test_save_selection_reads_are_protected_and_copied_before_forwarding(self):
+        source = read("Code/client/Games/Skyrim/CampaignSaveLoadGate.cpp")
+        probe = source[source.index("MostRecentPointerProbe ProbeMostRecentTargetPointer("):
+                       source.index("NativeTargetObservation ObserveMostRecentTarget(")]
+        self.assertIn("__try", probe)
+        self.assertIn("__except (EXCEPTION_EXECUTE_HANDLER)", probe)
+        self.assertIn("STRE::Runtime::MostRecentSaveName(", probe)
+        self.assertNotIn("ppEntries[0]", probe)
+        # Admission must still use a bounded copied observation, not persist
+        # the native BSString pointer across the engine call.
+        self.assertIn("strnlen_s(", source)
+        self.assertIn("kMaximumObservedSaveName", source)
+        self.assertIn("observation.Target.assign(apTarget, probe.Length)", source)
 
     def test_missing_rtti_remain_lazy_and_have_no_new_native_consumers(self):
         # A new consumer must reopen B04; inherited base declarations alone do

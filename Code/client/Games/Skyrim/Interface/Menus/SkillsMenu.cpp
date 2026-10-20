@@ -17,6 +17,6 @@ static TiltedPhoques::Initializer s_skillsMenuInit(
 
         // Fix for controls not working
         VersionDbPtr<uint8_t> controlPatch(52518);
-        TiltedPhoques::Nop(controlPatch.Get() + 0x46, 4);
-        TiltedPhoques::Nop(controlPatch.Get() + 0x4A, 2);
+        // One complete near JNE on both qualified flat AE runtimes.
+        TiltedPhoques::Nop(controlPatch.Get() + 0x46, 6);
     });

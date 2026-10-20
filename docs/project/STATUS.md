@@ -9,76 +9,53 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Guarded native Steam 1.7.104 partial port (2026-10-20, Refs #99)
+## Steam 1.7.104 static native qualification (2026-10-20, Refs #99)
 
-The experimental branch `feat/skyrim-1.7-runtime` remains a **compiled,
-non-playable partial port**. Lot 2 source commit
-`faed1a01e5390ac6e5ddfd4735073cd1653d1123` continues all three lot-1 commits
-without merge/rebase. `CampaignAbiVerified` is now derived from a finite
-[22-contract evidence register](../development/RUNTIME_1_7_NATIVE_CONTRACTS.md)
-and remains **false**, before image mapping, initializers and engine entry.
-This is not an in-game compatibility claim or a stable/CK runtime migration.
+Lot3 continues `feat/skyrim-1.7-runtime` from
+`90da92ccdb097d2520b86631ce42e0e56fc455d6`, retaining all five earlier local
+commits and their artifacts. The maintainer deliberately updated Steam and
+activated SKSE before this lot. Independently copied Skyrim1.7.104.0,
+SKSE0.2.3.1 and matching AL104 were inspected without executing the game.
+Exact paths/hashes, native instructions, ownership boundaries and divergences
+are recorded in the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md).
 
-Lot 2 qualifies ten mandatory contracts from exact upstream/SKSE/CommonLib
-sources. Save/Load/ProcessEvents signatures have independent SKSE RVA matches;
-save-path slot2, VM/Script layouts and Main reset fields are source-backed.
-The three missing RTTI IDs (392519 NiObjectNET, 394235 CreationClubMenu,
-398437 NiParticleSystem) have no production consumer and no pre-main database
-resolution. An isolated probe of the actual registry/VersionDb confirms lazy
-null results; no registrations were removed or substitute IDs invented.
-The 45 initializers are classified separately from optional/diagnostic paths.
+The [finite register](../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) now has
+**18/18 mandatory static qualifications**: ten ExactSource from lot2 and eight
+ExactBinary (B02/B03/C06/C07/C08/C09/C12/C13). Consequently the unchanged
+`NativeAdmissionReady(NativeContracts)` expression evaluates true. This prepares
+an experimental candidate for a separately authorized smoke; **no1.7 engine
+validation or global compatibility claim exists**. The version/store/AL/SKSE
+preflight and missing-evidence fail-closed policy remain in place.
 
-Implemented narrow adaptations: `RequestSkyrimMainMenu` and
-`TryEndGrabObject` accept exact 1.7.104 as well as their 1.6.1170 reference
-using demonstrated source contracts. Optional menu/dialogue presentation,
-appearance probes, camera logging and the unqualified seating/rematerialization
-guards remain closed on 1.7. The eight mandatory outstanding obligations are
-**B02 target EXE, B03 SKSE binary, C06 save selection, C07 Continue dispatch,
-C08 save/load callbacks, C09 native pause/menu map, C12 final rematerialization,
-C13 local seating**. Unknown is not equivalent to confirmed incompatibility.
-No protocol/schema, server authority, sealed-roster, per-player save, Valen,
-seating or collective recovery business behavior changed (ADR-0018).
+Implemented: most-recent selection now reads native remembered filename240/
+length248 rather than list[0]; shared bounded manual index mapping and regression
+tests; trace names reflect that BSString; MenuControls byte83 is correctly named
+inputProcessingBlocked without changing toggle values; SkillsMenu's four-plus-two
+NOP writes become one complete six-byte instruction. Production FinalAppearance
+and LocalSeating guards admit the exact qualified1.7.104 target. Life9, native
+ownership/retirement boundaries and furniture events were inspected; real
+destruction/private-base reclamation, visual appearance and controls are still
+unvalidated. O02/O03/D01 retain their guarded fallback/disabled behavior.
 
-Executed lot-2 Windows x64 Debug evidence (VS2022 BuildTools/MSVC14.44.35207,
-SDK10.0.26100.0, xmake3.0.9+HEAD.2b184e178):
+The three dormant RTTI conclusions and 45-initializer lot2 inventory stand.
+No ADR-0018 authority, sealed roster, per-player native save, collective recovery,
+Valen/content, Better Grabbing admission or network/schema rule changed.
 
-- Targeted TPTests: **9 cases / 3,390 assertions PASS**; full TPTests:
-  **456 cases / 49,256 assertions PASS**.
-- Python discovery: **233 tests PASS**. The new RTTI consumer regression
-  preserves dormant registrations and catches newly introduced consumers.
-- Actual client/launcher, EarlyLoad, UI process, server DLL/launcher and TPTests
-  linked successfully. Angular built; 51 UI files retained identical bytes.
-- Client EXE and server DLL both embed
-  `runtime17-faed1a01e5390ac6e5ddfd4735073cd1653d1123`; new hashes/paths are in
-  `_audit/rt17-lot2/candidate-manifest.json` and `BINARIES.md`. Build output is
-  a new sibling directory; generated-header paths honor xmake's builddir.
-- **4,517 protected file records unchanged**, baseline taken before any lot-2
-  preparation/build. This includes lot-1 receipts/logs/binaries/UI and the
-  bounded stable-content/install/profile/state/Steam-management inventory.
-  Primary HEAD, main and primary pre-existing dirty STATUS bytes are preserved.
-  Coverage is explicit local paths, not an exhaustive personal or remote scan.
+Lot3 automated/build verification is being recorded in the independent
+`_audit/rt17-lot3` receipts; historical counts below are not new PASS results.
+Final source identity, executed counts, artifact hashes and protected-file
+comparison will be added after compilation.
 
-The bounded target search found only 1.6.1170 EXEs (installed and Steam cache)
-and SKSE2.2.6 binaries. Exact AL104 and pinned SKSE2.3.1/CommonLib13.1.0
-sources are available in the independent evidence directory. Missing:
-legitimate Steam `SkyrimSE.exe` **1.7.104.0** and official
-`skse64_1_7_104.dll` **0.2.3.1**. The
-[lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md) records provenance,
-partial proof boundaries, commands/exits, and an exact human acquisition
-procedure with a separate destination and mandatory file-version validation.
+Historical evidence remains unchanged: lot2 source
+`faed1a01e5390ac6e5ddfd4735073cd1653d1123`, receipt90da92cc,456 C++ cases /
+49,256 assertions and233 Python tests; lot1 sourcecf207f69/97779fbf,
+receipt824ddd37,454 C++ cases /49,109 assertions and232 Python tests.
+Their binaries retain their own source identities and manifests.
 
-Historical lot-1 source commits remain `cf207f6900d71b53478bc8a176c49ab97327e3b4`
-and `97779fbfa67884858b46d299fd2d726148b6f942`, receipt commit
-`824ddd37b7991fc04353dda714d390af599e07e2`. Its binaries still embed
-`runtime17-97779fbfa67884858b46d299fd2d726148b6f942`; its original receipts,
-454-case/49,109-assertion and 232-Python-test evidence remain unchanged under
-`_audit/rt17` and in the [lot-1 audit](../audit/2026-10-20-runtime-1.7.104.md).
-The lot-2 register supersedes the earlier broad blocker classification.
-
-No deployment, installation update, downloaded-binary execution, Skyrim/server/
-CK/xEdit launch, manual CI, push, PR, merge or release occurred. No runtime
-smoke was performed. Follow the [experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md)
-and feature test plans only in a later authorized environment; the
+No deployment, installed Steam/Vortex mutation, Skyrim/server/CK/xEdit launch,
+manual CI, push, PR, merge or release occurred in this lot. No content/save/
+database migration was performed. Follow the [experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md)
+and feature plans only after explicit maintainer authorization; the
 [compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) retains stable support.
 
 ## Local Character Creation seating termination correction (2026-10-18, Refs #91)

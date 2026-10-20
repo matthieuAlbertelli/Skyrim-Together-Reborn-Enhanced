@@ -2128,9 +2128,9 @@ neither automated checks nor the later roster-2 partial acceptance validates Sol
 
 This protocol is **prepared, not executed**. Use a new campaign and isolated
 profiles/state from the [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
-The current source gate blocks game entry; every scenario below remains blocked
-until native creation, save/load and recovery prerequisites are proved and a
-follow-up candidate is explicitly authorized for in-game testing.
+Lot 3 satisfies the static native prerequisites. Every scenario below remains
+unexecuted until the candidate and isolated environment are explicitly authorized
+for in-game testing. Static admission does not establish gameplay acceptance.
 
 1. Run a fresh Solo campaign, then a fresh two-player roster with P1 finishing
    creation first, then another with P2 first. Record both observers throughout

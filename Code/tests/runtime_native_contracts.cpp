@@ -5,7 +5,8 @@ using namespace STRE::Runtime;
 
 TEST_CASE("Native admission requires the complete evidence set, not relocation presence", "[runtime-port][native-contracts]")
 {
-    REQUIRE_FALSE(CampaignAbiVerified);
+    REQUIRE(CampaignAbiVerified);
+    REQUIRE(CampaignAbiVerified == NativeAdmissionReady(NativeContracts));
     REQUIRE_FALSE(NativeAdmissionReady({}));
 
     // Synthetic evidence exercises policy only. It is never supplied to startup.
@@ -47,11 +48,15 @@ TEST_CASE("Qualified native wrappers remain exact and cannot open other paths", 
     {
         REQUIRE(SupportsQualifiedNativeAccess(version, NativeContract::ResetMain));
         REQUIRE(SupportsQualifiedNativeAccess(version, NativeContract::GrabRelease));
+        REQUIRE(SupportsQualifiedNativeAccess(version, NativeContract::FinalAppearance));
+        REQUIRE(SupportsQualifiedNativeAccess(version, NativeContract::LocalSeating));
         for (const auto& contract : NativeContracts)
-            if (contract.Id != NativeContract::ResetMain && contract.Id != NativeContract::GrabRelease)
+            if (contract.Id != NativeContract::ResetMain && contract.Id != NativeContract::GrabRelease &&
+                contract.Id != NativeContract::FinalAppearance && contract.Id != NativeContract::LocalSeating)
                 REQUIRE_FALSE(SupportsQualifiedNativeAccess(version, contract.Id));
     }
     for (const auto version : {"", "1.6.1179.0", "1.7.99.0", "1.7.104", "1.7.104.1", "1.7.105.0", "1.7.104.0-gog"})
-        for (const auto contract : {NativeContract::ResetMain, NativeContract::GrabRelease, NativeContract::Count})
+        for (const auto contract : {NativeContract::ResetMain, NativeContract::GrabRelease,
+                                   NativeContract::FinalAppearance, NativeContract::LocalSeating, NativeContract::Count})
             REQUIRE_FALSE(SupportsQualifiedNativeAccess(version, contract));
 }
