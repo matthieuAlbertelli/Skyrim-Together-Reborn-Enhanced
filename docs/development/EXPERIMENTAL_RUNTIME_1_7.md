@@ -4,8 +4,10 @@ This is the build and future environment procedure for
 [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
 [STATUS](../project/STATUS.md) owns executed results and the
 [compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) owns support claims.
-The dated [native audit](../audit/2026-10-20-runtime-1.7.104.md) records provenance
-and unresolved ABI evidence.
+The dated [lot-1 audit](../audit/2026-10-20-runtime-1.7.104.md) and
+[lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md) record provenance.
+The [native contract register](RUNTIME_1_7_NATIVE_CONTRACTS.md) owns the finite
+admission conditions and supersedes the original broad blocker classification.
 
 ## Scope and fail-closed boundary
 
@@ -28,11 +30,11 @@ diagnostics. PE/store inspection requires a Steam API import and a `.bind` entry
 section; GOG/EOS evidence or an unknown executable fails closed. This conservative
 identification is not a cryptographic executable attestation.
 
-`CampaignAbiVerified` is an explicit source gate without an INI/debug override.
-It must stay false until native campaign prerequisites are evidenced on the
-exact target. Removing it requires resolving the audit's campaign save/load,
-creation, recovery and dependent native-layout findings and checking every
-required initializer relocation/signature. No fake success, partial campaign
+`CampaignAbiVerified` is derived from the complete native contract table without
+an INI/debug override. It stays false while any mandatory condition lacks its
+required source/binary evidence. Partial source evidence or an AL entry cannot
+replace a required target-binary proof. The contract register distinguishes
+inherited hooks, STRE additions, optional features and diagnostics. No fake success, partial campaign
 activation, server authority change or partial-roster continuation is permitted.
 Optional presentation may retain vanilla fallback once gameplay is admissible.
 
@@ -68,6 +70,12 @@ xmake build -P . -y -j 2 TPProcess
 git diff --check
 ```
 
+When retaining an earlier candidate, choose a new ordinary output directory
+with `xmake config -P . -m debug -y -o <new-absolute-build-directory>`.
+Generated BuildInfo/BranchInfo include paths honor that selection. Inspect it
+before building, retain new logs/manifest, and never overwrite earlier receipts
+or reuse their binary hashes. Lot 2 uses `_audit/rt17-lot2/build`.
+
 `SkyrimTogetherClient` alone is a static library. The actual client executable is
 `SkyrimTogether.exe` from `SkyrimImmersiveLauncher`, with `EarlyLoad.dll` and
 `TPProcess.exe`; server outputs are `STServer.dll` and `SkyrimTogetherServer.exe`.
@@ -86,7 +94,8 @@ embeds `runtime17-` plus the full Git commit; client and server still require
 exact equality. CommonLib enables `build.always_update_configfiles`: Git HEAD
 is not a normal template dependency, and ordinary reconfiguration alone can
 otherwise retain an old SHA. Verify generated `build/BuildInfo.h` against
-`git rev-parse HEAD` before retaining binaries. A later documentation-only commit does not retroactively
+`git rev-parse HEAD` before retaining binaries (use the selected builddir's
+`BuildInfo.h` with `-o`). A later documentation-only commit does not retroactively
 rename the compiled source commit. Record both commits, mode/toolchain,
 commands/exits, UI output and binary SHA-256 in ignored audit receipts.
 Unchanged historical `GIT_TAG` alone is not candidate identity.
