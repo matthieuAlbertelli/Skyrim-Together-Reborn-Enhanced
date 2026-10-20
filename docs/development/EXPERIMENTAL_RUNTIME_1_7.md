@@ -83,8 +83,10 @@ the current build reference. This is dependency installation inside the worktree
 
 Commit the reviewed source before final configuration/build. `BUILD_COMMIT`
 embeds `runtime17-` plus the full Git commit; client and server still require
-exact equality. Reconfigure after committing and verify generated
-`build/BuildInfo.h`. A later documentation-only commit does not retroactively
+exact equality. CommonLib enables `build.always_update_configfiles`: Git HEAD
+is not a normal template dependency, and ordinary reconfiguration alone can
+otherwise retain an old SHA. Verify generated `build/BuildInfo.h` against
+`git rev-parse HEAD` before retaining binaries. A later documentation-only commit does not retroactively
 rename the compiled source commit. Record both commits, mode/toolchain,
 commands/exits, UI output and binary SHA-256 in ignored audit receipts.
 Unchanged historical `GIT_TAG` alone is not candidate identity.

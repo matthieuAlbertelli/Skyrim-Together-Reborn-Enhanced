@@ -47,6 +47,7 @@ class RuntimePortBootstrap(unittest.TestCase):
 
     def test_client_server_keep_the_same_exact_source_build_identity(self):
         self.assertIn('${GIT_COMMIT_LONG}', read("Code/common/BuildInfo.h.in"))
+        self.assertIn('set_policy("build.always_update_configfiles", true)', read("Code/common/xmake.lua"))
         self.assertIn("request.Version = BUILD_COMMIT", read("Code/client/Services/Generic/TransportService.cpp"))
         self.assertIn("acRequest->Version != BUILD_COMMIT", read("Code/server/GameServer.cpp"))
 
