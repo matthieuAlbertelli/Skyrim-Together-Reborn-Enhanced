@@ -1,6 +1,6 @@
-# Native Steam 1.7.104 experiment
+# Steam 1.7.104 migration and local DEV procedure
 
-This is the build and future environment procedure for
+This is the current native build/deployment procedure for
 [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
 [STATUS](../project/STATUS.md) owns executed results and the
 [compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) owns support claims.
@@ -14,9 +14,10 @@ admission conditions and supersedes the original broad blocker classification.
 
 `feat/skyrim-1.7-runtime` targets **Steam 1.7.104.0 only**. A format-2 Address
 Library reader is retained for parser coverage, not dual-runtime admission.
-The maintainer's native experiment does not change
-[AGENTS.md](../../AGENTS.md), the [CK runbook](MODDING_TOOLCHAIN.md), or their
-1.6.1170 content-authoring restrictions.
+The maintainer selected 1.7.104.0 as the sole future development target;
+1.6 support is no longer maintained. [AGENTS.md](../../AGENTS.md) and the
+[CK runbook](MODDING_TOOLCHAIN.md) require 1.7 tool requalification before authoring.
+Existing ABI guards and historical release evidence are not widened/relabelled.
 
 The bootstrap contract is: exact executable version -> bounded PE/store
 inspection -> Address Library -> exact SKSE dependency -> required STRE native
@@ -89,8 +90,9 @@ lot 3 uses `_audit/rt17-lot3/build`.
 `TPProcess.exe`; server outputs are `STServer.dll` and `SkyrimTogetherServer.exe`.
 The client build's `deploy:production` npm script only runs Angular `ng build`
 into the checkout's `Code/skyrim_ui/dist`. It does not deploy to a game.
-The xmake `after_install` callback copies runtime dependencies/UI; do not invoke
-it in this mission. Never invoke `build-and-deploy-dev.ps1`.
+The xmake `after_install` callback copies runtime dependencies/UI into the
+explicit distribution directory. The ordinary `build-and-deploy-dev.ps1` entry
+is retained with an explicit local-only worktree route, described below.
 
 The tracked UI lockfile has version 6. With an incompatible pnpm default, use
 `corepack pnpm@8.15.9 install --frozen-lockfile` inside `Code/skyrim_ui`, with
@@ -108,65 +110,50 @@ rename the compiled source commit. Record both commits, mode/toolchain,
 commands/exits, UI output and binary SHA-256 in ignored audit receipts.
 Unchanged historical `GIT_TAG` alone is not candidate identity.
 
-## Isolated environment and scoped runtime authorization
+## Authorized environment and local DEV routing
 
-Lot 4 authorizes isolated preparation and the first **main-PC main-menu-only**
-smoke. It does not authorize the server, a second PC, new game, save load,
-campaign, creation, appearance or checkpoint scenarios below. General launch
-permission need not be requested again. Executed evidence and any stop reason
-belong in [STATUS](../project/STATUS.md).
+The resumed lot 4 authorizes the normal Windows account, current Steam 1.7.104
+installation, Vortex staging/configuration and normal Documents/AppData/HKCU
+writes. No second account, parallel Steam installation or full game copy is
+required. The earlier lot-4 isolation stop is historical and superseded by this
+authorization. Only the main-PC main menu is in scope; no server, gameplay,
+campaign load, Pc-vero, push, PR, manual CI, merge or release.
 
-A Git branch or Vortex profile is not evidence of filesystem isolation.
-The existing `--exePath` option writes the normal per-user launcher registry
-selection; `InstallPathRouting` only changes CWD/DLL search/PATH. SKSE known-folder
-logs/dumps, Skyrim INIs/saves, local AppData plugin order, STRE identity and CEF
-child/temp paths need independent isolation. Environment-variable overrides
-alone are insufficient. Do not launch with shared writable paths or change
-current-user Known Folders/HKCU to manufacture a pass. Account/credentials setup
-needs maintainer intervention; shared-environment changes need a precise
-separate authorization. Stop before launch when these boundaries cannot be proved.
-The maintainer has already deliberately updated the installed Steam game and
-activated SKSE. Preserve that state; it does not itself isolate saves, plugins,
-server state or test outputs.
+Inspect the actual local DEV script and every called script before running it.
+The historical script has a hardcoded primary checkout, CK auto-import and
+remote deployment. A native-only local wrapper must select the experimental
+worktree, pass `-P .` to every xmake command and never enter that remote/import
+path. Local ignored scripts are not versioned project changes.
 
-1. Provision a complete, legitimately obtained Steam **1.7.104.0** installation
-   with matching data/masters in a separate environment. Prefer a dedicated
-   Windows user or test machine with its own Documents and AppData. Do not copy
-   only a newer EXE into 1.6 data, update the stable Steam installation to obtain
-   files, or hardlink the experiment to stable files.
-2. Inventory EXE/data identity, Steam app/depot identity, root proxy DLLs, SKSE
-   and every native plugin. Resolve symlinks/junctions and inspect hardlink
-   counts for the install, staging and profile paths. Reject any link back to
-   stable game, Vortex, distribution or Pc-vero destinations.
-3. Install the official [SKSE64 2.3.1](https://skse.silverlock.org/) dependency
-   matching 1.7.104 (DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`) and
-   [Address Library v13](https://www.nexusmods.com/skyrimspecialedition/mods/32444?tab=files)
-   with `versionlib-1-7-104-0.bin`. Verify files, not just archive names.
-   [Better Grabbing 2.0](https://www.nexusmods.com/skyrimspecialedition/mods/134769?tab=description)
-   advertises Skyrim 1.7 support; this is a candidate for World Sync validation,
-   not proof of STRE interoperability. Preserve its required-plugin policy.
-4. Use the normal required STRE content and separately owned resources, copied
-   without authoring/conversion. Do not migrate ESP/PSC/PEX/voices/catalogues or
-   run CK/AutoMod. Optional SkyUI, CCExtender, proxy loaders, and other native
-   mods need their own exact-target evidence; do not infer it from SKSE loading.
-   Begin with the smallest coherent dependency set and the vanilla Journal.
-5. Resolve `Documents/My Games/Skyrim Special Edition`, INI `sLocalSavePath`,
-   SKSE logs/co-saves, `%LOCALAPPDATA%/Skyrim Special Edition` plugin/load-order
-   files, launcher-selected EXE paths, CEF data/cache, and each process's working
-   directory. Separate all of them from the stable user profile. Preserve the
-   full isolated save profile, including per-player STRE bindings/sidecars.
-6. Give the test server its own working directory, configuration, port and
-   `state/stre-server.sqlite3`; verify any `StatePath` setting. Never point it at
-   an existing database. Keep client and server source build identities equal.
-7. Stage only in a new explicitly named experiment directory after reviewing
-   every copy's resolved source/destination and lack of links. The ordinary local
-   build/deploy script references the primary checkout, installed Data, local
-   Vortex staging and `\\Pc-vero\STRE-Dev-Initial`; it is unsuitable here.
-8. Only in a later, separately authorized gameplay lot, start a **new** solo
-   save and a **new** fixed-roster test campaign. Resuming
-   1.6 saves/campaigns is a separate migration subject with no guarantee.
-   Preserve ADR-0018 throughout: full sealed roster, persistent server authority,
-   recovery lock, one committed checkpoint, each player's own `.ess + .skse`.
+The resumed local entry uses explicit `Runtime17RepositoryRoot`,
+`Runtime17ReceiptRoot`, `Runtime17ExpectedCommit` and `Runtime17Phase`
+(`Build` then `Deploy`) parameters. It compiles/installs to a fresh receipt
+directory, verifies the branch/commit and embedded client/server identity, and
+copies only its new native/UI/dependency payload to the usual STRE Vortex
+staging. It backs up old runtime files and unlinks destination hardlinks before
+copying new bytes. It preserves content, saves, logs/cache and server state/config.
+The exact local wrapper and script diff are retained with the dated receipt;
+they must be reviewed again if the local workflow changes.
+
+Before any import/deployment, compare installed CK-owned and tracked content.
+Never auto-import differences. An unsatisfied byte-level CK import/compile gate
+must remain reported as such. A separate native-only build may proceed when
+the existing ESP/PEX/runtime content is verified and all content is preserved;
+this is not CK authoring validation. Keep backups of divergent authoring files.
+
+Use SKSE 2.3.1 and the exact qualified 1.7.104 Address Library. Inventory native
+plugins and root proxies. Disable the inspected incompatible Better Grabbing
+1.17, CCExtender and CKPE winhttp proxy through Vortex for the first menu test.
+Better Grabbing 2.0 remains a later World Sync candidate; do not weaken the
+server's required-plugin policy. Do not edit hardlinked plugin bytes in place.
+
+After Vortex deploys the staged candidate, verify every payload hash at the
+actual `Data/SkyrimTogetherReborn` destination, plus runtime/SKSE/AL and absence
+of incompatible DLLs. Launch the official `SkyrimTogether.exe`, observe logs,
+menu entries and keyboard/mouse navigation, and quit normally. Do not select
+New/Load/Continue. Diagnose a startup failure before a focused correction and
+retest; stop on memory-corruption symptoms, wrong destination or uncontrolled
+writes. Ask only for required human observations if GUI access is unavailable.
 
 Use the feature-owned protocols for the later human lot:
 [startup/menu](../features/main-menu/TEST_PLAN.md#steam-171040-experimental-lot),

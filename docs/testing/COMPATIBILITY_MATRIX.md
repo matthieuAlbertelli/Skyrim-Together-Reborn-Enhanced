@@ -1,19 +1,27 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: October 20, 2026**
+> **Last updated: October 21, 2026**
 
-## Reference platform
+## Current development target
+
+Steam **1.7.104.0 only**, by maintainer decision. No future 1.6 support is
+maintained. The migration branch is separate from main pending validation.
+Target selection is not evidence of gameplay compatibility; [STATUS](../project/STATUS.md)
+owns executed results. All older gameplay observations below are historical
+1.6 evidence unless explicitly dated and identified as 1.7.
+
+## Historical 0.4.0-alpha.1 reference platform
 
 | Component | Observed version/support | State |
 |---|---|---|
-| Skyrim SE/AE runtime | `1.6.1170` Steam | primary development runtime and `0.4.0-alpha.1` public-alpha target |
+| Skyrim SE/AE runtime | `1.6.1170` Steam | historical `0.4.0-alpha.1` target; no longer the development target |
 | Operating system | Windows x64 | playable client/server target; Linux CI builds shared/server code but does not establish Linux client support |
 | Skyrim Together Reborn upstream | historical baseline in `UPSTREAM.md` | fork integrated into STRE |
 | STRE | `0.4.0-alpha.1` | reciprocal final appearance and individual local/remote seating validated for roster 2 in both completion orders; tagged-package clean install pending |
 | Angular | 16.x | in use |
 | xmake | `3.0.9` in CI (`>= 3.0.0` project) | Windows and Linux CI build toolchain |
-| Creation Kit | environment compatible with `1.6.1170` | current ESP/Papyrus authoring and strict manifest target |
+| Creation Kit | environment compatible with `1.6.1170` | historical tool qualification; 1.7 requalification required before authoring |
 | SKSE64 | `2.2.6` for Skyrim `1.6.1170` | alpha installation target |
 | Better Grabbing | `1.17` | external plugin required by default for multiplayer World Sync manipulation |
 | Address Library | all-in-one package containing database `11` for runtime `1.6.1170` | required external dependency; runtime base for STRE/Better Grabbing |
@@ -22,23 +30,25 @@ These are the **`0.4.0-alpha.1` release targets**. Other Skyrim runtimes,
 stores, operating systems, SKSE/Address Library combinations, or dependency
 versions are not part of this release's supported matrix.
 
-## Steam 1.7.104 native experiment
+## Steam 1.7.104 migration
 
-This is separate from the released reference platform above. It is **not a
-playable compatibility claim** and does not inherit historical 1.6 validations.
+This is the sole development target, separate from the historical release above.
+It does not inherit historical 1.6 validations or claim full gameplay compatibility.
 See [STATUS](../project/STATUS.md) for executed evidence and the
-[experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md) for isolation.
+[experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md) for the authorized local DEV procedure.
 
 | Component/domain | Experimental boundary |
 |---|---|
 | Runtime | Exactly Steam `1.7.104.0`; 1.7.99, 1.6, other builds, GOG/EOS/unknown distributions rejected |
-| Bootstrap | All 18 static native prerequisites qualified in lot 3; derived admission open for the exact inspected material; no engine-entry PASS |
-| Experimental deployment | Independent Windows profile/registry, game/Data, plugins, logs/cache and saves are required in addition to static admission; EXE copy or Vortex profile alone is insufficient |
+| Bootstrap | All 18 static native prerequisites qualified in lot 3; derived admission open for the exact inspected material; local DEV vanilla-menu startup PASS2026-10-21 (see STATUS) |
+| Experimental deployment | Normal main-PC Windows/Steam/Vortex environment and ordinary profile writes authorized; verify actual deployed hashes and compatible plugins; no Pc-vero |
 | Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
 | Better Grabbing | 2.0 candidate announced for 1.7; STRE manipulation/interruption validation pending; required native-plugin policy retained |
-| Main menu, appearance, seating, dialogue, save/load/recovery | Mandatory native boundaries statically qualified; optional menu/dialogue presentation and diagnostics remain guarded; no 1.7 in-game PASS |
-| CK/Papyrus/content | Existing 1.6.1170 authoring restrictions preserved; no conversion or content edits |
+| Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
+| STRE intro/custom menu | Disabled by historical1.6 presentation guard; not a1.7 visual PASS |
+| Appearance, seating, dialogue, save/load/recovery | Mandatory native boundaries statically qualified; gameplay unexecuted; optional presentation/diagnostics remain guarded |
+| CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |
 

@@ -1,5 +1,11 @@
 # Main Menu technical design
 
+Steam 1.7.104.0 / SKSE 2.3.1 is the sole future development target. The
+1.6 adapter descriptions and observations below remain historical; optional
+presentation stays disabled on 1.7 until separately qualified. See
+[the native register](../../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) and
+[STATUS](../../project/STATUS.md) for current implementation and executed scope.
+
 > **Status:** feature-local design for [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86).
 > Owner: native client / UI. Actual evidence lives in [STATUS](../../project/STATUS.md).
 

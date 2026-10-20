@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 22 September 2026.
+> **Last updated:** 21 October 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -11,6 +11,15 @@ This document defines **where STRE is going and what a release must prove**. It 
 - [`docs/production/GITHUB_GOVERNANCE.md`](docs/production/GITHUB_GOVERNANCE.md) defines the complete issue, Project, Milestone, PR, tag and release flow.
 
 A release outcome is satisfied only when its user-visible behavior, failure cases and recovery behavior are demonstrable. Historical alpha accomplishments remain recorded in `STATUS.md` and [`CHANGELOG.md`](CHANGELOG.md), rather than copied into live planning lists here.
+
+## Runtime direction
+
+Skyrim Special Edition **Steam 1.7.104.0 is the sole development target**, by
+maintainer decision on 2026-10-20. Future work does not maintain 1.6 compatibility.
+The migration branch remains separate from main until validation. Historical
+1.6 releases and evidence remain historical; they establish no 1.7 acceptance.
+CK/AutoMod must be requalified before authoring on the new target. Runtime,
+content and campaign release gates still require their own executed evidence.
 
 ## STRE v1.0.0 product definition
 

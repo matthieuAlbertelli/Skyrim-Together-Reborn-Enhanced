@@ -30,7 +30,12 @@ validated.
 Follow [the modding runbook](docs/development/MODDING_TOOLCHAIN.md) and use
 `Tools/Scripts/Invoke-StreModding.ps1` for supported AutoMod operations.
 
-- Target Skyrim SE Steam **1.6.1170.0**; no runtime migration or ESL conversion.
+- Target Skyrim SE Steam **1.7.104.0 only** for future development; no parallel
+  1.6 support. Preserve historical release/test evidence as historical.
+- CK/AutoMod authoring must be requalified for 1.7 before plugin/Papyrus writes.
+  The existing 1.6 tool guard is not permission to author on 1.7; do not widen it
+  without tool validation. No ESL conversion. Native build/deployment may proceed
+  separately with read-only content checks and no automatic CK import.
 - Require AutoMod `--json`, parse Boolean `success`, and stop on any failure.
 - Run `--dry-run` before writes when supported; verify unchanged file hashes.
 - Run `papyrus status` before the first Papyrus operation; verify required tools.

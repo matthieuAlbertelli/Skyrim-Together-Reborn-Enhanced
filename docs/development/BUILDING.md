@@ -54,9 +54,12 @@ The generated UI is written under `Code/skyrim_ui/dist`. Local deployment script
 
 ## Tests
 
-The native-only Steam 1.7.104 experiment has a separate
-[build/isolation procedure](EXPERIMENTAL_RUNTIME_1_7.md). It does not authorize
-the CK/AutoMod toolchain or ordinary deployment paths to migrate from 1.6.1170.
+Steam 1.7.104.0 is the sole development target. Follow the
+[local DEV build/deployment procedure](EXPERIMENTAL_RUNTIME_1_7.md): select the
+experimental worktree explicitly, pass `-P .` to xmake, preserve earlier outputs,
+and verify compiled/deployed identities. The current Windows/Steam/Vortex setup
+is authorized for the main-PC menu smoke. CK/AutoMod authoring requires separate
+1.7 requalification; a native build must not silently import changed Data.
 
 For CK/AutoMod authoring, official xEdit validation and the existing local import/
 deployment boundary, follow [the modding toolchain runbook](MODDING_TOOLCHAIN.md).

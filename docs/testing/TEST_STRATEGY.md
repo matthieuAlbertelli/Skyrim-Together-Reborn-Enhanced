@@ -47,12 +47,16 @@ Two automated processes or a harness:
 
 ### In-game tests
 
-- Skyrim 1.6.1170;
+- Steam Skyrim 1.7.104.0 with SKSE 2.3.1 and the exact matching Address Library;
 - CK plugin;
 - UI and preview;
 - targeted magic;
 - save and load;
 - 1 player, then 2 players, then 4 and 10.
+
+Historical 1.6 results remain historical. The first authorized 1.7 gate is
+main-menu-only; gameplay, player-count and campaign scenarios require their own
+later execution. CK/AutoMod authoring requires requalification for 1.7.
 
 ## Trading
 

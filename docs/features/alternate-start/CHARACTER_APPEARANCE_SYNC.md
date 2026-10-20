@@ -1,19 +1,21 @@
 # Character appearance synchronization
 
 Implementation and validation truth is in [STATUS.md](../../project/STATUS.md).
-This contract concerns initial Character Creation on Steam Skyrim 1.6.1170, with
-SKSE64 2.2.6 as the native reference. It does not change classes, loadouts,
+This contract concerns initial Character Creation. Steam Skyrim 1.7.104.0 /
+SKSE64 2.3.1 is the sole development target; the 1.6.1170 / SKSE64 2.2.6
+observations below remain historical native and gameplay evidence. It does not change classes, loadouts,
 camera or campaign recovery authority. ADR-0022 makes entry and final
 rematerialization independent of posture; collective seating is a future phase.
 ADR-0023 makes the official final flow automatic in every build, including MASTER.
 
-The experimental Steam 1.7.104 branch now admits the production final
+The Steam 1.7.104 migration branch now admits the production final
 rematerialization and local seating paths after the exact binary qualification
 in [lot 3](../../audit/2026-10-20-runtime-1.7.104-lot3.md). This extends the native
 adapter guard, not the historical gameplay acceptance below. Life9 remains
 DontMove; identity/weapon/state/recovery fences, deferred retirement and
 local-only furniture activation are unchanged. Private-base reclamation,
-appearance and controls still require the authorized 1.7 smoke. Optional live
+appearance and controls require a later authorized 1.7 gameplay smoke, outside
+the first main-menu-only test. Optional live
 appearance probes retain their 1.6 guards.
 
 ## Creation-cell lifetime and transition regression (2026-10-11)

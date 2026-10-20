@@ -6,8 +6,9 @@ This document owns the finite native proof obligations used by
 [#99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99)
 owns operational follow-up. The [lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md)
 records source evidence; the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md)
-records exact target binaries, disassembly, adaptations and runtime limits. Nothing here changes the stable
-1.6.1170 support claim or [ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md).
+records exact target binaries, disassembly, adaptations and runtime limits.
+Steam 1.7.104.0 is now the sole future development target. Historical 1.6 release
+evidence remains historical; [ADR-0018](../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md) is unchanged.
 
 ## Meaning of evidence
 
@@ -157,8 +158,8 @@ runtime acceptance or a per-launch hash allowlist. A changed input with the same
 version must be requalified before experiment deployment. O02/O03/D01 remain
 unavailable on1.7.104. Static qualification does not establish write isolation
 or authorize a server.
-Runtime work requires a verified isolated environment and scoped maintainer
-authorization; the [runbook](EXPERIMENTAL_RUNTIME_1_7.md) distinguishes the
+The maintainer authorizes the ordinary main-PC Windows/Steam/Vortex environment
+and its normal profile writes for the first smoke. The [runbook](EXPERIMENTAL_RUNTIME_1_7.md) distinguishes the
 authorized main-menu-only smoke from later gameplay/server scenarios.
 
 After static obligations are closed, follow the existing alternate-start,

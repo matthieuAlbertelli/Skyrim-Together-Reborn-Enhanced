@@ -160,9 +160,11 @@ reach vanilla menu controls. Rendering failure or loss of the render heartbeat
 releases capture; presentation never acquires a gameplay/campaign lock.
 Initialization/device failure disables presentation for the process.
 
-The implementation target is Steam Skyrim 1.6.1170 / SKSE 2.2.6. Other runtime
-versions disable these presentation hooks; this is not a promise that the rest
-of STRE can start on them. 1.7.x requires a separate port and validation.
+The sole development target is Steam Skyrim 1.7.104.0 / SKSE 2.3.1. These
+optional presentation hooks still have their historical 1.6.1170 guard and are
+disabled on 1.7. Do not widen that ABI guard without qualification. Engine
+startup with vanilla presentation and future custom presentation acceptance
+are separate tests; historical 1.6 visual evidence is not 1.7 validation.
 Keep `po3_MainMenuVideo.dll` inactive when testing STRE presentation: detecting
 that external renderer disables this feature without deleting another mod.
 

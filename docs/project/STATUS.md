@@ -1,13 +1,59 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 20, 2026.
+> **Last updated:** October 21, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Steam 1.7.104 local DEV main-menu acceptance (2026-10-21, Refs #99)
+
+**PASS: official launcher to usable vanilla main menu, keyboard/mouse and
+normal Quit (exit0).** The maintainer supplied visual/input acceptance because
+Computer Use denied application access. STRE intro/custom presentation remains
+**disabled** by its historical1.6 guard; this is not custom-menu acceptance.
+The [resumed lot-4 evidence](../audit/2026-10-21-runtime-1.7.104-lot4-resume.md)
+owns chronology, hashes, local workflow and limitations.
+
+Steam1.7.104.0 is the sole future development target by maintainer decision;
+the ordinary main-PC Windows/Steam/Vortex environment and normal profile writes
+are authorized. This supersedes the earlier isolation prerequisite below.
+The branch remains separate from main. CK/AutoMod requires1.7 requalification
+before authoring; no guard/ABI or native source changed in this resumed lot.
+
+Compiled source `efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7`, identity
+`runtime17-efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7` in both client and server.
+The actual DEV entry routes explicitly to the worktree, uses fresh output
+directories and excludes CK import/remote deployment. It is a local ignored
+script modification, not a versioned tool change. All293 deployed file hashes
+match the new candidate at the actual game destination, including51 UI files.
+Sixteen divergent installed content files were preserved/backed up; all914
+content files remain unchanged. Two obsolete test executables were archived
+and removed; no extra root executable/DLL remains in the runtime directory.
+
+Exact EXE1.7.104/SKSE2.3.1/AL hashes still match lot3. The maintainer disabled
+the old Better Grabbing, CCExtender and CKPE proxy through Vortex; zero SKSE
+plugin DLLs and no root winhttp proxy remain. The live module list confirms
+SKSE1.7.104, deployed EarlyLoad/libcef and Windows SYSTEM32 WINHTTP. SKSE reports
+`init complete`; native UI registration and `MAIN_MENU_ENTERED campaign=none`
+are logged; CEF requests installed UI resources. One launch, no startup fix or
+retry. Non-blocking Discord/CEF/animation diagnostics are retained in the audit.
+
+Full TPTests **459 cases/49,287 assertions PASS**, Python **234 tests PASS**,
+and three local routing rejection checks PASS. Bounded preservation verified
+12,613 records, with nine expected deployment/profile metadata/log changes;
+historical artifacts, saves/state, primary checkout/main and its pre-existing
+dirty STATUS remain preserved. No matching crash event/new dump or residual
+game/CEF process was found after exit in the inspected scope.
+
+No solo, multiplayer, Valen, creation/appearance/seating, native save/load or
+campaign recovery test ran. No server, Pc-vero, push, PR, manual CI, merge or
+release. Historical1.6 results do not establish1.7 compatibility. **Stop after
+the validated vanilla menu; custom presentation and broader gameplay remain
+separate qualification work.**
 
 ## Steam 1.7.104 isolated-startup preparation (2026-10-20, Refs #99)
 

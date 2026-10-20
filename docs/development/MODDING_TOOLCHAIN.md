@@ -8,10 +8,18 @@ content changes. Campaign authority and ADR-0018 are unchanged.
 
 ## Prerequisites and configuration
 
-Use Windows, PowerShell 7.2+, Git, a .NET 8 SDK/runtime, Skyrim SE **Steam
-1.6.1170.0**, the installed CK/Papyrus tools and Vortex. Do not substitute
-1.5.97/1.6.640, introduce a native/SKSE dependency, migrate plugin formats, or
-ESL-flag STRE_AlternateStart.esp. No MO2, TES5Edit-MCP or Delphi installation.
+The sole future runtime target is Skyrim SE **Steam 1.7.104.0**. CK, Papyrus,
+AutoMod and official xEdit must be requalified for this target before authoring
+or plugin writes. The existing wrapper still enforces its historical 1.6.1170.0
+qualification; it is intentionally not widened by the native migration.
+Do not run its write operations on 1.7 or treat a native build as CK validation.
+Read-only content comparison and native-only DEV deployment are separate:
+preserve differing Data files and never automatically promote them into Git.
+
+Tool prerequisites remain Windows, PowerShell 7.2+, Git, .NET 8 and the installed
+CK/Papyrus/Vortex tools. No plugin-format migration or ESL conversion is approved.
+No MO2, TES5Edit-MCP or Delphi installation. The procedures below describe the
+existing tool contract and require 1.7 requalification before authoring resumes.
 
 Install [Spooky's AutoMod Toolkit](https://github.com/SpookyPirate/spookys-automod-toolkit)
 outside the STRE repository. Build its Debug CLI once from the chosen source:

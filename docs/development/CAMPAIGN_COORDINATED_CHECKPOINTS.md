@@ -169,8 +169,10 @@ existing localized system-message surface.
 
 ### Vanilla Gameplay menu projection audit — 2026-08-25
 
-The supported and locally installed target is Skyrim AE `1.6.1170.0` with SKSE
-`2.2.6`. The real Gameplay settings are part of `Journal Menu`, backed by
+The target inspected for this historical audit was Skyrim AE `1.6.1170.0` with
+SKSE `2.2.6`. Future development targets Steam `1.7.104.0` / SKSE `2.3.1` only;
+these historical observations do not establish its runtime acceptance.
+The real Gameplay settings are part of `Journal Menu`, backed by
 `quest_journal.swf`. Native `JournalMenu` owns a `Journal_SystemTab`; its
 `JournalTab` base exposes only the movie view and `Journal_SystemTab::Accept()`
 registers the native Scaleform callbacks. Neither CommonLibSSE-NG nor STRE's

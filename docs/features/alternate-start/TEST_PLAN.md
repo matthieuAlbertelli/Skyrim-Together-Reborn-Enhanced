@@ -2126,11 +2126,13 @@ neither automated checks nor the later roster-2 partial acceptance validates Sol
 
 ## Steam 1.7.104.0 experimental lot
 
-This protocol is **prepared, not executed**. Use a new campaign and isolated
-profiles/state from the [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
+This protocol is **prepared, not executed**. Steam 1.7.104.0 is the sole future
+target; older 1.6 recipes/results above remain historical. Use a new campaign
+and test state under the [runtime procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
 Lot 3 satisfies the static native prerequisites. Every scenario below remains
-unexecuted until the candidate and isolated environment are explicitly authorized
-for in-game testing. Static admission does not establish gameplay acceptance.
+unexecuted until gameplay is explicitly authorized; the current main-PC menu
+authorization excludes these scenarios. Static admission does not establish
+gameplay acceptance.
 
 1. Run a fresh Solo campaign, then a fresh two-player roster with P1 finishing
    creation first, then another with P2 first. Record both observers throughout

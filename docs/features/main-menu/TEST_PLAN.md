@@ -61,7 +61,9 @@ relative links with the available documentation tooling.
 ## Human in-game acceptance
 
 Target the [reference platform](../../testing/COMPATIBILITY_MATRIX.md): Steam
-Skyrim 1.6.1170 / SKSE 2.2.6. Record source commit, binary hash, exact video hashes,
+Historical presentation reference: Skyrim 1.6.1170 / SKSE 2.2.6. The current
+development target is 1.7.104.0 / SKSE 2.3.1, with these optional hooks disabled.
+Use the first runtime gate below for 1.7 startup. Record source commit, binary hash, exact video hashes,
 configuration, resolution/aspect, controller and relevant MainMenu logs.
 Use the distributed background and separately approved local intro for private
 QA; do not distribute the intro while music permission is pending. Keep po3
@@ -156,37 +158,31 @@ enter the package. No deployment or in-game PASS may be inferred from a build.
 
 ## Steam 1.7.104.0 experimental lot
 
-These are **prepared checks**, not PASS evidence. Follow the isolated
+These are **prepared checks**, not PASS evidence. Follow the local DEV
 [native experiment procedure](../../development/EXPERIMENTAL_RUNTIME_1_7.md).
-Lot 3 satisfies the static campaign ABI gate. Isolation is an additional
-prerequisite; never bypass a subsequently missing condition.
+Lot 3 satisfies the static campaign ABI gate. Verify the actual deployed
+candidate and dependencies; never bypass a subsequently missing condition.
 
 ### First main-menu-only runtime gate
 
 The lot-4 authorization covers only the main PC and this bounded procedure:
 
-1. Rehash exact runtime/SKSE/AL and candidate; verify a coherent independent
-   game, Data/plugins, Documents/INI/saves, AppData/STRE identity, launcher HKCU,
-   CEF/temp paths and no dangerous links. Inventory processes and exit access.
-   Check actual native plugin metadata; installed/activated does not mean
-   compatible. Record a fresh automatic preflight, and stop if any required
-   isolation/dependency check fails. Never run the ordinary DEV deploy script.
-2. Use the supported STRE launcher against that verified environment. Its
-   `--exePath` option persists registry selection, so it requires isolated HKCU.
-   Record process creation, mapping, native initialization, SKSE startup/plugin
-   initialization and CEF readiness as separate milestones.
-3. Observe the actual main menu and harmless navigation, then Quit normally.
-   Do not select New, Continue or Load, start a server, or enter gameplay.
-   Record usable inputs and normal exit; an active process or black screen
-   cannot be PASS. Ask only for necessary human visual evidence if unavailable.
-4. Collect bounded logs/exits/dumps and compare protected paths after exit.
-   Stop on wrong installation, unexpected hash, isolation breach, native
-   exception, initialization loop or persistent lost input. Diagnose before
-   any further same-scope launch; no blind restart loop.
-5. PASS requires every startup milestone, observed usable menu, normal exit,
-   no critical native log failure and intact isolation. A failed preflight is
-   BLOCKED / NOT RUN, not a runtime FAIL. O02/O03/D01's controlled fallback is
-   expected. Stop here and await maintainer validation before extending scope.
+1. Rehash exact runtime/SKSE/AL and candidate. Verify actual local DEV deployment,
+   plugins, process state and exit access. The normal Windows account, Steam
+   installation, Vortex staging, Documents/AppData and launcher HKCU are explicitly
+   authorized. No separate Windows account or full game copy is required.
+2. Use the official STRE launcher. Record process creation, image mapping,
+   native hooks, SKSE/plugin initialization and CEF readiness separately.
+3. Observe the menu entries and harmless keyboard/mouse navigation, then Quit
+   normally. Never select New, Continue or Load; do not start a server.
+   Ask for necessary human observations if the window is inaccessible.
+4. Collect logs/exits/dumps and compare protected content/saves/state. Stop on
+   wrong destination, memory-corruption symptoms or uncontrolled writes.
+   Diagnose each failure before a targeted correction/rebuild/retest.
+5. PASS requires the observed usable menu and normal exit, supported by startup
+   logs without critical native errors. A build, live process or black screen
+   cannot be PASS. Record disabled O02/O03/D01 presentation separately. Stop
+   after this gate; broader gameplay requires later authorization.
 
 ### Later expanded scenarios
 
