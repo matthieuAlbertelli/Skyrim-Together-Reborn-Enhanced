@@ -1,13 +1,102 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 18, 2026.
+> **Last updated:** October 20, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Guarded native Steam 1.7.104 partial port (2026-10-20, Refs #99)
+
+The experimental branch `feat/skyrim-1.7-runtime` starts at refreshed
+`origin/main` `071f7573d7d86d96dbd20e5ee6f2cbf2300d56b7`. Local source commits
+are `cf207f6900d71b53478bc8a176c49ab97327e3b4` (port/contracts) and
+`97779fbfa67884858b46d299fd2d726148b6f942` (build identity regeneration).
+This is a **compiled, non-playable partial port**. `CampaignAbiVerified=false`
+explicitly refuses entry into Skyrim before mapping or game hooks. The exact
+target executable/SKSE and required native campaign ABI evidence were not
+available in the inspected environment. No 1.7 in-game validation is claimed.
+
+Implemented: bounded transactional Address Library formats 2/5 with stale-cache
+invalidation; exact Steam 1.7.104 admission before the mapping sentinel and
+initializers; separate runtime/Address Library/dependency/capability diagnostics;
+exact SKSE 2.3.1 filename/resource validation and earlier startup-hook ordering;
+upstream-proven SteamStub, GameVM and PlayerCharacter source layout adaptations.
+Client/server authentication retains exact build equality, now using
+`runtime17-97779fbfa67884858b46d299fd2d726148b6f942` in the retained binaries.
+Both client EXE and server DLL contain that same full identity.
+
+Existing 1.6 guards remain for menu presentation/prompt, dialogue progress,
+race/sex/appearance, seating/rematerialization and diagnostic probes. Additional
+guards precede unproved return-to-menu fields, embedded RaceSex camera access
+and forced grab release. Native save/load/completion/recovery signatures,
+save-list fields, creation camera/layouts and dependent engine wrappers remain
+required blockers, even where relocation IDs exist. No fake campaign success
+or partial-roster path was introduced. ADR-0018, recent seating/Valen behavior,
+protocol and persistence schema are unchanged; the historical controls defect
+is not declared resolved.
+
+Executed Windows x64 Debug evidence (VS 2022 BuildTools, MSVC 14.44.35207,
+Windows SDK 10.0.26100.0, xmake 3.0.9+HEAD.2b184e178):
+
+- Baseline before port: TPTests **447 cases / 45,866 assertions PASS**.
+- Final committed source: targeted TPTests **7 cases / 3,243 assertions PASS**;
+  full TPTests **454 cases / 49,109 assertions PASS**.
+- Python discovery: **232 tests PASS**. Main-menu structure (16) and runtime
+  bootstrap structure (5) also passed individually after the corrective change.
+- `SkyrimImmersiveLauncher`, `SkyrimServerRunner`, `TPProcess` and `TPTests`
+  built successfully. Actual outputs include `SkyrimTogether.exe`,
+  `EarlyLoad.dll`, `TPProcess.exe`, `SkyrimTogetherServer.exe`, `STServer.dll`
+  and the test executable. No install/runtime package was assembled.
+- Angular production build passed (Node 20.19.5); 51 UI output files were
+  hashed. UI dependencies used pnpm 8.15.9 with the unchanged frozen lockfile.
+- Read-only C++ probe accepted the installed 1.6 PE and format-2 table
+  (428,461 entries), plus the exact 1.7.104 format-5 table (435,162 entries).
+  The latter used the loader capacity, not an observed target image size:
+  this does not prove target ABI or game startup.
+- `git diff --check` passed. No PowerShell implementation was changed; no
+  real-tool modding, game, CK/xEdit, Linux run or manual CI was executed.
+
+The retained binary receipt and full SHA-256/UI manifest are
+`_audit/rt17/BINARIES.md` and `_audit/rt17/candidate-manifest.json`.
+Final command logs are under `_audit/rt17/wt/_audit/verified-*`; baseline and
+failed-attempt logs are retained beside them. Earlier sandbox fixture failures
+passed on host reruns. Initial launcher compilation exposed a missing fmt
+reference (corrected); default pnpm 10 rejected the lockfile (pnpm 8 frozen
+install succeeded). A later Python run caught a test-source ordering regression
+(corrected and all 232 rerun); generated BuildInfo initially retained the old
+SHA (corrected with xmake's always-update configfile policy, then rebuilt).
+Earlier `candidate-*` logs predate that identity fix and are not the retained
+candidate. The first profile-affected xmake commands generated build/cache
+files in the primary checkout; the experimental baseline and all subsequent
+commands used the isolated worktree, a non-login shell and explicit `-P .`.
+
+Protected local before/after inventory: **4,381 files unchanged**, including
+the inspected installed EXE/DLLs, tracked GameFiles and installed counterparts,
+local Vortex STRE staging, primary distrib, Documents/My Games saves/config,
+local Skyrim profile and any files under the primary `state` path. The original
+EXE/plugin inventory also retained its hashes. The inventory found 2,180 files
+with multiple physical links. Primary branch/HEAD, local main and its pre-existing
+dirty STATUS bytes are unchanged. Scope is explicit local paths, not every game
+file, Steam library, profile, server location or remote Pc-vero share; the wider
+inventory was taken after initial build preparation and excludes build caches.
+No installation, save, server-state, content or deployment write was issued.
+
+The [dated native audit](../audit/2026-10-20-runtime-1.7.104.md) records exact
+upstream/SKSE provenance, the per-domain evidence ledger, three missing RTTI
+relocations and dependency inventory. The
+[experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md) and
+[compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) separate this branch
+from the 1.6 release/CK toolchain. Feature-owned test plans cover the future
+startup/menu, both creation orders, Valen, Better Grabbing and collective
+checkpoint/recovery lot. Next prerequisites are a legitimately provisioned,
+fully isolated target environment and proof of required native boundaries;
+only then may a reviewed follow-up candidate and separately authorized game
+tests replace this blocked runtime result. No push, PR, deployment, Steam
+update, release or merge was performed.
 
 ## Local Character Creation seating termination correction (2026-10-18, Refs #91)
 
