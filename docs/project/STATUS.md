@@ -9,7 +9,38 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 first Solo gameplay acceptance (2026-10-21, Refs #99)
+## Better Grabbing 2.0 main-PC Solo qualification (2026-10-21, Refs #99)
+
+**Three independent PASS results on the main PC: DLL/provenance, SKSE loading,
+and human Solo manipulation.** The maintainer installed/deployed the official
+2.0 package and performed the smoke; Codex inspected files and logs without
+launching or controlling applications. The
+[dated evidence](../audit/2026-10-21-better-grabbing-2.md) records the Nexus
+download/install chain, exact archive/DLL hashes, runtime capture and limits.
+
+| Independent verdict | Evidence/result |
+|---|---|
+| DLL/provenance | PASS: Nexus mod 134769/file 806222; archive, staging and deployed DLL match; PE version 2.0.0.0; explicit Address Library V5 declaration |
+| SKSE loading | PASS: SKSE 2.3.1 reports BetterGrabbing.dll 02000000 loaded correctly, handle 1; fresh plugin log identifies 2-0-0-0 and Plugin loaded; no Address Library/runtime compatibility error in these logs |
+| Solo manipulation | Human PASS: menu, validated save, hold-E grab, translation, rotation, release, subsequent character/camera/interactions and normal Quit; logs corroborate loading, not each object transform |
+| Multiplayer admission / World Sync | NOT TESTED on 1.7; these static/runtime/Solo results do not qualify them |
+
+The only active SKSE plugin DLL is the inspected 2.0 binary. Vortex reused its
+old `1-17` staging directory name when replacing the files; the retained 1.17
+download has different DLL bytes and is not active. All 293 STRE payload files,
+914 accepted installed content files and three EXE/SKSE/AL inputs still match
+the accepted receipts. Installed `sRequiredNativePlugins=BetterGrabbing.dll`
+is retained. Postflight also preserves the DLL, its configuration and server
+policy hashes. No STRE code, deployment, policy or save was changed by the agent.
+No second-PC operation or multiplayer launch has been performed or authorized.
+
+The smoke's new client segment is 12:40:14.219-12:41:19.204 Europe/Paris;
+SKSE/plugin initialization and an ordinary Solo Continue/load are corroborated.
+Normal Quit is human-attested, with no inferred exit code. Retained diagnostics
+are the existing Discord error 4, animation warnings, disabled intro/menu guard
+and CEF diagnostics; none is an Address Library/plugin-loading failure.
+
+## Steam 1.7.104 Solo gameplay acceptance (2026-10-21, Refs #99)
 
 **Scoped Solo PASS, performed and attested by the maintainer.** New Game /
 Alternate Start reaches the STRE inn; RaceMenu and creation work; local sitting,
@@ -28,8 +59,9 @@ still match the accepted lot-4 receipts. No code, binary, content or policy chan
 | Local seating | PASS | One MoveTo, one Activate, entry confirmed, terminal observation closure; no subsequent seating trace in the captured segment | PASS for Solo Marker01/Seat01 |
 | Controls after creation | Walking to/interacting with Valen reported | Controls unlocked | Limited PASS; intermittent control loss is not proven permanently fixed |
 | Valen dialogue | Access/opening confirmed | Local Thief class projection stage 114; no dialogue-navigation event captured | Limited human PASS; branches, conditions, skip and closure not comprehensively tested |
-| Save / load | PASS | Quick-save boundary, same SKSE co-save written/read, native loading completion, matching `.ess`/`.skse` pair present | PASS for this save/reload; exact UI route and detailed restored properties not established |
-| Continue | Not attested | No specific Continue evidence | NOT TESTED |
+| Save / load | PASS | Quick-save boundary, same SKSE co-save written/read, native loading completion, matching `.ess`/`.skse` pair present | PASS for this save/reload; original reload UI route not established |
+| Continue | PASS, intended save loaded | Later MainMenu.Continue event, exact quick-save target resolved as Ordinary/AllowVanilla, SKSE co-save read and native loading completion | PASS for the exercised ordinary Solo Continue path |
+| Solo persistence | PASS: appearance, equipment, spells, creation state and dialogues retained | Same save target/co-save and completed native load corroborated; no per-property comparison in logs | Human PASS for the checked character; not an exhaustive class/race/sex or dialogue matrix |
 | Multiplayer / collective recovery / World Sync | Not tested on 1.7 | Solo evidence cannot qualify these | NOT TESTED |
 
 The new client-log segment is 11:48:43.897–12:01:26.821 Europe/Paris, with one
@@ -46,13 +78,19 @@ messages. Optional `DialogueProgress` and intro/custom menu remain disabled by
 their historical runtime guards. The old SkyUI Show All Saves compatibility
 problem remains separate and is not cleared by this quick-save/reload.
 
-The [next manual protocol](../features/alternate-start/TEST_PLAN.md#steam-17104-manual-qualification-sequence)
-combines a targeted Continue/persistence check with preparation of two fresh
-roster-2 completion orders. The installed server's native-plugin admission policy
-still requires `BetterGrabbing.dll`, independently of `bEnableModCheck=false`.
-With that DLL disabled, multiplayer admission is a prerequisite to resolve;
-Better Grabbing 2.0 is not installed/qualified by this Solo PASS. No policy bypass
-or second-PC deployment is authorized by this preparation. ADR-0018 is unchanged.
+The later [Continue/persistence capture](../audit/2026-10-21-better-grabbing-2.md#additional-solo-attestation-and-corroboration)
+adds explicit human acceptance of the intended save and all listed properties.
+Continue is observed at 12:20:25.347, its target resolved at 12:20:25.513 and
+native loading completed at 12:20:28.069 Europe/Paris. This session precedes
+the Better Grabbing 2.0 installation and is not plugin-loading evidence.
+
+The [manual protocol](../features/alternate-start/TEST_PLAN.md#steam-17104-manual-qualification-sequence)
+retains the repeatable Solo check and preparation of two fresh roster-2 completion
+orders. Continue/persistence and Better Grabbing's main-PC runtime/Solo smoke
+have now been exercised as scoped above. Future A/B/server consistency and
+actual admission remain prerequisites before multiplayer testing. No policy
+bypass or second-PC deployment is authorized by this preparation. ADR-0018
+is unchanged.
 
 ## Steam 1.7.104 local DEV main-menu acceptance (2026-10-21, Refs #99)
 

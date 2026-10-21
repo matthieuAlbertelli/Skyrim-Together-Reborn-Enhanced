@@ -44,11 +44,11 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 | Experimental deployment | Normal main-PC Windows/Steam/Vortex environment and ordinary profile writes authorized; verify actual deployed hashes and compatible plugins; no Pc-vero |
 | Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
-| Better Grabbing | 2.0 candidate announced for 1.7; STRE manipulation/interruption validation pending; required native-plugin policy retained |
+| Better Grabbing | Official 2.0: main-PC DLL/provenance, actual SKSE 2.3.1 loading and human Solo smoke PASS; V5 declaration present; multiplayer manipulation/interruption remains untested; required native-plugin policy retained |
 | Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
 | STRE intro/custom menu | Disabled by historical1.6 presentation guard; not a1.7 visual PASS |
-| Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access and quick-save/reload evidence; exact scope and untested persistence/Continue in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
-| Multiplayer appearance/seating, World Sync and collective recovery | Native boundaries statically qualified; no 1.7 multiplayer runtime acceptance; required native-plugin admission and Better Grabbing 2.0 qualification remain prerequisites; optional presentation/diagnostics remain guarded |
+| Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access, quick-save/reload, Continue and checked-character persistence; exact human/technical scope in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
+| Multiplayer appearance/seating, World Sync and collective recovery | Native boundaries statically qualified; no 1.7 multiplayer runtime acceptance; A/B/server consistency, actual native-plugin admission and multiplayer Better Grabbing behavior remain prerequisites; optional presentation/diagnostics remain guarded |
 | CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |

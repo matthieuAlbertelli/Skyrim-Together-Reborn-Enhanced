@@ -12,8 +12,8 @@ or two-PC run. The agent prepares and analyzes; stop between accepted stages.
 
 ### S1 - targeted Continue and persistence, without repeating New Game
 
-Ordinary Solo save/reload is already attested. Continue and detailed post-load
-persistence still need a check; combine them in one short run. After authorization,
+This repeatable protocol checks ordinary Solo Continue and post-load persistence;
+executed scope and evidence are recorded in STATUS. For a separately authorized repeat,
 use the existing tested Solo character, not a campaign save. If a load is needed
 to recover that character, select the exact captured save (private receipt keeps
 its basename; timestamp 2026-10-21 11:52:02 Europe/Paris). Record a reference before
@@ -50,7 +50,7 @@ controls stops the run; preserve logs without console repair or repeated retries
 - Resolve native-plugin admission first. The existing server requires
   `BetterGrabbing.dll` independently of ordinary mod-check settings; a disabled
   DLL cannot pass that policy. Better Grabbing 1.17 stays disabled. Installation
-  and qualification of 2.0 require the maintainer's later action; prove actual
+  and qualification of 2.0 are performed by the maintainer on each PC; prove actual
   version/hash and SKSE loading on both PCs before admission. Never silently
   clear the required-plugin list or change policy to obtain a PASS.
 - This dependency check does not qualify World Sync. Its manipulation and
