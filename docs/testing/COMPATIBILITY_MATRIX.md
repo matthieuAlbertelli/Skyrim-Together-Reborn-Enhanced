@@ -47,7 +47,8 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 | Better Grabbing | 2.0 candidate announced for 1.7; STRE manipulation/interruption validation pending; required native-plugin policy retained |
 | Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
 | STRE intro/custom menu | Disabled by historical1.6 presentation guard; not a1.7 visual PASS |
-| Appearance, seating, dialogue, save/load/recovery | Mandatory native boundaries statically qualified; gameplay unexecuted; optional presentation/diagnostics remain guarded |
+| Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access and quick-save/reload evidence; exact scope and untested persistence/Continue in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
+| Multiplayer appearance/seating, World Sync and collective recovery | Native boundaries statically qualified; no 1.7 multiplayer runtime acceptance; required native-plugin admission and Better Grabbing 2.0 qualification remain prerequisites; optional presentation/diagnostics remain guarded |
 | CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |

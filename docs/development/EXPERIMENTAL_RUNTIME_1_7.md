@@ -41,7 +41,9 @@ activation, server authority change or partial-roster continuation is permitted.
 Optional presentation may retain vanilla fallback once gameplay is admissible.
 
 Lot 3 closes all 18 static prerequisites on the exact inspected bytes, so this
-derived gate is now open. Runtime acceptance is still absent. The gate is not
+derived gate is now open. Subsequent bounded menu/Solo runtime acceptance is
+recorded only in [STATUS](../project/STATUS.md); it does not establish complete
+gameplay or multiplayer acceptance. The gate is not
 a per-launch SHA-256 allowlist: compare the EXE/SKSE/AL to the lot-3 receipt
 before preparing a smoke, and requalify any difference. Passing version checks
 alone does not extend this binary evidence to patched or different images.

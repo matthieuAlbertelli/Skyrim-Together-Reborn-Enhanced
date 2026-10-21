@@ -9,6 +9,51 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Steam 1.7.104 first Solo gameplay acceptance (2026-10-21, Refs #99)
+
+**Scoped Solo PASS, performed and attested by the maintainer.** New Game /
+Alternate Start reaches the STRE inn; RaceMenu and creation work; local sitting,
+walking to Valen/opening dialogue, and save/reload were reported successful.
+The [lot-5 audit](../audit/2026-10-21-runtime-1.7.104-lot5-solo.md) separates
+that report from captured technical evidence and records the remaining limits.
+Compiled identity remains `runtime17-efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7`;
+all 293 deployed files, three EXE/SKSE/AL inputs and 914 installed content files
+still match the accepted lot-4 receipts. No code, binary, content or policy change.
+
+| Functionality | Human attestation | Technical evidence | Accepted scope |
+|---|---|---|---|
+| New Game / Alternate Start | PASS, arrival in inn | Fresh stage-20 gate, offline Solo authorization, correct creation cell/marker | PASS for this Solo run |
+| RaceMenu / creation | PASS | Open at 11:49:05.766, close at 11:49:12.218 | PASS for the exercised flow; race/sex matrix untested |
+| Character Build applied | Creation reported | `class.thief`, BuildVersion 5, three selections, local application complete, level 1, 11 resolved item grants, five equipment entries, zero class spell grants | PASS for this local Thief build; exhaustive kits/attributes/spells and final visual fidelity untested |
+| Local seating | PASS | One MoveTo, one Activate, entry confirmed, terminal observation closure; no subsequent seating trace in the captured segment | PASS for Solo Marker01/Seat01 |
+| Controls after creation | Walking to/interacting with Valen reported | Controls unlocked | Limited PASS; intermittent control loss is not proven permanently fixed |
+| Valen dialogue | Access/opening confirmed | Local Thief class projection stage 114; no dialogue-navigation event captured | Limited human PASS; branches, conditions, skip and closure not comprehensively tested |
+| Save / load | PASS | Quick-save boundary, same SKSE co-save written/read, native loading completion, matching `.ess`/`.skse` pair present | PASS for this save/reload; exact UI route and detailed restored properties not established |
+| Continue | Not attested | No specific Continue evidence | NOT TESTED |
+| Multiplayer / collective recovery / World Sync | Not tested on 1.7 | Solo evidence cannot qualify these | NOT TESTED |
+
+The new client-log segment is 11:48:43.897–12:01:26.821 Europe/Paris, with one
+observed initialization sequence; no PID, exit code or second process is inferred.
+Seat entry is confirmed at 11:49:18.908 and observation ends at 11:49:23.911
+(`sinceEnterMs=5005`, `actionsDropped=0`). No repeat activation/observation loop
+appears after closure in this capture. The ordinary reload completes at
+11:52:13.576; this does not prove Continue or collective restoration.
+
+No gameplay failure was reported or demonstrated by these logs. Retained
+diagnostics include the successful native UI queue fallback for RaceMenu,
+Discord error 4, animation-signature warnings and CEF CPU/GCM/configuration
+messages. Optional `DialogueProgress` and intro/custom menu remain disabled by
+their historical runtime guards. The old SkyUI Show All Saves compatibility
+problem remains separate and is not cleared by this quick-save/reload.
+
+The [next manual protocol](../features/alternate-start/TEST_PLAN.md#steam-17104-manual-qualification-sequence)
+combines a targeted Continue/persistence check with preparation of two fresh
+roster-2 completion orders. The installed server's native-plugin admission policy
+still requires `BetterGrabbing.dll`, independently of `bEnableModCheck=false`.
+With that DLL disabled, multiplayer admission is a prerequisite to resolve;
+Better Grabbing 2.0 is not installed/qualified by this Solo PASS. No policy bypass
+or second-PC deployment is authorized by this preparation. ADR-0018 is unchanged.
+
 ## Steam 1.7.104 local DEV main-menu acceptance (2026-10-21, Refs #99)
 
 **PASS: official launcher to usable vanilla main menu, keyboard/mouse and
@@ -49,11 +94,11 @@ historical artifacts, saves/state, primary checkout/main and its pre-existing
 dirty STATUS remain preserved. No matching crash event/new dump or residual
 game/CEF process was found after exit in the inspected scope.
 
-No solo, multiplayer, Valen, creation/appearance/seating, native save/load or
-campaign recovery test ran. No server, Pc-vero, push, PR, manual CI, merge or
-release. Historical1.6 results do not establish1.7 compatibility. **Stop after
-the validated vanilla menu; custom presentation and broader gameplay remain
-separate qualification work.**
+During resumed lot 4, no solo, multiplayer, Valen, creation/appearance/seating,
+native save/load or campaign recovery test ran. No server, Pc-vero, push, PR,
+manual CI, merge or release. Historical1.6 results do not establish1.7 compatibility.
+That execution stopped after the vanilla menu; subsequent Solo evidence is
+recorded separately above and does not qualify custom presentation or multiplayer.
 
 ## Steam 1.7.104 isolated-startup preparation (2026-10-20, Refs #99)
 

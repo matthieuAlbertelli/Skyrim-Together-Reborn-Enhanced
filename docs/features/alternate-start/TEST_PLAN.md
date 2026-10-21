@@ -2,6 +2,97 @@
 
 > **Status: Automated audits plus M7, New Game, MQ101/post-Helgen, standalone T+4, pre-deadline wounded-survivor, and focused campaign-bootstrap checks executed; the campaign bootstrap and multiplayer T+4 occupied projection pass their validated runtime paths, while the remaining permutation matrix stays pending**
 
+## Steam 1.7.104 manual qualification sequence
+
+This is a proposed human protocol, not permission to launch/deploy or an executed
+result. [STATUS](../../project/STATUS.md) owns bounded Solo acceptance and all
+later results. Keep the 1.6 evidence below historical. The maintainer performs
+every game/server/Vortex operation and explicitly authorizes the next deployment
+or two-PC run. The agent prepares and analyzes; stop between accepted stages.
+
+### S1 - targeted Continue and persistence, without repeating New Game
+
+Ordinary Solo save/reload is already attested. Continue and detailed post-load
+persistence still need a check; combine them in one short run. After authorization,
+use the existing tested Solo character, not a campaign save. If a load is needed
+to recover that character, select the exact captured save (private receipt keeps
+its basename; timestamp 2026-10-21 11:52:02 Europe/Paris). Record a reference before
+saving: race/sex/appearance, class, level, equipment, inventory, spells, controls,
+completed creation and available Valen choices. Do not invent original appearance
+or loadout choices that were not noted.
+
+Create a distinguishable new Solo save through ordinary UI and identify its
+`.ess`/`.skse` pair. Verify it is actually the most recent eligible save; do not
+delete or rename other saves to force selection. Return normally to the main
+menu and choose Continue once. Compare all recorded properties and dialogue
+access; require no new creation gate, reset or automatic reseating. Record the
+exact loaded basename, native completion and human result. If another save
+became newest, stop and resolve selection before pressing Continue. The old
+SkyUI Show All Saves issue is tracked separately in the
+[native-load contract](../../development/CAMPAIGN_NATIVE_LOAD_SPIKE.md); do not
+use that surface as a prerequisite or silently replace its assets.
+
+PASS requires human confirmation of the intended character and retained state,
+plus matching save/load evidence. Missing events are evidence limits, not an
+automatic gameplay FAIL. Crash, wrong target, unexpected creation/reset or lost
+controls stops the run; preserve logs without console repair or repeated retries.
+
+### M0 - prerequisites before any two-PC launch
+
+- Obtain separate maintainer authorization for second-PC deployment and tests.
+  Preserve existing campaigns/saves; use isolated test server state and new
+  campaigns. Do not infer a 1.6 campaign migration guarantee.
+- Check Steam 1.7.104.0, SKSE 2.3.1 and the exact qualified Address Library on
+  both PCs, using version **and hash** receipts. Require the same STRE compiled
+  identity for A, B and server; document the documentation HEAD separately.
+  Compare actual deployed native/UI/content manifests and active plugin order,
+  not just staging. Record client/server configurations without credentials.
+- Resolve native-plugin admission first. The existing server requires
+  `BetterGrabbing.dll` independently of ordinary mod-check settings; a disabled
+  DLL cannot pass that policy. Better Grabbing 1.17 stays disabled. Installation
+  and qualification of 2.0 require the maintainer's later action; prove actual
+  version/hash and SKSE loading on both PCs before admission. Never silently
+  clear the required-plugin list or change policy to obtain a PASS.
+- This dependency check does not qualify World Sync. Its manipulation and
+  interruption tests remain a separate gate after Better Grabbing 2.0 is
+  installed and qualified. Keep custom menu and SkyUI issues separate.
+- Archive client logs and rotations, CEF/SKSE logs and server logs before each
+  run. Label A/B, start times, identity, campaign and completion order. Evidence
+  lacking from one PC must remain explicitly missing.
+
+### M1-M4 - sealed roster of two, sequential human gates
+
+Use two independent fresh campaigns/process runs: A finishes first in one,
+B finishes first in the other. A/B denote PCs, not durable roster rank. Record
+the actual sealed PlayerId-to-MarkerXX/SeatXX assignment; do not assume the host
+owns Seat01. Each row requires human observations from both PCs and corresponding
+client/server logs, with acceptance before continuing.
+
+| Gate | Human procedure | Expected result and evidence |
+|---|---|---|
+| M1 Admission/creation | A creates, B joins before start; start with exactly those two. Follow creation in the selected completion order, keeping both connected. Record race/sex/class/loadout choices. | Server seals the immutable full roster; local creation releases only from canonical authorization; each matching build is accepted/applied with inventory/spell hashes. No late join or replacement. |
+| M2 Final appearance/seating | Each observer compares the other's final race, sex, face and kit to the recorded choices. Let each individual finalization seat locally, then test normal chair exit, camera, walking and interaction. | Final publication/rematerialization commits on the same logical identity; each local player uses one MoveTo/Activate and terminal observation. Both see the other's final appearance and seating. Remote representation uses existing STR actions/binding replay, never remote Activate/MoveTo. Individual seating does not wait for the other player's completion. |
+| M3 Valen | Both open/navigate implemented categories, return to root and close normally. In a known fresh narrative state, one accepts the implemented Helgen lead; observe both journals and relevant choices. | Navigation follows the [Valen topology](VALEN_PLAYER_DIALOGUE_TOPOLOGY.md). The existing shared lead propagates through QuestService and does not require duplicate acceptance; local class/dialogue projection stays local. Record actual stages/events, without setstage, invented discoveries or demands for unimplemented collective scenes/departure. |
+| M4 Checkpoint/recovery | At a safe point with both present, use ordinary Manual/Quick Save to request a checkpoint. Wait for durable commit; then disconnect B. Verify immediate lock, return the same B identity, and use the existing recovery UI. | Server owns one committed checkpoint and both exact native bundles. Disconnect locks progression; incomplete roster cannot resume. Both members restore their own .ess/.skse from that same checkpoint, acknowledge the correlated restore and return to ACTIVE only together. Compare local properties and shared state against the recorded checkpoint. |
+
+Use the existing [checkpoint contract](../../development/CAMPAIGN_COORDINATED_CHECKPOINTS.md)
+and [collective recovery contract](../../development/CAMPAIGN_COLLECTIVE_RECOVERY.md)
+for M4. Record committed CheckpointId/source revision, each slot/native bundle,
+restore attempt/revision, acknowledgements and ACTIVE transition. A restore may
+have a new server revision; it must restore the same committed source checkpoint.
+Do not substitute a host save, reconstruct quests/Papyrus from stages, catch up
+a missing member or confuse WorldEntity late materialization with campaign join.
+[ADR-0018](../../architecture/ADRs/ADR-0018-fixed-roster-coordinated-checkpoint-recovery.md)
+remains binding. No checkpoint PASS follows from two unrelated local saves.
+
+Stop on mismatched artifacts, admission rejection, missing roster member,
+incorrect appearance, repeated activation, lost controls, wrong save/checkpoint,
+divergent shared state or crash. Preserve failures and normal diagnostics;
+never repair via console, alter admission, add a substitute player or force
+unlock. An absent log alone requires qualification. M0-M4 and World Sync remain
+unexecuted until new human evidence is recorded in STATUS.
+
+
 ## Local seating lifecycle regression (issue #91, 2026-10-18)
 
 This is the current local termination procedure, superseding the historical
