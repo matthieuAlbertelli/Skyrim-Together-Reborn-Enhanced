@@ -7,6 +7,12 @@ This is the current native build/deployment procedure for
 The dated [lot-1 audit](../audit/2026-10-20-runtime-1.7.104.md) and
 [lot-2 audit](../audit/2026-10-20-runtime-1.7.104-lot2.md) record provenance;
 the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md) adds exact binary qualification.
+The [two-PC DEV workflow](RUNTIME_1_7_TWO_PC_DEV.md) now owns the reusable
+maintainer-operated native/UI build, Vortex handoff, actual-installation hashes
+and recovery procedure. Its preparation does not authorize a real deployment
+or access to the second PC. The lot-4 routing below is retained as historical
+context; current execution results remain in STATUS.
+
 The [native contract register](RUNTIME_1_7_NATIVE_CONTRACTS.md) owns the finite
 admission conditions and supersedes the original broad blocker classification.
 
@@ -94,7 +100,8 @@ The client build's `deploy:production` npm script only runs Angular `ng build`
 into the checkout's `Code/skyrim_ui/dist`. It does not deploy to a game.
 The xmake `after_install` callback copies runtime dependencies/UI into the
 explicit distribution directory. The ordinary `build-and-deploy-dev.ps1` entry
-is retained with an explicit local-only worktree route, described below.
+retains the explicit lot-4 local-only route and now has an explicit two-PC mode
+described in the linked workflow; ambiguous no-mode invocation is rejected.
 
 The tracked UI lockfile has version 6. With an incompatible pnpm default, use
 `corepack pnpm@8.15.9 install --frozen-lockfile` inside `Code/skyrim_ui`, with
@@ -112,7 +119,7 @@ rename the compiled source commit. Record both commits, mode/toolchain,
 commands/exits, UI output and binary SHA-256 in ignored audit receipts.
 Unchanged historical `GIT_TAG` alone is not candidate identity.
 
-## Authorized environment and local DEV routing
+## Historical resumed lot-4 authorization and local DEV routing
 
 The resumed lot 4 authorizes the normal Windows account, current Steam 1.7.104
 installation, Vortex staging/configuration and normal Documents/AppData/HKCU

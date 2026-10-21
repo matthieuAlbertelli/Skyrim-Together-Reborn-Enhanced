@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "repository": "C:\\STRE\\runtime17-worktree",
+  "receipts": "C:\\STRE\\runtime17-receipts",
+  "referencePath": "C:\\STRE\\private\\accepted-reference.json",
+  "referenceSha256": "REPLACE_WITH_SHA256_OF_ACCEPTED_REFERENCE",
+  "targets": [
+    {
+      "id": "A",
+      "stagingRoot": "C:\\VortexMods\\STRE-DEV",
+      "gameRoot": "C:\\Games\\Skyrim Special Edition"
+    },
+    {
+      "id": "B",
+      "stagingRoot": "\\\\SECOND-PC\\EXISTING-STRE-STAGING-SHARE",
+      "gameRoot": null
+    }
+  ]
+}
