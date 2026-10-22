@@ -60,8 +60,10 @@ its referenced accepted manifest in private backups, outside Git.
 
 For the maintained machine, A and B staging paths come from the historical
 script. **The script contains no actual game path for B.** The prepared local
-configuration intentionally leaves B's `gameRoot` null. Before any real run the
-maintainer must set an existing accessible share to that actual installation.
+configuration initially left B's `gameRoot` null. The maintainer subsequently
+supplied that path; it was saved with local JSON validation only, without probing
+the share. A new configuration still requires an existing accessible share to
+the actual installation before any real run.
 No path is guessed, share created, SMB permission changed or access attempted
 during preparation. Missing gameRoot fails before source/build/destination work.
 
@@ -91,6 +93,27 @@ worktree, review the paths, and run WhatIf. The tracked
 `Start-StreRuntime17Dev.example.ps1` is an optional standalone replacement entry
 for a machine without the historical wrapper; copy it beside `_audit` under the
 habitual filename. It does not contain personal paths or the legacy CK body.
+
+## Server configuration preservation
+
+The canonical path relative to each runtime directory is **`config/STServer.ini`**,
+as used by `DediRunner::LoadSettings`. A root-level `STServer.ini` is not a
+substitute. The INI is excluded from native packaging, copying and restoration.
+
+- The installed `Data/SkyrimTogetherReborn/config/STServer.ini` is required by
+  this workflow to verify the existing Better Grabbing policy. Absence blocks
+  with `Required installed server configuration is absent`; never start the
+  server or create an empty/default INI to bypass this check.
+- The staging `SkyrimTogetherReborn/config/STServer.ini` is optional. Its initial
+  absence is recorded as `presence: absent` with a null hash. If present, its
+  policy is checked and its SHA-256 retained. The installed copy remains required
+  even when a staging copy exists.
+- Verification compares both presence and hash: an initially absent staging INI
+  appearing, an existing INI disappearing, or changed bytes all block. Neither
+  contents nor credentials are printed or copied into receipts.
+- Only explicit file/directory-not-found errors establish absence. Denied
+  metadata/read access and other IO failures are distinct blocking errors,
+  including for the optional staging copy. Reparse paths are refused.
 
 ## Exact run sequence
 
@@ -127,7 +150,7 @@ habitual filename. It does not contain personal paths or the legacy CK body.
 6. Repeat both destination preflights after the long build. Back up **both**
    staging and installed native/UI inventories to the local receipt and verify
    backup hashes before changing either target. Snapshot server-configuration
-   hashes without copying or editing their contents.
+   presence/hashes without copying or editing their contents.
 7. Copy the same manifest to A and B staging. Unlink each destination file before
    copying, including obsolete owned UI/assets/locales; do not overwrite a
    hardlinked inode. Verify exact file sets, sizes and hashes. Preserve content,

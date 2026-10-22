@@ -20,19 +20,29 @@ no-mode invocation fails. CK import, content synchronization and external native
 dependency copying are excluded. See the [operational procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md)
 and [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
 
-The 27-case PowerShell suite passes on local fake A/B installations, including
+The initial 27-case PowerShell suite passed on local fake A/B installations, including
 wrong branch/commit, stale artifact, missing/inaccessible destinations, invalid
 manifests, CK divergence, hardlinks, partial-copy recovery and restoration
 refusals. The compiler and human Vortex steps were simulated. Real entry WhatIf
 performed no destination IO. The retained 293-file candidate and 914 repository
 content hashes remain verifiable against the earlier accepted references.
 
-**No real compilation or deployment occurred. Pc-vero remains NON AUDITÉ PAR
-CODEX**, with no incompatibility inferred. Its actual installed-game share is
-absent from the historical script and must be supplied once in private config;
-the prepared field is empty and execution fails closed. The maintainer must
-authorize/execute any later two-PC run. No application launch, network access
-to that PC, runtime smoke, admission, World Sync or multiplayer validation follows.
+The subsequent human preflight exposed an incorrect INI path in the helper:
+`SkyrimTogetherReborn/STServer.ini` instead of `SkyrimTogetherReborn/config/STServer.ini`.
+The correction now requires the installed configuration for policy verification,
+records an optional staging copy's presence/hash, and distinguishes absence from
+denied access or IO errors. Better Grabbing policy and configuration preservation
+remain blocking checks. **33 local fixture cases PASS**, including a complete
+simulated deployment with no staging INI. Read-only inspection confirmed both
+main-PC INIs under `config/`, identical hashes and unchanged contents; no INI was
+created, copied or edited. See the [same-day correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#same-day-ini-path-correction).
+
+**Codex performed no real compilation, deployment or retry. Pc-vero remains
+NON AUDITÉ PAR CODEX**, with no incompatibility inferred. The maintainer supplied
+its actual installed-game share after preparation; the private JSON was updated
+without probing that share. The maintainer owns any later two-PC execution.
+No agent application launch, access to that PC, runtime smoke, admission, World
+Sync or multiplayer validation follows from these changes.
 
 ## Better Grabbing 2.0 main-PC Solo qualification (2026-10-21, Refs #99)
 

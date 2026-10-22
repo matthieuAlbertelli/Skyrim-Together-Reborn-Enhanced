@@ -218,6 +218,43 @@ function Get-R17Reference($Config) {
     if (@(Compare-Object @($tracked | Sort-Object) @($ref.contentFiles.path | Sort-Object)).Count) { throw 'Content source inventory changed; requalification required.' }
     $ref
 }
+function Get-R17IniAttributes([string]$Path) { [IO.File]::GetAttributes($Path) }
+function Read-R17IniBytes([string]$Path) { ,([IO.File]::ReadAllBytes($Path)) }
+function Get-R17IniState([string]$Path, [switch]$Required) {
+    # File.Exists/Test-Path can hide access failures as false. Only explicit
+    # file/directory-not-found exceptions establish absence; all other IO fails.
+    $Path = [IO.Path]::GetFullPath($Path)
+    $cursor = $Path
+    $root = [IO.Path]::GetPathRoot($Path).TrimEnd('\','/')
+    $missing = $false
+    while ($cursor) {
+        try {
+            $attributes = Get-R17IniAttributes $cursor
+            if ($attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Reparse configuration path refused: $cursor" }
+            if ($cursor -eq $Path -and ($attributes -band [IO.FileAttributes]::Directory)) { throw "Server configuration is not a file: $Path" }
+            if ($cursor -ne $Path -and !($attributes -band [IO.FileAttributes]::Directory)) { throw "Server configuration ancestor is not a directory: $cursor" }
+        } catch [IO.FileNotFoundException] { $missing = $true
+        } catch [IO.DirectoryNotFoundException] { $missing = $true
+        } catch [UnauthorizedAccessException] { throw "Access denied inspecting server configuration: $cursor"
+        } catch [IO.IOException] { throw "IO failure inspecting server configuration: $cursor" }
+        if ($cursor.TrimEnd('\','/') -eq $root) { break }
+        $parent = Split-Path -Parent $cursor
+        if ($parent -eq $cursor) { break }
+        $cursor = $parent
+    }
+    if ($missing) {
+        if ($Required) { throw "Required installed server configuration is absent: $Path" }
+        return @{path=$Path; presence='absent'; sha256=$null}
+    }
+    try { $bytes = Read-R17IniBytes $Path
+    } catch [UnauthorizedAccessException] { throw "Access denied reading server configuration: $Path"
+    } catch [IO.IOException] { throw "IO failure reading server configuration (unreadable or changed during inspection): $Path" }
+    # Inspect policy and hash the same bytes, without exposing or copying the INI.
+    $reader = [IO.StreamReader]::new([IO.MemoryStream]::new($bytes), [Text.Encoding]::UTF8, $true)
+    try { $iniText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+    if ([regex]::Matches($iniText, '(?m)^\s*sRequiredNativePlugins\s*=\s*BetterGrabbing\.dll\s*$').Count -ne 1) { throw "Required native plugin policy mismatch: $Path" }
+    @{path=$Path; presence='present'; sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()}
+}
 function Get-R17ProtectedState($Config, $Reference) {
     $state = @(foreach ($target in $Config.targets) {
         $game = $target.gameRoot; $stage = $target.stagingRoot
@@ -226,13 +263,11 @@ function Get-R17ProtectedState($Config, $Reference) {
         Assert-R17Files $game $Reference.dependencies
         $plugins = @(Get-ChildItem -LiteralPath (Join-Path $game 'Data/SKSE/Plugins') -Filter '*.dll' -File -Force)
         if ($plugins.Count -ne 1 -or $plugins[0].Name -ine 'BetterGrabbing.dll' -or (Test-Path -LiteralPath (Join-Path $game 'winhttp.dll'))) { throw "Unqualified native plugin/proxy set on $($target.id)." }
-        foreach ($base in @($stage,(Join-Path $game 'Data'))) {
-            $ini = Join-Path $base 'SkyrimTogetherReborn/STServer.ini'
-            Assert-R17Ordinary $ini
-            $policy = @(Select-String -LiteralPath $ini -Pattern '^\s*sRequiredNativePlugins\s*=\s*BetterGrabbing\.dll\s*$')
-            if ($policy.Count -ne 1) { throw "Required native plugin policy mismatch: $ini" }
-            @{path=$ini; sha256=Get-R17Hash $ini}
-        }
+        # DediRunner uses config/STServer.ini. This is preserved runtime state,
+        # never a native package requirement. Only the installed copy is needed
+        # to attest the effective policy; staging may legitimately have no copy.
+        Get-R17IniState (Join-Path $stage 'SkyrimTogetherReborn/config/STServer.ini')
+        Get-R17IniState (Join-Path $game 'Data/SkyrimTogetherReborn/config/STServer.ini') -Required
     })
     $state
 }
@@ -326,9 +361,10 @@ function Set-R17Payload([string]$Destination, [string]$Source, $Before, $After) 
 }
 function Assert-R17Protected($Config, $Reference, $Original) {
     $current = @(Get-R17ProtectedState $Config $Reference)
+    if ($current.Count -ne @($Original).Count) { throw 'Protected configuration inventory changed; run a new preflight.' }
     foreach ($row in $current) {
-        $old = @($Original | Where-Object { $_.path -eq $row.path -and $_.sha256 -eq $row.sha256 })
-        if ($old.Count -ne 1) { throw 'Protected server configuration changed; stop and investigate.' }
+        $old = @($Original | Where-Object { $_.path -eq $row.path -and $_.presence -eq $row.presence -and $_.sha256 -eq $row.sha256 })
+        if ($old.Count -ne 1) { throw 'Protected server configuration presence/hash changed; stop and investigate.' }
     }
 }
 function Restore-R17Staging($Receipt, [string]$Run) {

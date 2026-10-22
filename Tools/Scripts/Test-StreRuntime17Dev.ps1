@@ -57,7 +57,7 @@ $module = Get-Module Stre.Runtime17Dev
                 Put (Join-Path $base 'STRE_AlternateStart.esp') 'accepted installed content'
                 Put (Join-Path $base 'SkyrimTogetherReborn/SkyrimTogether.exe') 'old native bytes'
                 Put (Join-Path $base 'SkyrimTogetherReborn/UI/old.js') 'old UI'
-                Put (Join-Path $base 'SkyrimTogetherReborn/STServer.ini') 'sRequiredNativePlugins=BetterGrabbing.dll'
+                Put (Join-Path $base 'SkyrimTogetherReborn/config/STServer.ini') "[ModPolicy]`nsRequiredNativePlugins=BetterGrabbing.dll"
             }
             Put (Join-Path $game 'SkyrimSE.exe') 'fixture Skyrim (never executed)'
             Put (Join-Path $game 'skse64_1_7_104.dll') 'fixture SKSE'
@@ -113,6 +113,69 @@ $module = Get-Module Stre.Runtime17Dev
     Case 'accepted source/installed content divergence preserved' {
         $ref=Get-R17Reference $f.config
         $null=Get-R17Preflight $f.config $ref
+    }
+    Case 'canonical INI under config passes with no root INI' {
+        $state=@(Get-R17ProtectedState $f.config $f.reference)
+        Check ($state.Count -eq 4) 'Missing protected configuration entries'
+        foreach ($row in $state) {
+            Check ($row.presence -eq 'present' -and $row.path -like '*\config\STServer.ini') 'Wrong canonical INI state'
+            Check (!(Test-Path -LiteralPath (Join-Path (Split-Path -Parent (Split-Path -Parent $row.path)) 'STServer.ini'))) 'Fixture unexpectedly has a root INI'
+        }
+    }
+    Case 'installed configuration alone passes and absent staging is recorded' {
+        $stageIni=Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini'
+        $old=[IO.File]::ReadAllBytes($stageIni); Remove-Item -LiteralPath $stageIni
+        try {
+            $state=(Get-R17Preflight $f.config $f.reference).protected
+            $absent=@($state | Where-Object presence -eq 'absent')
+            Check ($absent.Count -eq 1 -and $absent[0].path -eq $stageIni -and $null -eq $absent[0].sha256) 'Staging absence was not recorded'
+            Assert-R17Protected $f.config $f.reference $state
+            [IO.File]::WriteAllBytes($stageIni,$old)
+            Reject { Assert-R17Protected $f.config $f.reference $state } 'presence/hash changed'
+        } finally { [IO.File]::WriteAllBytes($stageIni,$old) }
+    }
+    Case 'initially present staging configuration cannot disappear' {
+        $state=@(Get-R17ProtectedState $f.config $f.reference)
+        $path=Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini'
+        $old=[IO.File]::ReadAllBytes($path); Remove-Item -LiteralPath $path
+        try { Reject { Assert-R17Protected $f.config $f.reference $state } 'presence/hash changed' } finally { [IO.File]::WriteAllBytes($path,$old) }
+    }
+    Case 'missing installed INI remains blocking despite a staged copy' {
+        $path=Join-Path $f.config.targets[0].gameRoot 'Data/SkyrimTogetherReborn/config/STServer.ini'
+        $old=[IO.File]::ReadAllBytes($path); Remove-Item -LiteralPath $path
+        try { Reject { Get-R17Preflight $f.config $f.reference } 'Required installed server configuration is absent' } finally { [IO.File]::WriteAllBytes($path,$old) }
+    }
+    Case 'Better Grabbing policy and configuration hashes remain protected' {
+        $path=Join-Path $f.config.targets[0].gameRoot 'Data/SkyrimTogetherReborn/config/STServer.ini'
+        $old=[IO.File]::ReadAllBytes($path); $state=@(Get-R17ProtectedState $f.config $f.reference)
+        try {
+            Put $path "[ModPolicy]`nsRequiredNativePlugins="
+            Reject { Get-R17ProtectedState $f.config $f.reference } 'Required native plugin policy mismatch'
+            Put $path "[ModPolicy]`nsRequiredNativePlugins=BetterGrabbing.dll`n; changed configuration"
+            Reject { Assert-R17Protected $f.config $f.reference $state } 'presence/hash changed'
+        } finally { [IO.File]::WriteAllBytes($path,$old) }
+    }
+    Case 'optional INI absence differs from denied metadata or read access' {
+        $missing=Join-Path $f.root 'missing-config/STServer.ini'
+        Check ((Get-R17IniState $missing).presence -eq 'absent') 'Missing optional INI should be recorded'
+        $badParent=Split-Path -Parent $missing; Put $badParent 'not a directory'
+        try { Reject { Get-R17IniState $missing } 'ancestor is not a directory' } finally { Remove-Item -LiteralPath $badParent }
+        $script:RealIniAttributes=(Get-Item Function:Get-R17IniAttributes).ScriptBlock
+        $script:RealIniBytes=(Get-Item Function:Read-R17IniBytes).ScriptBlock
+        $path=Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini'
+        try {
+            # Deterministic OS exception injection, without changing any ACL.
+            function script:Get-R17IniAttributes { param($Path) throw [UnauthorizedAccessException]::new('fixture access denial') }
+            Reject { Get-R17IniState $missing } 'Access denied inspecting server configuration'
+            Set-Item Function:script:Get-R17IniAttributes $script:RealIniAttributes
+            function script:Read-R17IniBytes { param($Path) throw [UnauthorizedAccessException]::new('fixture access denial') }
+            Reject { Get-R17IniState $path } 'Access denied reading server configuration'
+            function script:Read-R17IniBytes { param($Path) throw [IO.IOException]::new('fixture sharing violation') }
+            Reject { Get-R17IniState $path } 'IO failure reading server configuration'
+        } finally {
+            Set-Item Function:script:Get-R17IniAttributes $script:RealIniAttributes
+            Set-Item Function:script:Read-R17IniBytes $script:RealIniBytes
+        }
     }
     Case 'missing actual game path rejected before any destination IO' {
         $bad=Read-R17Json $f.configPath; $bad.targets[1].gameRoot=''
@@ -226,10 +289,12 @@ $module = Get-Module Stre.Runtime17Dev
     }
     Case 'end-to-end simulated A/B deploy verifies actual Data and protects content' {
         $script:Active=New-Fixture
+        Remove-Item -LiteralPath (Join-Path $script:Active.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini')
         Invoke-R17Workflow -ConfigPath $script:Active.configPath
         $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
         $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
         Check ($receipt.status -eq 'INSTALLED_VERIFIED') 'False final status'
+        Check (@($receipt.preflight.protected | Where-Object presence -eq 'absent').Count -eq 1) 'Staging INI absence was lost during deployment'
         Check ((Read-R17Json (Join-Path $latest 'verified-B.json')).status -eq 'INSTALLED_VERIFIED') 'B receipt missing'
         Assert-R17Content (Join-Path $script:Active.repo 'GameFiles/Skyrim') $script:Active.reference.contentFiles -Repository
     }
