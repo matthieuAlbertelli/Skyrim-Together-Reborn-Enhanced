@@ -9,7 +9,7 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 content tools — offline requalification in progress
+## Steam 1.7.104 content tools — offline CLI qualification; editors pending
 
 The existing migration worktree's exact historical `1.6.1170.0` preflight was
 adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
@@ -23,9 +23,9 @@ remain blocking. No plugin-format/bytecode migration or production authoring.
 | Independent verdict | Evidence |
 |---|---|
 | Inventory / provenance | File versions/hashes observed; historical AutoMod/xEdit binary continuity verified. **Partial provenance**: AutoMod extraction has no Git commit, no new exact release-archive verification; metadata is not publisher authentication |
-| Wrapper/preflight protections | **76 simulated PowerShell cases PASS**, plus **21 matrix import**, **9 presentation**, **19 navigation** guard cases; **59 targeted Python tests PASS** |
-| Real AutoMod fixture | **PENDING**: existing process guard detected Vortex; no real AutoMod execution yet in this qualification |
-| Real Papyrus compilation | **PENDING** behind the same guard; independent two-source CLI test prepared |
+| Wrapper/preflight protections | **76 simulated PowerShell cases PASS**, plus **21 matrix preparation**, **21 matrix import**, **9 presentation**, **19 navigation** guard cases; **59 targeted Python tests PASS** |
+| Real AutoMod fixture | **PASS**: actual prebuilt CLI dry-run preserves bytes, then writes/rereads GLOB `STRE_ToolchainFixture`, float 7.25, with expected `HUMAN_XEDIT_REQUIRED` stop. Full `-RealTools` suite: **78 PASS** (76 simulated + 2 real). Unused masters are removed from this empty fixture; exact three-master normalization remains a blocking human step |
+| Real Papyrus compilation | **PASS**: wrapper status first, then two real compiler/assembler runs (minimal script and Quest/Actor/SKSE/project imports), exit0, empty stderr, zero errors/warnings, two private PEX with Skyrim 3.2/game-ID-1 header; **14,416 tool/import inputs unchanged** |
 | xEdit | **NOT EXECUTED**; human saved-file validation still required |
 | Creation Kit | **NOT EXECUTED**; full editor compatibility remains unqualified |
 | Production authoring/import/deployment | **NOT EXECUTED** |
@@ -33,19 +33,22 @@ remain blocking. No plugin-format/bytecode migration or production authoring.
 Observed tools: Skyrim **1.7.104.0**, CK **1.6.1378.1**, Papyrus compiler
 **1.0.0.0**, AutoMod CLI **1.0.0.0** (local changelog is not its binary version),
 xEdit resource **4.1.5.0**, .NET runtime **8.0.32**, SDKs **8.0.426/10.0.204**.
-No tool update or reactivation. The process guard is retained, and Vortex must be
-closed by the maintainer before the real CLI trials; Codex does not stop it.
+No tool update or reactivation. The initial Vortex guard stop is historical;
+after the maintainer confirmed closing it, the unchanged guard passed and the
+real CLI trials ran. No maintainer process was controlled or stopped by Codex.
 
 The initial read-only hash check matches the installed accepted `53530e69`
 candidate's **293 native/UI + 914 contents**. The **14 WAV + 2 PSC** existing
 Git/Data differences remain untouched and do not block fixtures.
-After-check: **16,603 protected local paths unchanged**, with additional tool and
-AutoMod dependency/source hashes unchanged; this check will be repeated after
-the pending real CLI trials. Existing
+After the real CLI trials: **16,603 protected local paths unchanged**, plus
+**114 additional tool/source inventory rows unchanged**. Existing
 Solo/multiplayer/presentation PASS, Runtime17TwoPc and server/plugin policy are
 unchanged. No gameplay logs were requested/reanalyzed or Pc-vero accessed.
-Detailed inventory, fingerprints, exact scope and remaining trials:
-[toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md). #99 remains open.
+The durable synthetic xEdit file, exact tool/hash and one human load/normalize/
+save/reopen check are prepared in the
+[toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md#first-human-check-xedit-on-the-durable-fixture).
+No human attestation is manufactured. This is not a fully qualified CK chain;
+production gates remain closed. #99 remains open.
 
 ## Steam 1.7.104 presentation — maintainer-attested human PASS
 

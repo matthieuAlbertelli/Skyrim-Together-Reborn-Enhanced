@@ -529,6 +529,10 @@ before-image and a clearly labeled machine-evidence JSON in a **new** `_audit`
 subdirectory. It exports no human attestation and no importable session. The
 current durable file and first human check are identified in the
 [1.7 toolchain evidence](../audit/2026-10-22-runtime-1.7-toolchain.md).
+The observed AutoMod write removes unused masters from the initially empty GLOB
+fixture. Its human xEdit check must use Add Masters and Sort Masters to restore
+the exact required three-master order before saved-file validation. A successful
+CLI trial does not waive the normalized-format gate or authorize promotion.
 
 For a real Papyrus fixture trial, inspect the selected compiler, assembler and
 their child-process behavior first, then run:
