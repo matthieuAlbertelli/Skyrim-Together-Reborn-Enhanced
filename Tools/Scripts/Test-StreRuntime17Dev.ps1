@@ -113,10 +113,20 @@ $module = Get-Module Stre.Runtime17Dev
         Check ($source.submodules.Count -eq 1) 'Missing submodule evidence'
     }
     Case 'wrong branch rejected' {
-        Invoke-FixtureGit $f.repo @('branch','-m','feat/arbitrary')
+        Invoke-FixtureGit $f.repo @('branch','-m','unreviewed/arbitrary')
         try { Reject { Get-R17Source $f.repo } 'Wrong source branch' } finally { Invoke-FixtureGit $f.repo @('branch','-m','feat/skyrim-1.7-runtime') }
     }
     Case 'wrong expected commit rejected' { Reject { Get-R17Source $f.repo ('0'*40) } 'Source commit mismatch' }
+    foreach ($branch in @('feat/selected-work','fix/selected-work','refactor/selected-work','docs/selected-work','test/selected-work','chore/selected-work','art/selected-work','audio/valen-voice-production-v1','codex/fix-dev-source')) {
+        Case "governed branch $branch accepted without origin/main ancestry" {
+            Invoke-FixtureGit $f.repo @('branch','-m',$branch)
+            try {
+                $selected=Get-R17Source $f.repo $f.commit
+                Check ($selected.repository -eq $f.repo -and $selected.branch -ceq $branch -and $selected.commit -ceq $f.commit -and $selected.identity -ceq "runtime17-$($f.commit)") 'Selected source changed'
+                Reject { Get-R17Source $f.repo ('0'*40) } 'Source commit mismatch'
+            } finally { Invoke-FixtureGit $f.repo @('branch','-m','feat/skyrim-1.7-runtime') }
+        }
+    }
     Case 'dirty source rejected' {
         Put (Join-Path $f.repo 'untracked.cpp') 'uncommitted'
         try { Reject { Get-R17Source $f.repo } 'Commit or isolate' } finally { Remove-Item -LiteralPath (Join-Path $f.repo 'untracked.cpp') }
@@ -633,7 +643,7 @@ $module = Get-Module Stre.Runtime17Dev
         Check ((Get-R17Hash (Join-Path $latest 'manifest.json')) -eq $manifestHash) 'Frozen manifest rewritten'
     }
     foreach ($invalid in @(
-        @{name='unauthorized branch'; change={param($r) $r.candidate.source.branch='feat/arbitrary'}; pattern='Invalid retained candidate provenance'},
+        @{name='unauthorized branch'; change={param($r) $r.candidate.source.branch='unreviewed/arbitrary'}; pattern='Invalid retained candidate provenance'},
         @{name='inconsistent identity'; change={param($r) $r.candidate.source.identity='runtime17-'+('0'*40)}; pattern='Invalid retained candidate provenance'},
         @{name='changed frozen native manifest'; change={param($r) $r.candidate.files[0].sha256='0'*64}; pattern='Hash/size mismatch'},
         @{name='changed frozen content manifest'; change={param($r) $r.candidate.contentFiles[0].bytes++}; pattern='frozen candidate integrity.*mismatch'}
@@ -666,6 +676,32 @@ $module = Get-Module Stre.Runtime17Dev
     Case 'main Verify recovers after invalid fixture evidence is restored' {
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath (Get-LatestRun)
         Check ((Read-R17Json (Join-Path (Get-LatestRun) 'receipt.json')).status -eq 'INSTALLED_VERIFIED') 'Restored fixture evidence did not verify'
+    }
+    Case 'development branch full A/B cycle keeps explicit source and historical receipt' {
+        $script:Active=New-Fixture
+        Invoke-FixtureGit $script:Active.repo @('branch','-m','audio/valen-voice-production-v1')
+        $private=Get-PrivateRows $script:Active
+        $messages=@(Invoke-R17Workflow -ConfigPath $script:Active.configPath -ExpectedCommit $script:Active.commit 6>&1)
+        $display=$messages | Out-String
+        Check ($display.Contains($script:Active.repo) -and $display.Contains('branch=audio/valen-voice-production-v1') -and $display.Contains("commit=$($script:Active.commit)")) 'Explicit selected source was not displayed'
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($before.status -eq 'INSTALLED_VERIFIED' -and $before.candidate.source.branch -ceq 'audio/valen-voice-production-v1') 'Wrong development candidate'
+        Check (((Read-R17Json (Join-Path $latest 'verified-A.json')).files | Where-Object path -eq 'SkyrimTogetherReborn/SkyrimTogether.exe').provenance -ceq 'development checkout build') 'Mislabelled development payload'
+        Invoke-FixtureGit $script:Active.repo @('branch','-m','fix/later-work')
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
+        $after=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($after.candidate.source.branch -ceq $before.candidate.source.branch -and $after.candidate.source.identity -ceq $before.candidate.source.identity -and $after.configSha256 -ceq $before.configSha256) 'Historical development receipt relabelled'
+        foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'development private files preserved' }
+    }
+    Case 'dirty selected development source fails without build or checkout fallback' {
+        $path=Join-Path $script:Active.repo 'uncommitted.txt'; Put $path 'preserve this work'
+        $receiptCount=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory).Count
+        try {
+            Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Commit or isolate'
+            Check ((Get-Content -LiteralPath $path -Raw) -ceq 'preserve this work') 'Dirty file changed'
+            Check (((Invoke-R17Git $script:Active.repo @('branch','--show-current')) -join '') -ceq 'fix/later-work') 'Branch changed'
+            Check (@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory).Count -eq $receiptCount) 'Dirty checkout entered build'
+        } finally { Remove-Item -LiteralPath $path }
     }
     Case 'WhatIf cannot touch destinations, enumerate processes or build' {
         $plan=Read-R17Json $f.configPath

@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 22, 2026.
+> **Last updated:** October 23, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -9,9 +9,38 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Runtime17TwoPc main-source support — local fixtures only
+## Runtime17TwoPc selected development branch — local fixtures only
 
-The DEV helper now accepts only `feat/skyrim-1.7-runtime` and attached `main`.
+The DEV helper accepts attached `main`, the repository's governed work-branch
+prefixes (`feat/`, `fix/`, `refactor/`, `docs/`, `test/`, `chore/`, `art/`,
+`audio/`) and `codex/` task branches. The existing private `repository` field
+selects the checkout. The local entry loads its helper from that checkout; the
+helper displays path, branch and full SHA before compilation. No automatic
+branch switch, checkout fallback or development-branch ancestry gate was added.
+Main still requires exact equality with an explicitly fetched `origin/main`.
+Official origin, clean tracked/untracked source and submodules, exact runtime/
+SKSE, build identity, protected files, frozen manifests, isolated outputs and
+A/B verification/restore gates remain unchanged. The separate Modding policy
+is unchanged.
+
+Validation: **83 local fixture cases PASS** (72 retained + 11 added), including
+each allowed development prefix, an audio-branch simulated A/B cycle, source
+display, historical receipt identity after a later branch change, and dirty
+development-source refusal before build with no fallback. Build, process guard
+and human deployment are simulated; real Git and local fixture files are used.
+No native build, real destination access or deployment was performed.
+Four additional checks of a copied personal entry with inert mock helpers pass:
+two explicitly selected paths containing spaces, argument/WhatIf forwarding,
+and UNC-source rejection before resolution (plus entry parsing).
+
+This correction is prepared as a local commit from the integrated migration.
+The operational configuration still selects the experimental worktree, which
+must remain until the correction is integrated and usable. Existing human
+gameplay/presentation acceptances and independent release gates are unchanged.
+
+## Historical Runtime17TwoPc main-source support — local fixtures only
+
+At this earlier milestone the DEV helper accepted only `feat/skyrim-1.7-runtime` and attached `main`.
 Main must match a valid `origin/main` commit exactly; the operator must fetch
 explicitly before use. Both branches retain official-origin, clean source and
 submodules, exact runtime/SKSE and `runtime17-<full SHA>` build-identity gates,

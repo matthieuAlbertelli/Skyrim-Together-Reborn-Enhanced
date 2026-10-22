@@ -11,7 +11,10 @@ $script:RootFiles = @(
     'v8_context_snapshot.bin','vk_swiftshader.dll','vulkan-1.dll'
 )
 $script:Required = $script:RootFiles + @('UI/index.html')
-$script:SourceBranches = @('feat/skyrim-1.7-runtime','main')
+function Test-R17SourceBranch([string]$Branch) {
+    # Repository work-branch conventions, including Codex task branches.
+    $Branch -ceq 'main' -or $Branch -cmatch '^(feat|fix|refactor|docs|test|chore|art|audio|codex)/[A-Za-z0-9][A-Za-z0-9._/-]*$'
+}
 
 function Get-R17Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 function Read-R17Json([string]$Path) { Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable }
@@ -124,7 +127,7 @@ function Get-R17Source([string]$Repo, [string]$ExpectedCommit) {
     $origin = (Invoke-R17Git $Repo @('remote','get-url','origin')) -join ''
     if ($origin -notmatch '^(https://github.com/|git@github.com:)matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced(\.git)?$') { throw 'Unexpected source repository origin.' }
     $branch = (Invoke-R17Git $Repo @('branch','--show-current')) -join ''
-    if ($branch -cnotin $script:SourceBranches) { throw 'Wrong source branch: select feat/skyrim-1.7-runtime or main (no detached HEAD).' }
+    if (!(Test-R17SourceBranch $branch)) { throw 'Wrong source branch: select main or a governed work branch (no detached HEAD).' }
     $head = (Invoke-R17Git $Repo @('rev-parse','HEAD')) -join ''
     if ($ExpectedCommit -and ($ExpectedCommit -notmatch '^[a-f0-9]{40}$' -or $head -cne $ExpectedCommit)) { throw 'Source commit mismatch.' }
     if ($branch -ceq 'main') {
@@ -352,7 +355,7 @@ function Get-R17DeploymentRows($Candidate) {
     Assert-R17Rows $Candidate.files -Native
     Assert-R17Rows $Candidate.contentFiles
     $rows = @(foreach ($row in $Candidate.files) {
-        @{path="SkyrimTogetherReborn/$($row.path)"; bytes=$row.bytes; sha256=$row.sha256; provenance=$(if ($Candidate.source.branch -ceq 'main') {'main checkout build'} else {'experimental worktree build'})}
+        @{path="SkyrimTogetherReborn/$($row.path)"; bytes=$row.bytes; sha256=$row.sha256; provenance=$(if ($Candidate.source.branch -ceq 'main') {'main checkout build'} elseif ($Candidate.source.branch -ceq 'feat/skyrim-1.7-runtime') {'experimental worktree build'} else {'development checkout build'})}
     }; foreach ($row in $Candidate.contentFiles) {
         Assert-R17ContentPath $row.path
         if ($row.provenance -cne 'installed main PC' -or ![IO.Path]::IsPathFullyQualified($row.sourcePath)) { throw "Invalid content provenance: $($row.path)" }
@@ -630,6 +633,7 @@ function Invoke-R17Workflow {
     # Rollback uses saved installed bytes even if current source is dirty or has
     # evolved. Verify still records the current documentation/source HEAD.
     $source = if ($Mode -notin @('RestoreStaging','VerifyRestored')) { Get-R17Source $config.repository $ExpectedCommit } else { $null }
+    if ($source) { Write-Host "Selected source: $($source.repository); branch=$($source.branch); commit=$($source.commit)" }
     $reference = if ($Mode -ne 'RestoreStaging') { Get-R17Reference $config } else { $null }
     if ($Mode -ne 'BuildDeploy') {
         Assert-R17Local $ReceiptPath
@@ -651,7 +655,7 @@ function Invoke-R17Workflow {
         }
         if ($Mode -eq 'Verify') {
             $builtSource=$receipt.candidate.source
-            if ($builtSource.commit -notmatch '^[a-f0-9]{40}$' -or $builtSource.identity -cne "runtime17-$($builtSource.commit)" -or $builtSource.branch -cnotin $script:SourceBranches) { throw 'Invalid retained candidate provenance.' }
+            if ($builtSource.commit -notmatch '^[a-f0-9]{40}$' -or $builtSource.identity -cne "runtime17-$($builtSource.commit)" -or !(Test-R17SourceBranch $builtSource.branch)) { throw 'Invalid retained candidate provenance.' }
             $retained=New-R17Candidate $builtSource $ReceiptPath
             Assert-R17Exact (Join-Path $ReceiptPath 'distrib/bin') $receipt.candidate.files -Distribution
             if ($retained.files.Count -ne $receipt.candidate.files.Count) { throw 'Retained manifest changed.' }

@@ -17,7 +17,7 @@ A's staging. An initial destination difference is normal, not a hash failure.
 
 | Category | Deployment source | Treatment |
 |---|---|---|
-| Native client, launcher, server, CEF libraries, generated UI | Fresh build of the explicitly selected clean experimental or verified `main` checkout | Validate compiled identity and snapshot distribution |
+| Native client, launcher, server, CEF libraries, generated UI | Fresh build of the explicitly selected clean development or verified `main` checkout | Validate compiled identity and snapshot distribution |
 | Managed STRE contents, including Valen WAVs | A's configured `gameRoot/Data` at capture time | Independent snapshot, replace/create only listed paths on A/B |
 | Server/personal configuration, saves/co-saves, campaigns, identities, databases, logs/caches, credentials | Each machine | Preserve; never distribute or include in package backups |
 | Skyrim, SKSE, Address Library, Better Grabbing | External dependency installation | Verify pinned hashes; never distribute |
@@ -41,13 +41,19 @@ streams, reparses and category collisions block. Files outside the new manifest,
 
 ## Source branches and retained receipts
 
-Only attached checkouts on **`feat/skyrim-1.7-runtime`** or **`main`** are accepted.
-Both require the official repository origin, clean tracked/untracked files,
+Attached **`main`** and work branches using the repository's `feat/`, `fix/`,
+`refactor/`, `docs/`, `test/`, `chore/`, `art/`, `audio/` conventions or the
+`codex/` task prefix are accepted. This includes `audio/valen-voice-production-v1`
+only when its selected checkout satisfies every preflight gate.
+All require the official repository origin, clean tracked/untracked files,
 submodules at the recorded gitlink commits with clean files and matching origins,
 and the exact Skyrim **1.7.104.0** / SKSE **2.3.1** contract. BuildInfo and binaries
 must identify `runtime17-<full source SHA>`. `ExpectedCommit`, when supplied, must
-match that exact SHA on either branch. Arbitrary feature branches and detached
-HEADs are refused. These DEV rules do not broaden the separate Modding
+match that exact SHA. Unsupported branch names and detached HEADs are refused.
+Development branches need not already be integrated into main. The helper never
+switches branches or falls back to another checkout when the selected source is
+dirty or incompatible. It displays that source's path, attached branch and full
+SHA before compilation. These DEV rules do not broaden the separate Modding
 authoring/ancestry policy.
 
 For `main`, `refs/remotes/origin/main` must resolve to a commit and **HEAD must
@@ -62,7 +68,7 @@ git -C '<selected-main-checkout>' fetch origin
 The helper never fetches;
 equality with a local remote-tracking ref does **not** prove that ref is fresh.
 
-`Verify` accepts either historical candidate branch, preserving its original
+`Verify` accepts supported historical candidate branches, preserving their original
 commit, identity and branch even when the current verification HEAD is later.
 The frozen candidate, configuration SHA-256 pin, scope/dependency hashes,
 destination identities, protected configurations and installed bytes remain
@@ -78,8 +84,10 @@ experimental A/B acceptances keep their own source identities.
 
 ## Entry and private configuration
 
-The ignored personal entry routes `-Runtime17TwoPc` to the experimental worktree's
-`Tools/Scripts/Invoke-StreRuntime17Dev.ps1` and `Stre.Runtime17Dev.psm1`.
+The ignored personal entry routes `-Runtime17TwoPc` to
+`config.repository/Tools/Scripts/Invoke-StreRuntime17Dev.ps1` and its module.
+Its working directory does not select the source. The selected checkout must
+contain a helper that supports the requested branch; no helper fallback occurs.
 The historical body remains behind `-Legacy`, which is not a 1.7 procedure.
 Ambiguous no-mode invocation fails. Run from the personal entry's directory:
 
@@ -115,6 +123,14 @@ reference, the private configuration and entry together; do not regenerate the
 reference from a divergent destination to bypass a failure.
 
 ### Selecting main after integration
+
+The same explicit configuration mechanism selects a development checkout.
+Use `repository` to select its absolute local path and the existing
+`-Runtime17ConfigPath` option to select the private configuration. Do not point
+the default at an unrelated or dirty checkout just to remove an old worktree.
+Until the development-branch correction is integrated and usable, retain the
+operational experimental checkout and its branch. A local corrective commit
+and fixture PASS alone do not change the active deployment source.
 
 After the migration is merged with separate authorization, the maintainer can
 select a clean local checkout of `main` containing this helper. Fetch there
@@ -172,7 +188,7 @@ The canonical path is **`SkyrimTogetherReborn/config/STServer.ini`**, as used by
    and origins, runtime/SKSE/build-identity contract, and local output isolation.
    No automatic fetch; main requires the explicit fetch described above and exact
    equality with origin/main. Optional `-Runtime17ExpectedCommit <full-SHA>` pins
-   HEAD on either branch. At `READY`,
+   HEAD on the selected branch. At `READY`,
    confirm both PCs' game, launcher, server, Vortex, Steam, CK and xEdit are closed
    and remain closed through staging.
 3. Create a unique receipt directory and linked short build directory. In the selected worktree run
@@ -292,6 +308,9 @@ origin/runtime/SKSE/BuildInfo), a complete main candidate cycle, retained
 experimental verification/restoration and unchanged configuration pins. Remote
 refs are created locally in disposable repositories; no fetch or network access
 occurs in these tests. Fixture success does not validate a real main deployment.
+Development-source cases cover every admitted prefix, a complete audio-branch
+cycle, source display, dirty-source refusal without fallback, and unchanged
+historical candidate identity after verification from a different work branch.
 See [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
 The subsequent [C1083 diagnosis and real native-build validation](../audit/2026-10-22-runtime17-c1083-build-path.md)
 records the short-build-root correction, 45 passing fixture cases and the exact
