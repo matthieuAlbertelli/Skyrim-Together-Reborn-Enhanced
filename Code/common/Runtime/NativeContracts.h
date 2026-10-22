@@ -63,7 +63,7 @@ inline constexpr std::array NativeContracts{
     NativeContractRequirement{NativeContract::FinalAppearance, "C12-final-appearance", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::LocalSeating, "C13-local-seating", NativeScope::Campaign, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::GrabRelease, "O01-grab-release", NativeScope::Optional, NativeEvidence::ExactSource, NativeEvidence::ExactSource},
-    NativeContractRequirement{NativeContract::MenuPresentation, "O02-menu-presentation", NativeScope::Optional, NativeEvidence::ExactBinary, NativeEvidence::Missing},
+    NativeContractRequirement{NativeContract::MenuPresentation, "O02-menu-presentation", NativeScope::Optional, NativeEvidence::ExactBinary, NativeEvidence::ExactBinary},
     NativeContractRequirement{NativeContract::DialogueProgress, "O03-dialogue-progress", NativeScope::Optional, NativeEvidence::ExactBinary, NativeEvidence::Missing},
     NativeContractRequirement{NativeContract::AppearanceDiagnostics, "D01-appearance-diagnostics", NativeScope::Diagnostic, NativeEvidence::ExactBinary, NativeEvidence::Missing},
 };

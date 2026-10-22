@@ -90,7 +90,8 @@ class MainMenuStructure(unittest.TestCase):
         self.assertIn("keyboard, m_scanCode, art", prompt)
         self.assertIn("children.Names.empty()", prompt)
         self.assertIn("m_attempted = true", prompt)
-        self.assertIn('GetLoadedVersionString() != "1.6.1170.0"', prompt)
+        self.assertIn('SupportsPresentation(db.GetLoadedVersionString())', prompt)
+        self.assertIn('SupportsPresentation(VersionDb::Get().GetLoadedVersionString())', prompt)
         self.assertIn("UI_MESSAGE_RESULTS::kIgnore", header)
         self.assertIn("void RefreshPlatform() override {}", header)
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
@@ -156,7 +157,7 @@ class MainMenuStructure(unittest.TestCase):
     def test_cursor_draw_gate_keeps_native_and_overlay_ownership(self):
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
         self.assertIn("FindAddressById(215246)", runtime)
-        hook = runtime[runtime.index("void CursorPostDisplayHook"):runtime.index("bool MusicAtCreateHook")]
+        hook = runtime[runtime.index("void CursorPostDisplayHook"):runtime.index("void MusicAtCreateHook")]
         self.assertIn("!presentation || !presentation->HidesCursor()", hook)
         self.assertIn("s_cursorPostDisplay(apMenu)", hook)
         presentation = read("Code/client/MainMenu/MainMenuPresentation.cpp")
@@ -210,7 +211,16 @@ class MainMenuStructure(unittest.TestCase):
 
     def test_runtime_fence_and_provenance(self):
         runtime = read("Code/client/Games/Skyrim/MainMenuRuntime.cpp")
-        self.assertIn('GetLoadedVersionString() != "1.6.1170.0"', runtime)
+        self.assertIn('SupportsPresentation(database.GetLoadedVersionString())', runtime)
+        adapter = read("Code/client/MainMenu/NativeAdapter.h")
+        self.assertIn('aVersion == "1.7.104.0"', adapter)
+        self.assertIn('NativeContract::MenuPresentation', adapter)
+        self.assertNotIn('1.6.1170.0', adapter)
+        self.assertIn('PrepareMusicCall', runtime)
+        self.assertIn('WithWritablePatches', runtime)
+        self.assertIn('table[4] != database.FindAddressById(52137)', runtime)
+        self.assertIn('table[6] != database.FindAddressById(33632)', runtime)
+        self.assertIn('cursorTable[6] != table[6]', runtime)
         sha = "ec692f0745972ba3b381e2b1df5c4c56218ee8e0"
         self.assertIn(sha, runtime)
         self.assertIn(sha, read("NOTICE.md"))
