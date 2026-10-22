@@ -1,211 +1,190 @@
-# Native/UI DEV workflow for two PCs
+# Two-PC DEV workflow: native build and installed main-PC contents
 
-This procedure owns the reusable deployment mechanics for issue #99.
+This procedure owns deployment mechanics for issue #99.
 [STATUS](../project/STATUS.md) owns executed validation; the
-[runtime migration guide](EXPERIMENTAL_RUNTIME_1_7.md) owns native compatibility.
-The lot-6 preparation authorizes **local script/fixture work only**. A maintainer
-must authorize and execute a later real run. Pc-vero remains **NON AUDITÉ PAR
-CODEX**; its readiness is the maintainer's responsibility. No incompatibility is
-inferred from that absence of an audit.
+[migration guide](EXPERIMENTAL_RUNTIME_1_7.md) owns native compatibility.
+The correction is validated on **local fixtures only**. Pc-vero remains
+**NON AUDITÉ PAR CODEX**, without any inferred incompatibility. The maintainer
+owns its readiness, real execution and both manual Vortex operations.
 
-## Routing and scope
+## Sources and scope
 
-The historical ignored `build-and-deploy-dev.ps1` selects the primary checkout,
-imports CK content, builds into its ordinary distribution and copies content and
-native files into two Vortex stagings. Its remote share is explicitly a Vortex
-mod directory, not the installed game. Its hashes establish staging agreement.
+**Contenu STRE installé sur le PC principal → remplacement sur Pc-vero**, avec
+contrôle des empreintes après synchronisation. The same frozen candidate feeds
+A's staging. An initial destination difference is normal, not a hash failure.
 
-The lot-4 explicit local wrapper introduced a selected 1.7 worktree, fresh xmake
-outputs, compiled identity, native-only copies and unlink-before-copy protection.
-The new tracked `Tools/Scripts/Stre.Runtime17Dev.psm1` extends those mechanics.
-It uses the same configure/build/install commands, native launcher/server/UI
-package and Vortex ownership model. It does not invoke the CK importer.
+| Category | Deployment source | Treatment |
+|---|---|---|
+| Native client, launcher, server, CEF libraries, generated UI | Fresh build of clean `feat/skyrim-1.7-runtime` | Validate compiled identity and snapshot distribution |
+| Managed STRE contents, including Valen WAVs | A's configured `gameRoot/Data` at capture time | Independent snapshot, replace/create only listed paths on A/B |
+| Server/personal configuration, saves/co-saves, campaigns, identities, databases, logs/caches, credentials | Each machine | Preserve; never distribute or include in package backups |
+| Skyrim, SKSE, Address Library, Better Grabbing | External dependency installation | Verify pinned hashes; never distribute |
 
-The personal entry routes `-Runtime17TwoPc` to
-`Tools/Scripts/Invoke-StreRuntime17Dev.ps1` in the selected experimental worktree.
-The earlier explicit lot-4 parameters remain available. An invocation without an
-explicit mode now fails; the old body requires `-Legacy`, which is **not a 1.7
-deployment procedure**. Neither legacy path supports WhatIf; they reject it.
+The pinned reference's `contentFiles.path` list defines the exact content scope.
+It is not a mirror of Data or of every mod. Old content hashes and
+`repositoryBytes/repositorySha256` are **historical evidence**, not expected
+capture bytes. The tracked `GameFiles/Skyrim` path inventory must still agree
+with the scope. Scope/dependency changes require review and a newly pinned
+reference. Copying installed content does not import or promote it into Git,
+authorize CK authoring, or invoke the historical CK collector/importer.
+The historical 293 native and 914 content files are not fixed candidate counts.
 
-The complete operation is one PowerShell command with two human handoffs:
+Content categories are independently fenced. The two shipped
+`STRE/MainMenu/{presentation,localization}.ini` files are presentation assets,
+distinct from server/personal configuration. Native output owns
+`SkyrimTogetherReborn/` in the combined Data-relative manifest; contents cannot
+enter that namespace or dependency paths. Duplicate paths, traversal, alternate
+streams, reparses and category collisions block. Files outside the new manifest,
+**including old UI bundles**, remain untouched: no purge or global equality.
+
+## Entry and private configuration
+
+The ignored personal entry routes `-Runtime17TwoPc` to the experimental worktree's
+`Tools/Scripts/Invoke-StreRuntime17Dev.ps1` and `Stre.Runtime17Dev.psm1`.
+The historical body remains behind `-Legacy`, which is not a 1.7 procedure.
+Ambiguous no-mode invocation fails. Run from the personal entry's directory:
 
 ```powershell
 pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc
 ```
 
-Run from the directory containing the personal entry. At `READY`, confirm that
-both PCs' game, launcher, server, Vortex, Steam, CK and xEdit are closed and remain
-closed during staging. After `AWAITING_HUMAN_VORTEX`, deploy the STRE DEV mod
-manually in Vortex on **both** PCs, close Vortex, then enter `DEPLOYED`. The same
-command resumes and hashes both actual installations. The script never launches
-or controls these applications. This pause is required to preserve Vortex's
-deployment ownership; staging success alone is never installation success.
+Use PowerShell 7.2+, Git and the existing xmake/MSVC/Node/pnpm build environment.
+The private config and entry remain ignored. `runtime17-dev.example.json` and
+`Start-StreRuntime17Dev.example.ps1` are generic templates for another machine.
 
-## One-time private configuration
-
-Use PowerShell 7.2+, Git and the existing xmake/MSVC/Node/pnpm build environment
-from the migration guide. No compiler installation is performed by this helper.
-Copy `Tools/Scripts/runtime17-dev.example.json` to the ignored
-`_audit/runtime17-dev.local.json` beside the personal entry. Keep this file and
-its referenced accepted manifest in private backups, outside Git.
-
-| Field | Required meaning |
+| Field | Meaning |
 |---|---|
-| `repository` | Absolute local root of `feat/skyrim-1.7-runtime`, not its parent checkout |
-| `receipts` | Existing absolute local directory outside that worktree and all destinations |
-| `referencePath`, `referenceSha256` | Local accepted qualification manifest and its pinned SHA-256 |
-| `targets[0]` / `targets[1]` | IDs `A` and `B`, in that order |
-| `stagingRoot` | Existing STRE Vortex mod root containing content and `SkyrimTogetherReborn` |
-| `gameRoot` | Actual Skyrim root containing `SkyrimSE.exe` and `Data`, never a staging alias |
+| `repository` | Absolute local root of `feat/skyrim-1.7-runtime`, not the parent checkout |
+| `receipts` | Existing local directory outside the source worktree and destinations |
+| `referencePath`, `referenceSha256` | Qualification/scope manifest and pinned SHA-256 |
+| `targets` | Ordered A,B; A is the local installed-content source |
+| `stagingRoot` | Existing STRE Vortex mod root, containing content and `SkyrimTogetherReborn` |
+| `gameRoot` | Actual Skyrim root with `SkyrimSE.exe` and `Data`, never a staging alias |
 
-For the maintained machine, A and B staging paths come from the historical
-script. **The script contains no actual game path for B.** The prepared local
-configuration initially left B's `gameRoot` null. The maintainer subsequently
-supplied that path; it was saved with local JSON validation only, without probing
-the share. A new configuration still requires an existing accessible share to
-the actual installation before any real run.
-No path is guessed, share created, SMB permission changed or access attempted
-during preparation. Missing gameRoot fails before source/build/destination work.
+The maintainer supplied B's staging and installed-game shares separately. Values
+can be read without resolving them; preparation does not probe or change shares.
+At real execution, directories must be accessible, non-overlapping ordinary
+directories with distinct physical IDs. A is local; B readiness is human-attested.
+The process guard enumerates local processes only. No remote process execution.
 
-Paths must be distinct, non-overlapping ordinary directories. Junctions/symlinks
-and equal directory file IDs are rejected. Directory file-ID queries must be
-supported by the filesystem/share. No remote execution or process enumeration
-is used; readiness on B is human-attested. Local process enumeration is read-only.
-
-The private reference schema has `schema: 1`, `runtime: "1.7.104.0"`,
-`compiledCommit`, `nativeFiles`, `contentFiles`, `dependencies` and provenance.
-Every row has relative `path`, `bytes` and `sha256`. Native paths are relative to
-`SkyrimTogetherReborn`; content paths to Data; dependency paths to the game root.
-Content rows additionally pin `repositoryBytes` and `repositorySha256` against
-`GameFiles/Skyrim`. The full tracked content path inventory must agree.
-
-The prepared reference is derived from the retained lot-4/Better Grabbing
-receipts: 293 historical native/UI files, 914 accepted contents, Skyrim 1.7.104,
-SKSE 2.3.1, Address Library V5 and Better Grabbing 2.0. It preserves the 16
-accepted source/installed divergences (14 Valen WAVs and two PSC line endings)
-as separate hashes, not broad exceptions. Any new source/content/dependency
-divergence requires human requalification and a newly pinned reference; do not
-regenerate it from unreviewed files just to make preflight pass.
-
-Back up the private configuration, reference and local entry together. To restore
-the workflow on a prepared machine, restore those files and the selected Git
-worktree, review the paths, and run WhatIf. The tracked
-`Start-StreRuntime17Dev.example.ps1` is an optional standalone replacement entry
-for a machine without the historical wrapper; copy it beside `_audit` under the
-habitual filename. It does not contain personal paths or the legacy CK body.
+The private reference retains schema 1, runtime `1.7.104.0`, `nativeFiles`
+(runtime-relative), `contentFiles` (Data-relative), `dependencies`
+(game-root-relative), and provenance. Rows have `path`, `bytes`, `sha256`.
+Its hash and external dependency hashes remain blocking checks. Back up this
+reference, the private configuration and entry together; do not regenerate the
+reference from a divergent destination to bypass a failure.
 
 ## Server configuration preservation
 
-The canonical path relative to each runtime directory is **`config/STServer.ini`**,
-as used by `DediRunner::LoadSettings`. A root-level `STServer.ini` is not a
-substitute. The INI is excluded from native packaging, copying and restoration.
+The canonical path is **`SkyrimTogetherReborn/config/STServer.ini`**, as used by
+`DediRunner::LoadSettings`; a root-level INI is not a substitute.
 
-- The installed `Data/SkyrimTogetherReborn/config/STServer.ini` is required by
-  this workflow to verify the existing Better Grabbing policy. Absence blocks
-  with `Required installed server configuration is absent`; never start the
-  server or create an empty/default INI to bypass this check.
-- The staging `SkyrimTogetherReborn/config/STServer.ini` is optional. Its initial
-  absence is recorded as `presence: absent` with a null hash. If present, its
-  policy is checked and its SHA-256 retained. The installed copy remains required
-  even when a staging copy exists.
-- Verification compares both presence and hash: an initially absent staging INI
-  appearing, an existing INI disappearing, or changed bytes all block. Neither
-  contents nor credentials are printed or copied into receipts.
-- Only explicit file/directory-not-found errors establish absence. Denied
-  metadata/read access and other IO failures are distinct blocking errors,
-  including for the optional staging copy. Reparse paths are refused.
+- Installed `Data/SkyrimTogetherReborn/config/STServer.ini` is required to verify
+  `sRequiredNativePlugins=BetterGrabbing.dll`. Absence blocks.
+- The staging copy is optional. Initial absence is recorded with a null hash.
+  If present, its policy and hash are checked. Installed configuration remains required.
+- Verification checks unchanged presence/hashes. INI contents and credentials
+  are never printed, copied, created or backed up. Do not launch a server or
+  create/copy a default INI to bypass the check.
+- Only explicit file/directory-not-found means absence. Access denial, IO errors,
+  non-directory ancestors and reparses remain blocking, including for an optional
+  INI. Managed-file inspection also distinguishes absence from unreadability.
 
-## Exact run sequence
+## Run sequence
 
-1. Read configuration. WhatIf returns here, without destination resolution,
-   existence checks, directory-ID queries, process enumeration, build or writes:
-
-   ```powershell
-   pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc -WhatIf
-   ```
-
-2. Check the actual repository root, canonical origin, exact branch, clean Git
-   state including untracked files, gitlink commits and submodule origins/clean
-   state, and the source runtime/SKSE/build-identity contract. Only actual Git
-   gitlinks count; obsolete `.gitmodules` entries do not fabricate dependencies.
-   No fetch is performed. Optional `-Runtime17ExpectedCommit <full-SHA>` pins a
-   specific source; otherwise the clean HEAD is captured and rechecked after
-   compilation. A later documentation commit never relabels an earlier binary.
-3. Preflight **both** destinations before compilation or any target write:
-   accessible distinct directories, accepted content in both staging and Data,
-   exact external dependency hashes, qualified plugin set, no old CKPE proxy and
-   retained required Better Grabbing server policy. Current staging and installed
-   native/UI payloads must agree on each PC; resolve pending Vortex conflicts
-   before rerunning. They need not be the historical 293-file build.
-4. After human readiness, create a unique local receipt directory. Run
+1. Read configuration. `-WhatIf` stops here: no destination resolution/IO,
+   process enumeration, compilation or writes.
+2. Check source root/origin/branch, clean source and submodules, gitlink commits
+   and origins, runtime/SKSE/build-identity contract, and local output isolation.
+   No fetch. Optional `-Runtime17ExpectedCommit <full-SHA>` pins HEAD. At `READY`,
+   confirm both PCs' game, launcher, server, Vortex, Steam, CK and xEdit are closed
+   and remain closed through staging.
+3. Create a unique receipt directory. In the selected worktree run
    `xmake config -P . -m debug -y -o <fresh-build>`,
-   `xmake build -P . -y -j <jobs>`, `xmake install -P . -o <fresh-distrib>`
-   from the selected worktree. Capture the log and fail on any exit error.
-5. Verify generated BuildInfo and embedded client/server identity
-   `runtime17-<full-source-commit>`, required launcher/native/CEF files and UI.
-   Generate the SHA-256/size manifest from the actual distribution. File count
-   is dynamic; PDB/ILK/LIB/EXP and test executables are excluded. Unreviewed root
-   payload names are rejected. CEF/Discord libraries and UI sound assets belong
-   to this native/UI package; CK audio, ESP/PSC/PEX, saves and settings do not.
-6. Repeat both destination preflights after the long build. Back up **both**
-   staging and installed native/UI inventories to the local receipt and verify
-   backup hashes before changing either target. Snapshot server-configuration
-   presence/hashes without copying or editing their contents.
-7. Copy the same manifest to A and B staging. Unlink each destination file before
-   copying, including obsolete owned UI/assets/locales; do not overwrite a
-   hardlinked inode. Verify exact file sets, sizes and hashes. Preserve content,
-   dependencies, settings, caches, logs, server state and saves. Receipts
-   `staged-A.json` and `staged-B.json` explicitly say installation is unverified.
-8. Wait for the human Vortex handoff, then check both staging and actual
-   `Data/SkyrimTogetherReborn` payloads, content/dependencies and unchanged server
-   configuration again. Write distinct `verified-A.json` / `verified-B.json`
-   with compiled commit, current verification HEAD, files and UTC. Only both
-   passing yields `INSTALLED_VERIFIED`. No runtime loading, Solo, admission or
-   World Sync result follows from these hashes.
+   `xmake build -P . -y -j <jobs>`, then
+   `xmake install -P . -o <fresh-distrib>`. Capture errors/logs and recheck source.
+   BuildInfo and embedded client/server IDs must identify that commit. Validate
+   native/CEF/UI requirements; exclude tests/debug artifacts.
+4. **After xmake completes**, freeze the combined candidate under `package/`.
+   Native/UI output goes under `package/SkyrimTogetherReborn/`. Capture only the
+   listed contents from A's installed Data: relative path, source path, bytes,
+   SHA-256, `installed main PC` provenance. New files are independent, never
+   hardlinks; source handles deny write/delete sharing while copying. Check
+   source hashes/timestamps across capture and snapshot hashes. Missing,
+   unreadable or changed sources block without Git fallback. Source Data is not
+   written. `manifest.json` records the schema-2 candidate and capture time.
+5. Preflight both destinations: physical isolation, external dependencies,
+   qualified plugin set, no old proxy, protected INIs. Record staging and Data's
+   state for each manifest path: `identical`, `replace` or `create`. Initial
+   staging/Data differences are allowed. Bad paths/access/IO still block.
+6. Back up both PCs' scoped staging and installed files independently under
+   `backup/A|B/staging|installed`, including recorded absence. Recheck sources
+   and backup hashes before changing either target. Both old sets matter when
+   staging differs from Data.
+7. Recheck frozen-package integrity before each target. Copy only manifest paths
+   to staging. Leave identical files alone; unlink replacements before copying
+   to new files, safely breaking Vortex hardlinks. Check preflight state before
+   replacement and frozen hashes after copy. Journal per-file progress and any
+   partial-copy bytes. No out-of-scope purge.
+8. At `AWAITING_HUMAN_VORTEX`, deploy STRE DEV manually through Vortex on **both**
+   PCs, close Vortex, then enter `DEPLOYED`. Do not launch games/server.
+9. Verify the retained package, both stagings, both actual Data trees (manifest
+   paths only), dependencies and unchanged INIs. Write `verified-A.json` and
+   `verified-B.json`. Only both passing yields `INSTALLED_VERIFIED`. Distinguish
+   compiled commit from later verification HEAD. No runtime/admission/World Sync
+   or multiplayer validation follows from these hashes.
 
-## Failure, resumption and restoration
+The inspected xmake client install hook copies CEF/Discord and generated Angular
+output to the **fresh distribution**, not installed Data. It does not copy
+`GameFiles/Skyrim`. Snapshot assembly follows xmake; no later Git-content pass can
+overwrite it. Namespace fences make source-category collisions explicit.
 
-Any failure stops the run; no automatic build reuse, retry or game launch occurs.
-The printed receipt directory contains `receipt.json`, `manifest.json`, build
-log, per-PC results, fresh distribution and `backup/A|B/staging|installed`.
-Never delete it to conceal partial success. Read its overall status and both
-per-PC results; A can have passed while B failed. Network availability and Vortex
-deployment are not a cross-PC transaction.
+## Failure, verification and restoration
 
-If staging succeeded and the human deployment was deferred or failed, correct
-that deployment manually and verify the retained candidate without rebuilding:
+Keep the receipt directory: `receipt.json`, `manifest.json`, build log/distribution,
+independent `package/`, backups, `backup-A|B.json`, `copy-A|B.json`,
+`staged-A|B.json` and verification results as phases finish. `failedPhase` names
+the stop. Journals distinguish pending/unlinked/identical/verified/failed files,
+including observed partial hashes. A success does not imply B success. Verification
+attempts have an `attemptId`; an old per-PC receipt is not a result for a newer
+failed attempt. There is no cross-PC transaction or automatic deployment retry.
+
+If staging succeeded but Vortex was deferred/failed, finish the manual deployment,
+then verify **the same frozen candidate**, without rebuilding:
 
 ```powershell
 pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc -Runtime17Mode Verify -Runtime17ReceiptRoot '<receipt-directory>'
 ```
 
-To abandon a partially staged or deployed candidate:
+If staging failed partway, Verify cannot finish that copy. Restore, redeploy and
+verify the old state, then start a new build/capture when ready:
 
 ```powershell
 pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc -Runtime17Mode RestoreStaging -Runtime17ReceiptRoot '<receipt-directory>'
 ```
 
-This validates both backups and original directory identities before either
-restore. It accepts only the recorded old/new file hashes (or missing files)
-in a partial staging, and refuses unrelated intervening changes. It restores
-native/UI staging bytes only, using unlink-before-copy. It can operate when
-the current source is dirty; the old compiled bytes remain identified by their
-backup manifest. If B is unavailable, restore stops: recover connectivity and
-rerun; do not start either client. Never force-copy over unknown changes.
+RestoreStaging validates both backup sets and destination identities before either
+write, rejecting unknown intervening changes. It accepts recorded old/new bytes,
+absence and precisely journaled partial-copy bytes. It prepares each PC's
+**pre-run installed backup** in that PC's staging with unlink/copy, including
+removing in-scope paths originally absent from Data. Restoring an initially
+divergent staging would not restore the prior installation after Vortex. The
+original staging backup remains available as evidence. Out-of-scope files and
+configuration stay untouched. Dirty current source does not prevent rollback.
 
-Then deploy the restored mod manually through Vortex on both PCs and close it.
-Verify the actual restored files:
+Deploy the restored stagings manually through Vortex on both PCs, close it, then:
 
 ```powershell
 pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc -Runtime17Mode VerifyRestored -Runtime17ReceiptRoot '<receipt-directory>'
 ```
 
-Only `RESTORED_VERIFIED` establishes that both actual native/UI installations
-again match the pre-run backup. Installed backups are also retained as evidence
-and for supervised recovery; the helper never bypasses Vortex to write Data.
-Do not alter the private configuration between a run and its recovery: receipts
-pin its hash. A changed installation identity or corrupted backup blocks recovery
-until investigated. Restoration cannot undo unrelated external content changes.
+Only `RESTORED_VERIFIED` establishes that scoped installed files match their
+pre-run installed backups. The helper never writes Data. Unavailable B, corrupted
+backups, unknown changes or changed directory identities block recovery. Keep the
+private config unchanged: receipts pin its hash. Schema-2 receipts are required;
+older native-only schema-1 receipts are explicitly rejected, not reinterpreted.
+A failure before complete backups/staging has no target writes to undo; inspect
+its phase before choosing recovery. Unrelated external changes are not undone.
 
 ## Local validation
 
@@ -213,8 +192,9 @@ until investigated. Restoration cannot undo unrelated external content changes.
 pwsh -NoProfile -File Tools/Scripts/Test-StreRuntime17Dev.ps1 -OutputRoot '<fresh-local-fixture-directory>'
 ```
 
-The tests create only local Git repositories and fake payloads. xmake, process
-enumeration and human Vortex actions are simulated for the full-flow tests;
-filesystem, hashes, manifests, hardlinks, backup and restoration are real local
-operations. No native executable is run. See the dated preparation evidence for
-executed cases. A fixture PASS is not an audit/deployment on B.
+Only local fake repositories/installations are used. Compiler, process checks and
+human Vortex steps are simulated; hashes, files, hardlinks, backups and restoration
+are real local operations. Cases cover installed-vs-Git WAV provenance, divergent
+or absent destinations, missing/unstable sources, corrupt snapshot, copy/final-hash
+failures, partial recovery, personal-file preservation, INI behavior and routing.
+See [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).

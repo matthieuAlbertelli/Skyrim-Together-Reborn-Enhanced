@@ -1,7 +1,7 @@
 #requires -Version 7.2
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-# Native-only successor to the lot-4 local wrapper. No CK import, app launch,
+# Native build + installed-A content successor to the lot-4 local wrapper. No CK import, app launch,
 # remote command, credentials, server configuration write or Vortex API.
 $script:RootFiles = @(
     'SkyrimTogether.exe','EarlyLoad.dll','TPProcess.exe','SkyrimTogetherServer.exe',
@@ -59,7 +59,8 @@ function Get-R17Tree([string]$Root) {
 function Assert-R17NativePath([string]$Relative) {
     $null = Get-R17Child 'C:\native' $Relative
     $name = $Relative.Replace('\','/')
-    if ($name -match '\.(esp|esm|esl|psc|pex|fuz|xwm|ess|skse|ini|log)$' -or
+    if ($name -match '\.(esp|esm|esl|psc|pex|fuz|xwm|ess|skse|ini|log|db|sqlite|sqlite3|dmp)$' -or
+        $name -match '(?i)(^|/)(config|configs|saves|campaigns|identities|logs|cache|credentials|tokens)(/|\.)' -or
         ($name -match '\.wav$' -and $name -notmatch '^UI/assets/sounds/') -or
         $name -match '(?i)(BetterGrabbing|skse64|versionlib-|Tests\.exe)') { throw "Protected/non-payload file: $name" }
     if ($name -notin $script:RootFiles -and $name -notmatch '^(UI|assets|locales)/') { throw "Unreviewed native package path: $name" }
@@ -81,7 +82,8 @@ function Assert-R17Files([string]$Root, $Rows) {
     foreach ($row in $Rows) {
         $path = Get-R17Child $Root $row.path
         Assert-R17Ordinary $path
-        if (!(Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -ne $row.bytes -or (Get-R17Hash $path) -ne $row.sha256) { throw "Hash/size mismatch: $path" }
+        $actual=Get-R17FileState $Root $row.path 'required reference file'
+        if (!(Test-R17SameFile $row $actual)) { throw "Hash/size mismatch: $path; reference bytes=$($row.bytes) SHA256=$($row.sha256); observed=$($actual.presence) bytes=$($actual.bytes) SHA256=$($actual.sha256)" }
     }
 }
 function Get-R17Rows([string]$Root, [switch]$Distribution) {
@@ -213,7 +215,7 @@ function Get-R17Reference($Config) {
     Assert-R17Rows $ref.nativeFiles -Native
     Assert-R17Rows $ref.dependencies
     Assert-R17Rows $ref.contentFiles
-    Assert-R17Content (Join-Path $Config.repository 'GameFiles/Skyrim') $ref.contentFiles -Repository
+    foreach ($row in $ref.contentFiles) { Assert-R17ContentPath $row.path }
     $tracked = @(Invoke-R17Git $Config.repository @('ls-files','--','GameFiles/Skyrim') | ForEach-Object { $_.Substring('GameFiles/Skyrim/'.Length) })
     if (@(Compare-Object @($tracked | Sort-Object) @($ref.contentFiles.path | Sort-Object)).Count) { throw 'Content source inventory changed; requalification required.' }
     $ref
@@ -258,8 +260,6 @@ function Get-R17IniState([string]$Path, [switch]$Required) {
 function Get-R17ProtectedState($Config, $Reference) {
     $state = @(foreach ($target in $Config.targets) {
         $game = $target.gameRoot; $stage = $target.stagingRoot
-        Assert-R17Content $stage $Reference.contentFiles
-        Assert-R17Content (Join-Path $game 'Data') $Reference.contentFiles
         Assert-R17Files $game $Reference.dependencies
         $plugins = @(Get-ChildItem -LiteralPath (Join-Path $game 'Data/SKSE/Plugins') -Filter '*.dll' -File -Force)
         if ($plugins.Count -ne 1 -or $plugins[0].Name -ine 'BetterGrabbing.dll' -or (Test-Path -LiteralPath (Join-Path $game 'winhttp.dll'))) { throw "Unqualified native plugin/proxy set on $($target.id)." }
@@ -271,7 +271,133 @@ function Get-R17ProtectedState($Config, $Reference) {
     })
     $state
 }
-function Get-R17Preflight($Config, $Reference) {
+function Assert-R17ContentPath([string]$Relative) {
+    $null = Get-R17Child 'C:\content' $Relative
+    $path = $Relative.Replace('\','/')
+    # The pinned manifest is the exact scope, these categories are a second fence.
+    # The two main-menu INIs are shipped presentation assets, not server settings.
+    if ($path -notmatch '^(SkyrimTogether\.esp|STRE_AlternateStart\.esp|(?:scripts|Source)/.+\.(?:pex|psc)|Sound/Voice/(?:STRE_AlternateStart|SkyrimTogether)\.esp/.+\.wav|meshes/.+\.nif|textures/.+\.dds|SEQ/.+\.seq|SkyrimTogetherRebornBehaviors/.+\.txt|STRE/Licenses/[^/]+\.txt|STRE/MainMenu/(?:[^/]+\.mp4|[^/]+\.png|Branding/[^/]+\.png|localization\.ini|presentation\.ini))$') {
+        throw "Protected/unreviewed managed content path: $path"
+    }
+}
+function Get-R17FileAttributes([string]$Path) { [IO.File]::GetAttributes($Path) }
+function Get-R17FileState([string]$Root, [string]$Relative, [string]$Phase='inspect') {
+    $path = Get-R17Child $Root $Relative
+    $cursor = $path; $missing = $false
+    $volume = [IO.Path]::GetPathRoot($path).TrimEnd('\','/')
+    while ($cursor) {
+        try {
+            $attr = Get-R17FileAttributes $cursor
+            if ($attr -band [IO.FileAttributes]::ReparsePoint) { throw "[$Phase] Reparse path refused: $cursor" }
+            if ($cursor -eq $path -and ($attr -band [IO.FileAttributes]::Directory)) { throw "[$Phase] Expected file, found directory: $path" }
+            if ($cursor -ne $path -and !($attr -band [IO.FileAttributes]::Directory)) { throw "[$Phase] Ancestor is not a directory: $cursor" }
+        } catch [IO.FileNotFoundException] { $missing=$true
+        } catch [IO.DirectoryNotFoundException] { $missing=$true
+        } catch [UnauthorizedAccessException] { throw "[$Phase] Access denied inspecting: $cursor"
+        } catch [IO.IOException] { throw "[$Phase] IO failure inspecting: $cursor" }
+        if ($cursor.TrimEnd('\','/') -eq $volume) { break }
+        $cursor = Split-Path -Parent $cursor
+    }
+    if ($missing) { return @{path=$Relative; presence='absent'; bytes=$null; sha256=$null} }
+    try {
+        $item = Get-Item -LiteralPath $path -Force
+        $bytes = $item.Length; $stamp = $item.LastWriteTimeUtc.Ticks
+        $hash = Get-R17Hash $path
+        $item.Refresh()
+        if ($item.Length -ne $bytes -or $item.LastWriteTimeUtc.Ticks -ne $stamp) { throw "[$Phase] File changed during inspection: $path" }
+        @{path=$Relative; presence='present'; bytes=$bytes; sha256=$hash; writeTicks=$stamp}
+    } catch [UnauthorizedAccessException] { throw "[$Phase] Access denied reading: $path"
+    } catch [IO.IOException] { throw "[$Phase] IO failure reading (unreadable or changed): $path" }
+}
+function Test-R17SameFile($Expected, $Actual) {
+    $presence = if ($Expected.ContainsKey('presence')) { $Expected.presence } else { 'present' }
+    $presence -eq $Actual.presence -and ($presence -eq 'absent' -or ($Expected.bytes -eq $Actual.bytes -and $Expected.sha256 -eq $Actual.sha256))
+}
+function Assert-R17State([string]$Root, $Rows, [string]$Phase) {
+    foreach ($row in $Rows) {
+        $actual = Get-R17FileState $Root $row.path $Phase
+        if (!(Test-R17SameFile $row $actual)) {
+            $presence = if ($row.ContainsKey('presence')) {$row.presence} else {'present'}
+            throw "[$Phase] Hash/size/presence mismatch: $(Get-R17Child $Root $row.path); reference=$presence bytes=$($row.bytes) SHA256=$($row.sha256); observed=$($actual.presence) bytes=$($actual.bytes) SHA256=$($actual.sha256)"
+        }
+    }
+}
+function Copy-R17IndependentFile([string]$Source, [string]$Destination) {
+    # Both handles are owned here. CreateNew cannot overwrite an inode/hardlink;
+    # FileShare.Read prevents concurrent writes/deletes while copying the source.
+    New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
+    $inputStream=$null; $outputStream=$null
+    try {
+        $inputStream=[IO.File]::Open($Source,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+        $outputStream=[IO.File]::Open($Destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        $inputStream.CopyTo($outputStream)
+    } catch [UnauthorizedAccessException] { throw "Access denied copying: $Source -> $Destination"
+    } catch [IO.IOException] { throw "IO failure copying: $Source -> $Destination; $($_.Exception.Message)"
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+    }
+}
+function Get-R17DeploymentRows($Candidate) {
+    Assert-R17Rows $Candidate.files -Native
+    Assert-R17Rows $Candidate.contentFiles
+    $rows = @(foreach ($row in $Candidate.files) {
+        @{path="SkyrimTogetherReborn/$($row.path)"; bytes=$row.bytes; sha256=$row.sha256; provenance='experimental worktree build'}
+    }; foreach ($row in $Candidate.contentFiles) {
+        Assert-R17ContentPath $row.path
+        if ($row.provenance -cne 'installed main PC' -or ![IO.Path]::IsPathFullyQualified($row.sourcePath)) { throw "Invalid content provenance: $($row.path)" }
+        $row
+    })
+    Assert-R17Rows $rows # Includes case-insensitive collisions between categories.
+    $rows
+}
+function Assert-R17Package([string]$Package, $Rows) {
+    Assert-R17Rows $Rows
+    Assert-R17State $Package $Rows 'frozen candidate integrity'
+    $actual = @(Get-R17Tree $Package | ForEach-Object { [IO.Path]::GetRelativePath($Package,$_.FullName).Replace('\','/') })
+    if (@(Compare-Object @($Rows.path | Sort-Object) @($actual | Sort-Object)).Count) { throw 'Frozen candidate file set mismatch.' }
+}
+function Add-R17InstalledContent($Candidate, $Config, $Reference, [string]$Run) {
+    Assert-R17Local $Config.targets[0].gameRoot
+    $data = Join-Path $Config.targets[0].gameRoot 'Data'
+    # Only main-PC source and local build/output are inspected in this phase.
+    Assert-R17Separate @($data,$Run)
+    $package = Join-Path $Run 'package'
+    New-Item -ItemType Directory -Path $package | Out-Null
+    $before = @(foreach ($row in $Reference.contentFiles) {
+        Assert-R17ContentPath $row.path
+        $state = Get-R17FileState $data $row.path 'installed main PC snapshot source'
+        if ($state.presence -ne 'present') { throw "[snapshot] Required installed main PC source absent: $(Get-R17Child $data $row.path); no Git fallback." }
+        $state
+    })
+    $contents = @(foreach ($row in $before) {
+        $sourcePath = Get-R17Child $data $row.path
+        Copy-R17IndependentFile $sourcePath (Get-R17Child $package $row.path)
+        Assert-R17State $package @($row) 'snapshot copy from installed main PC'
+        @{path=$row.path; sourcePath=$sourcePath; bytes=$row.bytes; sha256=$row.sha256; provenance='installed main PC'}
+    })
+    # Recheck the whole source set, not only the last captured file.
+    foreach ($row in $before) {
+        $after = Get-R17FileState $data $row.path 'installed main PC snapshot stability'
+        if (!(Test-R17SameFile $row $after) -or $row.writeTicks -ne $after.writeTicks) { throw "[snapshot] Installed main PC source changed during capture: $(Get-R17Child $data $row.path); expected SHA256=$($row.sha256), observed=$($after.sha256)." }
+    }
+    foreach ($row in $Candidate.files) {
+        Copy-R17IndependentFile (Get-R17Child (Join-Path $Run 'distrib/bin') $row.path) (Get-R17Child $package "SkyrimTogetherReborn/$($row.path)")
+    }
+    $Candidate.schema=2; $Candidate.contentFiles=$contents
+    $Candidate.capturedUtc=[datetime]::UtcNow; $Candidate.contentSourceRoot=$data
+    $Candidate.scopeReferenceSha256=$Config.referenceSha256
+    Assert-R17Package $package @(Get-R17DeploymentRows $Candidate)
+    $Candidate
+}
+function Get-R17Plan([string]$Root, $Rows) {
+    @(foreach ($row in $Rows) {
+        $state=Get-R17FileState $Root $row.path 'destination preflight'
+        $state.action=if ($state.presence -eq 'absent') {'create'} elseif (Test-R17SameFile $row $state) {'identical'} else {'replace'}
+        $state
+    })
+}
+function Get-R17Preflight($Config, $Reference, $Rows) {
     foreach ($target in $Config.targets) {
         if (!$target.gameRoot) { throw "Configure the actual gameRoot for $($target.id); staging is not an installation." }
     }
@@ -281,16 +407,13 @@ function Get-R17Preflight($Config, $Reference) {
     Assert-R17Separate $paths
     $protected = @(Get-R17ProtectedState $Config $Reference)
     $targets = @(foreach ($target in $Config.targets) {
-        $stage = Join-Path $target.stagingRoot 'SkyrimTogetherReborn'
-        $installed = Join-Path $target.gameRoot 'Data/SkyrimTogetherReborn'
+        $stage = $target.stagingRoot
+        $installed = Join-Path $target.gameRoot 'Data'
         Assert-R17Separate @($stage,$installed)
-        $old = @(Get-R17Rows $stage)
-        # A pending or conflicting Vortex deployment must be resolved by the
-        # maintainer before this transaction. This also makes rollback exact.
-        Assert-R17Exact $installed $old
+        if (!$Rows) { throw 'A frozen synchronization manifest is required for destination preflight.' }
         @{id=$target.id; staging=$stage; installed=$installed;
           stagingId=Get-R17DirectoryId $stage; installedId=Get-R17DirectoryId $installed;
-          stagingBefore=$old; installedBefore=@(Get-R17Rows $installed)}
+          stagingBefore=@(Get-R17Plan $stage $Rows); installedBefore=@(Get-R17Plan $installed $Rows)}
     })
     @{targets=$targets; protected=$protected}
 }
@@ -331,33 +454,59 @@ function Backup-R17Target($Target, [string]$Run) {
     foreach ($kind in @('staging','installed')) {
         $backup = Join-Path $Run "backup/$($Target.id)/$kind"
         New-Item -ItemType Directory -Path $backup | Out-Null
+        Assert-R17State $Target[$kind] $Target["${kind}Before"] "backup $($Target.id) $kind source"
         foreach ($row in $Target["${kind}Before"]) {
+            if ($row.presence -eq 'absent') { continue }
             $dest = Get-R17Child $backup $row.path
-            New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force | Out-Null
-            Copy-Item -LiteralPath (Get-R17Child $Target[$kind] $row.path) -Destination $dest
+            Copy-R17IndependentFile (Get-R17Child $Target[$kind] $row.path) $dest
         }
-        Assert-R17Files $backup $Target["${kind}Before"]
+        Assert-R17State $backup $Target["${kind}Before"] "backup $($Target.id) $kind integrity"
     }
 }
-function Set-R17Payload([string]$Destination, [string]$Source, $Before, $After) {
-    Assert-R17Rows $After -Native
-    Assert-R17Exact $Source $After -Distribution
-    if (@($Before).Count) { Assert-R17Exact $Destination $Before }
-    elseif (@(Get-R17Rows $Destination).Count) { throw 'Unexpected files at an empty destination.' }
-    # Each individual unlink breaks Vortex hardlinks; no in-place overwrite.
-    $oldPaths = @($Before | ForEach-Object { $_.path })
-    foreach ($rel in @($oldPaths+@($After.path) | Sort-Object -Unique)) {
-        $path = Get-R17Child $Destination $rel
-        Assert-R17Ordinary $path -AllowMissing
-        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
-        $row = @($After | Where-Object path -eq $rel)
-        if ($row.Count) {
-            New-Item -ItemType Directory -Path (Split-Path -Parent $path) -Force | Out-Null
-            Copy-Item -LiteralPath (Get-R17Child $Source $rel) -Destination $path
-            if ((Get-R17Hash $path) -ne $row[0].sha256) { throw "Copied hash mismatch: $rel" }
-        }
+function Set-R17Payload([string]$Destination, [string]$Source, $Before, $After, [string]$JournalPath) {
+    if (@(Compare-Object @($Before.path | Sort-Object) @($After.path | Sort-Object)).Count) { throw 'Copy scope differs from preflight scope.' }
+    foreach ($row in $After) {
+        if ($row.path -match '^SkyrimTogetherReborn/(.+)$') { Assert-R17NativePath $Matches[1] } else { Assert-R17ContentPath $row.path }
     }
-    Assert-R17Exact $Destination $After
+    Assert-R17State $Source $After 'copy source manifest'
+    Assert-R17State $Destination $Before 'destination unchanged since preflight'
+    $journal=@{destination=$Destination; reference=$Source; files=@(); status='COPYING'}
+    foreach ($row in $After) {
+        $path=Get-R17Child $Destination $row.path
+        $old=@($Before | Where-Object path -eq $row.path)[0]
+        $entry=@{path=$row.path; status='PENDING'; mutationStarted=$false; observed=$null}
+        $journal.files += $entry
+        if ($JournalPath) { Write-R17Json $journal $JournalPath }
+        try {
+            Assert-R17State $Destination @($old) 'before individual replacement'
+            if (Test-R17SameFile $row $old) { $entry.status='IDENTICAL' } else {
+                # Only this manifest path is unlinked; no union/purge of old UI.
+                if ($old.presence -eq 'present') { Remove-Item -LiteralPath $path -Force }
+                $entry.mutationStarted=$true
+                $entry.status='UNLINKED'
+                if ($JournalPath) { Write-R17Json $journal $JournalPath }
+                if (!$row.ContainsKey('presence') -or $row.presence -eq 'present') {
+                    Copy-R17IndependentFile (Get-R17Child $Source $row.path) $path
+                }
+                Assert-R17State $Destination @($row) 'after copy against frozen manifest'
+                $entry.status='VERIFIED'
+            }
+        } catch {
+            $entry.status='FAILED'; $entry.error=$_.Exception.Message
+            # Record partial bytes for guarded restoration; never accept an
+            # arbitrary later edit just because a copy previously failed.
+            if ($entry.mutationStarted) {
+                try { $entry.observed=Get-R17FileState $Destination $row.path 'partial copy evidence' } catch { $entry.observationError=$_.Exception.Message }
+            }
+            $journal.status='STOPPED'
+            if ($JournalPath) { Write-R17Json $journal $JournalPath }
+            throw
+        }
+        if ($JournalPath) { Write-R17Json $journal $JournalPath }
+    }
+    Assert-R17State $Destination $After 'complete staging against frozen manifest'
+    $journal.status='COMPLETE'
+    if ($JournalPath) { Write-R17Json $journal $JournalPath }
 }
 function Assert-R17Protected($Config, $Reference, $Original) {
     $current = @(Get-R17ProtectedState $Config $Reference)
@@ -368,22 +517,36 @@ function Assert-R17Protected($Config, $Reference, $Original) {
     }
 }
 function Restore-R17Staging($Receipt, [string]$Run) {
-    $candidate = $Receipt.candidate.files
+    $candidate = @(Get-R17DeploymentRows $Receipt.candidate)
     # Validate every backup and destination before restoring either target.
     $plans = @(foreach ($target in $Receipt.preflight.targets) {
-        $backup = Join-Path $Run "backup/$($target.id)/staging"
-        Assert-R17Exact $backup $target.stagingBefore -Distribution
+        foreach ($kind in @('staging','installed')) {
+            Assert-R17State (Join-Path $Run "backup/$($target.id)/$kind") $target["${kind}Before"] "restore backup $($target.id) $kind"
+        }
+        # Initially divergent staging is not a safe rollback image for Data.
+        # Feed the original installed bytes to Vortex; retain both backups.
+        $backup = Join-Path $Run "backup/$($target.id)/installed"
         Assert-R17Ordinary $target.staging
         if ((Get-R17DirectoryId $target.staging) -ne $target.stagingId) { throw 'Restore destination identity changed.' }
-        $current = @(Get-R17Rows $target.staging)
+        $current = @(Get-R17Plan $target.staging $candidate)
+        $partial=@()
+        foreach ($name in @("copy-$($target.id).json","restore-copy-$($target.id).json")) {
+            $journalPath=Join-Path $Run $name
+            if (Test-Path -LiteralPath $journalPath) {
+                $partial += @((Read-R17Json $journalPath).files | Where-Object { $_.ContainsKey('observed') -and $null -ne $_.observed } | ForEach-Object { $_.observed })
+            }
+        }
         foreach ($row in $current) {
-            $allowed = @(@($target.stagingBefore)+@($candidate) | Where-Object { $_.path -eq $row.path -and $_.sha256 -eq $row.sha256 })
+            if ($row.presence -eq 'absent') { continue }
+            $allowed = @(@($target.stagingBefore)+@($target.installedBefore)+@($candidate)+$partial | Where-Object { $_.path -eq $row.path -and (Test-R17SameFile $_ $row) })
             if (!$allowed.Count) { throw "Restore would overwrite unrelated changes: $($row.path)" }
         }
         @{target=$target; backup=$backup; current=$current}
     })
     foreach ($plan in $plans) {
-        Set-R17Payload $plan.target.staging $plan.backup $plan.current $plan.target.stagingBefore
+        $Receipt.status="RESTORING_$($plan.target.id)"
+        Write-R17Json $Receipt (Join-Path $Run 'receipt.json')
+        Set-R17Payload $plan.target.staging $plan.backup $plan.current $plan.target.installedBefore (Join-Path $Run "restore-copy-$($plan.target.id).json")
         Write-R17Json @{id=$plan.target.id; status='STAGING_RESTORED'; actualGameVerified=$false} (Join-Path $Run "restore-$($plan.target.id).json")
     }
 }
@@ -392,7 +555,7 @@ function Assert-R17ReceiptTargets($Config, $Receipt) {
     $paths = @()
     foreach ($target in $Config.targets) {
         $saved = @($Receipt.preflight.targets | Where-Object id -eq $target.id)
-        if ($saved.Count -ne 1 -or $saved[0].staging -ne (Join-Path $target.stagingRoot 'SkyrimTogetherReborn') -or $saved[0].installed -ne (Join-Path $target.gameRoot 'Data/SkyrimTogetherReborn')) { throw 'Receipt destination mismatch.' }
+        if ($saved.Count -ne 1 -or $saved[0].staging -ne $target.stagingRoot -or $saved[0].installed -ne (Join-Path $target.gameRoot 'Data')) { throw 'Receipt destination mismatch.' }
         foreach ($kind in @('staging','installed')) {
             $path = $saved[0][$kind]; $paths += $path
             Assert-R17Ordinary $path
@@ -408,12 +571,12 @@ function Invoke-R17Workflow {
     if ($PlanOnly) {
         [pscustomobject]@{mode=$Mode; destinationIO=$false; repository=$config.repository;
             targets=$config.targets; missingGameRoots=@($config.targets | Where-Object {!$_.gameRoot} | ForEach-Object { $_.id });
-            steps='preflight both; build fresh; backup both; stage both; human Vortex deploy; verify actual Data'}
+            steps='build fresh; snapshot installed A content; preflight both; backup both; stage both; human Vortex deploy; verify actual Data'}
         return
     }
     foreach ($target in $config.targets) { if (!$target.gameRoot) { throw "Configure actual gameRoot for $($target.id) before execution." } }
     Assert-R17Stopped
-    # Rollback uses saved native bytes even if current source is dirty or has
+    # Rollback uses saved installed bytes even if current source is dirty or has
     # evolved. Verify still records the current documentation/source HEAD.
     $source = if ($Mode -notin @('RestoreStaging','VerifyRestored')) { Get-R17Source $config.repository $ExpectedCommit } else { $null }
     $reference = if ($Mode -ne 'RestoreStaging') { Get-R17Reference $config } else { $null }
@@ -421,14 +584,18 @@ function Invoke-R17Workflow {
         Assert-R17Local $ReceiptPath
         Assert-R17Ordinary $ReceiptPath
         $receipt = Read-R17Json (Join-Path $ReceiptPath 'receipt.json')
-        if ($receipt.configSha256 -ne (Get-R17Hash $ConfigPath) -or $receipt.schema -ne 1) { throw 'Receipt/configuration mismatch.' }
-        Assert-R17Rows $receipt.candidate.files -Native
+        if ($receipt.configSha256 -ne (Get-R17Hash $ConfigPath) -or $receipt.schema -ne 2) { throw 'Receipt/configuration mismatch (schema 2 required; do not reinterpret an older native-only receipt).' }
+        $rows=@(Get-R17DeploymentRows $receipt.candidate)
+        $receipt.attemptId=[guid]::NewGuid().ToString('N')
+        $receipt.status="${Mode}_PREFLIGHT"
+        Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
+        try {
         Assert-R17ReceiptTargets $config $receipt
         if ($Mode -eq 'RestoreStaging') {
             $receipt.status='RESTORE_REQUESTED'; Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
             Restore-R17Staging $receipt $ReceiptPath
             $receipt.status='STAGING_RESTORED'; Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
-            Write-Host 'Staging restored. Human Vortex deployment is required; installed files are not declared restored.'
+            Write-Host 'Original installed bytes prepared in staging. Human Vortex deployment is required; installed files are not declared restored.'
             return
         }
         if ($Mode -eq 'Verify') {
@@ -437,43 +604,66 @@ function Invoke-R17Workflow {
             $retained=New-R17Candidate $builtSource $ReceiptPath
             Assert-R17Exact (Join-Path $ReceiptPath 'distrib/bin') $receipt.candidate.files -Distribution
             if ($retained.files.Count -ne $receipt.candidate.files.Count) { throw 'Retained manifest changed.' }
+            if ($receipt.candidate.scopeReferenceSha256 -ne $config.referenceSha256 -or $receipt.candidate.contentSourceRoot -ne (Join-Path $config.targets[0].gameRoot 'Data')) { throw 'Retained content source/scope changed.' }
+            if (@(Compare-Object @($reference.contentFiles.path | Sort-Object) @($receipt.candidate.contentFiles.path | Sort-Object)).Count) { throw 'Retained content scope changed.' }
+            foreach ($row in $receipt.candidate.contentFiles) {
+                if ($row.sourcePath -ne (Get-R17Child $receipt.candidate.contentSourceRoot $row.path)) { throw 'Retained content source path changed.' }
+            }
+            Assert-R17Package (Join-Path $ReceiptPath 'package') $rows
         }
         Assert-R17Protected $config $reference $receipt.preflight.protected
-        if ($Mode -eq 'Verify' -and $receipt.status -in @('RESTORE_REQUESTED','STAGING_RESTORED','RESTORED_VERIFIED')) { throw 'Use VerifyRestored after restoration.' }
+        if ($Mode -eq 'Verify' -and (Test-Path -LiteralPath (Join-Path $ReceiptPath 'restore-A.json'))) { throw 'Use VerifyRestored after restoration.' }
         $status = if ($Mode -eq 'VerifyRestored') { 'RESTORED_VERIFIED' } else { 'INSTALLED_VERIFIED' }
         foreach ($target in $receipt.preflight.targets) {
-            $expected = if ($Mode -eq 'VerifyRestored') { $target.installedBefore } else { $receipt.candidate.files }
-            Assert-R17Exact $target.staging $expected
-            Assert-R17Exact $target.installed $expected
-            Write-R17Json @{id=$target.id; status=$status; utc=[datetime]::UtcNow; candidateCommit=$receipt.candidate.source.commit; verificationHead=$(if ($source) {$source.commit} else {$null}); files=$expected} (Join-Path $ReceiptPath "verified-$($target.id).json")
+            $receipt.status="${Mode}_$($target.id)"; Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
+            $expected = if ($Mode -eq 'VerifyRestored') { $target.installedBefore } else { $rows }
+            Assert-R17State $target.staging $expected "$Mode $($target.id) staging"
+            Assert-R17State $target.installed $expected "$Mode $($target.id) installed Data"
+            Write-R17Json @{id=$target.id; attemptId=$receipt.attemptId; status=$status; utc=[datetime]::UtcNow; candidateCommit=$receipt.candidate.source.commit; verificationHead=$(if ($source) {$source.commit} else {$null}); files=$expected} (Join-Path $ReceiptPath "verified-$($target.id).json")
         }
         $receipt.status=$status; Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
         Write-Host "$status on both actual installations. No runtime or multiplayer validation is implied."
         return
+        } catch {
+            $receipt.failedPhase=$receipt.status; $receipt.status='STOPPED'; $receipt.error=$_.Exception.Message
+            Write-R17Json $receipt (Join-Path $ReceiptPath 'receipt.json')
+            throw
+        }
     }
-    $preflight = Get-R17Preflight $config $reference
+    # No remote destination access before the fresh build and frozen candidate.
+    # Check local output isolation before xmake can create any build files.
+    Assert-R17Local $config.targets[0].gameRoot
+    Assert-R17Separate @($config.repository,$config.receipts,$config.targets[0].gameRoot,$config.targets[0].stagingRoot)
     $answer = Read-Host 'Both PCs: close game, Vortex, Steam, server, CK and xEdit; keep them closed through staging. Type READY'
     if ($answer -cne 'READY') { throw 'Maintainer readiness not confirmed.' }
     $run = Join-Path $config.receipts ((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')+'-'+[guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $run | Out-Null
-    $receipt = @{schema=1; status='BUILDING'; configSha256=Get-R17Hash $ConfigPath; source=$source; preflight=$preflight; candidate=$null}
+    $receipt = @{schema=2; status='BUILDING'; configSha256=Get-R17Hash $ConfigPath; source=$source; preflight=$null; candidate=$null}
     Write-R17Json $receipt (Join-Path $run 'receipt.json')
     Write-Host "Receipt: $run"
     try {
         Invoke-R17Build $config.repository $run $Jobs
         $null = Get-R17Source $config.repository $source.commit
         $receipt.candidate = New-R17Candidate $source $run
-        Write-R17Json $receipt.candidate (Join-Path $run 'manifest.json')
         Assert-R17Exact (Join-Path $run 'distrib/bin') $receipt.candidate.files -Distribution
+        $receipt.status='SNAPSHOT_INSTALLED_A'; Write-R17Json $receipt (Join-Path $run 'receipt.json')
+        $receipt.candidate = Add-R17InstalledContent $receipt.candidate $config $reference $run
+        $rows=@(Get-R17DeploymentRows $receipt.candidate)
+        Write-R17Json $receipt.candidate (Join-Path $run 'manifest.json')
         Assert-R17Stopped
-        # Repeat both preflights after the long build and before any target write.
-        $receipt.preflight = Get-R17Preflight $config $reference
-        foreach ($target in $receipt.preflight.targets) { Backup-R17Target $target $run }
+        $receipt.status='DESTINATION_PREFLIGHT'; Write-R17Json $receipt (Join-Path $run 'receipt.json')
+        $receipt.preflight = Get-R17Preflight $config $reference $rows
+        foreach ($target in $receipt.preflight.targets) {
+            $receipt.status="BACKUP_$($target.id)"; Write-R17Json $receipt (Join-Path $run 'receipt.json')
+            Backup-R17Target $target $run
+            Write-R17Json @{id=$target.id; status='BACKED_UP'; staging=$target.stagingBefore; installed=$target.installedBefore} (Join-Path $run "backup-$($target.id).json")
+        }
         $receipt.status='BACKED_UP'; Write-R17Json $receipt (Join-Path $run 'receipt.json')
         foreach ($target in $receipt.preflight.targets) {
             $receipt.status="STAGING_$($target.id)"; Write-R17Json $receipt (Join-Path $run 'receipt.json')
-            Set-R17Payload $target.staging (Join-Path $run 'distrib/bin') $target.stagingBefore $receipt.candidate.files
-            Write-R17Json @{id=$target.id; status='STAGED'; actualGameVerified=$false; files=$receipt.candidate.files} (Join-Path $run "staged-$($target.id).json")
+            Assert-R17Package (Join-Path $run 'package') $rows
+            Set-R17Payload $target.staging (Join-Path $run 'package') $target.stagingBefore $rows (Join-Path $run "copy-$($target.id).json")
+            Write-R17Json @{id=$target.id; status='STAGED'; actualGameVerified=$false; files=$rows} (Join-Path $run "staged-$($target.id).json")
         }
         $receipt.status='AWAITING_HUMAN_VORTEX'; Write-R17Json $receipt (Join-Path $run 'receipt.json')
         $answer = Read-Host 'Deploy mods manually with Vortex on BOTH PCs, then close Vortex. Do not launch any game/server. Type DEPLOYED'
@@ -481,7 +671,10 @@ function Invoke-R17Workflow {
         Assert-R17Stopped
         Invoke-R17Workflow -ConfigPath $ConfigPath -Mode Verify -ReceiptPath $run
     } catch {
-        $receipt.failedPhase=$receipt.status; $receipt.status='STOPPED'; $receipt.error=$_.Exception.Message
+        $savedReceipt=Read-R17Json (Join-Path $run 'receipt.json')
+        if ($savedReceipt.status -eq 'STOPPED') { $receipt=$savedReceipt } else {
+            $receipt.failedPhase=$receipt.status; $receipt.status='STOPPED'; $receipt.error=$_.Exception.Message
+        }
         Write-R17Json $receipt (Join-Path $run 'receipt.json')
         throw "STOP: $($_.Exception.Message) Receipt: $run. Use Verify after correction, or RestoreStaging then human Vortex deployment; do not launch mismatched clients."
     }

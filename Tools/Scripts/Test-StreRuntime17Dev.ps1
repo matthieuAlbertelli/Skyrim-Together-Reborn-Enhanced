@@ -31,16 +31,19 @@ $module = Get-Module Stre.Runtime17Dev
         [IO.File]::WriteAllText($Path,$Text)
     }
     function Invoke-FixtureGit([string]$Repo, [string[]]$ArgsList) { $null=Invoke-R17Git $Repo $ArgsList }
+    $script:Wave='Sound/Voice/STRE_AlternateStart.esp/MaleWarlock/stre_quest_stre_dial_valen_000d6b19_1.wav'
     function New-Fixture {
         $root = Join-Path $OutputRoot ([guid]::NewGuid().ToString('N'))
         $repo = Join-Path $root 'repo'; New-Item -ItemType Directory -Path $repo -Force | Out-Null
         Invoke-FixtureGit $repo @('init','-q','-b','feat/skyrim-1.7-runtime')
         Invoke-FixtureGit $repo @('config','core.autocrlf','false')
+        Invoke-FixtureGit $repo @('config','core.longpaths','true')
         Invoke-FixtureGit $repo @('config','user.name','STRE local fixture'); Invoke-FixtureGit $repo @('config','user.email','fixture@example.invalid')
         Invoke-FixtureGit $repo @('remote','add','origin','https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced')
         Put (Join-Path $repo 'Code/common/Runtime/Compatibility.h') 'TargetVersion{1, 7, 104, 0}; RequiredSkseFileVersion{0, 2, 3, 1}; skse64_1_7_104.dll'
         Put (Join-Path $repo 'Code/common/BuildInfo.h.in') '#define BUILD_COMMIT "runtime17-${GIT_COMMIT_LONG}"'
         Put (Join-Path $repo 'GameFiles/Skyrim/STRE_AlternateStart.esp') 'repository content'
+        Put (Join-Path $repo "GameFiles/Skyrim/$script:Wave") 'Git WAV bytes'
         $sub = Join-Path $repo 'Libraries/Fixture'; New-Item -ItemType Directory -Path $sub -Force | Out-Null
         Invoke-FixtureGit $sub @('init','-q'); Invoke-FixtureGit $sub @('config','user.name','STRE local fixture'); Invoke-FixtureGit $sub @('config','user.email','fixture@example.invalid')
         Invoke-FixtureGit $sub @('remote','add','origin','https://github.com/TiltedPhoques/Fixture')
@@ -54,6 +57,8 @@ $module = Get-Module Stre.Runtime17Dev
         $targets = @(foreach ($id in @('A','B')) {
             $staging = Join-Path $root "$id/staging"; $game = Join-Path $root "$id/game"
             foreach ($base in @($staging,(Join-Path $game 'Data'))) {
+                Put (Join-Path $base $script:Wave) "original $id $([IO.Path]::GetFileName($base)) WAV"
+                foreach ($extra in @('Saves/player.ess','Saves/player.skse','SkyrimTogetherReborn/campaigns/state.db','SkyrimTogetherReborn/identities/local.json','SkyrimTogetherReborn/logs/run.log','SkyrimTogetherReborn/cache/blob','unmanaged.txt')) { Put (Join-Path $base $extra) "private $id $base $extra" }
                 Put (Join-Path $base 'STRE_AlternateStart.esp') 'accepted installed content'
                 Put (Join-Path $base 'SkyrimTogetherReborn/SkyrimTogether.exe') 'old native bytes'
                 Put (Join-Path $base 'SkyrimTogetherReborn/UI/old.js') 'old UI'
@@ -65,10 +70,12 @@ $module = Get-Module Stre.Runtime17Dev
             Put (Join-Path $game 'Data/SKSE/Plugins/versionlib-1-7-104-0.bin') 'fixture AL'
             @{id=$id; stagingRoot=$staging; gameRoot=$game}
         })
-        $content = Join-Path $targets[0].stagingRoot 'STRE_AlternateStart.esp'
-        $sourceContent = Join-Path $repo 'GameFiles/Skyrim/STRE_AlternateStart.esp'
         $reference = @{schema=1; runtime='1.7.104.0'; compiledCommit='0'*40;
-            contentFiles=@(@{path='STRE_AlternateStart.esp'; bytes=(Get-Item $content).Length; sha256=Get-R17Hash $content; repositoryBytes=(Get-Item $sourceContent).Length; repositorySha256=Get-R17Hash $sourceContent});
+            contentFiles=@(foreach ($rel in @('STRE_AlternateStart.esp',$script:Wave)) {
+                $content=Join-Path $targets[0].gameRoot "Data/$rel"
+                $sourceContent=Join-Path $repo "GameFiles/Skyrim/$rel"
+                @{path=$rel; bytes=(Get-Item $content).Length; sha256=Get-R17Hash $content; repositoryBytes=(Get-Item $sourceContent).Length; repositorySha256=Get-R17Hash $sourceContent}
+            });
             dependencies=@(foreach ($rel in @('SkyrimSE.exe','skse64_1_7_104.dll','Data/SKSE/Plugins/BetterGrabbing.dll','Data/SKSE/Plugins/versionlib-1-7-104-0.bin')) {
                 $path=Join-Path $targets[0].gameRoot $rel
                 @{path=$rel; bytes=(Get-Item $path).Length; sha256=Get-R17Hash $path}
@@ -112,7 +119,7 @@ $module = Get-Module Stre.Runtime17Dev
     }
     Case 'accepted source/installed content divergence preserved' {
         $ref=Get-R17Reference $f.config
-        $null=Get-R17Preflight $f.config $ref
+        $null=Get-R17Preflight $f.config $ref $ref.contentFiles
     }
     Case 'canonical INI under config passes with no root INI' {
         $state=@(Get-R17ProtectedState $f.config $f.reference)
@@ -126,7 +133,7 @@ $module = Get-Module Stre.Runtime17Dev
         $stageIni=Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini'
         $old=[IO.File]::ReadAllBytes($stageIni); Remove-Item -LiteralPath $stageIni
         try {
-            $state=(Get-R17Preflight $f.config $f.reference).protected
+            $state=(Get-R17Preflight $f.config $f.reference $f.reference.contentFiles).protected
             $absent=@($state | Where-Object presence -eq 'absent')
             Check ($absent.Count -eq 1 -and $absent[0].path -eq $stageIni -and $null -eq $absent[0].sha256) 'Staging absence was not recorded'
             Assert-R17Protected $f.config $f.reference $state
@@ -143,7 +150,7 @@ $module = Get-Module Stre.Runtime17Dev
     Case 'missing installed INI remains blocking despite a staged copy' {
         $path=Join-Path $f.config.targets[0].gameRoot 'Data/SkyrimTogetherReborn/config/STServer.ini'
         $old=[IO.File]::ReadAllBytes($path); Remove-Item -LiteralPath $path
-        try { Reject { Get-R17Preflight $f.config $f.reference } 'Required installed server configuration is absent' } finally { [IO.File]::WriteAllBytes($path,$old) }
+        try { Reject { Get-R17Preflight $f.config $f.reference $f.reference.contentFiles } 'Required installed server configuration is absent' } finally { [IO.File]::WriteAllBytes($path,$old) }
     }
     Case 'Better Grabbing policy and configuration hashes remain protected' {
         $path=Join-Path $f.config.targets[0].gameRoot 'Data/SkyrimTogetherReborn/config/STServer.ini'
@@ -179,24 +186,24 @@ $module = Get-Module Stre.Runtime17Dev
     }
     Case 'missing actual game path rejected before any destination IO' {
         $bad=Read-R17Json $f.configPath; $bad.targets[1].gameRoot=''
-        Reject { Get-R17Preflight $bad $f.reference } 'Configure the actual gameRoot'
+        Reject { Get-R17Preflight $bad $f.reference $f.reference.contentFiles } 'Configure the actual gameRoot'
     }
     Case 'unavailable secondary destination rejected before any write' {
         $bad=Read-R17Json $f.configPath; $bad.targets[1].stagingRoot=Join-Path $f.root 'missing'
-        Reject { Get-R17Preflight $bad $f.reference } 'Missing or inaccessible'
+        Reject { Get-R17Preflight $bad $f.reference $f.reference.contentFiles } 'Missing or inaccessible'
         Assert-R17Files (Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn') $f.reference.nativeFiles
     }
     Case 'aliased destinations rejected' {
         $bad=Read-R17Json $f.configPath; $bad.targets[1].stagingRoot=$bad.targets[0].stagingRoot
-        Reject { Get-R17Preflight $bad $f.reference } 'Overlapping/aliased'
+        Reject { Get-R17Preflight $bad $f.reference $f.reference.contentFiles } 'Overlapping/aliased'
     }
-    Case 'CK content divergence rejected' {
+    Case 'initial content divergence plans replacement instead of rejection' {
         $path=Join-Path $f.config.targets[1].stagingRoot 'STRE_AlternateStart.esp'; Put $path 'unexpected CK'
-        try { Reject { Get-R17Preflight $f.config $f.reference } 'Hash/size mismatch' } finally { Put $path 'accepted installed content' }
+        try { $plan=Get-R17Preflight $f.config $f.reference $f.reference.contentFiles; Check (($plan.targets[1].stagingBefore | Where-Object path -eq 'STRE_AlternateStart.esp').action -eq 'replace') 'Divergent content not scheduled for replacement' } finally { Put $path 'accepted installed content' }
     }
     Case 'old Better Grabbing dependency rejected' {
         $path=Join-Path $f.config.targets[1].gameRoot 'Data/SKSE/Plugins/BetterGrabbing.dll'; Put $path '1.17'
-        try { Reject { Get-R17Preflight $f.config $f.reference } 'Hash/size mismatch' } finally { Put $path 'fixture BG' }
+        try { Reject { Get-R17Preflight $f.config $f.reference $f.reference.contentFiles } 'Hash/size mismatch' } finally { Put $path 'fixture BG' }
     }
     Case 'manifest traversal, duplicates and protected files rejected' {
         foreach ($rel in @('../SkyrimSE.exe','UI/x:stream','UI/a.psc','BetterGrabbing.dll','SKSE/Plugins/x.dll')) {
@@ -229,14 +236,81 @@ $module = Get-Module Stre.Runtime17Dev
         Put (Join-Path $run 'distrib/bin/UI/unexpected.js') 'extra'
         try { Reject { Assert-R17Exact (Join-Path $run 'distrib/bin') $candidate.files -Distribution } 'file set mismatch' } finally { Remove-Item -LiteralPath (Join-Path $run 'distrib/bin/UI/unexpected.js') }
     }
-    Case 'staging breaks hardlinks and leaves actual installation untouched' {
-        $stage=Join-Path $f.config.targets[0].stagingRoot 'SkyrimTogetherReborn'
-        $installed=Join-Path $f.config.targets[0].gameRoot 'Data/SkyrimTogetherReborn'
-        Remove-Item -LiteralPath (Join-Path $stage 'SkyrimTogether.exe')
-        New-Item -ItemType HardLink -Path (Join-Path $stage 'SkyrimTogether.exe') -Target (Join-Path $installed 'SkyrimTogether.exe') | Out-Null
-        Set-R17Payload $stage (Join-Path $run 'distrib/bin') $f.reference.nativeFiles $candidate.files
-        Assert-R17Exact $installed $f.reference.nativeFiles
-        Check (!(Test-Path -LiteralPath (Join-Path $stage 'UI/old.js'))) 'Old UI was retained'
+    Case 'candidate captures installed A WAV independently without changing Git or A' {
+        $installedWave=Join-Path $f.config.targets[0].gameRoot "Data/$script:Wave"
+        $before=Get-R17Hash $installedWave
+        $candidate=Add-R17InstalledContent $candidate $f.config $f.reference $run
+        $wave=@($candidate.contentFiles | Where-Object path -eq $script:Wave)[0]
+        Check ($wave.sha256 -eq $before -and $wave.provenance -eq 'installed main PC' -and $wave.sourcePath -eq $installedWave) 'Wrong WAV provenance'
+        Check ($before -ne (Get-R17Hash (Join-Path $f.repo "GameFiles/Skyrim/$script:Wave"))) 'Fixture does not differ from Git'
+        Check ((Get-R17Hash $installedWave) -eq $before) 'Source was overwritten'
+        Assert-R17Content (Join-Path $f.repo 'GameFiles/Skyrim') $f.reference.contentFiles -Repository
+        $saved=[IO.File]::ReadAllBytes($installedWave)
+        try {
+            Put $installedWave 'later source edit'
+            Check ((Get-R17Hash (Join-Path $run "package/$script:Wave")) -eq $before) 'Snapshot is linked to source'
+        } finally { [IO.File]::WriteAllBytes($installedWave,$saved) }
+    }
+    Case 'preflight plans replace/create/identical; both staging WAVs use one candidate' {
+        $rows=@(Get-R17DeploymentRows $candidate)
+        $plan=Get-R17Preflight $f.config $f.reference $rows
+        foreach ($target in $plan.targets) {
+            Check (($target.stagingBefore | Where-Object path -eq $script:Wave).action -eq 'replace') 'Divergent staging WAV rejected or missed'
+            Check (($target.stagingBefore | Where-Object path -eq 'SkyrimTogetherReborn/libcef.dll').action -eq 'create') 'Absent native file not planned'
+            Check (($target.stagingBefore | Where-Object path -eq 'STRE_AlternateStart.esp').action -eq 'identical') 'Identical file not recognized'
+        }
+    }
+    Case 'staging breaks native and WAV hardlinks; outside-manifest old UI survives' {
+        $stage=$f.config.targets[0].stagingRoot
+        $installed=Join-Path $f.config.targets[0].gameRoot 'Data'
+        $rows=@(Get-R17DeploymentRows $candidate)
+        # Simulate a different installed version after snapshot, with Vortex links.
+        Put (Join-Path $installed $script:Wave) 'old linked WAV'
+        foreach ($rel in @('SkyrimTogetherReborn/SkyrimTogether.exe',$script:Wave)) {
+            Remove-Item -LiteralPath (Join-Path $stage $rel)
+            New-Item -ItemType HardLink -Path (Join-Path $stage $rel) -Target (Join-Path $installed $rel) | Out-Null
+        }
+        $old=@(Get-R17Plan $installed $rows)
+        Set-R17Payload $stage (Join-Path $run 'package') @(Get-R17Plan $stage $rows) $rows
+        Assert-R17State $installed $old 'hardlink test old Data'
+        Check (Test-Path -LiteralPath (Join-Path $stage 'SkyrimTogetherReborn/UI/old.js')) 'Outside-manifest old UI was deleted'
+    }
+    Case 'missing installed source blocks without Git fallback' {
+        $x=New-Fixture; $r=Join-Path $x.root 'capture'; New-FakeBuild $x.repo $r 1
+        Remove-Item -LiteralPath (Join-Path $x.config.targets[0].gameRoot "Data/$script:Wave")
+        Reject { Add-R17InstalledContent (New-R17Candidate (Get-R17Source $x.repo) $r) $x.config $x.reference $r } 'Required installed main PC source absent'
+    }
+    Case 'capture detects source changing during the copy interval' {
+        $x=New-Fixture; $r=Join-Path $x.root 'capture'; New-FakeBuild $x.repo $r 1
+        $script:OriginalCopy=(Get-Item Function:Copy-R17IndependentFile).ScriptBlock
+        $script:ChangingSource=Join-Path $x.config.targets[0].gameRoot "Data/$script:Wave"
+        function script:Copy-R17IndependentFile {
+            param($Source,$Destination)
+            & $script:OriginalCopy $Source $Destination
+            if ($Source -eq $script:ChangingSource) { Put $Source 'changed during capture' }
+        }
+        try { Reject { Add-R17InstalledContent (New-R17Candidate (Get-R17Source $x.repo) $r) $x.config $x.reference $r } 'source changed during capture' }
+        finally { Set-Item Function:script:Copy-R17IndependentFile $script:OriginalCopy }
+    }
+    Case 'altered frozen snapshot blocks before staging' {
+        $p=Join-Path $run "package/$script:Wave"; $bytes=[IO.File]::ReadAllBytes($p)
+        try { Put $p 'corruption'; Reject { Assert-R17Package (Join-Path $run 'package') @(Get-R17DeploymentRows $candidate) } 'frozen candidate integrity.*mismatch' }
+        finally { [IO.File]::WriteAllBytes($p,$bytes) }
+    }
+    Case 'managed absence is distinct from denied access and IO errors' {
+        Check ((Get-R17FileState $f.root 'absent.wav').presence -eq 'absent') 'Absence lost'
+        $script:OriginalAttributes=(Get-Item Function:Get-R17FileAttributes).ScriptBlock
+        try {
+            function script:Get-R17FileAttributes { param($Path) throw [UnauthorizedAccessException]::new('fixture') }
+            Reject { Get-R17FileState $f.root 'absent.wav' } 'Access denied'
+            function script:Get-R17FileAttributes { param($Path) throw [IO.IOException]::new('fixture') }
+            Reject { Get-R17FileState $f.root 'absent.wav' } 'IO failure'
+        } finally { Set-Item Function:script:Get-R17FileAttributes $script:OriginalAttributes }
+    }
+    Case 'personal paths and native/content collisions are outside content scope' {
+        foreach ($rel in @('Saves/player.ess','SKSE/Plugins/BetterGrabbing.dll','SkyrimTogetherReborn/UI/index.html','SkyrimTogetherReborn/config/STServer.ini','STRE/state.db','../STRE_AlternateStart.esp')) {
+            Reject { Assert-R17ContentPath $rel } 'Protected|Unsafe'
+        }
     }
     $script:RealBuild=(Get-Item Function:Invoke-R17Build).ScriptBlock
     Case 'xmake routing uses selected worktree and fresh output paths' {
@@ -256,90 +330,134 @@ $module = Get-Module Stre.Runtime17Dev
     # compiler, local process enumeration and human handoff are simulated.
     function script:Invoke-R17Build { param($Repo,$Run,$Jobs) New-FakeBuild $Repo $Run $Jobs }
     function script:Assert-R17Stopped { }
-    $script:FailSecond=$false
-    $script:RealSet=(Get-Item Function:Set-R17Payload).ScriptBlock
-    function script:Set-R17Payload {
-        param($Destination,$Source,$Before,$After)
-        if ($script:FailSecond -and $Destination -eq (Join-Path $script:Active.config.targets[1].stagingRoot 'SkyrimTogetherReborn')) {
-            # A real partial second-copy state, after A already succeeded.
-            Remove-Item -LiteralPath (Join-Path $Destination 'SkyrimTogether.exe')
-            Remove-Item -LiteralPath (Join-Path $Destination 'UI/old.js')
+    $script:FailSecond=$false; $script:CorruptFinal=$false
+    $script:RealCopy=(Get-Item Function:Copy-R17IndependentFile).ScriptBlock
+    function script:Copy-R17IndependentFile {
+        param($Source,$Destination)
+        if ($script:FailSecond -and $Destination -eq (Join-Path $script:Active.config.targets[1].stagingRoot $script:Wave)) {
+            Put $Destination 'partial failed copy bytes'
             throw 'Injected secondary copy failure'
         }
-        & $script:RealSet $Destination $Source $Before $After
+        & $script:RealCopy $Source $Destination
     }
     $script:DoDeploy=$true
+    function Get-LatestRun { @(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory | Sort-Object Name)[-1].FullName }
     function script:Read-Host {
         param($Prompt)
         if ($Prompt -like '*Type READY') { return 'READY' }
         if (!$script:DoDeploy) { return 'LATER' }
-        foreach ($target in $script:Active.config.targets) {
-            $stage=Join-Path $target.stagingRoot 'SkyrimTogetherReborn'; $installed=Join-Path $target.gameRoot 'Data/SkyrimTogetherReborn'
-            # Simulate the human Vortex handoff only inside this fixture.
-            $rows=@(Get-R17Rows $stage)
-            foreach ($old in Get-R17Rows $installed) { Remove-Item -LiteralPath (Get-R17Child $installed $old.path) }
+        $receipt=Read-R17Json (Join-Path (Get-LatestRun) 'receipt.json')
+        foreach ($target in $receipt.preflight.targets) {
+            $rows=if ($receipt.status -eq 'STAGING_RESTORED') {$target.installedBefore} else {@(Get-R17DeploymentRows $receipt.candidate)}
+            # Human Vortex simulation touches only manifest paths in local fixtures.
             foreach ($row in $rows) {
-                $dest=Get-R17Child $installed $row.path
-                New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force | Out-Null
-                Copy-Item -LiteralPath (Get-R17Child $stage $row.path) -Destination $dest
+                $dest=Get-R17Child $target.installed $row.path
+                if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest }
+                if (!$row.ContainsKey('presence') -or $row.presence -eq 'present') {
+                    Copy-R17IndependentFile (Get-R17Child $target.staging $row.path) $dest
+                }
             }
-            Assert-R17Exact $installed $rows
         }
+        if ($script:CorruptFinal) { Put (Join-Path $script:Active.config.targets[1].gameRoot "Data/$script:Wave") 'bad Vortex installed hash' }
         return 'DEPLOYED'
     }
-    Case 'end-to-end simulated A/B deploy verifies actual Data and protects content' {
+    function Get-PrivateRows($Fixture) {
+        @(foreach ($target in $Fixture.config.targets) {
+            foreach ($base in @($target.stagingRoot,(Join-Path $target.gameRoot 'Data'))) {
+                foreach ($rel in @('SkyrimTogetherReborn/config/STServer.ini','Saves/player.ess','Saves/player.skse','SkyrimTogetherReborn/campaigns/state.db','SkyrimTogetherReborn/identities/local.json','SkyrimTogetherReborn/logs/run.log','SkyrimTogetherReborn/cache/blob','unmanaged.txt','SkyrimTogetherReborn/UI/old.js')) {
+                    @{root=$base; state=Get-R17FileState $base $rel 'private fixture evidence'}
+                }
+            }
+        })
+    }
+    Case 'end-to-end A/B sync uses installed A content and preserves private files and Git' {
         $script:Active=New-Fixture
         Remove-Item -LiteralPath (Join-Path $script:Active.config.targets[0].stagingRoot 'SkyrimTogetherReborn/config/STServer.ini')
+        $private=Get-PrivateRows $script:Active
+        $expected=Get-R17Hash (Join-Path $script:Active.config.targets[0].gameRoot "Data/$script:Wave")
         Invoke-R17Workflow -ConfigPath $script:Active.configPath
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
+        $latest=Get-LatestRun; $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
         Check ($receipt.status -eq 'INSTALLED_VERIFIED') 'False final status'
-        Check (@($receipt.preflight.protected | Where-Object presence -eq 'absent').Count -eq 1) 'Staging INI absence was lost during deployment'
+        Check (@($receipt.preflight.protected | Where-Object presence -eq 'absent').Count -eq 1) 'Staging INI absence lost'
         Check ((Read-R17Json (Join-Path $latest 'verified-B.json')).status -eq 'INSTALLED_VERIFIED') 'B receipt missing'
+        foreach ($target in $script:Active.config.targets) {
+            Check ((Get-R17Hash (Join-Path $target.gameRoot "Data/$script:Wave")) -eq $expected) 'Different WAV installed'
+        }
+        foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'private files preserved' }
         Assert-R17Content (Join-Path $script:Active.repo 'GameFiles/Skyrim') $script:Active.reference.contentFiles -Repository
     }
     Case 'later documentation HEAD does not relabel the compiled candidate' {
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
         Put (Join-Path $script:Active.repo 'README.md') 'later documentation only'
         Invoke-FixtureGit $script:Active.repo @('add','README.md'); Invoke-FixtureGit $script:Active.repo @('commit','-qm','documentation fixture')
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
         $verified=Read-R17Json (Join-Path $latest 'verified-A.json')
-        Check ($verified.candidateCommit -eq $before.candidate.source.commit -and $verified.verificationHead -ne $verified.candidateCommit) 'Compiled commit was relabelled'
+        Check ($verified.candidateCommit -eq $before.candidate.source.commit -and $verified.verificationHead -ne $verified.candidateCommit) 'Compiled commit relabelled'
     }
-    Case 'staging alone cannot be declared installed; Verify resumes same candidate' {
+    Case 'staging alone cannot pass; Verify resumes the same frozen candidate' {
         $script:Active=New-Fixture; $script:DoDeploy=$false
         Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Staged only'
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest } 'Hash/size mismatch|Missing or inaccessible'
+        $latest=Get-LatestRun
+        Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest } 'Hash/size/presence mismatch'
+        Check ((Read-R17Json (Join-Path $latest 'receipt.json')).status -eq 'STOPPED') 'False PASS after verify failure'
         $script:DoDeploy=$true; $null=Read-Host 'fixture human deploy'
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
     }
-    Case 'partial secondary failure stops; both backups restore; later human redeploy verified' {
+    Case 'partial B copy failure records exact progress; installed backups restore despite divergent staging' {
         $script:Active=New-Fixture; $script:FailSecond=$true
+        $private=Get-PrivateRows $script:Active
         Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Injected secondary copy failure'
         $script:FailSecond=$false
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        $receipt=Read-R17Json (Join-Path $latest 'receipt.json'); Check ($receipt.status -eq 'STOPPED') 'Missing failure receipt'
-        Check (!(Test-Path -LiteralPath (Join-Path $latest 'staged-B.json'))) 'False B success'
+        $latest=Get-LatestRun; $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($receipt.status -eq 'STOPPED' -and $receipt.failedPhase -eq 'STAGING_B') 'Missing precise failure phase'
+        Check ((Test-Path (Join-Path $latest 'staged-A.json')) -and !(Test-Path (Join-Path $latest 'staged-B.json'))) 'False staging success'
+        $journal=Read-R17Json (Join-Path $latest 'copy-B.json')
+        Check (($journal.files | Where-Object path -eq $script:Wave).status -eq 'FAILED') 'Failed file not recorded'
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest
         $null=Read-Host 'fixture human deploy'
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode VerifyRestored -ReceiptPath $latest
         Check ((Read-R17Json (Join-Path $latest 'receipt.json')).status -eq 'RESTORED_VERIFIED') 'Missing restoration verification'
+        foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'private files after restoration' }
     }
     Case 'restore refuses unrelated intervening staging bytes before writes' {
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        $target=$script:Active.config.targets[1]
+        $latest=Get-LatestRun; $target=$script:Active.config.targets[1]
         $path=Join-Path $target.stagingRoot 'SkyrimTogetherReborn/SkyrimTogether.exe'
         $old=[IO.File]::ReadAllText($path); Put $path 'unrelated user change'
         try { Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest } 'unrelated changes' } finally { Put $path $old }
     }
     Case 'restore refuses corrupted backup before writing either PC' {
-        $latest=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory)[0].FullName
-        $path=Join-Path $latest 'backup/B/staging/SkyrimTogether.exe'
+        $latest=Get-LatestRun; $path=Join-Path $latest 'backup/B/staging/SkyrimTogetherReborn/SkyrimTogether.exe'
         $old=[IO.File]::ReadAllText($path); Put $path 'corrupt backup'
-        try { Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest } 'Hash/size mismatch' } finally { Put $path $old }
-        foreach ($target in $script:Active.config.targets) { Assert-R17Exact (Join-Path $target.stagingRoot 'SkyrimTogetherReborn') $script:Active.reference.nativeFiles }
+        try { Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest } 'Hash/size/presence mismatch' } finally { Put $path $old }
+    }
+    Case 'incorrect final B hash cannot pass; A result and failure phase retained; rollback works' {
+        $script:Active=New-Fixture; $script:CorruptFinal=$true
+        Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Verify B installed Data.*mismatch'
+        $script:CorruptFinal=$false
+        $latest=Get-LatestRun; $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($receipt.status -eq 'STOPPED' -and $receipt.failedPhase -eq 'Verify_B') 'Final failure not precisely recorded'
+        Check ((Read-R17Json (Join-Path $latest 'verified-A.json')).status -eq 'INSTALLED_VERIFIED') 'A verification evidence missing'
+        Check (!(Test-Path (Join-Path $latest 'verified-B.json'))) 'False B final PASS'
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest
+        $null=Read-Host 'fixture human deploy'
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode VerifyRestored -ReceiptPath $latest
+    }
+    Case 'late unrelated edit before a replacement cannot become recoverable partial-copy evidence' {
+        $script:Active=New-Fixture
+        $script:OriginalState=(Get-Item Function:Assert-R17State).ScriptBlock
+        function script:Assert-R17State {
+            param($Root,$Rows,$Phase)
+            if ($Phase -eq 'before individual replacement' -and $Root -eq $script:Active.config.targets[1].stagingRoot -and $Rows[0].path -eq $script:Wave) {
+                Put (Join-Path $Root $script:Wave) 'unrelated late user edit'
+            }
+            & $script:OriginalState $Root $Rows $Phase
+        }
+        try { Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'before individual replacement.*mismatch' }
+        finally { Set-Item Function:script:Assert-R17State $script:OriginalState }
+        $latest=Get-LatestRun
+        $entry=@((Read-R17Json (Join-Path $latest 'copy-B.json')).files | Where-Object path -eq $script:Wave)[0]
+        Check (!$entry.mutationStarted -and $null -eq $entry.observed) 'Unrelated edit was labelled partial-copy evidence'
+        Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest } 'unrelated changes'
     }
     Case 'WhatIf cannot touch destinations, enumerate processes or build' {
         $plan=Read-R17Json $f.configPath

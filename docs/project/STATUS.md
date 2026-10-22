@@ -9,18 +9,19 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Two-PC native/UI DEV workflow preparation (2026-10-22, Refs #99)
+## Two-PC DEV workflow preparation (2026-10-22, Refs #99)
 
 **Implemented and validated on local fixtures only.** The tracked helper extends
 the lot-4 explicit worktree/xmake route with clean source/submodule checks, a
 dynamic SHA-256 package, both-destination preflight, native/UI backups, hardlink
 protection, a human Vortex handoff, actual-installation verification and guarded
 restoration. The ignored personal entry now exposes `-Runtime17TwoPc`; ambiguous
-no-mode invocation fails. CK import, content synchronization and external native
-dependency copying are excluded. See the [operational procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md)
+no-mode invocation fails. The later correction below adds explicitly scoped
+installed-main-PC content synchronization. CK import and external native
+dependency copying remain excluded. See the [operational procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md)
 and [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
 
-The initial 27-case PowerShell suite passed on local fake A/B installations, including
+Historically, the initial 27-case PowerShell suite passed on local fake A/B installations, including
 wrong branch/commit, stale artifact, missing/inaccessible destinations, invalid
 manifests, CK divergence, hardlinks, partial-copy recovery and restoration
 refusals. The compiler and human Vortex steps were simulated. Real entry WhatIf
@@ -36,6 +37,20 @@ remain blocking checks. **33 local fixture cases PASS**, including a complete
 simulated deployment with no staging INI. Read-only inspection confirmed both
 main-PC INIs under `config/`, identical hashes and unchanged contents; no INI was
 created, copied or edited. See the [same-day correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#same-day-ini-path-correction).
+
+The next human attempt exposed the old preflight's content-hash gate on a Valen
+WAV in B staging. The workflow now builds native/UI from the experimental
+worktree, captures an independent snapshot of the **managed contents installed
+on A**, plans identical/replace/create per manifest path, and copies the same
+candidate to both stagings. The pinned reference defines content scope; historical
+content hashes no longer veto an initial destination difference. Source stability,
+post-copy hashes, external dependencies and INI protection remain blocking.
+Per-file journals retain partial progress; guarded restoration prepares each PC's
+pre-run installed bytes for human Vortex redeployment, even when its original
+staging differed. Out-of-manifest files are preserved, including old UI bundles.
+**42 local fixture cases PASS** (compiler/Vortex simulated), covering WAV provenance,
+source/copy/final-hash failures, hardlinks, private data and recovery. See the
+[content synchronization correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#installed-main-pc-content-synchronization-correction).
 
 **Codex performed no real compilation, deployment or retry. Pc-vero remains
 NON AUDITÉ PAR CODEX**, with no incompatibility inferred. The maintainer supplied
