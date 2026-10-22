@@ -563,3 +563,39 @@ and `Test-StreValenNavigation` suites use synthetic files/mocked evidence. The
 mission**. Never stop a maintainer process automatically to satisfy a guard.
 Simulated receipts in tests remain labeled synthetic, and a real AutoMod stop at
 `HUMAN_XEDIT_REQUIRED` is the expected successful boundary, not editor acceptance.
+
+## Minimal human Creation Kit check
+
+This first check qualifies only CK startup and read-only inspection of the base
+master in the installed **Skyrim Steam 1.7.104.0** environment. The current tool
+identity and exact input path are recorded in the
+[toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md#next-human-check-minimal-creation-kit-inspection).
+CK's own file version is distinct from the game version. This protocol is
+prepared for the maintainer; it is not an executed test or production-authoring
+authorization.
+
+1. With the game and other modding tools closed, manually start the existing
+   inventoried `CreationKit.exe`. Record the version shown. Do not install,
+   update, reactivate CKPE or change INI settings as part of this first check.
+   If startup fails, retain the precise diagnostic and stop.
+2. In **File > Data**, select only the installed **Skyrim.esm**. Leave every
+   other plugin unchecked and **no file active**. In particular, do not load
+   `STRE_AlternateStart.esp` or `SkyrimTogether.esp`. Load the master and wait for
+   completion. Record any message instead of assuming warnings are harmless;
+   a blocking error, missing dependency or unexpected plugin load ends the check.
+3. In **Object Window > Miscellaneous > Global**, locate `TimeScale`, open its
+   record dialog, read its EditorID/type/value, and close with **Cancel** without
+   changing anything. Expected: the object list is populated, the record dialog
+   is usable and the editor remains responsive. No script compilation, record
+   creation or save is part of this check.
+4. Exit normally **without saving**; decline any save prompt. Report startup,
+   master-load and record-inspection results separately, plus normal exit and
+   the actual version/messages. Preserve any existing CK session diagnostics;
+   do not invent a validation receipt or start import/deployment.
+
+A successful result is a bounded human CK inspection PASS. It does not qualify
+CK write/save/reopen, the xEdit fixture in CK, production plugins, quests,
+fragments, assets or in-game behavior. Keep the accepted xEdit fixture unchanged;
+its private Data-path options are specific to xEdit and are not CK arguments.
+Any later CK write cycle requires a separately prepared independent candidate
+and the existing authoring and human-validation gates.

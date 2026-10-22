@@ -9,7 +9,7 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 content tools — offline CLI qualification; editors pending
+## Steam 1.7.104 content tools — offline CLI and human xEdit fixture PASS; CK pending
 
 The existing migration worktree's exact historical `1.6.1170.0` preflight was
 adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
@@ -24,9 +24,9 @@ remain blocking. No plugin-format/bytecode migration or production authoring.
 |---|---|
 | Inventory / provenance | File versions/hashes observed; historical AutoMod/xEdit binary continuity verified. **Partial provenance**: AutoMod extraction has no Git commit, no new exact release-archive verification; metadata is not publisher authentication |
 | Wrapper/preflight protections | **76 simulated PowerShell cases PASS**, plus **21 matrix preparation**, **21 matrix import**, **9 presentation**, **19 navigation** guard cases; **59 targeted Python tests PASS** |
-| Real AutoMod fixture | **PASS**: actual prebuilt CLI dry-run preserves bytes, then writes/rereads GLOB `STRE_ToolchainFixture`, float 7.25, with expected `HUMAN_XEDIT_REQUIRED` stop. Full `-RealTools` suite: **78 PASS** (76 simulated + 2 real). Unused masters are removed from this empty fixture; exact three-master normalization remains a blocking human step |
+| Real AutoMod fixture | **PASS**: actual prebuilt CLI dry-run preserves bytes, then writes/rereads GLOB `STRE_ToolchainFixture`, float 7.25, with expected `HUMAN_XEDIT_REQUIRED` stop. Full `-RealTools` suite: **78 PASS** (76 simulated + 2 real). AutoMod removed unused masters; the maintainer subsequently completed their normalization on this independent fixture only |
 | Real Papyrus compilation | **PASS**: wrapper status first, then two real compiler/assembler runs (minimal script and Quest/Actor/SKSE/project imports), exit0, empty stderr, zero errors/warnings, two private PEX with Skyrim 3.2/game-ID-1 header; **14,416 tool/import inputs unchanged** |
-| xEdit | **NOT EXECUTED**; human saved-file validation still required |
+| xEdit | **Maintainer-attested human PASS on the independent fixture only**, xEdit **4.1.5f**: GLOB `STRE_ToolchainFixture`, Float 7.25; Skyrim.esm, Update.esm, Dragonborn.esm added/sorted; saved and reopened; Check for Errors reports no errors. Fixture logs corroborate the bounded cycle; no production plugin is qualified |
 | Creation Kit | **NOT EXECUTED**; full editor compatibility remains unqualified |
 | Production authoring/import/deployment | **NOT EXECUTED** |
 
@@ -44,11 +44,20 @@ After the real CLI trials: **16,603 protected local paths unchanged**, plus
 **114 additional tool/source inventory rows unchanged**. Existing
 Solo/multiplayer/presentation PASS, Runtime17TwoPc and server/plugin policy are
 unchanged. No gameplay logs were requested/reanalyzed or Pc-vero accessed.
-The durable synthetic xEdit file, exact tool/hash and one human load/normalize/
-save/reopen check are prepared in the
-[toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md#first-human-check-xedit-on-the-durable-fixture).
-No human attestation is manufactured. This is not a fully qualified CK chain;
-production gates remain closed. #99 remains open.
+The maintainer reports final fixture SHA-256
+`5D942F230B3E4C279270F9B12ECC0C8FC6ECC7E84C571AC4053BCB2D6A988349`.
+Codex read only this fixture's existing handoff/logs for corroboration; the final
+ESP hash is maintainer-supplied, not independently recomputed in this documentary
+follow-up. The logs confirm the private Data path, 4.1.5f, master addition/sort,
+save, subsequent load, and two error checks reporting zero errors. The GLOB's
+EditorID/type/value remains the maintainer's observation.
+The [acceptance record](../audit/2026-10-22-runtime-1.7-toolchain.md#maintainer-acceptance-xedit-fixture-cycle)
+preserves both log hashes and the original unnormalized AutoMod candidate.
+No `validation.json` or importable attestation is fabricated. The
+[minimal human CK protocol](../development/MODDING_TOOLCHAIN.md#minimal-human-creation-kit-check)
+is prepared for startup and read-only loading of the installed Skyrim.esm, with
+no active plugin or save. CK remains **NOT EXECUTED**; this is not a fully
+qualified CK chain. Production gates remain closed and #99 remains open.
 
 ## Steam 1.7.104 presentation — maintainer-attested human PASS
 
