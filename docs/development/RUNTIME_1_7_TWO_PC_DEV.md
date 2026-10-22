@@ -222,3 +222,6 @@ are real local operations. Cases cover installed-vs-Git WAV provenance, divergen
 or absent destinations, missing/unstable sources, corrupt snapshot, copy/final-hash
 failures, partial recovery, personal-file preservation, INI behavior and routing.
 See [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
+The subsequent [C1083 diagnosis and real native-build validation](../audit/2026-10-22-runtime17-c1083-build-path.md)
+records the short-build-root correction, 45 passing fixture cases and the exact
+compiled commit. Native build acceptance is separate from deployment/runtime acceptance.

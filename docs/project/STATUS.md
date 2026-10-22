@@ -52,12 +52,37 @@ staging differed. Out-of-manifest files are preserved, including old UI bundles.
 source/copy/final-hash failures, hardlinks, private data and recovery. See the
 [content synchronization correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#installed-main-pc-content-synchronization-correction).
 
-**Codex performed no real compilation, deployment or retry. Pc-vero remains
+**The workflow preparation above performed no real compilation or deployment.
+The compiler-only correction below adds native-build evidence. Pc-vero remains
 NON AUDITÉ PAR CODEX**, with no incompatibility inferred. The maintainer supplied
 its actual installed-game share after preparation; the private JSON was updated
 without probing that share. The maintainer owns any later two-PC execution.
 No agent application launch, access to that PC, runtime smoke, admission, World
 Sync or multiplayer validation follows from these changes.
+
+## Runtime17TwoPc native build-path correction (2026-10-22, Refs #99)
+
+**Confirmed C1083 cause and real native build PASS.** A new long-output reproduction
+failed on `SEMemoryBlock.cpp`. Holding all other compiler arguments constant, the
+relative `/Fo` failed while the same absolute output passed: the path spells 267
+characters before collapsing `..`, versus 253 after resolution. This is not an
+empty output argument or a universal 253-character path limit.
+
+The corrected helper allocates a short unique local build directory and records
+receipt/builddir/commit links without moving source or historical receipts. It
+preserves path/identity guards and gives pre-copy failures a new-execution message
+instead of destination-restoration advice. **45 fixture cases PASS**. On clean
+code commit `d2fee200399af846a41c06657b0901920b125a13`, the corrected build helper
+then compiled and linked all default native targets and packaged to a new local
+receipt: **293 native/UI files verified**, matching client/server/BuildInfo
+identity. Compiler-generated objects, headers, PCHs, PDBs and final outputs were
+checked. Existing warnings remain; no native/gameplay test executable was run.
+
+The original failed run's 73 files remain unchanged by size/hash. No content
+capture, staging, real deployment or Pc-vero access occurred. The private config
+now selects `C:\STRE-R17`; the normal user command is unchanged. See the
+[diagnosis and native-build evidence](../audit/2026-10-22-runtime17-c1083-build-path.md)
+for controlled comparisons, compiled provenance and correct resumption.
 
 ## Better Grabbing 2.0 main-PC Solo qualification (2026-10-21, Refs #99)
 
