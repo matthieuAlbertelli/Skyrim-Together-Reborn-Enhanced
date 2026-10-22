@@ -9,7 +9,36 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 content tools — CLI, xEdit fixture and CK inspection PASS; CK writes pending
+## Steam 1.7.104 integration review — offline checks, no publication
+
+The review started at `870f640ff4cd65cf7caaa731474cbffd5cadc824` on
+`feat/skyrim-1.7-runtime`. After an authorized fetch, `origin/main` and the
+merge-base were both `071f7573d7d86d96dbd20e5ee6f2cbf2300d56b7`: 24 local
+unpublished commits ahead, none behind. The four submodule references and
+GameFiles were unchanged. Subsequent review corrections are documentary only.
+
+At that source HEAD, **234 Python tests**, **76 simulated Modding safeguards**,
+**45 Runtime17TwoPc fixture cases**, and the **697-entry packaging audit PASS**.
+Initial sandbox permission failures and a deep-output-path hardlink failure are
+retained alongside successful isolated reruns. No real deployment, editor,
+game/server, AutoMod or Papyrus execution occurred in this review.
+
+Retained Debug/releasedbg receipts still belong to `b5665aa4` (462 TPTests /
+49,390 assertions each); all tracked Code/Libraries/root-xmake inputs are
+unchanged since that source. Tool sources are unchanged since `e1888015`.
+This correspondence is not a new build or a relabeling of old binaries.
+Existing local A/B receipts consistently identify multiplayer `98f1d35c` and
+later presentation `53530e69`; no remote destination or gameplay log was read.
+
+The ignored review dossier is `_audit/runtime17-final-review-20261022/`.
+The ordinary build can use main after integration, but Runtime17TwoPc still
+requires its experimental branch; its [branch boundary](../development/RUNTIME_1_7_TWO_PC_DEV.md#branch-boundary-before-main-integration)
+needs a separate decision before changing the DEV source route. Recovery,
+multiplayer World Sync, unreported creation permutations, #91/#96 follow-up,
+production authoring and intro redistribution retain their independent limits.
+No push, PR, CI dispatch, merge, release or issue closure occurred.
+
+## Steam 1.7.104 content tools — CLI, xEdit fixture and CK inspection PASS; CK write test waived
 
 The existing migration worktree's exact historical `1.6.1170.0` preflight was
 adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
@@ -28,7 +57,7 @@ remain blocking. No plugin-format/bytecode migration or production authoring.
 | Real Papyrus compilation | **PASS**: wrapper status first, then two real compiler/assembler runs (minimal script and Quest/Actor/SKSE/project imports), exit0, empty stderr, zero errors/warnings, two private PEX with Skyrim 3.2/game-ID-1 header; **14,416 tool/import inputs unchanged** |
 | xEdit | **Maintainer-attested human PASS on the independent fixture only**, xEdit **4.1.5f**: GLOB `STRE_ToolchainFixture`, Float 7.25; Skyrim.esm, Update.esm, Dragonborn.esm added/sorted; saved and reopened; Check for Errors reports no errors. Fixture logs corroborate the bounded cycle; no production plugin is qualified |
 | Creation Kit read-only inspection | **Maintainer-attested human PASS**, CK **1.6.1378.1** on Steam Skyrim **1.7.104**: startup, Skyrim.esm loaded with no active file, TimeScale inspected (Short, 20, Constant unchecked), Cancel, normal exit without saving. MASTERFILE warning for AutoLoadDoor01 / YngolBarrowExterior reported non-blocking in this run |
-| Creation Kit creation/write/save/reopen | **NOT EXECUTED / NOT QUALIFIED**; no production plugin qualification follows from read-only inspection |
+| Creation Kit creation/write/save/reopen | **NON TESTÉ / dispensé par décision du mainteneur** for the independent fixture cycle; not a PASS and not an automatic prerequisite for the migration PR. Production authoring remains unqualified |
 | Production authoring/import/deployment | **NOT EXECUTED** |
 
 Observed tools: Skyrim **1.7.104.0**, CK **1.6.1378.1**, Papyrus compiler
@@ -60,10 +89,11 @@ is the maintainer's observation; Codex did not launch CK or inspect CK logs for
 that follow-up. Its warning is retained, not diagnosed or declared universally
 harmless. No creation, modification, save or plugin-reopen PASS is inferred.
 The [future CK fixture write protocol](../development/MODDING_TOOLCHAIN.md#future-human-creation-kit-fixture-write-cycle)
-is prepared only: one new independent test ESP/GLOB, save/close/reopen, no STRE
-production plugins. No fixture was created or installed in this documentary
-task. This is not a fully qualified CK chain; production gates remain closed
-and #99 remains open.
+is retained as an optional procedure only. During the final integration review,
+the maintainer explicitly chose not to run further CK write/save tests. This
+dispensation does not qualify creation, modification, saving or reopening, and
+does not waive production authoring/xEdit/import gates. No fixture was created or
+installed. The read-only human PASS remains unchanged; #99 remains open.
 
 ## Steam 1.7.104 presentation — maintainer-attested human PASS
 

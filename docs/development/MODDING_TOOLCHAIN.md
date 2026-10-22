@@ -602,6 +602,12 @@ and the existing authoring and human-validation gates.
 
 ## Future human Creation Kit fixture write cycle
 
+**Not requested for the migration PR:** the maintainer has waived this additional
+fixture test. Its verdict is **NON TESTÉ / dispensé par décision du mainteneur**,
+not PASS. Retain this optional procedure for a separately authorized future need;
+do not repeat the accepted read-only CK check or treat writing as qualified.
+Production authoring, xEdit validation and import gates remain unchanged.
+
 **Protocol only, not executed or staged.** This first write check is limited to
 creating one synthetic GLOB, saving a new test ESP, closing CK and reopening that
 saved file. It does not qualify editing an existing production record. Use the

@@ -13,10 +13,10 @@ rematerialization and local seating paths after the exact binary qualification
 in [lot 3](../../audit/2026-10-20-runtime-1.7.104-lot3.md). This extends the native
 adapter guard, not the historical gameplay acceptance below. Life9 remains
 DontMove; identity/weapon/state/recovery fences, deferred retirement and
-local-only furniture activation are unchanged. Private-base reclamation,
-appearance and controls require a later authorized 1.7 gameplay smoke, outside
-the first main-menu-only test. Optional live
-appearance probes retain their 1.6 guards.
+local-only furniture activation are unchanged. STATUS records later bounded
+human Solo and two-player appearance/seating/control acceptance; it does not
+qualify private-base reclamation, repeated lifetime cycles or both creation
+orders on 1.7. Optional live appearance probes retain their 1.6 guards.
 
 ## Creation-cell lifetime and transition regression (2026-10-11)
 

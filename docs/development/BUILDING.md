@@ -57,9 +57,14 @@ The generated UI is written under `Code/skyrim_ui/dist`. Local deployment script
 Steam 1.7.104.0 is the sole development target. Follow the
 [local DEV build/deployment procedure](EXPERIMENTAL_RUNTIME_1_7.md): select the
 experimental worktree explicitly, pass `-P .` to xmake, preserve earlier outputs,
-and verify compiled/deployed identities. The current Windows/Steam/Vortex setup
-is authorized for the main-PC menu smoke. CK/AutoMod authoring requires separate
-1.7 requalification; a native build must not silently import changed Data.
+and verify compiled/deployed identities. Initial menu-only authorization is
+historical; STATUS records later scoped acceptance. The standard build commands
+above do not depend on the branch name. The separate Runtime17TwoPc helper still
+requires `feat/skyrim-1.7-runtime`; merging this port does not retarget that helper
+or the private entry/configuration to main. See its
+[documented branch boundary](RUNTIME_1_7_TWO_PC_DEV.md#branch-boundary-before-main-integration).
+Production CK/AutoMod authoring remains separately gated; a native build must
+not silently import changed Data.
 
 For CK/AutoMod authoring, official xEdit validation and the existing local import/
 deployment boundary, follow [the modding toolchain runbook](MODDING_TOOLCHAIN.md).

@@ -39,6 +39,19 @@ enter that namespace or dependency paths. Duplicate paths, traversal, alternate
 streams, reparses and category collisions block. Files outside the new manifest,
 **including old UI bundles**, remain untouched: no purge or global equality.
 
+## Branch boundary before main integration
+
+The current helper deliberately requires source branch `feat/skyrim-1.7-runtime`
+and validates that branch in retained candidate provenance. A source checkout on
+`main` is rejected with `Wrong source branch.` even after the migration merges.
+The ordinary xmake/CI build path has no such restriction. Keep this experimental
+worktree and private routing intact until a separate, reviewed adaptation is
+authorized; merging alone does not make the two-PC command a main-source workflow.
+That adaptation must retain repository/commit/submodule checks and the ability
+to verify or restore historical receipts. Do not just delete the branch guard,
+relabel old receipts or weaken content/import policy. No workflow behavior is
+changed by this integration-review note.
+
 ## Entry and private configuration
 
 The ignored personal entry routes `-Runtime17TwoPc` to the experimental worktree's
@@ -217,6 +230,11 @@ its phase before choosing recovery. Unrelated external changes are not undone.
 ```powershell
 pwsh -NoProfile -File Tools/Scripts/Test-StreRuntime17Dev.ps1 -OutputRoot '<fresh-local-fixture-directory>'
 ```
+
+Use a fresh **absolute local path with a short prefix**, for example a unique
+directory beneath the local temporary folder. Deep worktree paths can exceed
+Windows hardlink path limits in the synthetic voice-file case. This test-output
+choice does not change the real deployment configuration or relax its checks.
 
 Only local fake repositories/installations are used. Compiler, process checks and
 human Vortex steps are simulated; hashes, files, hardlinks, backups and restoration
