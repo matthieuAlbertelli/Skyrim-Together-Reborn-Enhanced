@@ -97,13 +97,23 @@ $module = Get-Module Stre.Runtime17Dev
         Put (Join-Path $Run 'distrib/bin/UI/new.js') 'new UI bundle'
         Put (Join-Path $Run 'distrib/bin/TPTests.exe') 'excluded test artifact'
     }
+    function Set-FixtureMain($Fixture) {
+        Invoke-FixtureGit $Fixture.repo @('branch','-m','main')
+        # Synthetic remote-tracking ref only. Never fetch or contact a remote.
+        Invoke-FixtureGit $Fixture.repo @('update-ref','refs/remotes/origin/main','HEAD')
+    }
+    function New-MainFixture {
+        $fixture=New-Fixture
+        Set-FixtureMain $fixture
+        $fixture
+    }
     $f=New-Fixture
     Case 'source branch, HEAD, runtime and submodule provenance' {
         $source=Get-R17Source $f.repo $f.commit
         Check ($source.submodules.Count -eq 1) 'Missing submodule evidence'
     }
     Case 'wrong branch rejected' {
-        Invoke-FixtureGit $f.repo @('branch','-m','main')
+        Invoke-FixtureGit $f.repo @('branch','-m','feat/arbitrary')
         try { Reject { Get-R17Source $f.repo } 'Wrong source branch' } finally { Invoke-FixtureGit $f.repo @('branch','-m','feat/skyrim-1.7-runtime') }
     }
     Case 'wrong expected commit rejected' { Reject { Get-R17Source $f.repo ('0'*40) } 'Source commit mismatch' }
@@ -120,6 +130,86 @@ $module = Get-Module Stre.Runtime17Dev
         Put (Join-Path $oldRuntime.repo 'Code/common/Runtime/Compatibility.h') 'TargetVersion{1, 6, 1170, 0}; skse64_1_6_1170.dll'
         Invoke-FixtureGit $oldRuntime.repo @('add','Code'); Invoke-FixtureGit $oldRuntime.repo @('commit','-qm','wrong runtime fixture')
         Reject { Get-R17Source $oldRuntime.repo } 'Wrong runtime/build identity'
+    }
+    $main=New-MainFixture
+    Case 'clean main aligned with origin/main accepted' {
+        $s=Get-R17Source $main.repo
+        Check ($s.branch -ceq 'main' -and $s.commit -ceq $main.commit -and $s.identity -ceq "runtime17-$($main.commit)" -and $s.submodules.Count -eq 1) 'Incorrect main provenance'
+    }
+    Case 'main accepts exact ExpectedCommit' {
+        Check ((Get-R17Source $main.repo $main.commit).commit -ceq $main.commit) 'Expected commit lost'
+    }
+    Case 'main refuses wrong ExpectedCommit' { Reject { Get-R17Source $main.repo ('0'*40) } 'Source commit mismatch' }
+    Case 'detached HEAD refused even at origin/main' {
+        Invoke-FixtureGit $main.repo @('checkout','-q','--detach')
+        try { Reject { Get-R17Source $main.repo } 'Wrong source branch.*detached' }
+        finally { Invoke-FixtureGit $main.repo @('checkout','-q','main') }
+    }
+    Case 'main ahead of origin/main refused' {
+        $x=New-MainFixture
+        Invoke-FixtureGit $x.repo @('commit','--allow-empty','-qm','unpublished fixture commit')
+        Reject { Get-R17Source $x.repo } 'HEAD must equal origin/main exactly'
+    }
+    Case 'main behind origin/main refused' {
+        $x=New-MainFixture
+        Invoke-FixtureGit $x.repo @('commit','--allow-empty','-qm','newer fixture remote')
+        Invoke-FixtureGit $x.repo @('update-ref','refs/remotes/origin/main','HEAD')
+        # Empty commit: move only this disposable branch back, no file reset.
+        Invoke-FixtureGit $x.repo @('reset','--soft',$x.commit)
+        Reject { Get-R17Source $x.repo } 'HEAD must equal origin/main exactly'
+    }
+    Case 'main without origin/main refused' {
+        Invoke-FixtureGit $main.repo @('update-ref','-d','refs/remotes/origin/main')
+        try { Reject { Get-R17Source $main.repo } 'requires a valid origin/main commit' }
+        finally { Invoke-FixtureGit $main.repo @('update-ref','refs/remotes/origin/main','HEAD') }
+    }
+    Case 'main with non-commit origin/main refused' {
+        $blob=(Invoke-R17Git $main.repo @('hash-object','-w','Code/common/BuildInfo.h.in')) -join ''
+        Invoke-FixtureGit $main.repo @('update-ref','refs/remotes/origin/main',$blob)
+        try { Reject { Get-R17Source $main.repo } 'requires a valid origin/main commit' }
+        finally { Invoke-FixtureGit $main.repo @('update-ref','refs/remotes/origin/main','HEAD') }
+    }
+    Case 'main tracked changes refused' {
+        $path=Join-Path $main.repo 'Code/common/BuildInfo.h.in'; $bytes=[IO.File]::ReadAllBytes($path)
+        try { Put $path 'uncommitted'; Reject { Get-R17Source $main.repo } 'Commit or isolate' }
+        finally { [IO.File]::WriteAllBytes($path,$bytes) }
+    }
+    Case 'main untracked changes refused' {
+        $path=Join-Path $main.repo 'untracked.cpp'; Put $path 'uncommitted'
+        try { Reject { Get-R17Source $main.repo } 'Commit or isolate' } finally { Remove-Item -LiteralPath $path }
+    }
+    Case 'main incorrect repository origin refused' {
+        Invoke-FixtureGit $main.repo @('remote','set-url','origin','https://example.invalid/wrong')
+        try { Reject { Get-R17Source $main.repo } 'Unexpected source repository origin' }
+        finally { Invoke-FixtureGit $main.repo @('remote','set-url','origin','https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced') }
+    }
+    Case 'main incorrect submodule commit refused' {
+        $x=New-MainFixture; $sub=Join-Path $x.repo 'Libraries/Fixture'
+        Invoke-FixtureGit $sub @('commit','--allow-empty','-qm','wrong submodule fixture')
+        Reject { Get-R17Source $x.repo } 'Commit or isolate|Submodule commit/cleanliness mismatch'
+    }
+    Case 'main dirty submodule refused' {
+        $path=Join-Path $main.repo 'Libraries/Fixture/dirty.txt'; Put $path 'untracked submodule'
+        try { Reject { Get-R17Source $main.repo } 'Commit or isolate|Submodule commit/cleanliness mismatch' }
+        finally { Remove-Item -LiteralPath $path }
+    }
+    Case 'main incorrect submodule origin refused' {
+        $sub=Join-Path $main.repo 'Libraries/Fixture'
+        Invoke-FixtureGit $sub @('remote','set-url','origin','https://example.invalid/wrong')
+        try { Reject { Get-R17Source $main.repo } 'Submodule origin mismatch' }
+        finally { Invoke-FixtureGit $sub @('remote','set-url','origin','https://github.com/TiltedPhoques/Fixture') }
+    }
+    foreach ($invalid in @(
+        @{name='runtime 1.6'; path='Code/common/Runtime/Compatibility.h'; text='TargetVersion{1, 6, 1170, 0}; RequiredSkseFileVersion{0, 2, 3, 1}; skse64_1_7_104.dll'},
+        @{name='wrong SKSE'; path='Code/common/Runtime/Compatibility.h'; text='TargetVersion{1, 7, 104, 0}; RequiredSkseFileVersion{0, 2, 2, 6}; skse64_1_7_104.dll'},
+        @{name='wrong BuildInfo template'; path='Code/common/BuildInfo.h.in'; text='#define BUILD_COMMIT "unversioned"'}
+    )) {
+        Case "main rejects $($invalid.name) despite aligned origin/main" {
+            $x=New-MainFixture; Put (Join-Path $x.repo $invalid.path) $invalid.text
+            Invoke-FixtureGit $x.repo @('add','Code'); Invoke-FixtureGit $x.repo @('commit','-qm','invalid contract fixture')
+            Invoke-FixtureGit $x.repo @('update-ref','refs/remotes/origin/main','HEAD')
+            Reject { Get-R17Source $x.repo } 'Wrong runtime/build identity contract'
+        }
     }
     Case 'accepted source/installed content divergence preserved' {
         $ref=Get-R17Reference $f.config
@@ -435,6 +525,15 @@ $module = Get-Module Stre.Runtime17Dev
         $verified=Read-R17Json (Join-Path $latest 'verified-A.json')
         Check ($verified.candidateCommit -eq $before.candidate.source.commit -and $verified.verificationHead -ne $verified.candidateCommit) 'Compiled commit relabelled'
     }
+    Case 'experimental receipt still verifies from aligned main using unchanged config' {
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        $manifestHash=Get-R17Hash (Join-Path $latest 'manifest.json'); $configHash=Get-R17Hash $script:Active.configPath
+        Set-FixtureMain $script:Active
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
+        $after=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($after.status -eq 'INSTALLED_VERIFIED' -and $after.candidate.source.branch -ceq 'feat/skyrim-1.7-runtime' -and $after.candidate.source.commit -ceq $before.candidate.source.commit -and $after.candidate.source.identity -ceq $before.candidate.source.identity) 'Experimental provenance relabelled'
+        Check ((Get-R17Hash (Join-Path $latest 'manifest.json')) -eq $manifestHash -and (Get-R17Hash $script:Active.configPath) -eq $configHash -and $after.configSha256 -eq $configHash) 'Historical manifest/config changed'
+    }
     Case 'staging alone cannot pass; Verify resumes the same frozen candidate' {
         $script:Active=New-Fixture; $script:DoDeploy=$false
         Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Staged only'
@@ -454,10 +553,15 @@ $module = Get-Module Stre.Runtime17Dev
         Check ((Test-Path (Join-Path $latest 'staged-A.json')) -and !(Test-Path (Join-Path $latest 'staged-B.json'))) 'False staging success'
         $journal=Read-R17Json (Join-Path $latest 'copy-B.json')
         Check (($journal.files | Where-Object path -eq $script:Wave).status -eq 'FAILED') 'Failed file not recorded'
+        # Rollback must remain available with the original configuration even
+        # after a source branch change and unrelated uncommitted source edits.
+        Set-FixtureMain $script:Active
+        Put (Join-Path $script:Active.repo 'later-untracked.txt') 'unrelated source changes'
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest
         $null=Read-Host 'fixture human deploy'
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode VerifyRestored -ReceiptPath $latest
-        Check ((Read-R17Json (Join-Path $latest 'receipt.json')).status -eq 'RESTORED_VERIFIED') 'Missing restoration verification'
+        $restored=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($restored.status -eq 'RESTORED_VERIFIED' -and $restored.candidate.source.branch -ceq 'feat/skyrim-1.7-runtime' -and $restored.candidate.source.commit -ceq $receipt.candidate.source.commit -and $restored.configSha256 -eq (Get-R17Hash $script:Active.configPath)) 'Restoration lost historical provenance/configuration'
         foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'private files after restoration' }
     }
     Case 'restore refuses unrelated intervening staging bytes before writes' {
@@ -499,6 +603,69 @@ $module = Get-Module Stre.Runtime17Dev
         $entry=@((Read-R17Json (Join-Path $latest 'copy-B.json')).files | Where-Object path -eq $script:Wave)[0]
         Check (!$entry.mutationStarted -and $null -eq $entry.observed) 'Unrelated edit was labelled partial-copy evidence'
         Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest } 'unrelated changes'
+    }
+    Case 'main full simulated build snapshot staging deployment Verify preserves private files' {
+        $script:Active=New-MainFixture
+        $private=Get-PrivateRows $script:Active
+        $expected=Get-R17Hash (Join-Path $script:Active.config.targets[0].gameRoot "Data/$script:Wave")
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -ExpectedCommit $script:Active.commit
+        $latest=Get-LatestRun; $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($receipt.status -eq 'INSTALLED_VERIFIED' -and $receipt.candidate.source.branch -ceq 'main' -and $receipt.candidate.source.commit -ceq $script:Active.commit -and $receipt.candidate.source.identity -ceq "runtime17-$($script:Active.commit)") 'Wrong main candidate provenance'
+        Check ((Read-R17Json (Join-Path $latest 'manifest.json')).source.branch -ceq 'main') 'Manifest lost source branch'
+        foreach ($id in @('A','B')) {
+            $verified=Read-R17Json (Join-Path $latest "verified-$id.json")
+            Check ($verified.status -eq 'INSTALLED_VERIFIED' -and $verified.candidateCommit -ceq $script:Active.commit) 'Missing exact main verification'
+            Check (($verified.files | Where-Object path -eq $script:Wave).sha256 -eq $expected) 'Installed-A snapshot lost'
+            Check (($verified.files | Where-Object path -eq 'SkyrimTogetherReborn/SkyrimTogether.exe').provenance -ceq 'main checkout build') 'Mislabelled main binary provenance'
+        }
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest -ExpectedCommit $script:Active.commit
+        foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'main private files preserved' }
+        Assert-R17Content (Join-Path $script:Active.repo 'GameFiles/Skyrim') $script:Active.reference.contentFiles -Repository
+    }
+    Case 'main Verify keeps original candidate after later aligned documentation commit' {
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        $manifestHash=Get-R17Hash (Join-Path $latest 'manifest.json')
+        Invoke-FixtureGit $script:Active.repo @('commit','--allow-empty','-qm','later main fixture')
+        Invoke-FixtureGit $script:Active.repo @('update-ref','refs/remotes/origin/main','HEAD')
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
+        $after=Read-R17Json (Join-Path $latest 'receipt.json'); $verified=Read-R17Json (Join-Path $latest 'verified-A.json')
+        Check ($after.candidate.source.branch -ceq 'main' -and $after.candidate.source.identity -ceq $before.candidate.source.identity -and $verified.candidateCommit -ceq $before.candidate.source.commit -and $verified.verificationHead -cne $verified.candidateCommit) 'Main candidate relabelled'
+        Check ((Get-R17Hash (Join-Path $latest 'manifest.json')) -eq $manifestHash) 'Frozen manifest rewritten'
+    }
+    foreach ($invalid in @(
+        @{name='unauthorized branch'; change={param($r) $r.candidate.source.branch='feat/arbitrary'}; pattern='Invalid retained candidate provenance'},
+        @{name='inconsistent identity'; change={param($r) $r.candidate.source.identity='runtime17-'+('0'*40)}; pattern='Invalid retained candidate provenance'},
+        @{name='changed frozen native manifest'; change={param($r) $r.candidate.files[0].sha256='0'*64}; pattern='Hash/size mismatch'},
+        @{name='changed frozen content manifest'; change={param($r) $r.candidate.contentFiles[0].bytes++}; pattern='frozen candidate integrity.*mismatch'}
+    )) {
+        Case "Verify refuses $($invalid.name)" {
+            $latest=Get-LatestRun; $path=Join-Path $latest 'receipt.json'; $original=[IO.File]::ReadAllBytes($path)
+            $bad=Read-R17Json $path; & $invalid.change $bad; Write-R17Json $bad $path
+            try { Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest } $invalid.pattern }
+            finally { [IO.File]::WriteAllBytes($path,$original) }
+        }
+    }
+    Case 'changed config hash blocks Verify and both restoration modes' {
+        $latest=Get-LatestRun; $path=$script:Active.configPath; $original=[IO.File]::ReadAllBytes($path)
+        try {
+            # Whitespace-only change still violates the exact configuration pin.
+            [IO.File]::AppendAllText($path,"`n")
+            foreach ($mode in @('Verify','RestoreStaging','VerifyRestored')) {
+                Reject { Invoke-R17Workflow -ConfigPath $path -Mode $mode -ReceiptPath $latest } 'Receipt/configuration mismatch'
+            }
+        } finally { [IO.File]::WriteAllBytes($path,$original) }
+    }
+    Case 'main Verify rejects changed protected INI' {
+        $latest=Get-LatestRun; $path=Join-Path $script:Active.config.targets[1].gameRoot 'Data/SkyrimTogetherReborn/config/STServer.ini'
+        $original=[IO.File]::ReadAllBytes($path)
+        try {
+            [IO.File]::AppendAllText($path,"`n; unrelated change")
+            Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest } 'Protected server configuration presence/hash changed'
+        } finally { [IO.File]::WriteAllBytes($path,$original) }
+    }
+    Case 'main Verify recovers after invalid fixture evidence is restored' {
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath (Get-LatestRun)
+        Check ((Read-R17Json (Join-Path (Get-LatestRun) 'receipt.json')).status -eq 'INSTALLED_VERIFIED') 'Restored fixture evidence did not verify'
     }
     Case 'WhatIf cannot touch destinations, enumerate processes or build' {
         $plan=Read-R17Json $f.configPath

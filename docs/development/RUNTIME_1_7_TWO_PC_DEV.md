@@ -17,7 +17,7 @@ A's staging. An initial destination difference is normal, not a hash failure.
 
 | Category | Deployment source | Treatment |
 |---|---|---|
-| Native client, launcher, server, CEF libraries, generated UI | Fresh build of clean `feat/skyrim-1.7-runtime` | Validate compiled identity and snapshot distribution |
+| Native client, launcher, server, CEF libraries, generated UI | Fresh build of the explicitly selected clean experimental or verified `main` checkout | Validate compiled identity and snapshot distribution |
 | Managed STRE contents, including Valen WAVs | A's configured `gameRoot/Data` at capture time | Independent snapshot, replace/create only listed paths on A/B |
 | Server/personal configuration, saves/co-saves, campaigns, identities, databases, logs/caches, credentials | Each machine | Preserve; never distribute or include in package backups |
 | Skyrim, SKSE, Address Library, Better Grabbing | External dependency installation | Verify pinned hashes; never distribute |
@@ -39,18 +39,42 @@ enter that namespace or dependency paths. Duplicate paths, traversal, alternate
 streams, reparses and category collisions block. Files outside the new manifest,
 **including old UI bundles**, remain untouched: no purge or global equality.
 
-## Branch boundary before main integration
+## Source branches and retained receipts
 
-The current helper deliberately requires source branch `feat/skyrim-1.7-runtime`
-and validates that branch in retained candidate provenance. A source checkout on
-`main` is rejected with `Wrong source branch.` even after the migration merges.
-The ordinary xmake/CI build path has no such restriction. Keep this experimental
-worktree and private routing intact until a separate, reviewed adaptation is
-authorized; merging alone does not make the two-PC command a main-source workflow.
-That adaptation must retain repository/commit/submodule checks and the ability
-to verify or restore historical receipts. Do not just delete the branch guard,
-relabel old receipts or weaken content/import policy. No workflow behavior is
-changed by this integration-review note.
+Only attached checkouts on **`feat/skyrim-1.7-runtime`** or **`main`** are accepted.
+Both require the official repository origin, clean tracked/untracked files,
+submodules at the recorded gitlink commits with clean files and matching origins,
+and the exact Skyrim **1.7.104.0** / SKSE **2.3.1** contract. BuildInfo and binaries
+must identify `runtime17-<full source SHA>`. `ExpectedCommit`, when supplied, must
+match that exact SHA on either branch. Arbitrary feature branches and detached
+HEADs are refused. These DEV rules do not broaden the separate Modding
+authoring/ancestry policy.
+
+For `main`, `refs/remotes/origin/main` must resolve to a commit and **HEAD must
+equal it exactly**. Local ahead, behind or divergent main is refused. Before an
+operation using main, explicitly fetch and check the resulting HEAD/reference
+state:
+
+```powershell
+git -C '<selected-main-checkout>' fetch origin
+```
+
+The helper never fetches;
+equality with a local remote-tracking ref does **not** prove that ref is fresh.
+
+`Verify` accepts either historical candidate branch, preserving its original
+commit, identity and branch even when the current verification HEAD is later.
+The frozen candidate, configuration SHA-256 pin, scope/dependency hashes,
+destination identities, protected configurations and installed bytes remain
+checked. Original schema-2 experimental receipts remain verifiable/restorable
+with their **unchanged original configuration**. Do not relabel receipts as main
+or edit the configuration pin to reuse a receipt with a new source path.
+RestoreStaging/VerifyRestored retain their existing backup and destination gates;
+rollback does not require a clean or current source checkout.
+
+This support is qualified on local fixtures only. **No real deployment from
+main or human A/B validation of that route has been executed.** Historical
+experimental A/B acceptances keep their own source identities.
 
 ## Entry and private configuration
 
@@ -69,7 +93,7 @@ The private config and entry remain ignored. `runtime17-dev.example.json` and
 
 | Field | Meaning |
 |---|---|
-| `repository` | Absolute local root of `feat/skyrim-1.7-runtime`, not the parent checkout |
+| `repository` | Explicit absolute local root of the chosen authorized branch; never inferred from the entry's working directory |
 | `receipts` | Existing local directory outside the source worktree and destinations |
 | `buildRoot` | Existing short local build root, e.g. `C:\STRE-R17`, separate from source, receipts and destinations |
 | `referencePath`, `referenceSha256` | Qualification/scope manifest and pinned SHA-256 |
@@ -89,6 +113,25 @@ The private reference retains schema 1, runtime `1.7.104.0`, `nativeFiles`
 Its hash and external dependency hashes remain blocking checks. Back up this
 reference, the private configuration and entry together; do not regenerate the
 reference from a divergent destination to bypass a failure.
+
+### Selecting main after integration
+
+After the migration is merged with separate authorization, the maintainer can
+select a clean local checkout of `main` containing this helper. Fetch there
+explicitly and ensure HEAD equals the fetched `origin/main`, with the expected
+submodules. Preserve the existing experimental checkout, entry, configuration,
+reference and receipts. Prepare a **separate private configuration** whose
+`repository` names the selected main checkout and whose local receipts/build
+roots satisfy the same isolation rules. Keep the reviewed destination and
+reference settings; no automatic rerouting or destination change is performed.
+
+For the entry supporting this option, select that separate file with
+`-Runtime17ConfigPath '<absolute-private-main-config.json>'` alongside
+`-Runtime17TwoPc`; it loads the helper from `config.repository`. The default
+command and current private config continue to select the experimental checkout.
+Use the original config/receipt pairing for historical Verify/RestoreStaging/
+VerifyRestored operations. Changing `repository` in a config changes its hash
+and intentionally prevents using it with receipts pinned to the old file.
 
 Each new build allocates `buildRoot/<GUID>/build`; the complete build-directory
 path is limited to 100 characters as a conservative budget for this project's
@@ -127,7 +170,9 @@ The canonical path is **`SkyrimTogetherReborn/config/STServer.ini`**, as used by
    process enumeration, compilation or writes.
 2. Check source root/origin/branch, clean source and submodules, gitlink commits
    and origins, runtime/SKSE/build-identity contract, and local output isolation.
-   No fetch. Optional `-Runtime17ExpectedCommit <full-SHA>` pins HEAD. At `READY`,
+   No automatic fetch; main requires the explicit fetch described above and exact
+   equality with origin/main. Optional `-Runtime17ExpectedCommit <full-SHA>` pins
+   HEAD on either branch. At `READY`,
    confirm both PCs' game, launcher, server, Vortex, Steam, CK and xEdit are closed
    and remain closed through staging.
 3. Create a unique receipt directory and linked short build directory. In the selected worktree run
@@ -241,6 +286,12 @@ human Vortex steps are simulated; hashes, files, hardlinks, backups and restorat
 are real local operations. Cases cover installed-vs-Git WAV provenance, divergent
 or absent destinations, missing/unstable sources, corrupt snapshot, copy/final-hash
 failures, partial recovery, personal-file preservation, INI behavior and routing.
+Additional cases cover exact main provenance (including missing/non-commit
+origin/main, ahead/behind, detached HEAD, dirty source/submodules and wrong
+origin/runtime/SKSE/BuildInfo), a complete main candidate cycle, retained
+experimental verification/restoration and unchanged configuration pins. Remote
+refs are created locally in disposable repositories; no fetch or network access
+occurs in these tests. Fixture success does not validate a real main deployment.
 See [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
 The subsequent [C1083 diagnosis and real native-build validation](../audit/2026-10-22-runtime17-c1083-build-path.md)
 records the short-build-root correction, 45 passing fixture cases and the exact

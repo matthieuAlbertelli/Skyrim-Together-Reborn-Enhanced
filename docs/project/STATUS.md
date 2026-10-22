@@ -9,13 +9,50 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 integration review — offline checks, no publication
+## Runtime17TwoPc main-source support — local fixtures only
+
+The DEV helper now accepts only `feat/skyrim-1.7-runtime` and attached `main`.
+Main must match a valid `origin/main` commit exactly; the operator must fetch
+explicitly before use. Both branches retain official-origin, clean source and
+submodules, exact runtime/SKSE and `runtime17-<full SHA>` build-identity gates,
+including optional ExpectedCommit. The separate Modding authoring policy is
+unchanged. See [source/receipt rules](../development/RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts).
+
+Original experimental receipts remain usable with their unchanged configuration,
+without relabeling the compiled source or weakening configSha256. Main receipts
+record their own branch/SHA; verification may record a later permitted HEAD.
+Frozen manifests, file hashes/sizes, protected INIs, destination identities and
+backup/restoration checks remain in force. Source selection remains explicit
+through `config.repository`; the [post-integration procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md#selecting-main-after-integration)
+uses a separate private main configuration and preserves the experimental one.
+
+Validation: **72 local fixture cases PASS** (45 retained + 27 additional),
+including the full simulated main build/snapshot/A-B staging/human-deployment/
+Verify cycle, historical experimental Verify/RestoreStaging/VerifyRestored,
+and negative provenance, manifest, protected-file and configuration-pin cases.
+The two modified PowerShell files parse without errors; diff whitespace,
+73 local document link paths and two new anchors pass. The 71 baselined local
+receipt/configuration/primary-entry/status files are byte-identical. Evidence
+is retained separately in ignored `_audit/runtime17-main-support-20261022/`.
+Compiler, process guard and human deployment are simulated; Git and filesystem
+checks use disposable local fixtures. No editor, game or real build is run.
+
+No private entry/configuration, existing receipt, installed content or primary
+checkout was changed. **No real main deployment or human A/B acceptance of this
+route has occurred.** Existing Solo/multiplayer/presentation acceptances retain
+their own candidates, including installed presentation `53530e69`. Recovery,
+partially unqualified multiplayer World Sync, DialogueProgress Valen, the waived
+untested CK write cycle and private-intro redistribution remain independent
+limits. #99/#86/#91/#96 are not closed by this increment.
+
+## Historical Steam 1.7.104 integration review — offline checks, no publication during review
 
 The review started at `870f640ff4cd65cf7caaa731474cbffd5cadc824` on
 `feat/skyrim-1.7-runtime`. After an authorized fetch, `origin/main` and the
 merge-base were both `071f7573d7d86d96dbd20e5ee6f2cbf2300d56b7`: 24 local
 unpublished commits ahead, none behind. The four submodule references and
-GameFiles were unchanged. Subsequent review corrections are documentary only.
+GameFiles were unchanged. Review corrections through `c43f71a2` were documentary
+only; the later main-source helper adaptation is recorded separately above.
 
 At that source HEAD, **234 Python tests**, **76 simulated Modding safeguards**,
 **45 Runtime17TwoPc fixture cases**, and the **697-entry packaging audit PASS**.
@@ -25,15 +62,15 @@ game/server, AutoMod or Papyrus execution occurred in this review.
 
 Retained Debug/releasedbg receipts still belong to `b5665aa4` (462 TPTests /
 49,390 assertions each); all tracked Code/Libraries/root-xmake inputs are
-unchanged since that source. Tool sources are unchanged since `e1888015`.
+unchanged since that source. At this review, tool sources were unchanged since `e1888015`.
 This correspondence is not a new build or a relabeling of old binaries.
 Existing local A/B receipts consistently identify multiplayer `98f1d35c` and
 later presentation `53530e69`; no remote destination or gameplay log was read.
 
 The ignored review dossier is `_audit/runtime17-final-review-20261022/`.
-The ordinary build can use main after integration, but Runtime17TwoPc still
-requires its experimental branch; its [branch boundary](../development/RUNTIME_1_7_TWO_PC_DEV.md#branch-boundary-before-main-integration)
-needs a separate decision before changing the DEV source route. Recovery,
+At this review Runtime17TwoPc still required its experimental branch, motivating
+the subsequently authorized [main-source adaptation](../development/RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts)
+recorded above. The ordinary build was not branch-restricted. Recovery,
 multiplayer World Sync, unreported creation permutations, #91/#96 follow-up,
 production authoring and intro redistribution retain their independent limits.
 No push, PR, CI dispatch, merge, release or issue closure occurred.

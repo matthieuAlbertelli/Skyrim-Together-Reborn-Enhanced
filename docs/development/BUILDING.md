@@ -59,10 +59,13 @@ Steam 1.7.104.0 is the sole development target. Follow the
 experimental worktree explicitly, pass `-P .` to xmake, preserve earlier outputs,
 and verify compiled/deployed identities. Initial menu-only authorization is
 historical; STATUS records later scoped acceptance. The standard build commands
-above do not depend on the branch name. The separate Runtime17TwoPc helper still
-requires `feat/skyrim-1.7-runtime`; merging this port does not retarget that helper
-or the private entry/configuration to main. See its
-[documented branch boundary](RUNTIME_1_7_TWO_PC_DEV.md#branch-boundary-before-main-integration).
+above do not depend on the branch name. The separate Runtime17TwoPc helper accepts
+only `feat/skyrim-1.7-runtime` or clean `main` exactly equal to an explicitly
+fetched `origin/main`, with the existing provenance checks. Merging this port
+does not retarget the private entry/configuration. See its
+[source and receipt rules](RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts)
+and [main selection procedure](RUNTIME_1_7_TWO_PC_DEV.md#selecting-main-after-integration).
+Main support is fixture-tested; no real main deployment is implied.
 Production CK/AutoMod authoring remains separately gated; a native build must
 not silently import changed Data.
 

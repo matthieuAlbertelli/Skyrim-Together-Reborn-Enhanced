@@ -11,6 +11,7 @@ $script:RootFiles = @(
     'v8_context_snapshot.bin','vk_swiftshader.dll','vulkan-1.dll'
 )
 $script:Required = $script:RootFiles + @('UI/index.html')
+$script:SourceBranches = @('feat/skyrim-1.7-runtime','main')
 
 function Get-R17Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 function Read-R17Json([string]$Path) { Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable }
@@ -123,9 +124,15 @@ function Get-R17Source([string]$Repo, [string]$ExpectedCommit) {
     $origin = (Invoke-R17Git $Repo @('remote','get-url','origin')) -join ''
     if ($origin -notmatch '^(https://github.com/|git@github.com:)matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced(\.git)?$') { throw 'Unexpected source repository origin.' }
     $branch = (Invoke-R17Git $Repo @('branch','--show-current')) -join ''
-    if ($branch -cne 'feat/skyrim-1.7-runtime') { throw 'Wrong source branch.' }
+    if ($branch -cnotin $script:SourceBranches) { throw 'Wrong source branch: select feat/skyrim-1.7-runtime or main (no detached HEAD).' }
     $head = (Invoke-R17Git $Repo @('rev-parse','HEAD')) -join ''
     if ($ExpectedCommit -and ($ExpectedCommit -notmatch '^[a-f0-9]{40}$' -or $head -cne $ExpectedCommit)) { throw 'Source commit mismatch.' }
+    if ($branch -ceq 'main') {
+        # Local reference only: the operator must explicitly fetch before use.
+        try { $main = (Invoke-R17Git $Repo @('rev-parse','--verify','refs/remotes/origin/main^{commit}')) -join '' }
+        catch { throw 'Source main requires a valid origin/main commit; fetch origin explicitly before use.' }
+        if ($head -cne $main) { throw 'Source main HEAD must equal origin/main exactly; ahead/behind/divergent checkouts are refused.' }
+    }
     if (@(Invoke-R17Git $Repo @('status','--porcelain=v1','--untracked-files=all')).Count) { throw 'Commit or isolate all source changes before building.' }
     $compat = Get-Content -LiteralPath (Join-Path $Repo 'Code/common/Runtime/Compatibility.h') -Raw
     $template = Get-Content -LiteralPath (Join-Path $Repo 'Code/common/BuildInfo.h.in') -Raw
@@ -345,7 +352,7 @@ function Get-R17DeploymentRows($Candidate) {
     Assert-R17Rows $Candidate.files -Native
     Assert-R17Rows $Candidate.contentFiles
     $rows = @(foreach ($row in $Candidate.files) {
-        @{path="SkyrimTogetherReborn/$($row.path)"; bytes=$row.bytes; sha256=$row.sha256; provenance='experimental worktree build'}
+        @{path="SkyrimTogetherReborn/$($row.path)"; bytes=$row.bytes; sha256=$row.sha256; provenance=$(if ($Candidate.source.branch -ceq 'main') {'main checkout build'} else {'experimental worktree build'})}
     }; foreach ($row in $Candidate.contentFiles) {
         Assert-R17ContentPath $row.path
         if ($row.provenance -cne 'installed main PC' -or ![IO.Path]::IsPathFullyQualified($row.sourcePath)) { throw "Invalid content provenance: $($row.path)" }
@@ -644,7 +651,7 @@ function Invoke-R17Workflow {
         }
         if ($Mode -eq 'Verify') {
             $builtSource=$receipt.candidate.source
-            if ($builtSource.commit -notmatch '^[a-f0-9]{40}$' -or $builtSource.identity -cne "runtime17-$($builtSource.commit)" -or $builtSource.branch -cne 'feat/skyrim-1.7-runtime') { throw 'Invalid retained candidate provenance.' }
+            if ($builtSource.commit -notmatch '^[a-f0-9]{40}$' -or $builtSource.identity -cne "runtime17-$($builtSource.commit)" -or $builtSource.branch -cnotin $script:SourceBranches) { throw 'Invalid retained candidate provenance.' }
             $retained=New-R17Candidate $builtSource $ReceiptPath
             Assert-R17Exact (Join-Path $ReceiptPath 'distrib/bin') $receipt.candidate.files -Distribution
             if ($retained.files.Count -ne $receipt.candidate.files.Count) { throw 'Retained manifest changed.' }
