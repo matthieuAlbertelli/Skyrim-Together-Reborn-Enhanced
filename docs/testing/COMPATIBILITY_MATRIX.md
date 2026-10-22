@@ -1,7 +1,7 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: October 21, 2026**
+> **Last updated: October 22, 2026**
 
 ## Current development target
 
@@ -46,10 +46,10 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
 | Better Grabbing | Official 2.0: main-PC DLL/provenance, actual SKSE 2.3.1 loading and human Solo smoke PASS; V5 declaration present; multiplayer manipulation/interruption remains untested; required native-plugin policy retained |
 | Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
-| STRE intro/custom menu | Disabled by historical1.6 presentation guard; not a1.7 visual PASS |
+| STRE intro/custom menu | Exact 1.7.104 native adapters ported; targeted static proof and offline build/test results in STATUS. Intro/audio, background, prompt, branding, music, cursor and input require human in-game acceptance; no visual/audio PASS inferred |
 | Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access, quick-save/reload, Continue and checked-character persistence; exact human/technical scope in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
 | Reported two-player path | Maintainer-attested PASS: admission/lobby, creation, reciprocal appearances, seating, movement and saving/loading. Logs checked by the maintainer, not Codex; exact candidate and accepted scope are in STATUS |
-| World Sync and collective recovery | Not qualified by the reported two-player path. No inferred manipulation/interruption, crash/disconnect/restart or coordinated-checkpoint recovery PASS; optional presentation/diagnostics remain guarded |
+| World Sync and collective recovery | Not qualified by the reported two-player path. No inferred manipulation/interruption, crash/disconnect/restart or coordinated-checkpoint recovery PASS; presentation has its separate exact-target gate, while unrelated optional dialogue/diagnostic paths remain guarded |
 | CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |

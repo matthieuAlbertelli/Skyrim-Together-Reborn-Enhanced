@@ -9,6 +9,61 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Steam 1.7.104 presentation port — offline candidate (2026-10-22)
+
+**Implemented, statically qualified and compiled/tested offline; human visual,
+audio and native-input acceptance is still pending.** Refs #99 / #86.
+Compiled source **`b5665aa41fb85fa71251e68a38fa82c9962c687c`** on
+`feat/skyrim-1.7-runtime`, identity
+`runtime17-b5665aa41fb85fa71251e68a38fa82c9962c687c`. Subsequent documentation
+HEADs are distinct from this compiled source.
+
+O02 now has targeted exact 1.7.104 binary/source evidence. MainMenu messages,
+MainMenu/CursorMenu draw slots, both music call sites and the GFx/native-text
+interfaces are qualified; the existing B05 renderer and C09 input seam are reused.
+The adapter admits only 1.7.104.0, verifies original methods and every music-call
+byte/target/range, then acquires all patch permissions before committing. Failed
+preflight/acquisition preserves originals; no second input/render hook is added.
+The 18 mandatory contracts and campaign/server admission rules are unchanged.
+
+| Component | Current implementation / evidence | Skyrim 1.7 acceptance |
+|---|---|---|
+| Intro, audio, natural end and skip | Existing MF player, bounded policy and keyboard/gamepad bindings enabled through the qualified adapter; offline policy/media cases PASS | Visual playback, audible audio and actual keyboard/controller routing pending |
+| Animated silent background | Existing decoder/DX11 sharing, native draw order and no-replay return policy retained; offline frame/EOS/loop tests PASS | In-game composition, focus/resize and Solo return pending |
+| Prompt and localized subtitle | Exact-target GFx/movie/device interfaces; native Esc/Space/font resources inspected; localization tests PASS | Native text/art rendering pending; failure omits only the affected text |
+| Branding/backdrop | Existing assets/design unchanged; three shipped PNGs decode in WARP; layout/alpha policy tests PASS | Visual review pending |
+| Music | Both exact music-trigger calls validated; original calls resume outside the intro-audio lease | Actual music/audio transitions pending |
+| Cursor and input | Native cursor draw gate and existing MenuControls interception retained; held-input/fallback/transaction tests PASS | Native cursor and control restoration pending |
+
+**Debug and releasedbg compile/link PASS** for client/launcher and matching
+server artifacts. Both full TPTests runs pass **462 cases / 49,390 assertions**;
+each explicit `[main-menu]` run passes **30 / 1,380**, `[main-menu-media]`
+**2 cases** (749/750 assertions), and `[main-menu-branding-assets]` **1 / 13**.
+All commands exit0, with nonzero cases for every filter. **234 Python tests PASS**
+after a sandbox temporary-directory permission failure and local retry; read-only
+CK packaging audit PASS (697 managed entries). No game or server was executed.
+
+Each mode has a fresh short compiler directory, a private 293-file native/UI
+package and a verified embedded client/server identity. The
+[dated proof and receipts](../audit/2026-10-22-runtime-1.7-presentation.md)
+retain commands, exit codes, hashes, exact ABI evidence and test limits.
+These candidates are ready for maintainer trials, **not deployed or accepted
+in Skyrim**. Use a whole same-build set; do not mix with the historical server.
+
+Installed presentation INIs/background/branding match the existing sources;
+no content/configuration change is needed. The known intro is present locally
+on A for private QA and remains uncleared for distribution: it is excluded from
+Git, the common payload and B synchronization. Po3 coexistence and workflow
+routing remain unchanged. The maintainer alone runs the existing
+`pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc` and the
+[progressive A-D trial](../features/main-menu/TEST_PLAN.md#progressive-human-trial-on-17104).
+That command rebuilds, so its future receipt must identify its actual candidate.
+
+The two-player human PASS below and its logs-checked-by-maintainer attribution
+remain intact; no multiplayer journal was reanalyzed. CK/AutoMod, unrelated
+optional dialogue/diagnostic paths and broader World Sync/recovery reserves
+remain independent. #99 and #86 stay open. **STOP before deployment/launch.**
+
 ## Steam 1.7.104 two-player acceptance — maintainer attestation
 
 Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).
@@ -43,9 +98,10 @@ of a committed `CampaignCheckpoint`. This attestation does not qualify the full
 M0-M4 protocol, additional Valen scenarios or World Sync manipulation/interruption.
 ADR-0018 and the native-plugin admission policy remain unchanged.
 
-**Independent reservations remain:** STRE intro/custom-menu presentation still
-needs its 1.7 port; CK/AutoMod must be requalified before authoring. This scoped
-milestone does not complete the whole migration or justify closing #99.
+**Independent reservations at this milestone:** STRE intro/custom-menu
+presentation still needed its 1.7 port (the later offline port above now awaits
+human presentation acceptance); CK/AutoMod must be requalified before authoring.
+This scoped milestone does not complete the whole migration or justify closing #99.
 See the [dated attestation and candidate receipt evidence](../audit/2026-10-22-runtime-1.7-multiplayer-acceptance.md)
 and [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
 
