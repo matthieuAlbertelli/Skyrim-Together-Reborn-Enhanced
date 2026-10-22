@@ -4,7 +4,9 @@ param(
     [switch]$RealTools,
     [string]$AutoModRoot = $env:STRE_AUTOMOD_ROOT,
     [string]$XEditPath = $env:STRE_XEDIT_PATH,
-    [string]$DataRoot = $env:STRE_SKYRIM_DATA
+    [string]$DataRoot = $env:STRE_SKYRIM_DATA,
+    # Optional durable SYNTHETIC copy, never a receipt or an importable session.
+    [string]$HumanFixtureOutput
 )
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'Run these toolchain tests on Windows.' }
@@ -13,7 +15,7 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('stre-modding-tests-' + [guid]
 $null = New-Item -ItemType Directory -Path $testRoot
 try {
     & $module {
-        param($TestRoot, $RealTools, $AutoModRoot, $XEditPath, $DataRoot, $SourceRepo)
+        param($TestRoot, $RealTools, $AutoModRoot, $XEditPath, $DataRoot, $SourceRepo, $HumanFixtureOutput)
         $script:Passed = 0
         $script:RealAutoMod = ${function:Invoke-StreAutoMod}
         $script:RealPreflight = ${function:Assert-StrePreflight}
@@ -50,11 +52,13 @@ try {
             } finally { $file.Dispose() }
         }
         function New-Fixture {
-            $repo = Join-Path $TestRoot ([guid]::NewGuid().ToString('N'))
+            $repo = Join-Path $TestRoot ('fixture with spaces ' + [guid]::NewGuid().ToString('N'))
             $null = New-Item -ItemType Directory -Path "$repo/GameFiles/Skyrim", "$repo/game/Data", "$repo/tools"
             Set-Header "$repo/GameFiles/Skyrim/STRE_AlternateStart.esp"
             Copy-Item "$repo/GameFiles/Skyrim/STRE_AlternateStart.esp" "$repo/game/Data/STRE_AlternateStart.esp"
-            foreach ($master in $script:Masters) { [IO.File]::WriteAllText("$repo/game/Data/$master", 'fixture master only') }
+            Set-Header "$repo/game/Data/Skyrim.esm" @() 1
+            Set-Header "$repo/game/Data/Update.esm" @('Skyrim.esm') 1
+            Set-Header "$repo/game/Data/Dragonborn.esm" @('Skyrim.esm','Update.esm') 1
             [IO.File]::WriteAllText("$repo/.gitignore", "_audit/`ngame/`ntools/`n")
             [IO.File]::WriteAllText("$repo/tools/xEdit.exe", 'fixture tool identity')
             [IO.File]::WriteAllText("$repo/tools/automod.dll", 'fixture tool identity')
@@ -70,6 +74,8 @@ foreach ($relative in $RelativePath) {
                 AutoModProject = "$repo/tools/automod.csproj"; AutoModDll = "$repo/tools/automod.dll"
                 XEditPath = "$repo/tools/xEdit.exe"; Runtime = "$repo/game/SkyrimSE.exe"
                 Dotnet = 'dotnet'; ImportScript = "$repo/import-from-ck-dev.ps1"
+                # Explicit synthetic identity, never an observation of a Skyrim executable.
+                RuntimeIdentity = @{ Path = "$repo/game/SkyrimSE.exe"; Version = '1.7.104.0'; Sha256 = 'synthetic-runtime' }
             }
             $null = Invoke-StreGit $Config @('init', '-b', 'feat/fixture')
             $null = Invoke-StreGit $Config @('config', 'user.email', 'fixture@example.invalid')
@@ -103,7 +109,8 @@ foreach ($relative in $RelativePath) {
             }
             if ($operation -eq 'view-record') {
                 $id = if ($script:Fault -eq 'wrong-record') { 'STRE_Wrong' } else { $script:Request.EditorId }
-                return @{ success = $true; result = @{ EditorId = $id; FormKey = '000800:STRE_AlternateStart.esp'; Properties = @{ Data = '7.25'; Name = 'Fixture'; Priority = 50 } } }
+                $type = if ($script:Fault -eq 'wrong-type') { 'GlobalShort' } elseif ($script:Request.Operation -eq 'AddQuest') { 'QuestBinaryOverlay' } else { 'GlobalFloatBinaryOverlay' }
+                return @{ success = $true; result = @{ EditorId = $id; RecordType = $type; FormKey = '000800:STRE_AlternateStart.esp'; Properties = @{ Data = '7.25'; Name = 'Fixture'; Priority = 50 } } }
             }
             if ($operation -eq 'list-masters') { return @{ success = $true; result = @{ masters = (Get-StreHeader $Arguments[2]).Masters } } }
             throw "Unexpected fixture call: $Arguments"
@@ -133,7 +140,7 @@ foreach ($relative in $RelativePath) {
         Test 'JSON requires literal true and parses the result' {
             Assert ((ConvertFrom-StreAutoModJson '{"success":true,"result":{"value":42}}').result.value -eq 42)
         }
-        foreach ($json in @('{"success":false}', '{"error":"no success"}', '{"success":"true"}', 'warning {"success":true}', '[{"success":true}]')) {
+        foreach ($json in @('{"success":false}', '{"error":"no success"}', '{"success":"true"}', '{"success":1}', 'warning {"success":true}', '[{"success":true}]', '{"success":true}{"success":true}')) {
             Test "reject invalid/failure JSON: $json" { Reject { ConvertFrom-StreAutoModJson $json } 'AutoMod' }
         }
         Test 'nonzero exit rejects even success JSON' { Reject { ConvertFrom-StreAutoModJson '{"success":true}' 7 } 'code 7' }
@@ -338,10 +345,103 @@ foreach ($relative in $RelativePath) {
                     @{ ExitCode = 0; Out = '{"success":true}'; Err = '' }
                 }
                 $null = & $script:RealAutoMod $Config @('esp','add-global','path with spaces.esp','STRE_Test','--dry-run')
-                Assert (('--json' -in $NativeArguments) -and ('--no-build' -in $NativeArguments))
+                Assert (('--json' -in $NativeArguments) -and $NativeArguments[0] -ceq $Config.AutoModDll)
+                Assert ('run' -notin $NativeArguments -and '--project' -notin $NativeArguments)
                 Assert ($NativeArguments[-3] -eq 'path with spaces.esp' -and $NativeArguments[-1] -eq '--dry-run')
                 Assert ($NativeEnvironment.DOTNET_SYSTEM_GLOBALIZATION_INVARIANT -eq '1')
             } finally { Set-Item Function:script:Invoke-StreProcess $native }
+        }
+        Test 'AutoMod stderr blocks even Boolean success' {
+            $native = ${function:Invoke-StreProcess}
+            try {
+                function script:Invoke-StreProcess { @{ ExitCode = 0; Out = '{"success":true}'; Err = 'unexpected warning' } }
+                Reject { & $script:RealAutoMod $Config @('papyrus','status') } 'AutoMod stderr'
+            } finally { Set-Item Function:script:Invoke-StreProcess $native }
+        }
+        Test 'UNC and device paths rejected before filesystem lookup' {
+            function script:Get-Item { throw 'FORBIDDEN filesystem lookup' }
+            try {
+                foreach ($path in @('\\example.invalid\share\file','//example.invalid/share/file','\\?\C:\file')) {
+                    Reject { Resolve-StrePath $path } 'Only local filesystem'
+                }
+            } finally {
+                function script:Get-Item { [CmdletBinding()]param([string]$LiteralPath,[switch]$Force) Microsoft.PowerShell.Management\Get-Item @PSBoundParameters }
+            }
+        }
+        Test 'missing file and simulated access denial remain distinct' {
+            Reject { Get-StreToolIdentity "$TestRoot/absent.exe" } 'Required tool/file missing'
+            function script:Get-Item { throw [UnauthorizedAccessException]::new('SIMULATED access denied; no ACL changed') }
+            try { Reject { Get-StreToolIdentity "$TestRoot/denied.exe" } 'SIMULATED access denied' }
+            finally {
+                function script:Get-Item { [CmdletBinding()]param([string]$LiteralPath,[switch]$Force) Microsoft.PowerShell.Management\Get-Item @PSBoundParameters }
+            }
+        }
+        Test 'reparse ancestor is rejected before looking up its child' {
+            function script:Get-Item {
+                [CmdletBinding()]param([string]$LiteralPath,[switch]$Force)
+                if ($LiteralPath.EndsWith('synthetic-junction')) { return @{Attributes=[IO.FileAttributes]::ReparsePoint} }
+                if ($LiteralPath.EndsWith('must-not-be-resolved.exe')) { throw 'FORBIDDEN descendant lookup' }
+                Microsoft.PowerShell.Management\Get-Item @PSBoundParameters
+            }
+            try { Reject { Resolve-StrePath "$TestRoot/synthetic-junction/must-not-be-resolved.exe" } 'Reparse point is not permitted' }
+            finally {
+                function script:Get-Item { [CmdletBinding()]param([string]$LiteralPath,[switch]$Force) Microsoft.PowerShell.Management\Get-Item @PSBoundParameters }
+            }
+        }
+        Test 'exact runtime, action prerequisites and tool identity' {
+            New-Fixture
+            $identity = ${function:Get-StreToolIdentity}; $native = ${function:Invoke-StreProcess}
+            $script:ObservedVersion = '1.7.104.0'; $script:ObservedProduct = "Spooky's AutoMod Toolkit"
+            $script:ObservedXEditProduct = 'xEdit'; $script:RuntimeListing = 'Microsoft.NETCore.App 8.0.32 [synthetic]'
+            try {
+                function script:Get-StreToolIdentity($Path) {
+                    if (-not $Path) { throw 'Required tool/file missing: unconfigured xEdit' }
+                    @{Path=$Path;Version=$script:ObservedVersion;Sha256='synthetic';Product=$(if($Path -eq $Config.XEditPath){$script:ObservedXEditProduct}else{$script:ObservedProduct})}
+                }
+                function script:Invoke-StreProcess { @{ExitCode=0;Err='';Out=$script:RuntimeListing} }
+                $result = & $script:RealPreflight $Config
+                Assert ($result.Runtime.Version -ceq '1.7.104.0')
+                foreach ($version in @('1.6.1170.0','1.7.105.0','9.0.0.0','')) {
+                    $script:ObservedVersion = $version
+                    Reject { & $script:RealPreflight $Config } 'Expected Skyrim SE Steam runtime 1.7.104.0 at'
+                }
+                $script:ObservedVersion = '1.7.104.0'
+                $script:ObservedProduct = 'Unrelated tool'
+                Reject { & $script:RealPreflight $Config } 'Unexpected AutoMod binary identity'
+                $script:ObservedProduct = "Spooky's AutoMod Toolkit"; $script:ObservedXEditProduct = 'Unrelated editor'
+                Reject { & $script:RealPreflight $Config } 'official xEdit'
+                $Config.XEditPath = $null
+                foreach ($action in @('Inspect','PapyrusStatus')) {
+                    $result = & $script:RealPreflight $Config $action
+                    Assert ($null -eq $result.XEdit -and $result.Action -ceq $action)
+                }
+                foreach ($action in @('Preflight','DryRun','Prepare','ImportValidated','FinalizeInterrupted')) {
+                    Reject { & $script:RealPreflight $Config $action } 'Required tool/file missing'
+                }
+                $script:RuntimeListing = 'Microsoft.NETCore.App 10.0.8 [synthetic]'
+                Reject { & $script:RealPreflight $Config 'PapyrusStatus' } 'requires the installed .NET 8'
+            } finally {
+                Set-Item Function:script:Get-StreToolIdentity $identity
+                Set-Item Function:script:Invoke-StreProcess $native
+            }
+        }
+        Test 'historical or changed runtime receipts cannot be relabeled' {
+            New-Fixture; Prepare
+            $statePath = Join-Path $Session 'session.json'
+            $state = Get-Content $statePath -Raw | ConvertFrom-Json -AsHashtable
+            $state.Config.Remove('RuntimeIdentity')
+            Write-StreJson $statePath $state
+            Reject { Import-Fixture } 'Historical session has no runtime identity'
+            $state.Config.RuntimeIdentity = $Config.RuntimeIdentity.Clone()
+            $state.Config.RuntimeIdentity.Sha256 = 'different-runtime'
+            Write-StreJson $statePath $state
+            Reject { Import-Fixture } 'Session runtime identity changed: Sha256'
+            Assert-Originals
+        }
+        Test 'matching EditorID and value cannot conceal a wrong record type' {
+            New-Fixture; $script:Fault = 'wrong-type'
+            Reject { Invoke-StreModding -Config $Config -Action Prepare -Request $Request } 'Written record type'
+            Assert-Originals
         }
         Test 'Valen authoring requires an explicitly visible private window' {
             Reject { New-StreValenSession @{} 'STRE_AlternateStart.esp' @{ShowXEdit=$false} } 'requires explicit'
@@ -361,6 +461,23 @@ foreach ($relative in $RelativePath) {
         }
         Test 'Papyrus accepts actual zero-error zero-warning success format' {
             Assert-StrePapyrusCompilation @{ExitCode=0; Err=''; Out="0 error(s), 0 warning(s)`r`nCompilation succeeded.`nBatch compile of 1 files finished. 1 succeeded, 0 failed."}
+        }
+        Test 'Papyrus availability is Boolean and never substitutes another tool' {
+            foreach ($available in @($false, 'true', 1, $null)) {
+                Reject { Get-StrePapyrusInputs @{result=@{compilerAvailable=$available}} '' '' } 'Papyrus compiler unavailable'
+            }
+            $compiler = Join-Path $TestRoot 'PapyrusCompiler.exe'
+            $flags = Join-Path $TestRoot 'TESV_Papyrus_Flags.flg'
+            [IO.File]::WriteAllText($compiler, 'SYNTHETIC IDENTITY ONLY')
+            $status = @{result=@{compilerAvailable=$true;compilerPath="$TestRoot/other/PapyrusCompiler.exe";decompilerAvailable=$false}}
+            Reject { Get-StrePapyrusInputs $status $compiler $flags } 'differs from the compiler discovered'
+            $status.result.compilerPath = $compiler
+            Reject { Get-StrePapyrusInputs $status $compiler $flags } 'Required tool/file missing'
+            [IO.File]::WriteAllText($flags, 'SYNTHETIC FLAGS ONLY')
+            Reject { Get-StrePapyrusInputs $status $compiler $flags } 'Required tool/file missing.*PapyrusAssembler'
+            [IO.File]::WriteAllText((Join-Path $TestRoot 'PapyrusAssembler.exe'), 'SYNTHETIC IDENTITY ONLY')
+            $inputs = Get-StrePapyrusInputs $status $compiler $flags
+            Assert ($inputs.Compiler.Path -ieq $compiler) 'Compiling must not require a decompiler'
         }
         Test 'Papyrus rejects usage output even with exit zero' {
             Reject { Assert-StrePapyrusCompilation @{ExitCode=0; Err=''; Out='Usage: PapyrusCompiler'} } 'compilation failed'
@@ -410,6 +527,24 @@ foreach ($relative in $RelativePath) {
                     Assert ((Get-StreHash "$Session/Data/STRE_AlternateStart.esp") -ne $Before)
                     Reject { Import-Fixture } 'HUMAN_XEDIT_REQUIRED'
                     Assert-Originals
+                    if ($HumanFixtureOutput) {
+                        $output = Resolve-StrePath $HumanFixtureOutput
+                        $allowed = (Resolve-StrePath (Join-Path $SourceRepo '_audit')).TrimEnd('\') + '\'
+                        if (-not $output.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { throw 'Human fixture must be a new local repository _audit subdirectory.' }
+                        $null = New-Item -ItemType Directory -Path $output -ErrorAction Stop
+                        foreach ($name in @('STRE_AlternateStart.esp') + $script:Masters) {
+                            Copy-StreVerified (Join-Path $Session "Data/$name") (Join-Path $output $name)
+                        }
+                        Copy-StreVerified (Join-Path $Session 'before.esp') (Join-Path $output 'before.esp')
+                        Write-StreJson (Join-Path $output 'synthetic-evidence.json') @{
+                            Kind = 'SYNTHETIC TEST ONLY; not a production session or human attestation'
+                            Record = $record; HeaderBefore = Get-StreHeader (Join-Path $Session 'before.esp')
+                            HeaderAfter = Get-StreHeader (Join-Path $output 'STRE_AlternateStart.esp')
+                            CandidateSha256 = Get-StreHash (Join-Path $output 'STRE_AlternateStart.esp')
+                            Runtime = $Config.RuntimeIdentity; XEdit = Get-StreToolIdentity $Config.XEditPath
+                            AutoModSha256 = Get-StreHash $Config.AutoModDll
+                        }
+                    }
                 }
             }
             finally {
@@ -418,7 +553,7 @@ foreach ($relative in $RelativePath) {
             Write-Host 'PASS all four production ESP hashes unchanged; no production importer or xEdit session executed.'
         }
         Write-Host "RESULT: $script:Passed passed, 0 failed (synthetic fixtures; no xEdit validation claimed)."
-    } $testRoot $RealTools $AutoModRoot $XEditPath $DataRoot (Join-Path $PSScriptRoot '../..')
+    } $testRoot $RealTools $AutoModRoot $XEditPath $DataRoot (Join-Path $PSScriptRoot '../..') $HumanFixtureOutput
 }
 finally {
     Remove-Module $module -Force

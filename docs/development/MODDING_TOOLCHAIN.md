@@ -8,18 +8,28 @@ content changes. Campaign authority and ADR-0018 are unchanged.
 
 ## Prerequisites and configuration
 
-The sole future runtime target is Skyrim SE **Steam 1.7.104.0**. CK, Papyrus,
-AutoMod and official xEdit must be requalified for this target before authoring
-or plugin writes. The existing wrapper still enforces its historical 1.6.1170.0
-qualification; it is intentionally not widened by the native migration.
-Do not run its write operations on 1.7 or treat a native build as CK validation.
+The sole runtime target is Skyrim SE **Steam 1.7.104.0**. The wrapper checks that
+exact file version beside the configured Data directory, reports the actual path
+and observed version, and rejects other, missing or unreadable runtimes. This
+does not certify Creation Kit, xEdit, plugin format or Papyrus bytecode versions.
+Offline fixture qualification and human editor validation are separate verdicts;
+[STATUS](../project/STATUS.md) records which have actually run. Production
+authoring requires its own authorization and the editor gates below.
 Read-only content comparison and native-only DEV deployment are separate:
 preserve differing Data files and never automatically promote them into Git.
 
-Tool prerequisites remain Windows, PowerShell 7.2+, Git, .NET 8 and the installed
-CK/Papyrus/Vortex tools. No plugin-format migration or ESL conversion is approved.
-No MO2, TES5Edit-MCP or Delphi installation. The procedures below describe the
-existing tool contract and require 1.7 requalification before authoring resumes.
+Common CLI prerequisites are Windows, PowerShell 7.2+, Git, .NET 8 runtime,
+AutoMod's inspected prebuilt CLI and the exact Skyrim executable. No plugin-format
+migration or ESL conversion is approved. No MO2, TES5Edit-MCP or Delphi is required.
+
+| Action | Additional prerequisite / meaning |
+|---|---|
+| `Inspect` | Readable plugin; xEdit configuration is optional; inspection is hash checked |
+| `PapyrusStatus` | Reports compiler/decompiler discovery without invoking either; xEdit is optional |
+| Standalone Papyrus fixture compilation | Available, explicitly selected compiler, assembler, flags/imports and new private output; decompiler is not needed |
+| `Preflight`, `DryRun`, `Prepare` | Official xEdit identity required, even for simple CLI preparations; does not execute/validate xEdit. Mutation also requires the clean feature branch, main ancestry, local importer identity, matching Git/Data source and typed adapter |
+| Human editor validation | Exact saved candidate, normalization, errors, reopening and retained human evidence; never inferred from preflight |
+| `ImportValidated`, `FinalizeInterrupted` | Current runtime matches preparation; all existing source/tool/Git/candidate/receipt gates still apply; historical receipts lacking runtime identity are rejected |
 
 Install [Spooky's AutoMod Toolkit](https://github.com/SpookyPirate/spookys-automod-toolkit)
 outside the STRE repository. Build its Debug CLI once from the chosen source:
@@ -49,9 +59,16 @@ Explicit `-AutoModRoot`, `-XEditPath` and `-DataRoot` override these variables.
 The repository root is discovered from the script location, independently of
 the caller's working directory. No personal-path fallback is built in.
 The runtime is checked beside Data. The CLI project and prebuilt
-`bin/Debug/net8.0/spookys-automod.dll` must exist; the wrapper uses
-`dotnet run --no-build --no-restore --project ... -- --json ...` from AutoMod's
-root so its existing settings/Papyrus tools are resolved consistently.
+`bin/Debug/net8.0/spookys-automod.dll` must exist; the wrapper checks the CLI's
+ProductName and invokes `dotnet <absolute CLI DLL> --json ...` from AutoMod's root.
+This preserves settings/tool resolution without MSBuild, SDK, restore or project
+hooks at invocation time. An SDK is needed only to build AutoMod separately, not
+to run this prebuilt CLI. ProductName checks detect mistakes; provenance still
+needs retained archive/source information and hashes.
+UNC/device paths and mapped network drives are refused before file traversal;
+reparse ancestors are inspected before descendants. Access denial is blocking,
+not interpreted as an absent optional file. Runtime path/version/hash are saved
+in new session configurations and checked again before public import/finalization.
 Only that child process uses .NET invariant globalization (named cultures are
 permitted with invariant data), making float CLI parsing/reflection consistent
 on French/English Windows. The user's process/system locale is unchanged.
@@ -491,6 +508,7 @@ staging, save directories or the shared audit parent.
 ```powershell
 pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1
 pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1 -RealTools
+pwsh -NoProfile -File Tools/Scripts/Test-StreModding.ps1 -RealTools -HumanFixtureOutput ./_audit/my-new-human-fixture
 ```
 
 The default suite creates its own synthetic ESPs and disposable Git repositories;
@@ -505,3 +523,39 @@ Its master files are fixtures, not Bethesda content, and xEdit is never launched
 It checks repository and installed production ESP hashes before/after. No test
 creates a quest or imports a production ESP. Temporary fixtures are deleted only
 after validating their unique path beneath the temporary directory.
+
+`-HumanFixtureOutput` retains only independent synthetic plugin/masters, the
+before-image and a clearly labeled machine-evidence JSON in a **new** `_audit`
+subdirectory. It exports no human attestation and no importable session. The
+current durable file and first human check are identified in the
+[1.7 toolchain evidence](../audit/2026-10-22-runtime-1.7-toolchain.md).
+
+For a real Papyrus fixture trial, inspect the selected compiler, assembler and
+their child-process behavior first, then run:
+
+```powershell
+pwsh -NoProfile -File Tools/Scripts/Test-StrePapyrus.ps1 `
+  -AutoModRoot '<local toolkit>' -DataRoot '<installed Skyrim>/Data' `
+  -CompilerPath '<compiler reported by PapyrusStatus>/PapyrusCompiler.exe' `
+  -FlagsPath '<explicit TESV_Papyrus_Flags.flg>' `
+  -OutputRoot './_audit/my-new-papyrus-fixture'
+```
+
+This calls `PapyrusStatus` first, requires the reported compiler to match the
+explicit selection, creates two synthetic scripts and compiles only those.
+Import precedence matches the existing adapter: private source, project
+`Source/Scripts`, project `scripts/source`, installed `scripts/source` (SKSE
+extended headers), then installed `Source/Scripts` (Bethesda headers). Imported
+project scripts are read only. Outputs and diagnostics stay in the new directory,
+including paths with spaces. Compiler/assembler/flags/import hashes are checked
+before/after. Exit code, stderr, zero-error/zero-warning diagnostics, two PEX files
+and their Skyrim PEX header are checked; PEX 3.2/game ID 1 is not a runtime version.
+No copy to Data/GameFiles, editor launch, decompilation or production authoring.
+
+Before running a specialized suite, inspect it and its children. The guard-only
+`Test-StreValenMatrix`, `Test-StreValenMatrixImport`, `Test-StreValenPresentation`
+and `Test-StreValenNavigation` suites use synthetic files/mocked evidence. The
+`Test-StreValen*Author` paths launch real xEdit and are **outside an offline-only
+mission**. Never stop a maintainer process automatically to satisfy a guard.
+Simulated receipts in tests remain labeled synthetic, and a real AutoMod stop at
+`HUMAN_XEDIT_REQUIRED` is the expected successful boundary, not editor acceptance.

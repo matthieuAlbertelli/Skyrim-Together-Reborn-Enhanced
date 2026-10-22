@@ -50,7 +50,7 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 | Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access, quick-save/reload, Continue and checked-character persistence; exact human/technical scope in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
 | Reported two-player path | Maintainer-attested PASS: admission/lobby, creation, reciprocal appearances, seating, movement and saving/loading. Logs checked by the maintainer, not Codex; exact candidate and accepted scope are in STATUS |
 | World Sync and collective recovery | Not qualified by the reported two-player path. No inferred manipulation/interruption, crash/disconnect/restart or coordinated-checkpoint recovery PASS; presentation has its separate exact-target gate, while unrelated optional dialogue/diagnostic paths remain guarded |
-| CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
+| CK/Papyrus/content | Exact 1.7.104 wrapper target and offline protection tests adapted; inventory observed, archive/source provenance incomplete. Real AutoMod/Papyrus trials pending the existing process guard (Vortex open); CK/xEdit and production authoring/import remain unqualified. See STATUS and the [toolchain evidence](../audit/2026-10-22-runtime-1.7-toolchain.md). Native-only DEV workflow unchanged |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |
 

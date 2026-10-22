@@ -14,11 +14,21 @@ function Get-StreHash([string]$Path) {
 
 function Resolve-StrePath([string]$Path) {
     if ([string]::IsNullOrWhiteSpace($Path)) { throw 'Missing path configuration; use parameters or STRE_* environment variables.' }
+    # Reject network/device paths before any filesystem lookup, including missing paths.
+    if ($Path -match '^[\\/]{2}|^[^:]+://') { throw "Only local filesystem paths are permitted: $Path" }
     $full = [IO.Path]::GetFullPath($Path)
-    # Reject junction/symlink traversal, including ancestors of not-yet-created paths.
+    $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($full))
+    if ($drive.DriveType -eq [IO.DriveType]::Network) { throw "Network drives are not permitted: $Path" }
+    # Check ancestors before descendants: never follow a junction to discover it.
+    $ancestors = [Collections.Generic.List[string]]::new()
     for ($part = $full; $part; $part = Split-Path -Parent $part) {
-        if ((Test-Path -LiteralPath $part) -and
-            ((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        $ancestors.Add($part)
+    }
+    $ancestors.Reverse()
+    foreach ($part in $ancestors) {
+        try { $item = Get-Item -LiteralPath $part -Force -ErrorAction Stop }
+        catch [System.Management.Automation.ItemNotFoundException] { continue }
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
             throw "Reparse point is not permitted: $part"
         }
     }
@@ -69,7 +79,8 @@ function ConvertFrom-StreAutoModJson([string]$Text, [int]$ExitCode = 0) {
 
 function Invoke-StreAutoMod($Config, [string[]]$Arguments) {
     $result = Invoke-StreProcess $Config.Dotnet (@(
-        'run', '--no-build', '--no-restore', '--project', $Config.AutoModProject, '--', '--json'
+        # Execute the inspected binary directly: no SDK/MSBuild/project hooks or restore.
+        $Config.AutoModDll, '--json'
     ) + $Arguments) $Config.AutoModRoot @{
         # System.CommandLine parses floats using child culture; reflection also formats them.
         # Keep both deterministic on French and English Windows without changing the user's locale.
@@ -87,7 +98,7 @@ function Resolve-StreConfiguration {
     $config = @{
         RepoRoot = Resolve-StrePath $RepoRoot
         AutoModRoot = Resolve-StrePath $AutoModRoot
-        XEditPath = Resolve-StrePath $XEditPath
+        XEditPath = if ($XEditPath) { Resolve-StrePath $XEditPath } else { $null }
         DataRoot = Resolve-StrePath $DataRoot
         Dotnet = (Get-Command dotnet -CommandType Application -ErrorAction Stop).Source
     }
@@ -98,23 +109,71 @@ function Resolve-StreConfiguration {
     $config
 }
 
-function Assert-StrePreflight($Config) {
+function Get-StreToolIdentity([string]$Path) {
+    if ([string]::IsNullOrWhiteSpace($Path)) { throw 'Required tool/file missing: path is not configured.' }
+    $path = Resolve-StrePath $Path
+    try {
+        $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
+        if ($item.PSIsContainer) { throw "Required tool/file is a directory: $path" }
+        @{ Path = $path; Version = $item.VersionInfo.FileVersion; Product = $item.VersionInfo.ProductName; Sha256 = Get-StreHash $path }
+    }
+    catch [System.Management.Automation.ItemNotFoundException] { throw "Required tool/file missing: $path" }
+    catch { throw "Required tool/file unreadable or invalid: $path. $($_.Exception.Message)" }
+}
+
+function Assert-StrePreflight($Config, [string]$Action = 'Preflight') {
     if (-not $IsWindows) { throw 'The STRE modding toolchain requires Windows.' }
-    foreach ($path in @($Config.XEditPath, $Config.AutoModProject, $Config.AutoModDll, $Config.Runtime)) {
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required tool/file missing: $path" }
+    $null = Get-StreToolIdentity $Config.AutoModProject
+    $cli = Get-StreToolIdentity $Config.AutoModDll
+    if ($cli.Product -cne "Spooky's AutoMod Toolkit") {
+        throw 'Unexpected AutoMod binary identity. Verify the prebuilt CLI release/source provenance.'
     }
-    if ((Get-Item -LiteralPath $Config.Runtime).VersionInfo.FileVersion -ne '1.6.1170.0') {
-        throw 'Expected Skyrim SE Steam runtime 1.6.1170.0; no other runtime is accepted.'
+    $game = Get-StreToolIdentity $Config.Runtime
+    if ($game.Version -cne '1.7.104.0') {
+        throw "Expected Skyrim SE Steam runtime 1.7.104.0 at '$($game.Path)'; observed '$($game.Version)' (empty means missing version metadata). No other runtime is accepted."
     }
-    if ((Get-Item -LiteralPath $Config.XEditPath).VersionInfo.ProductName -ne 'xEdit') {
-        throw 'Expected the official xEdit executable (ProductName=xEdit). Verify its release provenance.'
+    # Inspection/compiler discovery cannot certify or require a human editor session.
+    $xedit = $null
+    if ($Action -notin @('Inspect', 'PapyrusStatus')) {
+        $xedit = Get-StreToolIdentity $Config.XEditPath
+        if ($xedit.Product -cne 'xEdit') {
+            throw 'Expected the official xEdit executable (ProductName=xEdit). Verify its release provenance.'
+        }
     }
     $runtime = Invoke-StreProcess $Config.Dotnet @('--list-runtimes') $Config.AutoModRoot
-    if ($runtime.ExitCode -ne 0 -or $runtime.Out -notmatch '(?m)^Microsoft.NETCore.App 8\.') {
+    if ($runtime.ExitCode -ne 0 -or $runtime.Err.Trim() -or $runtime.Out -notmatch '(?m)^Microsoft.NETCore.App 8\.') {
         throw 'AutoMod requires the installed .NET 8 runtime and a prebuilt Debug CLI.'
     }
     Assert-GameProcessesStopped
-    @{ Branch = Invoke-StreGit $Config @('branch', '--show-current'); Head = Invoke-StreGit $Config @('rev-parse', 'HEAD') }
+    $Config.RuntimeIdentity = $game
+    @{ Branch = Invoke-StreGit $Config @('branch', '--show-current'); Head = Invoke-StreGit $Config @('rev-parse', 'HEAD')
+        Runtime = $game; AutoMod = $cli; XEdit = $xedit; Action = $Action; HumanValidation = 'Not established by preflight' }
+}
+
+function Assert-StreSessionRuntime($Config, [string]$Session) {
+    $root = Resolve-StrePath $Session
+    $state = Get-Content -LiteralPath (Join-Path $root 'session.json') -Raw | ConvertFrom-Json -AsHashtable
+    if (-not $state.Config.ContainsKey('RuntimeIdentity') -or -not $Config.ContainsKey('RuntimeIdentity')) {
+        throw 'Historical session has no runtime identity; retain it as historical evidence, not a 1.7 authoring receipt.'
+    }
+    foreach ($field in @('Path', 'Version', 'Sha256')) {
+        if ($state.Config.RuntimeIdentity[$field] -cne $Config.RuntimeIdentity[$field]) {
+            throw "Session runtime identity changed: $field. Prepare a new candidate and obtain new human validation."
+        }
+    }
+}
+
+function Get-StrePapyrusInputs($Status, [string]$CompilerPath, [string]$FlagsPath) {
+    if ($Status.result.compilerAvailable -isnot [bool] -or -not $Status.result.compilerAvailable) {
+        throw 'Papyrus compiler unavailable; no download or installation will be attempted.'
+    }
+    $compiler = Get-StreToolIdentity $CompilerPath
+    if ([IO.Path]::GetFileName($compiler.Path) -ine 'PapyrusCompiler.exe' -or
+        $compiler.Path -ine (Resolve-StrePath $Status.result.compilerPath)) {
+        throw 'Explicit PapyrusCompiler.exe differs from the compiler discovered by PapyrusStatus.'
+    }
+    @{ Compiler=$compiler; Flags=Get-StreToolIdentity $FlagsPath
+        Assembler=Get-StreToolIdentity (Join-Path (Split-Path -Parent $compiler.Path) 'PapyrusAssembler.exe') }
 }
 
 function Assert-StrePlugin([string]$Plugin, [switch]$Writable) {
@@ -245,6 +304,8 @@ function Get-StreExpectedRecord($Config, $Request, [string]$Path) {
     if ($record.result.EditorId -cne $Request.EditorId -or $record.result.FormKey -notmatch ':STRE_AlternateStart\.esp$') {
         throw 'Written record identity did not match the request.'
     }
+    $expectedTypes = if ($type -eq 'quest') { @('Quest','QuestBinaryOverlay') } else { @('GlobalFloat','GlobalFloatBinaryOverlay') }
+    if ($record.result.RecordType -cnotin $expectedTypes) { throw 'Written record type did not match the typed request.' }
     if ($type -eq 'quest') {
         if ($record.result.Properties.Name -cne $Request.Name -or $record.result.Properties.Priority -ne $Request.Priority) {
             throw 'Written quest properties did not match the request.'
@@ -408,7 +469,7 @@ function Import-StreValidated($Config, [string]$Session) {
 
 function Invoke-StreModdingCore {
     param($Config, [string]$Action, [string]$Plugin = 'STRE_AlternateStart.esp', $Request = @{}, [string]$Session, [string]$RecordType = 'quest')
-    $preflight = Assert-StrePreflight $Config
+    $preflight = Assert-StrePreflight $Config $Action
     Assert-StrePlugin $Plugin
     switch ($Action) {
         'Preflight' { return $preflight }
@@ -424,8 +485,8 @@ function Invoke-StreModdingCore {
         }
         'DryRun' { return New-StreSession $Config $Plugin $Request -DryRun }
         'Prepare' { return New-StreSession $Config $Plugin $Request }
-        'ImportValidated' { return Import-StreValidated $Config $Session }
-        'FinalizeInterrupted' { return Complete-StreValenMatrixInterrupted $Config $Session }
+        'ImportValidated' { Assert-StreSessionRuntime $Config $Session; return Import-StreValidated $Config $Session }
+        'FinalizeInterrupted' { Assert-StreSessionRuntime $Config $Session; return Complete-StreValenMatrixInterrupted $Config $Session }
         default { throw 'Unknown action.' }
     }
 }

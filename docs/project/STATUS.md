@@ -9,6 +9,44 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Steam 1.7.104 content tools — offline requalification in progress
+
+The existing migration worktree's exact historical `1.6.1170.0` preflight was
+adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
+preparation/import keep their editor identity, clean feature branch, origin/main
+ancestry, immutable source and human-validation gates. AutoMod now runs its
+inspected prebuilt DLL directly, without MSBuild/restore. New receipts bind the
+runtime path/version/hash; historical or changed-runtime receipts cannot be
+silently reused. Network/reparse paths, denied access and wrong record types
+remain blocking. No plugin-format/bytecode migration or production authoring.
+
+| Independent verdict | Evidence |
+|---|---|
+| Inventory / provenance | File versions/hashes observed; historical AutoMod/xEdit binary continuity verified. **Partial provenance**: AutoMod extraction has no Git commit, no new exact release-archive verification; metadata is not publisher authentication |
+| Wrapper/preflight protections | **76 simulated PowerShell cases PASS**, plus **21 matrix import**, **9 presentation**, **19 navigation** guard cases; **59 targeted Python tests PASS** |
+| Real AutoMod fixture | **PENDING**: existing process guard detected Vortex; no real AutoMod execution yet in this qualification |
+| Real Papyrus compilation | **PENDING** behind the same guard; independent two-source CLI test prepared |
+| xEdit | **NOT EXECUTED**; human saved-file validation still required |
+| Creation Kit | **NOT EXECUTED**; full editor compatibility remains unqualified |
+| Production authoring/import/deployment | **NOT EXECUTED** |
+
+Observed tools: Skyrim **1.7.104.0**, CK **1.6.1378.1**, Papyrus compiler
+**1.0.0.0**, AutoMod CLI **1.0.0.0** (local changelog is not its binary version),
+xEdit resource **4.1.5.0**, .NET runtime **8.0.32**, SDKs **8.0.426/10.0.204**.
+No tool update or reactivation. The process guard is retained, and Vortex must be
+closed by the maintainer before the real CLI trials; Codex does not stop it.
+
+The initial read-only hash check matches the installed accepted `53530e69`
+candidate's **293 native/UI + 914 contents**. The **14 WAV + 2 PSC** existing
+Git/Data differences remain untouched and do not block fixtures.
+After-check: **16,603 protected local paths unchanged**, with additional tool and
+AutoMod dependency/source hashes unchanged; this check will be repeated after
+the pending real CLI trials. Existing
+Solo/multiplayer/presentation PASS, Runtime17TwoPc and server/plugin policy are
+unchanged. No gameplay logs were requested/reanalyzed or Pc-vero accessed.
+Detailed inventory, fingerprints, exact scope and remaining trials:
+[toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md). #99 remains open.
+
 ## Steam 1.7.104 presentation — maintainer-attested human PASS
 
 Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).

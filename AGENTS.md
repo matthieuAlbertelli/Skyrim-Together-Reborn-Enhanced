@@ -32,10 +32,13 @@ Follow [the modding runbook](docs/development/MODDING_TOOLCHAIN.md) and use
 
 - Target Skyrim SE Steam **1.7.104.0 only** for future development; no parallel
   1.6 support. Preserve historical release/test evidence as historical.
-- CK/AutoMod authoring must be requalified for 1.7 before plugin/Papyrus writes.
-  The existing 1.6 tool guard is not permission to author on 1.7; do not widen it
-  without tool validation. No ESL conversion. Native build/deployment may proceed
-  separately with read-only content checks and no automatic CK import.
+- The wrapper admits exactly 1.7.104.0; this is not CK/xEdit validation.
+  Separate offline fixture qualification from human editor validation and
+  authorization for production authoring. See STATUS for executed verdicts.
+  No ESL conversion. Native build/deployment remains separate from CK import.
+- Inspect CLI effects and child processes before executing them. Use local,
+  independent fixtures for tool tests; never bypass the process guard, download
+  tools implicitly, or turn historical receipts into current validation.
 - Require AutoMod `--json`, parse Boolean `success`, and stop on any failure.
 - Run `--dry-run` before writes when supported; verify unchanged file hashes.
 - Run `papyrus status` before the first Papyrus operation; verify required tools.
