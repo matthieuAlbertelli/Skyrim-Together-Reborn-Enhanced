@@ -570,9 +570,9 @@ This first check qualifies only CK startup and read-only inspection of the base
 master in the installed **Skyrim Steam 1.7.104.0** environment. The current tool
 identity and exact input path are recorded in the
 [toolchain audit](../audit/2026-10-22-runtime-1.7-toolchain.md#next-human-check-minimal-creation-kit-inspection).
-CK's own file version is distinct from the game version. This protocol is
-prepared for the maintainer; it is not an executed test or production-authoring
-authorization.
+CK's own file version is distinct from the game version. This is the repeatable
+procedure; [STATUS](../project/STATUS.md) records the maintainer's bounded PASS.
+The procedure itself is not production-authoring authorization.
 
 1. With the game and other modding tools closed, manually start the existing
    inventoried `CreationKit.exe`. Record the version shown. Do not install,
@@ -599,3 +599,67 @@ fragments, assets or in-game behavior. Keep the accepted xEdit fixture unchanged
 its private Data-path options are specific to xEdit and are not CK arguments.
 Any later CK write cycle requires a separately prepared independent candidate
 and the existing authoring and human-validation gates.
+
+## Future human Creation Kit fixture write cycle
+
+**Protocol only, not executed or staged.** This first write check is limited to
+creating one synthetic GLOB, saving a new test ESP, closing CK and reopening that
+saved file. It does not qualify editing an existing production record. Use the
+same inventoried CK **1.6.1378.1** in the **Steam Skyrim 1.7.104.0** environment.
+The maintainer alone performs the later run; Codex creates no fixture and changes
+no installed content during documentary preparation.
+
+Fixture identity and scope:
+
+- New plugin: **`STRE_CKWriteFixture.esp`**; GLOB:
+  **`STRE_CKWriteFixtureGlobal`**, **Float 7.25**, **Constant unchecked**.
+- Do not copy/load `STRE_AlternateStart.esp`, `SkyrimTogether.esp`, or the accepted
+  xEdit fixture. Only the vanilla Skyrim.esm is a read-only input. This disposable
+  manual test does not extend the wrappers' production writable-plugin allowlist.
+- CK's normal Data-file workflow places this new ESP temporarily at
+  `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\STRE_CKWriteFixture.esp`.
+  This future human-only placement is explicit; no xEdit-style private Data
+  switch or unsupported CK isolation mode is assumed. Never activate it in the
+  game's plugin list, register it in Vortex, deploy it or run an importer.
+
+1. **Prepare the later run:** close other game/modding tools and verify the exact
+   test filename does not already exist in Data. If it exists, stop without
+   overwriting, deleting or reusing it. Choose a fresh ignored worktree folder
+   such as `_audit/ck-write-fixture/<unique-run>/` for copies and evidence. Retain
+   before hashes of Skyrim.esm and the installed STRE production ESPs solely for
+   preservation comparison; do not open those ESPs in CK. Do not change tools,
+   CKPE or INI settings.
+2. **Create:** start CK manually; in File > Data, load Skyrim.esm with no active
+   file and no other plugin selected. Under Object Window > Miscellaneous >
+   Global, use **New**, not Duplicate or an edit of TimeScale. Enter the exact
+   new EditorID, Float 7.25 and Constant unchecked, then confirm. Stop if that
+   EditorID already exists. No scripts, assets, other records or vanilla overrides.
+3. **Save and close:** File > Save must prompt for a **new** plugin. Enter the
+   exact `STRE_CKWriteFixture.esp` name and verify the destination above. Any
+   overwrite prompt or different destination is a stop. Confirm saving only
+   this test ESP, then exit CK normally. Record the saved ESP SHA-256 and keep an
+   independent copy in the fresh evidence folder before reopening it.
+4. **Reopen:** start a fresh CK process manually. Select only the saved test ESP
+   as **Active File** and its required Skyrim.esm master; verify the actual
+   dependency list and stop if any unexpected master or STRE plugin is involved.
+   Open the new GLOB and verify the same EditorID, Float 7.25 and Constant
+   unchecked. Record its actual FormID and master list; do not preassign a FormID
+   or change a format field to match the runtime number. Close the dialog with
+   **Cancel**, then exit **without saving**.
+5. **Preserve the result:** confirm the saved ESP hash still equals the hash
+   recorded before reopening, and the protected before hashes are unchanged.
+   Retain the independent test ESP, SHA-256, CK version, actual master list,
+   record fields and any available session messages. Report create/save/reopen
+   and exit outcomes separately. The previously reported MASTERFILE warning is
+   not permission to disregard new warnings or a failed save/load.
+6. **End the later run:** with CK closed and the independent copy/hash verified,
+   remove only this run's positively identified temporary test ESP from Data;
+   retain evidence and identify any fixture-only backup separately. Never clean
+   Data globally, delete an uncertain file or touch production ESPs. No game
+   activation, import, deployment or promotion follows this check.
+
+Expected PASS is narrowly **CK new-GLOB creation/save/reopen on that fixture**,
+with preserved fields and no unexpected content changes. Failure or ambiguity
+stops the run with the real diagnostic. No validation JSON or positive result is
+prepared in advance. Modification of an existing record, broader CK features,
+production plugins and their xEdit/import gates remain separately unqualified.

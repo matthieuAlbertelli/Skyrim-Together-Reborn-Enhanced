@@ -9,7 +9,7 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 content tools — offline CLI and human xEdit fixture PASS; CK pending
+## Steam 1.7.104 content tools — CLI, xEdit fixture and CK inspection PASS; CK writes pending
 
 The existing migration worktree's exact historical `1.6.1170.0` preflight was
 adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
@@ -27,7 +27,8 @@ remain blocking. No plugin-format/bytecode migration or production authoring.
 | Real AutoMod fixture | **PASS**: actual prebuilt CLI dry-run preserves bytes, then writes/rereads GLOB `STRE_ToolchainFixture`, float 7.25, with expected `HUMAN_XEDIT_REQUIRED` stop. Full `-RealTools` suite: **78 PASS** (76 simulated + 2 real). AutoMod removed unused masters; the maintainer subsequently completed their normalization on this independent fixture only |
 | Real Papyrus compilation | **PASS**: wrapper status first, then two real compiler/assembler runs (minimal script and Quest/Actor/SKSE/project imports), exit0, empty stderr, zero errors/warnings, two private PEX with Skyrim 3.2/game-ID-1 header; **14,416 tool/import inputs unchanged** |
 | xEdit | **Maintainer-attested human PASS on the independent fixture only**, xEdit **4.1.5f**: GLOB `STRE_ToolchainFixture`, Float 7.25; Skyrim.esm, Update.esm, Dragonborn.esm added/sorted; saved and reopened; Check for Errors reports no errors. Fixture logs corroborate the bounded cycle; no production plugin is qualified |
-| Creation Kit | **NOT EXECUTED**; full editor compatibility remains unqualified |
+| Creation Kit read-only inspection | **Maintainer-attested human PASS**, CK **1.6.1378.1** on Steam Skyrim **1.7.104**: startup, Skyrim.esm loaded with no active file, TimeScale inspected (Short, 20, Constant unchecked), Cancel, normal exit without saving. MASTERFILE warning for AutoLoadDoor01 / YngolBarrowExterior reported non-blocking in this run |
+| Creation Kit creation/write/save/reopen | **NOT EXECUTED / NOT QUALIFIED**; no production plugin qualification follows from read-only inspection |
 | Production authoring/import/deployment | **NOT EXECUTED** |
 
 Observed tools: Skyrim **1.7.104.0**, CK **1.6.1378.1**, Papyrus compiler
@@ -53,11 +54,16 @@ save, subsequent load, and two error checks reporting zero errors. The GLOB's
 EditorID/type/value remains the maintainer's observation.
 The [acceptance record](../audit/2026-10-22-runtime-1.7-toolchain.md#maintainer-acceptance-xedit-fixture-cycle)
 preserves both log hashes and the original unnormalized AutoMod candidate.
-No `validation.json` or importable attestation is fabricated. The
-[minimal human CK protocol](../development/MODDING_TOOLCHAIN.md#minimal-human-creation-kit-check)
-is prepared for startup and read-only loading of the installed Skyrim.esm, with
-no active plugin or save. CK remains **NOT EXECUTED**; this is not a fully
-qualified CK chain. Production gates remain closed and #99 remains open.
+No `validation.json` or importable attestation is fabricated. The subsequent
+[CK read-only acceptance](../audit/2026-10-22-runtime-1.7-toolchain.md#maintainer-acceptance-creation-kit-read-only-inspection)
+is the maintainer's observation; Codex did not launch CK or inspect CK logs for
+that follow-up. Its warning is retained, not diagnosed or declared universally
+harmless. No creation, modification, save or plugin-reopen PASS is inferred.
+The [future CK fixture write protocol](../development/MODDING_TOOLCHAIN.md#future-human-creation-kit-fixture-write-cycle)
+is prepared only: one new independent test ESP/GLOB, save/close/reopen, no STRE
+production plugins. No fixture was created or installed in this documentary
+task. This is not a fully qualified CK chain; production gates remain closed
+and #99 remains open.
 
 ## Steam 1.7.104 presentation — maintainer-attested human PASS
 
