@@ -12,6 +12,8 @@ $module = Get-Module Stre.Runtime17Dev
     Assert-R17Ordinary $OutputRoot -AllowMissing
     if (Test-Path -LiteralPath $OutputRoot) { throw 'Select a fresh test output directory.' }
     New-Item -ItemType Directory -Path $OutputRoot | Out-Null
+    $script:BuildFixtureRoot=Join-Path ([IO.Path]::GetTempPath()) ('r17 tests '+[guid]::NewGuid().ToString('N').Substring(0,8))
+    New-Item -ItemType Directory -Path $script:BuildFixtureRoot | Out-Null
     $script:Results = [Collections.Generic.List[object]]::new()
     function Check($Condition, $Message) { if (!$Condition) { throw $Message } }
     function Case([string]$Name, [scriptblock]$Body) {
@@ -82,13 +84,15 @@ $module = Get-Module Stre.Runtime17Dev
             }); nativeFiles=@(Get-R17Rows (Join-Path $targets[0].stagingRoot 'SkyrimTogetherReborn'))}
         $refPath=Join-Path $root 'reference.json'; Write-R17Json $reference $refPath
         $receipts=Join-Path $root 'receipts'; New-Item -ItemType Directory -Path $receipts | Out-Null
-        $config=@{schema=1; repository=$repo; receipts=$receipts; referencePath=$refPath; referenceSha256=Get-R17Hash $refPath; targets=$targets}
+        $buildRoot=Join-Path $script:BuildFixtureRoot ([guid]::NewGuid().ToString('N').Substring(0,8))
+        New-Item -ItemType Directory -Path $buildRoot | Out-Null
+        $config=@{schema=1; repository=$repo; receipts=$receipts; buildRoot=$buildRoot; referencePath=$refPath; referenceSha256=Get-R17Hash $refPath; targets=$targets}
         $configPath=Join-Path $root 'config.json'; Write-R17Json $config $configPath
         @{root=$root; repo=$repo; commit=$commit; config=$config; configPath=$configPath; reference=$reference}
     }
     function New-FakeBuild($Repo,$Run,$Jobs) {
         $head=(Invoke-R17Git $Repo @('rev-parse','HEAD')) -join ''
-        Put (Join-Path $Run 'build/BuildInfo.h') "runtime17-$head"
+        Put (Join-Path (Get-R17BuildDirectory $Run) 'BuildInfo.h') "runtime17-$head"
         foreach ($name in $script:Required) { Put (Join-Path $Run "distrib/bin/$name") "fixture runtime17-$head $name" }
         Put (Join-Path $Run 'distrib/bin/UI/new.js') 'new UI bundle'
         Put (Join-Path $Run 'distrib/bin/TPTests.exe') 'excluded test artifact'
@@ -313,14 +317,35 @@ $module = Get-Module Stre.Runtime17Dev
         }
     }
     $script:RealBuild=(Get-Item Function:Invoke-R17Build).ScriptBlock
+    Case 'short build roots with spaces allocate unique linked outputs and preserve receipts' {
+        $r1=Join-Path $f.root 'layout-one';$r2=Join-Path $f.root 'layout-two'
+        New-Item -ItemType Directory -Path $r1,$r2 | Out-Null
+        $one=New-R17BuildLayout $f.config $r1 $source
+        $two=New-R17BuildLayout $f.config $r2 $source
+        Check ($one.root -ne $two.root -and $one.buildDirectory.Length -le 100) 'Build directories not short/unique'
+        Check ($one.buildDirectory.Contains(' ')) 'Space-containing build root not covered'
+        Check ((Get-R17BuildDirectory $r1 $source) -eq $one.buildDirectory) 'Receipt/build linkage lost'
+        $badSource=$source.Clone();$badSource.commit='0'*40
+        Reject { Get-R17BuildDirectory $r1 $badSource } 'source commit mismatch'
+        $link=Read-R17Json (Join-Path $one.root 'receipt-link.json');$link.receiptRoot=$r2
+        Write-R17Json $link (Join-Path $one.root 'receipt-link.json')
+        Reject { Get-R17BuildDirectory $r1 $source } 'reverse link mismatch'
+    }
+    Case 'oversized or nonlocal compiler roots are rejected without compiling' {
+        $bad=$f.config.Clone();$bad.buildRoot=$f.root
+        Reject { New-R17BuildLayout $bad $run $source } 'Short compiler build directory'
+        $bad.buildRoot='\\must-not-be-resolved.invalid\build'
+        Reject { New-R17BuildLayout $bad $run $source } 'fully qualified local path'
+    }
     Case 'xmake routing uses selected worktree and fresh output paths' {
+        $layout=New-R17BuildLayout $f.config $run $source
         $script:Calls=@()
         function script:xmake { $script:Calls += ,@($args); Check ((Get-Location).Path -eq $f.repo) 'Wrong build working directory'; $global:LASTEXITCODE=0 }
         try {
             & $script:RealBuild $f.repo $run 3
             Check ($script:Calls.Count -eq 3) 'Wrong xmake invocation count'
             foreach ($call in $script:Calls) { Check ($call[1] -eq '-P' -and $call[2] -eq '.') 'Missing explicit -P .' }
-            Check ($script:Calls[0][-1] -eq (Join-Path $run 'build')) 'Wrong build path'
+            Check ($script:Calls[0][-1] -eq $layout.buildDirectory) 'Wrong short build path'
             Check ($script:Calls[2][-1] -eq (Join-Path $run 'distrib')) 'Wrong install path'
             function script:xmake { $global:LASTEXITCODE=42 }
             Reject { & $script:RealBuild $f.repo $run 3 } 'config failed: 42'
@@ -369,6 +394,22 @@ $module = Get-Module Stre.Runtime17Dev
                 }
             }
         })
+    }
+    Case 'real workflow build failure stops before copies and gives phase-appropriate recovery' {
+        $x=New-Fixture
+        $script:FixtureBuild=(Get-Item Function:Invoke-R17Build).ScriptBlock
+        function script:Invoke-R17Build { throw 'fixture compiler C1083' }
+        try {
+            try { Invoke-R17Workflow -ConfigPath $x.configPath; throw 'Expected failure' }
+            catch {
+                Check ($_.Exception.Message -match 'Stopped before staging writes' -and $_.Exception.Message -notmatch 'Use Verify|RestoreStaging') 'Build failure suggested destination recovery'
+            }
+        } finally { Set-Item Function:script:Invoke-R17Build $script:FixtureBuild }
+        $failed=@(Get-ChildItem -LiteralPath $x.config.receipts -Directory)[0].FullName
+        $receipt=Read-R17Json (Join-Path $failed 'receipt.json')
+        Check ($receipt.failedPhase -eq 'BUILDING' -and $null -eq $receipt.preflight -and $null -eq $receipt.candidate) 'Wrong failed phase'
+        Check (!(Test-Path (Join-Path $failed 'backup')) -and !(Test-Path (Join-Path $failed 'copy-A.json'))) 'Build failure entered destination writes'
+        Check ((Get-R17BuildDirectory $failed $receipt.source) -eq $receipt.build.buildDirectory) 'Missing failed-build provenance'
     }
     Case 'end-to-end A/B sync uses installed A content and preserves private files and Git' {
         $script:Active=New-Fixture

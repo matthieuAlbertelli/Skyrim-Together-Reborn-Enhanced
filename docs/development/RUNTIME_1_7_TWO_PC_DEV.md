@@ -56,6 +56,7 @@ The private config and entry remain ignored. `runtime17-dev.example.json` and
 |---|---|
 | `repository` | Absolute local root of `feat/skyrim-1.7-runtime`, not the parent checkout |
 | `receipts` | Existing local directory outside the source worktree and destinations |
+| `buildRoot` | Existing short local build root, e.g. `C:\STRE-R17`, separate from source, receipts and destinations |
 | `referencePath`, `referenceSha256` | Qualification/scope manifest and pinned SHA-256 |
 | `targets` | Ordered A,B; A is the local installed-content source |
 | `stagingRoot` | Existing STRE Vortex mod root, containing content and `SkyrimTogetherReborn` |
@@ -73,6 +74,21 @@ The private reference retains schema 1, runtime `1.7.104.0`, `nativeFiles`
 Its hash and external dependency hashes remain blocking checks. Back up this
 reference, the private configuration and entry together; do not regenerate the
 reference from a divergent destination to bypass a failure.
+
+Each new build allocates `buildRoot/<GUID>/build`; the complete build-directory
+path is limited to 100 characters as a conservative budget for this project's
+object/PCH/dependency suffixes. The root must be ordinary, writable and local;
+UNC/mapped-network roots, overlap and physical aliases remain rejected. It is
+not a renamed/moved source checkout. If `buildRoot` is omitted, it defaults to
+`STRE-R17` at the root of the repository's drive; prepare that directory first.
+
+`build-layout.json` in the receipt and `receipt-link.json` in the allocated build
+root record both directions, the repository, source commit and directory ID.
+`receipt.json.build` retains that layout, and `build-commands.json` records argv
+and working directory. Do not discard the short build directory while retaining
+the candidate: verification needs its generated BuildInfo. Existing pre-fix
+receipts without a layout still read their original `<receipt>/build` header;
+new compilation requires an explicit layout and cannot silently use that path.
 
 ## Server configuration preservation
 
@@ -99,12 +115,14 @@ The canonical path is **`SkyrimTogetherReborn/config/STServer.ini`**, as used by
    No fetch. Optional `-Runtime17ExpectedCommit <full-SHA>` pins HEAD. At `READY`,
    confirm both PCs' game, launcher, server, Vortex, Steam, CK and xEdit are closed
    and remain closed through staging.
-3. Create a unique receipt directory. In the selected worktree run
+3. Create a unique receipt directory and linked short build directory. In the selected worktree run
    `xmake config -P . -m debug -y -o <fresh-build>`,
    `xmake build -P . -y -j <jobs>`, then
    `xmake install -P . -o <fresh-distrib>`. Capture errors/logs and recheck source.
    BuildInfo and embedded client/server IDs must identify that commit. Validate
-   native/CEF/UI requirements; exclude tests/debug artifacts.
+   native/CEF/UI requirements; exclude tests/debug artifacts. Objects, PCHs, PDBs,
+   generated headers and linked outputs use the short build tree. Installation
+   packaging still writes only `<receipt>/distrib`, never either actual game.
 4. **After xmake completes**, freeze the combined candidate under `package/`.
    Native/UI output goes under `package/SkyrimTogetherReborn/`. Capture only the
    listed contents from A's installed Data: relative path, source path, bytes,
@@ -148,6 +166,12 @@ the stop. Journals distinguish pending/unlinked/identical/verified/failed files,
 including observed partial hashes. A success does not imply B success. Verification
 attempts have an `attemptId`; an old per-PC receipt is not a result for a newer
 failed attempt. There is no cross-PC transaction or automatic deployment retry.
+
+An error in BUILDING, snapshot preparation, destination preflight or backup occurs
+before staging writes: preserve its receipt, correct that failure and start a
+new execution. Do not use Verify/RestoreStaging for a failed build with no
+candidate. An error during staging instead requires inspection of per-PC copy
+journals and guarded restoration; completed staging can resume with Verify.
 
 If staging succeeded but Vortex was deferred/failed, finish the manual deployment,
 then verify **the same frozen candidate**, without rebuilding:

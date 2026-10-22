@@ -194,6 +194,9 @@ function Read-R17Config([string]$Path) {
     $config = Read-R17Json $Path
     if ($config.schema -ne 1 -or @($config.targets).Count -ne 2 -or ($config.targets.id -join ',') -cne 'A,B') { throw 'Configuration requires schema 1 and ordered targets A,B.' }
     foreach ($key in @('repository','receipts','referencePath')) { Assert-R17Local $config[$key] }
+    # Optional for reading older receipts/configs; new builds always allocate here.
+    if (!$config.ContainsKey('buildRoot')) { $config.buildRoot=Join-Path ([IO.Path]::GetPathRoot($config.repository)) 'STRE-R17' }
+    Assert-R17Local $config.buildRoot
     if ($config.referenceSha256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Pin the accepted reference SHA-256 in local configuration.' }
     foreach ($target in $config.targets) {
         if (!$target.stagingRoot -or ![IO.Path]::IsPathFullyQualified($target.stagingRoot)) { throw "Missing absolute stagingRoot for $($target.id)." }
@@ -401,7 +404,7 @@ function Get-R17Preflight($Config, $Reference, $Rows) {
     foreach ($target in $Config.targets) {
         if (!$target.gameRoot) { throw "Configure the actual gameRoot for $($target.id); staging is not an installation." }
     }
-    $paths = @($Config.repository,$Config.receipts)
+    $paths = @($Config.repository,$Config.receipts,$Config.buildRoot)
     foreach ($target in $Config.targets) { $paths += $target.stagingRoot; $paths += $target.gameRoot }
     # Receipt storage must be outside the selected source checkout and both PCs.
     Assert-R17Separate $paths
@@ -422,17 +425,58 @@ function Assert-R17Stopped {
     Assert-GameProcessesStopped
     if (Get-Process -Name steam -ErrorAction SilentlyContinue) { throw 'Close Steam before running this workflow.' }
 }
+function New-R17BuildLayout($Config, [string]$Run, $Source) {
+    Assert-R17Local $Config.buildRoot
+    Assert-R17Ordinary $Config.buildRoot
+    $root=Join-Path $Config.buildRoot ([guid]::NewGuid().ToString('N'))
+    $build=Join-Path $root 'build'
+    # Conservative budget for this project's objects/PCH/dependency suffixes.
+    # MSVC also has limits before normalizing relative paths with .. components.
+    if ($build.Length -gt 100) { throw "Short compiler build directory required (maximum 100 characters): $build" }
+    New-Item -ItemType Directory -Path $root | Out-Null
+    $layout=@{schema=1; root=$root; rootId=Get-R17DirectoryId $root;
+        buildDirectory=$build; receiptRoot=[IO.Path]::GetFullPath($Run);
+        repository=$Source.repository; sourceCommit=$Source.commit; utc=[datetime]::UtcNow}
+    Write-R17Json $layout (Join-Path $root 'receipt-link.json')
+    Write-R17Json $layout (Join-Path $Run 'build-layout.json')
+    $layout
+}
+function Get-R17BuildDirectory([string]$Run, $Source) {
+    $path=Join-Path $Run 'build-layout.json'
+    if (!(Test-Path -LiteralPath $path)) { return (Join-Path $Run 'build') } # Retained pre-fix candidate only.
+    Assert-R17Ordinary $path
+    $layout=Read-R17Json $path
+    Assert-R17Local $layout.root
+    Assert-R17Ordinary $layout.root
+    if ($layout.schema -ne 1 -or $layout.receiptRoot -ne [IO.Path]::GetFullPath($Run) -or
+        $layout.buildDirectory -ne (Join-Path $layout.root 'build') -or $layout.buildDirectory.Length -gt 100 -or
+        (Get-R17DirectoryId $layout.root) -ne $layout.rootId) { throw 'Build/receipt path identity mismatch.' }
+    if ($Source -and ($layout.repository -ne $Source.repository -or $layout.sourceCommit -ne $Source.commit)) { throw 'Build/receipt source commit mismatch.' }
+    Assert-R17Separate @($Run,$layout.root)
+    $linkPath=Join-Path $layout.root 'receipt-link.json'
+    Assert-R17Ordinary $linkPath
+    $link=Read-R17Json $linkPath
+    foreach ($key in @('schema','root','rootId','buildDirectory','receiptRoot','repository','sourceCommit')) {
+        if ($link[$key] -ne $layout[$key]) { throw 'Build/receipt reverse link mismatch.' }
+    }
+    $layout.buildDirectory
+}
 function Invoke-R17Build([string]$Repo, [string]$Run, [int]$Jobs) {
+    if (!(Test-Path -LiteralPath (Join-Path $Run 'build-layout.json'))) { throw 'Allocate a short build directory before compilation.' }
+    $head=(Invoke-R17Git $Repo @('rev-parse','HEAD')) -join ''
+    $build=Get-R17BuildDirectory $Run @{repository=$Repo;commit=$head}
+    $commands=@(
+        @('config','-P','.','-m','debug','-y','-o',$build),
+        @('build','-P','.','-y','-j',"$Jobs"),
+        @('install','-P','.','-o',(Join-Path $Run 'distrib'))
+    )
+    Write-R17Json @{repository=$Repo;commit=$head;buildDirectory=$build;commands=$commands} (Join-Path $Run 'build-commands.json')
     # Reuse lot-4 configure/build/install, always in the explicitly selected repo.
     $oldPin=$env:COREPACK_ENABLE_AUTO_PIN; $oldLatest=$env:COREPACK_DEFAULT_TO_LATEST
     Push-Location -LiteralPath $Repo
     try {
         $env:COREPACK_ENABLE_AUTO_PIN='0'; $env:COREPACK_DEFAULT_TO_LATEST='0'
-        foreach ($argsList in @(
-            @('config','-P','.','-m','debug','-y','-o',(Join-Path $Run 'build')),
-            @('build','-P','.','-y','-j',"$Jobs"),
-            @('install','-P','.','-o',(Join-Path $Run 'distrib'))
-        )) {
+        foreach ($argsList in $commands) {
             & xmake @argsList 2>&1 | Tee-Object -FilePath (Join-Path $Run 'build.log') -Append | Out-Host
             if ($LASTEXITCODE) { throw "xmake $($argsList[0]) failed: $LASTEXITCODE" }
         }
@@ -440,7 +484,7 @@ function Invoke-R17Build([string]$Repo, [string]$Run, [int]$Jobs) {
 }
 function New-R17Candidate($Source, [string]$Run) {
     $bin = Join-Path $Run 'distrib/bin'
-    $header = Get-Content -LiteralPath (Join-Path $Run 'build/BuildInfo.h') -Raw
+    $header = Get-Content -LiteralPath (Join-Path (Get-R17BuildDirectory $Run $Source) 'BuildInfo.h') -Raw
     if (!$header.Contains($Source.identity)) { throw 'Stale generated build identity.' }
     foreach ($name in $script:Required) {
         if (!(Test-Path -LiteralPath (Join-Path $bin $name) -PathType Leaf)) { throw "Missing required artifact: $name" }
@@ -570,7 +614,7 @@ function Invoke-R17Workflow {
     $config = Read-R17Config $ConfigPath
     if ($PlanOnly) {
         [pscustomobject]@{mode=$Mode; destinationIO=$false; repository=$config.repository;
-            targets=$config.targets; missingGameRoots=@($config.targets | Where-Object {!$_.gameRoot} | ForEach-Object { $_.id });
+            buildRoot=$config.buildRoot; targets=$config.targets; missingGameRoots=@($config.targets | Where-Object {!$_.gameRoot} | ForEach-Object { $_.id });
             steps='build fresh; snapshot installed A content; preflight both; backup both; stage both; human Vortex deploy; verify actual Data'}
         return
     }
@@ -633,7 +677,7 @@ function Invoke-R17Workflow {
     # No remote destination access before the fresh build and frozen candidate.
     # Check local output isolation before xmake can create any build files.
     Assert-R17Local $config.targets[0].gameRoot
-    Assert-R17Separate @($config.repository,$config.receipts,$config.targets[0].gameRoot,$config.targets[0].stagingRoot)
+    Assert-R17Separate @($config.repository,$config.receipts,$config.buildRoot,$config.targets[0].gameRoot,$config.targets[0].stagingRoot)
     $answer = Read-Host 'Both PCs: close game, Vortex, Steam, server, CK and xEdit; keep them closed through staging. Type READY'
     if ($answer -cne 'READY') { throw 'Maintainer readiness not confirmed.' }
     $run = Join-Path $config.receipts ((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')+'-'+[guid]::NewGuid().ToString('N'))
@@ -642,6 +686,8 @@ function Invoke-R17Workflow {
     Write-R17Json $receipt (Join-Path $run 'receipt.json')
     Write-Host "Receipt: $run"
     try {
+        $receipt.build=New-R17BuildLayout $config $run $source
+        Write-R17Json $receipt (Join-Path $run 'receipt.json')
         Invoke-R17Build $config.repository $run $Jobs
         $null = Get-R17Source $config.repository $source.commit
         $receipt.candidate = New-R17Candidate $source $run
@@ -676,7 +722,17 @@ function Invoke-R17Workflow {
             $receipt.failedPhase=$receipt.status; $receipt.status='STOPPED'; $receipt.error=$_.Exception.Message
         }
         Write-R17Json $receipt (Join-Path $run 'receipt.json')
-        throw "STOP: $($_.Exception.Message) Receipt: $run. Use Verify after correction, or RestoreStaging then human Vortex deployment; do not launch mismatched clients."
+        $recovery=Get-R17RecoveryMessage $receipt $run
+        throw "STOP: $($_.Exception.Message) Receipt: $run. $recovery"
     }
+}
+function Get-R17RecoveryMessage($Receipt, [string]$Run) {
+    if ($Receipt.failedPhase -match '^(STAGING_[AB]|AWAITING_HUMAN_VORTEX|Verify_)') {
+        if ($Receipt.failedPhase -eq 'AWAITING_HUMAN_VORTEX' -or $Receipt.failedPhase -like 'Verify_*') {
+            return 'Staging completed: finish the human Vortex deployment and use Verify, or use RestoreStaging then human Vortex and VerifyRestored.'
+        }
+        return 'Staging may be partial: inspect the per-PC copy journals; use RestoreStaging then human Vortex and VerifyRestored before starting a new run.'
+    }
+    'Stopped before staging writes. Preserve this receipt, correct the build/preparation failure and start a new execution. No destination restoration is indicated for this run.'
 }
 Export-ModuleMember -Function Invoke-R17Workflow
