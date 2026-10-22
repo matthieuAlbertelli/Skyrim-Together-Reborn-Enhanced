@@ -89,8 +89,10 @@ Stop on mismatched artifacts, admission rejection, missing roster member,
 incorrect appearance, repeated activation, lost controls, wrong save/checkpoint,
 divergent shared state or crash. Preserve failures and normal diagnostics;
 never repair via console, alter admission, add a substitute player or force
-unlock. An absent log alone requires qualification. M0-M4 and World Sync remain
-unexecuted until new human evidence is recorded in STATUS.
+unlock. An absent log alone requires qualification. Executed scope belongs in
+[STATUS](../../project/STATUS.md): a bounded maintainer attestation is not automatic
+acceptance of all M0-M4 checks, both completion orders or World Sync. In particular,
+reported saving/loading does not by itself qualify the M4 interruption/recovery case.
 
 
 ## Local seating lifecycle regression (issue #91, 2026-10-18)

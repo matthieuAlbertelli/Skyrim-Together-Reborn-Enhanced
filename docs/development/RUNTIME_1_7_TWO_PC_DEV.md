@@ -3,9 +3,11 @@
 This procedure owns deployment mechanics for issue #99.
 [STATUS](../project/STATUS.md) owns executed validation; the
 [migration guide](EXPERIMENTAL_RUNTIME_1_7.md) owns native compatibility.
-The correction is validated on **local fixtures only**. Pc-vero remains
-**NON AUDITÉ PAR CODEX**, without any inferred incompatibility. The maintainer
-owns its readiness, real execution and both manual Vortex operations.
+The fixture validation, native-build evidence and later maintainer-operated
+installation receipts are distinguished in STATUS. Pc-vero remains
+**NON AUDITÉ PAR CODEX** directly; reading its retained local verification receipt
+is not a new remote audit. The maintainer owns its readiness, real execution and
+both manual Vortex operations. No incompatibility is inferred from that boundary.
 
 ## Sources and scope
 

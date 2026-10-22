@@ -9,6 +9,50 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## Steam 1.7.104 two-player acceptance — maintainer attestation
+
+Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).
+**Human PASS**, performed and attested by the maintainer for the reported
+two-player path: admission/lobby, character creation, reciprocal appearances,
+seating, movement, and saving/loading. **The maintainer also confirms checking
+the logs; Codex did not analyze or reanalyze those gameplay logs.**
+
+| Reported scenario | Accepted result and evidence |
+|---|---|
+| Admission / lobby | Human PASS for the reported two-player admission/lobby path |
+| Character creation | Human PASS for the exercised creation path |
+| Reciprocal appearances | Human PASS for the appearances observed by the two players |
+| Seating and movement | Human PASS for the reported seating and movement |
+| Saving and loading | Human PASS for the reported save/load operations; no crash/disconnect recovery scenario was specified |
+
+Candidate identification comes from the **latest local run with both installations
+recorded as `INSTALLED_VERIFIED`**:
+`20261022T135344Z-640fb9658dc74afb96a0a312896b6fa2`.
+Its compiled source is `98f1d35ccd04d14e778e772384f35ae9d87c79ef`, identity
+`runtime17-98f1d35ccd04d14e778e772384f35ae9d87c79ef`. The main receipt and A/B
+verification records share attempt `f5d35ed19f0042c3afb6e6775bbcd000`; both record
+the same 1,207 manifest entries (293 native/UI plus 914 installed-A contents).
+Codex checked these existing **local receipt records only**, without accessing
+either installation or Pc-vero. This is not a fresh destination or runtime audit.
+Earlier compiled SHAs below remain evidence for their own historical candidates.
+
+No test time, technical event chronology, race/class matrix, role permutation or
+opposite creation-completion order is inferred. Saving/loading does **not**
+qualify recovery after a crash, disconnect or restart, nor coordinated restoration
+of a committed `CampaignCheckpoint`. This attestation does not qualify the full
+M0-M4 protocol, additional Valen scenarios or World Sync manipulation/interruption.
+ADR-0018 and the native-plugin admission policy remain unchanged.
+
+**Independent reservations remain:** STRE intro/custom-menu presentation still
+needs its 1.7 port; CK/AutoMod must be requalified before authoring. This scoped
+milestone does not complete the whole migration or justify closing #99.
+See the [dated attestation and candidate receipt evidence](../audit/2026-10-22-runtime-1.7-multiplayer-acceptance.md)
+and [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
+
+The earlier dated 1.7 milestones below retain their original evidence and limits.
+Their statements about multiplayer not yet being tested describe those earlier
+milestones; the scoped current acceptance is recorded above.
+
 ## Two-PC DEV workflow preparation (2026-10-22, Refs #99)
 
 **Implemented and validated on local fixtures only.** The tracked helper extends

@@ -41,14 +41,15 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 |---|---|
 | Runtime | Exactly Steam `1.7.104.0`; 1.7.99, 1.6, other builds, GOG/EOS/unknown distributions rejected |
 | Bootstrap | All 18 static native prerequisites qualified in lot 3; derived admission open for the exact inspected material; local DEV vanilla-menu startup PASS2026-10-21 (see STATUS) |
-| Experimental deployment | Normal main-PC Windows/Steam/Vortex environment and ordinary profile writes authorized; verify actual deployed hashes and compatible plugins; no Pc-vero |
+| Experimental deployment | Maintainer-operated two-PC workflow has a retained local A/B `INSTALLED_VERIFIED` receipt; candidate and evidence limits are in STATUS. No fresh destination audit or Codex access to Pc-vero |
 | Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
 | Better Grabbing | Official 2.0: main-PC DLL/provenance, actual SKSE 2.3.1 loading and human Solo smoke PASS; V5 declaration present; multiplayer manipulation/interruption remains untested; required native-plugin policy retained |
 | Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
 | STRE intro/custom menu | Disabled by historical1.6 presentation guard; not a1.7 visual PASS |
 | Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access, quick-save/reload, Continue and checked-character persistence; exact human/technical scope in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
-| Multiplayer appearance/seating, World Sync and collective recovery | Native boundaries statically qualified; no 1.7 multiplayer runtime acceptance; A/B/server consistency, actual native-plugin admission and multiplayer Better Grabbing behavior remain prerequisites; optional presentation/diagnostics remain guarded |
+| Reported two-player path | Maintainer-attested PASS: admission/lobby, creation, reciprocal appearances, seating, movement and saving/loading. Logs checked by the maintainer, not Codex; exact candidate and accepted scope are in STATUS |
+| World Sync and collective recovery | Not qualified by the reported two-player path. No inferred manipulation/interruption, crash/disconnect/restart or coordinated-checkpoint recovery PASS; optional presentation/diagnostics remain guarded |
 | CK/Papyrus/content | 1.7 is the desired tool target; requalification required before authoring. Native-only build may preserve existing content without import/conversion |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |
