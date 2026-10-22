@@ -9,7 +9,45 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Steam 1.7.104 presentation port — offline candidate (2026-10-22)
+## Steam 1.7.104 presentation — maintainer-attested human PASS
+
+Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).
+The maintainer replies **« tout est PASS »** to the progressive A-D presentation
+trial. **Human PASS** is recorded for the reported startup presentation/menu and
+normal exit, intro/audio/natural end/skip and restored controls/cursor, Solo
+return without intro replay, and the reversible vanilla fallback trial.
+The tested presentation includes its animated background, branding/native text
+and music. This is the maintainer's observation, not Codex visual or log analysis.
+
+The latest retained local run with **both A/B `INSTALLED_VERIFIED`** is
+`20261022T155401Z-f46fbf42929c4d879f6e8be78f82bb05`. Its compiled source is
+**`53530e6956205f20960e1113a04e661a0e0362f9`**, identity
+`runtime17-53530e6956205f20960e1113a04e661a0e0362f9`, attempt
+`e63bdb47eea243499db5fc9af98d4852`. The main receipt, manifest, build layout
+and both verification records agree; A/B each match the 1,207 recorded entries
+(293 native/UI and 914 managed contents). Codex read these local JSON records
+only, without checking either installation or accessing Pc-vero. This is the
+deployment reference for the attestation, not a measured runtime-session trace.
+The earlier offline candidate `b5665aa4` remains evidence for its own builds.
+
+The response does not specify a controller, resolution/aspect matrix, focus
+permutation, language/binding variants or all corrupt/missing-media cases. No
+separate PASS is inferred for those optional/broader permutations, nor for
+presentation on each PC individually. No new log verification is claimed for
+this presentation session and no logs, captures or repeated trials are requested.
+The previous multiplayer PASS and its maintainer-checked-log attribution remain
+unchanged; this does not extend World Sync or crash/recovery acceptance.
+
+See the [dated follow-up and receipt fingerprints](../audit/2026-10-22-runtime-1.7-presentation.md#follow-up-maintainer-human-acceptance)
+and [A-D scope](../features/main-menu/TEST_PLAN.md#progressive-human-trial-on-17104).
+Intro music redistribution clearance and CK/AutoMod requalification remain
+independent requirements. #99 and #86 stay open. This consolidation changes
+documentation only: no rebuild, deployment, remote audit or application launch.
+
+## Earlier Steam 1.7.104 presentation port — offline candidate (2026-10-22)
+
+This earlier handoff is retained as historical build evidence. Its pending
+human verdicts below are superseded only within the A-D attestation above.
 
 **Implemented, statically qualified and compiled/tested offline; human visual,
 audio and native-input acceptance is still pending.** Refs #99 / #86.
@@ -99,8 +137,8 @@ M0-M4 protocol, additional Valen scenarios or World Sync manipulation/interrupti
 ADR-0018 and the native-plugin admission policy remain unchanged.
 
 **Independent reservations at this milestone:** STRE intro/custom-menu
-presentation still needed its 1.7 port (the later offline port above now awaits
-human presentation acceptance); CK/AutoMod must be requalified before authoring.
+presentation still needed its 1.7 port (the later presentation milestones above
+record the offline port and scoped human acceptance); CK/AutoMod must be requalified before authoring.
 This scoped milestone does not complete the whole migration or justify closing #99.
 See the [dated attestation and candidate receipt evidence](../audit/2026-10-22-runtime-1.7-multiplayer-acceptance.md)
 and [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
