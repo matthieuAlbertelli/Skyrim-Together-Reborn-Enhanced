@@ -3,6 +3,7 @@
 #include <CampaignLoadPolicy.h>
 #include <CampaignNativeLoad.h>
 #include <CampaignSaveTrace.h>
+#include <Runtime/NativeSaveSelection.h>
 #include <Games/Skyrim/DialogueProgressRuntime.h>
 #include <Misc/BSFixedString.h>
 #include <Services/CampaignNativeLoadService.h>
@@ -47,15 +48,7 @@ TP_THIS_FUNCTION(
     std::uint32_t);
 TFxDelegateCallback* s_realFxDelegateCallback{};
 
-struct NativeArrayView
-{
-    void* pData;
-    std::uint32_t Capacity;
-    std::uint32_t Pad0C;
-    std::uint32_t Size;
-    std::uint32_t Pad14;
-};
-static_assert(sizeof(NativeArrayView) == 0x18);
+using NativeArrayView = STRE::Runtime::NativeSaveListView;
 
 struct NativeSaveLoadFileEntryView
 {
@@ -304,19 +297,8 @@ MostRecentPointerProbe ProbeMostRecentTargetPointer(
 
     __try
     {
-        const auto* const pBytes =
-            reinterpret_cast<const std::byte*>(apManager);
-        const auto* const pList = reinterpret_cast<const NativeArrayView*>(
-            pBytes + kAeSaveGameListOffset);
-        if (!pList->pData || pList->Size == 0 ||
-            pList->Size > pList->Capacity || pList->Capacity > 10000)
-        {
-            return {};
-        }
-        auto* const* const ppEntries =
-            static_cast<NativeSaveLoadFileEntryView* const*>(pList->pData);
-        const NativeSaveLoadFileEntryView* const pEntry = ppEntries[0];
-        return {pEntry ? pEntry->FileName.AsAscii() : nullptr};
+        return {STRE::Runtime::MostRecentSaveName(
+            reinterpret_cast<const STRE::Runtime::NativeSaveSelectionView*>(apManager))};
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
@@ -413,19 +395,15 @@ MostRecentPointerProbe ProbeSaveListTargetPointer(
             reinterpret_cast<const std::byte*>(apManager);
         const auto* const pList = reinterpret_cast<const NativeArrayView*>(
             pBytes + kAeSaveGameListOffset);
-        if (!pList->pData || pList->Size == 0 ||
-            pList->Size > pList->Capacity || pList->Capacity > 10000 ||
-            aSelectionIndex >= pList->Size)
-        {
+        const auto nativeIndex =
+            STRE::Runtime::NativeSaveListIndex(*pList, aSelectionIndex);
+        if (!nativeIndex)
             return {};
-        }
 
         auto* const* const ppEntries =
             static_cast<NativeSaveLoadFileEntryView* const*>(pList->pData);
-        const std::uint32_t nativeIndex =
-            pList->Size - aSelectionIndex - 1;
         const NativeSaveLoadFileEntryView* const pEntry =
-            ppEntries[nativeIndex];
+            ppEntries[*nativeIndex];
         return {pEntry ? pEntry->FileName.AsAscii() : nullptr};
     }
     __except (EXCEPTION_EXECUTE_HANDLER)

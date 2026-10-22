@@ -47,12 +47,19 @@ Two automated processes or a harness:
 
 ### In-game tests
 
-- Skyrim 1.6.1170;
+- Steam Skyrim 1.7.104.0 with SKSE 2.3.1 and the exact matching Address Library;
 - CK plugin;
 - UI and preview;
 - targeted magic;
 - save and load;
 - 1 player, then 2 players, then 4 and 10.
+
+Historical 1.6 results remain historical. The initial 1.7 main-menu-only gate is
+also historical; STATUS records later scoped gameplay/presentation acceptance.
+Unreported player-count, World Sync and recovery scenarios need their own
+evidence. Offline tooling fixtures and read-only CK inspection do not qualify
+production authoring. The additional CK fixture write test is untested and
+waived by the maintainer for migration-PR preparation, not recorded as PASS.
 
 ## Trading
 

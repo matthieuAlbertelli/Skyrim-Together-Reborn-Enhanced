@@ -1,5 +1,11 @@
 # Valen presentation correction and ordered runtime experiment
 
+Steam 1.7.104.0 / SKSE 2.3.1 is the sole future development target. The
+1.6 adapter descriptions and observations below remain historical; optional
+presentation stays disabled on 1.7 until separately qualified. See
+[the native register](../../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) and
+[STATUS](../../project/STATUS.md) for current implementation and executed scope.
+
 [STATUS](../../project/STATUS.md) owns observed results. This procedure does not
 grant xEdit or runtime PASS. Do not continue Helgen acceptance until this defect
 is resolved. PR #97 remains DRAFT and #96 remains open.

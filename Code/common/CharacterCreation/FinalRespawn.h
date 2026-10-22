@@ -10,8 +10,8 @@ inline bool FinalRespawnEligible(bool aConnected, bool aOfficialCreation, bool a
     return aConnected && aOfficialCreation && aApplied && aFinalRevision && aFinalRevision == aAppliedRevision;
 }
 
-// Read-only policy for the 1.6.1170 LAB, not a general native Actor safety API.
-// CommonLibSSE-NG field layout; runtime adapter must check exact 1.6.1170.
+// Read-only policy for the qualified final rematerialization path, not a
+// general native Actor safety API. Runtime adapter checks NativeContracts.
 // Sit/sleep bits 14:4 are deliberately irrelevant, including WantToStand.
 struct FinalRespawnActorState
 {
@@ -20,6 +20,7 @@ struct FinalRespawnActorState
 
     // Exact-build RE: Actor.SetDontMove(true), RVA 9EA930 -> 6750D0,
     // sets life 9 through 680740. It is movement inhibition, not knock/death.
+    // 1.7.104: A02B60 -> 687BA0 -> 693200, same bit mask/clearer.
     // See CHARACTER_APPEARANCE_SYNC.md for the evidence and scope of admission.
     constexpr bool LifeAllowsReplacement() const noexcept { return Life == 0 || Life == 9; }
     constexpr bool KnockIdle() const noexcept { return Knock == 0; }

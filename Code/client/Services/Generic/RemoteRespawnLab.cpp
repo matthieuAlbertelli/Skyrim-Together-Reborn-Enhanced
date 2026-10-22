@@ -4,6 +4,7 @@
 #include <CharacterCreation/FinalRespawn.h>
 #include <CharacterCreation/FinalRespawnAdmission.h>
 #include <CharacterCreation/RemoteMaterializationLifecycle.h>
+#include <Runtime/NativeContracts.h>
 #include <Services/RemoteActorProjection.h>
 #include <Services/CharacterService.h>
 #include <Services/CampaignRuntimeGateService.h>
@@ -291,12 +292,13 @@ FinalRespawnAdmissionDecision RejectAdmission(Job& aJob, const BindingObservatio
 }
 void CancelAdmission(World& aWorld, Job& aJob, const char* aReason)
 {
-    RejectAdmission(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob), VersionDb::Get().GetLoadedVersionString() == "1.6.1170.0"), aReason);
+    RejectAdmission(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob),
+        Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), Runtime::NativeContract::FinalAppearance)), aReason);
     aJob.Done = true; // No lifecycle reservation, abort or retirement to dispatch.
 }
 FinalRespawnAdmissionDecision Capture(World& aWorld, Job& aJob)
 {
-    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+    if (!Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), Runtime::NativeContract::FinalAppearance))
     {
         return RejectAdmission(aJob, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, aJob), false), "unsupported-runtime");
     }
@@ -761,7 +763,8 @@ void Tick(World& aWorld) noexcept
                 // A recovery lock is not authoritative removal of the old actor.
                 job.Lifecycle.Abort(job.Lifecycle.Key());
                 job.Done = true;
-                LogBindingRejection(job, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, job), VersionDb::Get().GetLoadedVersionString() == "1.6.1170.0"),
+                LogBindingRejection(job, ObserveBinding(aWorld, FindDiagnosticEntity(aWorld, job),
+                    Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), Runtime::NativeContract::FinalAppearance)),
                     "abort", !aWorld.GetTransport().IsConnected() ? "transport-disconnected" : "recovery-locked");
                 // Native load/recovery owns its teardown. Defer our intents until
                 // a later safe update; ordinary Delete calls still mark them issued.

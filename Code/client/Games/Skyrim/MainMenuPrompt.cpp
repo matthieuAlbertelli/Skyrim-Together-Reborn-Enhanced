@@ -3,6 +3,7 @@
 #include "MainMenuPrompt.h"
 #include "MainMenuRuntime.h"
 #include <MainMenu/Branding.h>
+#include <MainMenu/NativeAdapter.h>
 
 #include <algorithm>
 #include <array>
@@ -13,8 +14,10 @@ namespace MainMenuRuntime
 namespace
 {
 // CommonLibSSE-NG public GFxMovie/GFxMovieView/GFxValue and input ABIs.
-// These calls are optional, fenced to 1.6.1170 and never patch another hook.
+// CL131 exact-target public interfaces, corroborated by the 1.7.104 binary.
+// These optional calls share the presentation gate and never patch another hook.
 using Detail::Readable;
+static_assert(offsetof(IMenu, fxDelegate) == 0x28);
 
 template <class T> T Method(void* apObject, std::size_t aSlot)
 {
@@ -63,6 +66,8 @@ struct Value
     }
 };
 static_assert(sizeof(Value) == 0x18);
+static_assert(offsetof(Value, Type) == 0x8);
+static_assert(offsetof(Value, Object) == 0x10);
 
 using ReleaseValue = void (*)(void*, Value*, void*);
 using VisitMembers = void (*)(void*, void*, void*, bool);
@@ -123,6 +128,8 @@ struct Viewport
     std::uint32_t Flags, Pad;
 };
 static_assert(sizeof(Viewport) == 0x38);
+static_assert(offsetof(Viewport, Width) == 0x10);
+static_assert(offsetof(Viewport, Flags) == 0x30);
 
 // sharedcomponents contains quantity-menu sample clips as well as exported
 // artwork. Hide existing root children before adding our own inert prompt.
@@ -190,7 +197,7 @@ void IntroPrompt::Fail()
 bool PresentationMovie::LoadLibrary()
 {
     auto& db = VersionDb::Get();
-    if (db.GetLoadedVersionString() != "1.6.1170.0")
+    if (!STRE::MainMenu::SupportsPresentation(db.GetLoadedVersionString()))
         return false;
     auto** manager = static_cast<void**>(db.FindAddressById(402775));
     using LoadMovie = bool (*)(void*, IMenu*, void**, const char*, std::uint32_t, float);
@@ -231,7 +238,7 @@ IntroPrompt::IntroPrompt(std::uint32_t aScanCode, std::string aAction)
 
 bool IntroPrompt::Initialize()
 {
-    if (m_action.empty() || VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+    if (m_action.empty() || !STRE::MainMenu::SupportsPresentation(VersionDb::Get().GetLoadedVersionString()))
         return false;
     auto** input = static_cast<void**>(VersionDb::Get().FindAddressById(402776));
     if (!Readable(input, sizeof(void*)) || !Readable(*input, 0x68))

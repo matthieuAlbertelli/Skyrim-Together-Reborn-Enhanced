@@ -11,6 +11,7 @@ target("TPTests")
     if is_plat("windows") then
         add_files("../client/MainMenu/VideoPlayer.cpp")
         add_files("../client/MainMenu/BrandingTexture.cpp")
+        add_files("../client/VersionDb.cpp")
         add_syslinks("d3d11", "mfuuid", "mfplat", "mfreadwrite", "ole32", "oleaut32", "windowscodecs")
     end
     add_deps(

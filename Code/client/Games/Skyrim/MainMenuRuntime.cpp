@@ -6,6 +6,8 @@
 #include <Interface/UI.h>
 #include <MainMenu/MainMenuPresentation.h>
 #include <MainMenu/Localization.h>
+#include <MainMenu/NativeAdapter.h>
+#include <Runtime/NativeContracts.h>
 #include <Games/TES.h>
 #include "../../../immersive_launcher/Launcher.h"
 
@@ -15,8 +17,8 @@
 
 namespace
 {
-// CommonLibSSE-NG RE::Main layout (AE 1.6.1170): two event-sink bases occupy
-// 0x10 bytes, followed by the three distinct runtime request flags.
+// CommonLibSSE-NG 12d61f3c (1.7.104), RE::Main flat layout: two event-sink
+// bases occupy 0x10 bytes, followed by three distinct runtime request flags.
 struct SkyrimMainResetBoundary
 {
     std::byte EventSinkBases[0x10];
@@ -31,6 +33,11 @@ static_assert(offsetof(SkyrimMainResetBoundary, FullReset) == 0x12);
 
 bool RequestSkyrimMainMenu() noexcept
 {
+    if (!STRE::Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), STRE::Runtime::NativeContract::ResetMain))
+    {
+        spdlog::error("[STRE][MainMenuRuntime] REQUEST_FAILED reason=unverified-reset-boundary-abi");
+        return false;
+    }
     // CommonLibSSE-NG RE::Offset::Main::Singleton, AE Address Library ID.
     POINTER_SKYRIMSE(SkyrimMainResetBoundary*, s_pMain, 403449);
     SkyrimMainResetBoundary** const ppMain = s_pMain.Get();
@@ -61,6 +68,9 @@ bool RequestSkyrimMainMenu() noexcept
 // See NOTICE.md and GameFiles/Skyrim/STRE/Licenses/MainMenuVideo-GPL-3.0.txt.
 namespace MainMenuRuntime
 {
+static_assert(offsetof(UIMessage, eType) == 0x8);
+static_assert(offsetof(IMenu, uiMovie) == 0x10);
+
 bool Detail::Readable(const void* apAddress, std::size_t aSize, bool aExecutable)
 {
     MEMORY_BASIC_INFORMATION info{};
@@ -77,12 +87,14 @@ using Detail::Readable;
 using STRE::MainMenu::Presentation;
 using ProcessMessage = UI_MESSAGE_RESULTS (*)(IMenu*, UIMessage&);
 using PostDisplay = void (*)(IMenu*);
-using MusicPredicate = bool (*)();
+// The two qualified callers ignore the music trigger's result and pass no
+// arguments. Preserve its side effects unless intro audio owns the lease.
+using MusicTrigger = void (*)();
 ProcessMessage s_processMessage{};
 PostDisplay s_postDisplay{};
 PostDisplay s_cursorPostDisplay{};
-MusicPredicate s_musicAtCreate{};
-MusicPredicate s_musicAtUpdate{};
+MusicTrigger s_musicAtCreate{};
+MusicTrigger s_musicAtUpdate{};
 bool s_hooksReady{};
 std::unique_ptr<Presentation> s_owner;
 std::unique_ptr<IntroPrompt> s_prompt;
@@ -131,24 +143,26 @@ void CursorPostDisplayHook(IMenu* apMenu)
         s_cursorPostDisplay(apMenu);
 }
 
-bool MusicAtCreateHook()
+void MusicAtCreateHook()
 {
     auto* presentation = s_presentation.load();
-    return (presentation && presentation->SuppressesMusic()) || s_musicAtCreate();
+    if (!presentation || !presentation->SuppressesMusic())
+        s_musicAtCreate();
 }
 
-bool MusicAtUpdateHook()
+void MusicAtUpdateHook()
 {
     auto* presentation = s_presentation.load();
-    return (presentation && presentation->SuppressesMusic()) || s_musicAtUpdate();
+    if (!presentation || !presentation->SuppressesMusic())
+        s_musicAtUpdate();
 }
 
 // Presentation patch addresses stay here; optional movie ABIs are isolated in
-// MainMenuPrompt. Both adapters reject unknown runtimes. There is no 1.7 map.
+// MainMenuPrompt. Both adapters use the same exact-target qualification gate.
 bool InstallHooks()
 {
     auto& database = VersionDb::Get();
-    if (database.GetLoadedVersionString() != "1.6.1170.0")
+    if (!STRE::MainMenu::SupportsPresentation(database.GetLoadedVersionString()))
     {
         spdlog::warn("[STRE][MainMenu] disabled unsupported-runtime={}", database.GetLoadedVersionString());
         return false;
@@ -160,10 +174,17 @@ bool InstallHooks()
     constexpr std::array<std::uint32_t, 2> ids{52110, 52137};
     constexpr std::array<std::size_t, 2> offsets{0x2A, 0x2DD};
     std::array<std::uint8_t*, 2> calls{};
-    const std::array<MusicPredicate, 2> hooks{MusicAtCreateHook, MusicAtUpdateHook};
+    const std::array<MusicTrigger, 2> hooks{MusicAtCreateHook, MusicAtUpdateHook};
+    std::array<std::int32_t, 2> displacements{};
+    auto* music = database.FindAddressById(52185);
     if (!Readable(table, 7 * sizeof(void*)) || !Readable(table[4], 1, true) || !Readable(table[6], 1, true))
         return false;
     if (!Readable(cursorTable, 7 * sizeof(void*)) || !Readable(cursorTable[6], 1, true))
+        return false;
+    // Reject an altered/stacked vtable before any write. Exact-target binary:
+    // MainMenu ProcessMessage=959F90; shared IMenu PostDisplay=57B470.
+    if (table[4] != database.FindAddressById(52137) || table[6] != database.FindAddressById(33632) ||
+        cursorTable[6] != table[6] || !Readable(music, 1, true))
         return false;
     for (std::size_t i = 0; i < calls.size(); ++i)
     {
@@ -171,14 +192,9 @@ bool InstallHooks()
         if (!base)
             return false;
         calls[i] = base + offsets[i];
-        if (!Readable(calls[i], 5, true) || calls[i][0] != 0xE8)
-            return false;
-        std::int32_t displacement{};
-        std::memcpy(&displacement, calls[i] + 1, sizeof(displacement));
-        if (!Readable(calls[i] + 5 + displacement, 1, true))
-            return false;
-        const auto distance = reinterpret_cast<std::intptr_t>(hooks[i]) - reinterpret_cast<std::intptr_t>(calls[i] + 5);
-        if (distance < std::numeric_limits<std::int32_t>::min() || distance > std::numeric_limits<std::int32_t>::max())
+        if (!Readable(calls[i], 5, true) ||
+            !STRE::MainMenu::PrepareMusicCall(i, {calls[i], 5}, reinterpret_cast<std::uintptr_t>(calls[i]),
+                                            reinterpret_cast<std::uintptr_t>(music), reinterpret_cast<std::uintptr_t>(hooks[i]), displacements[i]))
             return false;
     }
     // Establish all write permissions before changing any byte. Failure leaves
@@ -186,32 +202,27 @@ bool InstallHooks()
     const std::array<void*, 4> addresses{table + 4, calls[0], calls[1], cursorTable + 6};
     constexpr std::array<std::size_t, 4> sizes{3 * sizeof(void*), 5, 5, sizeof(void*)};
     std::array<DWORD, 4> protections{};
-    std::size_t writable{};
-    for (; writable < addresses.size(); ++writable)
-    {
-        if (!VirtualProtect(addresses[writable], sizes[writable], PAGE_EXECUTE_READWRITE, &protections[writable]))
-            break;
-    }
-    const bool ready = writable == addresses.size();
-    if (ready)
-    {
-        s_processMessage = reinterpret_cast<ProcessMessage>(table[4]);
-        s_postDisplay = reinterpret_cast<PostDisplay>(table[6]);
-        s_cursorPostDisplay = reinterpret_cast<PostDisplay>(cursorTable[6]);
-        TiltedPhoques::SwapCall(mem::pointer(calls[0]), s_musicAtCreate, &MusicAtCreateHook);
-        TiltedPhoques::SwapCall(mem::pointer(calls[1]), s_musicAtUpdate, &MusicAtUpdateHook);
-        table[4] = reinterpret_cast<void*>(&ProcessMessageHook);
-        table[6] = reinterpret_cast<void*>(&PostDisplayHook);
-        cursorTable[6] = reinterpret_cast<void*>(&CursorPostDisplayHook);
-        FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
-    }
-    while (writable)
-    {
-        --writable;
-        DWORD ignored{};
-        VirtualProtect(addresses[writable], sizes[writable], protections[writable], &ignored);
-    }
-    return ready;
+    return STRE::MainMenu::WithWritablePatches(addresses.size(),
+        [&](std::size_t i) noexcept { return VirtualProtect(addresses[i], sizes[i], PAGE_EXECUTE_READWRITE, &protections[i]) != FALSE; },
+        [&](std::size_t i) noexcept {
+            DWORD ignored{};
+            if (!VirtualProtect(addresses[i], sizes[i], protections[i], &ignored))
+                spdlog::error("[STRE][MainMenu] page-protection restore failed site={}", i);
+        },
+        [&]() noexcept {
+            s_processMessage = reinterpret_cast<ProcessMessage>(table[4]);
+            s_postDisplay = reinterpret_cast<PostDisplay>(table[6]);
+            s_cursorPostDisplay = reinterpret_cast<PostDisplay>(cursorTable[6]);
+            // Retain each original independently; only the rel32 operand changes.
+            s_musicAtCreate = reinterpret_cast<MusicTrigger>(music);
+            s_musicAtUpdate = reinterpret_cast<MusicTrigger>(music);
+            std::memcpy(calls[0] + 1, &displacements[0], sizeof(displacements[0]));
+            std::memcpy(calls[1] + 1, &displacements[1], sizeof(displacements[1]));
+            table[4] = reinterpret_cast<void*>(&ProcessMessageHook);
+            table[6] = reinterpret_cast<void*>(&PostDisplayHook);
+            cursorTable[6] = reinterpret_cast<void*>(&CursorPostDisplayHook);
+            FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
+        });
 }
 
 template <std::size_t MaxBytes> std::string ReadBoundedText(const std::filesystem::path& aFile)
@@ -236,7 +247,7 @@ static TiltedPhoques::Initializer s_installPresentation(
     []()
     {
         s_hooksReady = InstallHooks();
-        spdlog::info("[STRE][MainMenu] hooks={} target=1.6.1170.0", s_hooksReady);
+        spdlog::info("[STRE][MainMenu] hooks={} target=1.7.104.0", s_hooksReady);
     });
 } // namespace
 

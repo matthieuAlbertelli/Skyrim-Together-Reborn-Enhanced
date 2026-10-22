@@ -52,7 +52,8 @@ struct MenuOpenCloseEvent
 static_assert(sizeof(MenuOpenCloseEvent) == 0x10);
 
 // Minimal mirrors of the public CommonLibSSE-NG save/load request, queue, and
-// Scaleform callback ABIs. They are trace-only and never carry save authority.
+// Scaleform callback ABIs. Continue correlation participates in production
+// load admission; these observations never carry persistence authority.
 struct NativeSaveLoadRequest
 {
     void* pVtable;
@@ -100,14 +101,16 @@ struct NativeResolvedLoadSourceRef
 };
 static_assert(sizeof(NativeResolvedLoadSourceRef) == 0x8);
 
+// Manager+240/+248 are the pointer/length of a BSString whose inline buffer
+// begins at +138 (constructor ID35720), not a callback/pending flag.
 // Fields touched by the proven ID 35772 branches only. Names remain
 // descriptive of their observed use; unknown manager storage is not promoted
 // to policy or authority.
 struct NativeContinueManagerView
 {
     std::byte Pad000[0x240];
-    const char* pCallbackName;
-    std::uint16_t CallbackPending;
+    const char* pRememberedFileName;
+    std::uint16_t RememberedNameLength;
     std::uint16_t Pad24A;
     std::uint32_t Pad24C;
     std::int32_t Value250;
@@ -116,8 +119,8 @@ struct NativeContinueManagerView
     std::uint8_t Value260;
     std::uint8_t ResolvedSourceReady;
 };
-static_assert(offsetof(NativeContinueManagerView, pCallbackName) == 0x240);
-static_assert(offsetof(NativeContinueManagerView, CallbackPending) == 0x248);
+static_assert(offsetof(NativeContinueManagerView, pRememberedFileName) == 0x240);
+static_assert(offsetof(NativeContinueManagerView, RememberedNameLength) == 0x248);
 static_assert(offsetof(NativeContinueManagerView, Value250) == 0x250);
 static_assert(
     offsetof(NativeContinueManagerView, pResolvedLoadSource) == 0x258);
@@ -672,10 +675,10 @@ NativeRequestObservation ObserveRequest(
 struct NativeManagerObservation
 {
     const void* pManager{};
-    const char* pCallbackName{};
+    const char* pRememberedFileName{};
     const void* pResolvedLoadSource{};
     const char* pNativeSaveIdentity{};
-    std::uint16_t CallbackPending{};
+    std::uint16_t RememberedNameLength{};
     std::int32_t Value250{};
     std::uint8_t ResolvedSourceReady{};
     bool Readable{};
@@ -692,8 +695,8 @@ NativeManagerObservation ObserveManager(const void* apManager) noexcept
     {
         const auto* const pManager =
             static_cast<const NativeContinueManagerView*>(apManager);
-        observation.pCallbackName = pManager->pCallbackName;
-        observation.CallbackPending = pManager->CallbackPending;
+        observation.pRememberedFileName = pManager->pRememberedFileName;
+        observation.RememberedNameLength = pManager->RememberedNameLength;
         observation.Value250 = pManager->Value250;
         observation.pResolvedLoadSource = pManager->pResolvedLoadSource;
         observation.ResolvedSourceReady = pManager->ResolvedSourceReady;
@@ -946,8 +949,8 @@ void LogContinueCorrelation(
         : observedRequestTarget;
     const NativeStringObservation managerTarget =
         ObserveNativeString(manager.pNativeSaveIdentity);
-    const NativeStringObservation callbackName =
-        ObserveNativeString(manager.pCallbackName);
+    const NativeStringObservation rememberedFileName =
+        ObserveNativeString(manager.pRememberedFileName);
     const CampaignSaveTrace::Context context = CampaignSaveTrace::Capture();
     spdlog::debug(
         "[STRE][CampaignLoadTrace] sequence={} "
@@ -955,8 +958,8 @@ void LogContinueCorrelation(
         "rootRequest={} parentRequest={} requestAddress={} "
         "operationCode=0x{:08X} requestType={} requestVtable={} "
         "requestState={} loadSource={} loadTargetReadable={} "
-        "loadTarget={} managerReadable={} callbackPending={} "
-        "callbackNameReadable={} callbackName={} managerValue250={} "
+        "loadTarget={} managerReadable={} rememberedNameLength={} "
+        "rememberedFileNameReadable={} rememberedFileName={} managerValue250={} "
         "managerLoadSource={} managerSourceReady={} "
         "managerTargetReadable={} managerTarget={}",
         context.Sequence,
@@ -974,9 +977,9 @@ void LogContinueCorrelation(
         requestTarget.Readable,
         requestTarget.Readable ? requestTarget.Value : "unavailable",
         manager.Readable,
-        manager.CallbackPending,
-        callbackName.Readable,
-        callbackName.Readable ? callbackName.Value : "unavailable",
+        manager.RememberedNameLength,
+        rememberedFileName.Readable,
+        rememberedFileName.Readable ? rememberedFileName.Value : "unavailable",
         manager.Value250,
         manager.pResolvedLoadSource,
         manager.ResolvedSourceReady,

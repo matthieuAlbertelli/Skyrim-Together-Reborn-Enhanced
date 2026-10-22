@@ -1,4 +1,5 @@
 #include <PlayerCharacter.h>
+#include <Runtime/NativeContracts.h>
 #include <Games/ActorExtension.h>
 
 #include <Structs/Skyrim/AnimationGraphDescriptor_Master_Behavior.h>
@@ -143,15 +144,20 @@ void PlayerCharacter::PayCrimeGoldToAllFactions() noexcept
 
 bool PlayerCharacter::TryEndGrabObject() noexcept
 {
+    if (!STRE::Runtime::SupportsQualifiedNativeAccess(VersionDb::Get().GetLoadedVersionString(), STRE::Runtime::NativeContract::GrabRelease))
+    {
+        spdlog::error("[STRE][WorldSync] forced_grab_release_failed reason=unverified-destroy-mouse-springs-abi");
+        return false;
+    }
     int major = 0;
     int minor = 0;
     int revision = 0;
     int build = 0;
     VersionDb::Get().GetLoadedVersion(major, minor, revision, build);
 
-    // Address Library IDs used by CommonLibSSE-NG for
-    // PlayerCharacter::DestroyMouseSprings(). Skyrim 1.6+ uses the AE ID.
-    const uint32_t addressId = (major > 1 || (major == 1 && minor >= 6)) ? 40557u : 39480u;
+    // CommonLibSSE-NG 12d61f3c (1.7.104), PlayerCharacter.cpp:
+    // DestroyMouseSprings is void(this), AE ID 40557 (flat, not VR overload).
+    const uint32_t addressId = 40557u;
     VersionDbPtr<TDestroyMouseSprings> destroyMouseSprings{addressId};
     if (!destroyMouseSprings.Get())
     {

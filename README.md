@@ -27,7 +27,7 @@ The current public build is **STRE `0.4.0-alpha.1`**.
 
 Download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
 
-The current alpha installation target is Steam Skyrim Special Edition runtime `1.6.1170` on Windows x64. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
+The sole future development target is Steam Skyrim Special Edition `1.7.104.0` on Windows x64. Historical `0.4.0-alpha.1` targets `1.6.1170`; its results are not 1.7 validation. See the installation guide and STATUS for the bounded development test scope. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
 
 ## Current capabilities
 

@@ -12,6 +12,7 @@
 #include <Services/RemoteRespawnLab.h>
 #include <Services/CampaignService.h>
 #include <Services/CampaignRuntimeGateService.h>
+#include <Runtime/NativeContracts.h>
 #include <Services/TransportService.h>
 #include <Services/PapyrusService.h>
 #include <Messages/NotifyCharacterBuildState.h>
@@ -425,7 +426,8 @@ void Tick(World& aWorld) noexcept
             Log(intent, "recovery-lock-terminal");
             continue;
         }
-        if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0")
+        if (!STRE::Runtime::SupportsQualifiedNativeAccess(
+                VersionDb::Get().GetLoadedVersionString(), STRE::Runtime::NativeContract::LocalSeating))
         {
             Log(intent, "pending-runtime-unsupported");
             continue;
@@ -520,7 +522,7 @@ void Tick(World& aWorld) noexcept
             }
             RemoteSeatingProbe::Binding(aWorld, intent.Server, intent.Revision, index, actor);
             Log(intent, actor ? "remote-network-animation-only" : "pending-actor");
-            // TESFurniture::Activate on 1.6.1170 only accepts the native local
+            // TESFurniture::Activate on the qualified runtimes accepts only the native local
             // PlayerCharacter. Remote presentation belongs to STR's action stream.
             continue;
         }

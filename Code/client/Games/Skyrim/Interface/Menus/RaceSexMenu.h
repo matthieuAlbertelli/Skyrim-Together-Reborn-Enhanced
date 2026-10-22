@@ -4,6 +4,7 @@
 #include <Interface/IMenu.h>
 #include <Interface/MenuEventHandler.h>
 #include <RTTI.h>
+#include <VersionDb.h>
 #include <cstddef>
 #include <type_traits>
 
@@ -29,7 +30,8 @@ static_assert(sizeof(RaceSexMenuLayout) == 0x140);
 
 [[nodiscard]] inline const RaceSexCamera* GetRaceSexMenuCamera(IMenu* apMenu)
 {
-    if (!apMenu)
+    // A resolved RTTI ID does not attest the embedded camera offset.
+    if (VersionDb::Get().GetLoadedVersionString() != "1.6.1170.0" || !apMenu)
         return nullptr;
 
     const auto* const pMenu = Cast<RaceSexMenu>(apMenu);

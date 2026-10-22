@@ -1,13 +1,599 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 18, 2026.
+> **Last updated:** October 22, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## Runtime17TwoPc main-source support — local fixtures only
+
+The DEV helper now accepts only `feat/skyrim-1.7-runtime` and attached `main`.
+Main must match a valid `origin/main` commit exactly; the operator must fetch
+explicitly before use. Both branches retain official-origin, clean source and
+submodules, exact runtime/SKSE and `runtime17-<full SHA>` build-identity gates,
+including optional ExpectedCommit. The separate Modding authoring policy is
+unchanged. See [source/receipt rules](../development/RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts).
+
+Original experimental receipts remain usable with their unchanged configuration,
+without relabeling the compiled source or weakening configSha256. Main receipts
+record their own branch/SHA; verification may record a later permitted HEAD.
+Frozen manifests, file hashes/sizes, protected INIs, destination identities and
+backup/restoration checks remain in force. Source selection remains explicit
+through `config.repository`; the [post-integration procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md#selecting-main-after-integration)
+uses a separate private main configuration and preserves the experimental one.
+
+Validation: **72 local fixture cases PASS** (45 retained + 27 additional),
+including the full simulated main build/snapshot/A-B staging/human-deployment/
+Verify cycle, historical experimental Verify/RestoreStaging/VerifyRestored,
+and negative provenance, manifest, protected-file and configuration-pin cases.
+The two modified PowerShell files parse without errors; diff whitespace,
+73 local document link paths and two new anchors pass. The 71 baselined local
+receipt/configuration/primary-entry/status files are byte-identical. Evidence
+is retained separately in ignored `_audit/runtime17-main-support-20261022/`.
+Compiler, process guard and human deployment are simulated; Git and filesystem
+checks use disposable local fixtures. No editor, game or real build is run.
+
+No private entry/configuration, existing receipt, installed content or primary
+checkout was changed. **No real main deployment or human A/B acceptance of this
+route has occurred.** Existing Solo/multiplayer/presentation acceptances retain
+their own candidates, including installed presentation `53530e69`. Recovery,
+partially unqualified multiplayer World Sync, DialogueProgress Valen, the waived
+untested CK write cycle and private-intro redistribution remain independent
+limits. #99/#86/#91/#96 are not closed by this increment.
+
+## Historical Steam 1.7.104 integration review — offline checks, no publication during review
+
+The review started at `870f640ff4cd65cf7caaa731474cbffd5cadc824` on
+`feat/skyrim-1.7-runtime`. After an authorized fetch, `origin/main` and the
+merge-base were both `071f7573d7d86d96dbd20e5ee6f2cbf2300d56b7`: 24 local
+unpublished commits ahead, none behind. The four submodule references and
+GameFiles were unchanged. Review corrections through `c43f71a2` were documentary
+only; the later main-source helper adaptation is recorded separately above.
+
+At that source HEAD, **234 Python tests**, **76 simulated Modding safeguards**,
+**45 Runtime17TwoPc fixture cases**, and the **697-entry packaging audit PASS**.
+Initial sandbox permission failures and a deep-output-path hardlink failure are
+retained alongside successful isolated reruns. No real deployment, editor,
+game/server, AutoMod or Papyrus execution occurred in this review.
+
+Retained Debug/releasedbg receipts still belong to `b5665aa4` (462 TPTests /
+49,390 assertions each); all tracked Code/Libraries/root-xmake inputs are
+unchanged since that source. At this review, tool sources were unchanged since `e1888015`.
+This correspondence is not a new build or a relabeling of old binaries.
+Existing local A/B receipts consistently identify multiplayer `98f1d35c` and
+later presentation `53530e69`; no remote destination or gameplay log was read.
+
+The ignored review dossier is `_audit/runtime17-final-review-20261022/`.
+At this review Runtime17TwoPc still required its experimental branch, motivating
+the subsequently authorized [main-source adaptation](../development/RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts)
+recorded above. The ordinary build was not branch-restricted. Recovery,
+multiplayer World Sync, unreported creation permutations, #91/#96 follow-up,
+production authoring and intro redistribution retain their independent limits.
+No push, PR, CI dispatch, merge, release or issue closure occurred.
+
+## Steam 1.7.104 content tools — CLI, xEdit fixture and CK inspection PASS; CK write test waived
+
+The existing migration worktree's exact historical `1.6.1170.0` preflight was
+adapted to **1.7.104.0 only**. Inspection/Papyrus discovery do not require xEdit;
+preparation/import keep their editor identity, clean feature branch, origin/main
+ancestry, immutable source and human-validation gates. AutoMod now runs its
+inspected prebuilt DLL directly, without MSBuild/restore. New receipts bind the
+runtime path/version/hash; historical or changed-runtime receipts cannot be
+silently reused. Network/reparse paths, denied access and wrong record types
+remain blocking. No plugin-format/bytecode migration or production authoring.
+
+| Independent verdict | Evidence |
+|---|---|
+| Inventory / provenance | File versions/hashes observed; historical AutoMod/xEdit binary continuity verified. **Partial provenance**: AutoMod extraction has no Git commit, no new exact release-archive verification; metadata is not publisher authentication |
+| Wrapper/preflight protections | **76 simulated PowerShell cases PASS**, plus **21 matrix preparation**, **21 matrix import**, **9 presentation**, **19 navigation** guard cases; **59 targeted Python tests PASS** |
+| Real AutoMod fixture | **PASS**: actual prebuilt CLI dry-run preserves bytes, then writes/rereads GLOB `STRE_ToolchainFixture`, float 7.25, with expected `HUMAN_XEDIT_REQUIRED` stop. Full `-RealTools` suite: **78 PASS** (76 simulated + 2 real). AutoMod removed unused masters; the maintainer subsequently completed their normalization on this independent fixture only |
+| Real Papyrus compilation | **PASS**: wrapper status first, then two real compiler/assembler runs (minimal script and Quest/Actor/SKSE/project imports), exit0, empty stderr, zero errors/warnings, two private PEX with Skyrim 3.2/game-ID-1 header; **14,416 tool/import inputs unchanged** |
+| xEdit | **Maintainer-attested human PASS on the independent fixture only**, xEdit **4.1.5f**: GLOB `STRE_ToolchainFixture`, Float 7.25; Skyrim.esm, Update.esm, Dragonborn.esm added/sorted; saved and reopened; Check for Errors reports no errors. Fixture logs corroborate the bounded cycle; no production plugin is qualified |
+| Creation Kit read-only inspection | **Maintainer-attested human PASS**, CK **1.6.1378.1** on Steam Skyrim **1.7.104**: startup, Skyrim.esm loaded with no active file, TimeScale inspected (Short, 20, Constant unchecked), Cancel, normal exit without saving. MASTERFILE warning for AutoLoadDoor01 / YngolBarrowExterior reported non-blocking in this run |
+| Creation Kit creation/write/save/reopen | **NON TESTÉ / dispensé par décision du mainteneur** for the independent fixture cycle; not a PASS and not an automatic prerequisite for the migration PR. Production authoring remains unqualified |
+| Production authoring/import/deployment | **NOT EXECUTED** |
+
+Observed tools: Skyrim **1.7.104.0**, CK **1.6.1378.1**, Papyrus compiler
+**1.0.0.0**, AutoMod CLI **1.0.0.0** (local changelog is not its binary version),
+xEdit resource **4.1.5.0**, .NET runtime **8.0.32**, SDKs **8.0.426/10.0.204**.
+No tool update or reactivation. The initial Vortex guard stop is historical;
+after the maintainer confirmed closing it, the unchanged guard passed and the
+real CLI trials ran. No maintainer process was controlled or stopped by Codex.
+
+The initial read-only hash check matches the installed accepted `53530e69`
+candidate's **293 native/UI + 914 contents**. The **14 WAV + 2 PSC** existing
+Git/Data differences remain untouched and do not block fixtures.
+After the real CLI trials: **16,603 protected local paths unchanged**, plus
+**114 additional tool/source inventory rows unchanged**. Existing
+Solo/multiplayer/presentation PASS, Runtime17TwoPc and server/plugin policy are
+unchanged. No gameplay logs were requested/reanalyzed or Pc-vero accessed.
+The maintainer reports final fixture SHA-256
+`5D942F230B3E4C279270F9B12ECC0C8FC6ECC7E84C571AC4053BCB2D6A988349`.
+Codex read only this fixture's existing handoff/logs for corroboration; the final
+ESP hash is maintainer-supplied, not independently recomputed in this documentary
+follow-up. The logs confirm the private Data path, 4.1.5f, master addition/sort,
+save, subsequent load, and two error checks reporting zero errors. The GLOB's
+EditorID/type/value remains the maintainer's observation.
+The [acceptance record](../audit/2026-10-22-runtime-1.7-toolchain.md#maintainer-acceptance-xedit-fixture-cycle)
+preserves both log hashes and the original unnormalized AutoMod candidate.
+No `validation.json` or importable attestation is fabricated. The subsequent
+[CK read-only acceptance](../audit/2026-10-22-runtime-1.7-toolchain.md#maintainer-acceptance-creation-kit-read-only-inspection)
+is the maintainer's observation; Codex did not launch CK or inspect CK logs for
+that follow-up. Its warning is retained, not diagnosed or declared universally
+harmless. No creation, modification, save or plugin-reopen PASS is inferred.
+The [future CK fixture write protocol](../development/MODDING_TOOLCHAIN.md#future-human-creation-kit-fixture-write-cycle)
+is retained as an optional procedure only. During the final integration review,
+the maintainer explicitly chose not to run further CK write/save tests. This
+dispensation does not qualify creation, modification, saving or reopening, and
+does not waive production authoring/xEdit/import gates. No fixture was created or
+installed. The read-only human PASS remains unchanged; #99 remains open.
+
+## Steam 1.7.104 presentation — maintainer-attested human PASS
+
+Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).
+The maintainer replies **« tout est PASS »** to the progressive A-D presentation
+trial. **Human PASS** is recorded for the reported startup presentation/menu and
+normal exit, intro/audio/natural end/skip and restored controls/cursor, Solo
+return without intro replay, and the reversible vanilla fallback trial.
+The tested presentation includes its animated background, branding/native text
+and music. This is the maintainer's observation, not Codex visual or log analysis.
+
+The latest retained local run with **both A/B `INSTALLED_VERIFIED`** is
+`20261022T155401Z-f46fbf42929c4d879f6e8be78f82bb05`. Its compiled source is
+**`53530e6956205f20960e1113a04e661a0e0362f9`**, identity
+`runtime17-53530e6956205f20960e1113a04e661a0e0362f9`, attempt
+`e63bdb47eea243499db5fc9af98d4852`. The main receipt, manifest, build layout
+and both verification records agree; A/B each match the 1,207 recorded entries
+(293 native/UI and 914 managed contents). Codex read these local JSON records
+only, without checking either installation or accessing Pc-vero. This is the
+deployment reference for the attestation, not a measured runtime-session trace.
+The earlier offline candidate `b5665aa4` remains evidence for its own builds.
+
+The response does not specify a controller, resolution/aspect matrix, focus
+permutation, language/binding variants or all corrupt/missing-media cases. No
+separate PASS is inferred for those optional/broader permutations, nor for
+presentation on each PC individually. No new log verification is claimed for
+this presentation session and no logs, captures or repeated trials are requested.
+The previous multiplayer PASS and its maintainer-checked-log attribution remain
+unchanged; this does not extend World Sync or crash/recovery acceptance.
+
+See the [dated follow-up and receipt fingerprints](../audit/2026-10-22-runtime-1.7-presentation.md#follow-up-maintainer-human-acceptance)
+and [A-D scope](../features/main-menu/TEST_PLAN.md#progressive-human-trial-on-17104).
+Intro music redistribution clearance and CK/AutoMod requalification remain
+independent requirements. #99 and #86 stay open. This consolidation changes
+documentation only: no rebuild, deployment, remote audit or application launch.
+
+## Earlier Steam 1.7.104 presentation port — offline candidate (2026-10-22)
+
+This earlier handoff is retained as historical build evidence. Its pending
+human verdicts below are superseded only within the A-D attestation above.
+
+**Implemented, statically qualified and compiled/tested offline; human visual,
+audio and native-input acceptance is still pending.** Refs #99 / #86.
+Compiled source **`b5665aa41fb85fa71251e68a38fa82c9962c687c`** on
+`feat/skyrim-1.7-runtime`, identity
+`runtime17-b5665aa41fb85fa71251e68a38fa82c9962c687c`. Subsequent documentation
+HEADs are distinct from this compiled source.
+
+O02 now has targeted exact 1.7.104 binary/source evidence. MainMenu messages,
+MainMenu/CursorMenu draw slots, both music call sites and the GFx/native-text
+interfaces are qualified; the existing B05 renderer and C09 input seam are reused.
+The adapter admits only 1.7.104.0, verifies original methods and every music-call
+byte/target/range, then acquires all patch permissions before committing. Failed
+preflight/acquisition preserves originals; no second input/render hook is added.
+The 18 mandatory contracts and campaign/server admission rules are unchanged.
+
+| Component | Current implementation / evidence | Skyrim 1.7 acceptance |
+|---|---|---|
+| Intro, audio, natural end and skip | Existing MF player, bounded policy and keyboard/gamepad bindings enabled through the qualified adapter; offline policy/media cases PASS | Visual playback, audible audio and actual keyboard/controller routing pending |
+| Animated silent background | Existing decoder/DX11 sharing, native draw order and no-replay return policy retained; offline frame/EOS/loop tests PASS | In-game composition, focus/resize and Solo return pending |
+| Prompt and localized subtitle | Exact-target GFx/movie/device interfaces; native Esc/Space/font resources inspected; localization tests PASS | Native text/art rendering pending; failure omits only the affected text |
+| Branding/backdrop | Existing assets/design unchanged; three shipped PNGs decode in WARP; layout/alpha policy tests PASS | Visual review pending |
+| Music | Both exact music-trigger calls validated; original calls resume outside the intro-audio lease | Actual music/audio transitions pending |
+| Cursor and input | Native cursor draw gate and existing MenuControls interception retained; held-input/fallback/transaction tests PASS | Native cursor and control restoration pending |
+
+**Debug and releasedbg compile/link PASS** for client/launcher and matching
+server artifacts. Both full TPTests runs pass **462 cases / 49,390 assertions**;
+each explicit `[main-menu]` run passes **30 / 1,380**, `[main-menu-media]`
+**2 cases** (749/750 assertions), and `[main-menu-branding-assets]` **1 / 13**.
+All commands exit0, with nonzero cases for every filter. **234 Python tests PASS**
+after a sandbox temporary-directory permission failure and local retry; read-only
+CK packaging audit PASS (697 managed entries). No game or server was executed.
+
+Each mode has a fresh short compiler directory, a private 293-file native/UI
+package and a verified embedded client/server identity. The
+[dated proof and receipts](../audit/2026-10-22-runtime-1.7-presentation.md)
+retain commands, exit codes, hashes, exact ABI evidence and test limits.
+These candidates are ready for maintainer trials, **not deployed or accepted
+in Skyrim**. Use a whole same-build set; do not mix with the historical server.
+
+Installed presentation INIs/background/branding match the existing sources;
+no content/configuration change is needed. The known intro is present locally
+on A for private QA and remains uncleared for distribution: it is excluded from
+Git, the common payload and B synchronization. Po3 coexistence and workflow
+routing remain unchanged. The maintainer alone runs the existing
+`pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc` and the
+[progressive A-D trial](../features/main-menu/TEST_PLAN.md#progressive-human-trial-on-17104).
+That command rebuilds, so its future receipt must identify its actual candidate.
+
+The two-player human PASS below and its logs-checked-by-maintainer attribution
+remain intact; no multiplayer journal was reanalyzed. CK/AutoMod, unrelated
+optional dialogue/diagnostic paths and broader World Sync/recovery reserves
+remain independent. #99 and #86 stay open. **STOP before deployment/launch.**
+
+## Steam 1.7.104 two-player acceptance — maintainer attestation
+
+Recorded on **2026-10-22** (documentation date, not an inferred test timestamp).
+**Human PASS**, performed and attested by the maintainer for the reported
+two-player path: admission/lobby, character creation, reciprocal appearances,
+seating, movement, and saving/loading. **The maintainer also confirms checking
+the logs; Codex did not analyze or reanalyze those gameplay logs.**
+
+| Reported scenario | Accepted result and evidence |
+|---|---|
+| Admission / lobby | Human PASS for the reported two-player admission/lobby path |
+| Character creation | Human PASS for the exercised creation path |
+| Reciprocal appearances | Human PASS for the appearances observed by the two players |
+| Seating and movement | Human PASS for the reported seating and movement |
+| Saving and loading | Human PASS for the reported save/load operations; no crash/disconnect recovery scenario was specified |
+
+Candidate identification comes from the **latest local run with both installations
+recorded as `INSTALLED_VERIFIED`**:
+`20261022T135344Z-640fb9658dc74afb96a0a312896b6fa2`.
+Its compiled source is `98f1d35ccd04d14e778e772384f35ae9d87c79ef`, identity
+`runtime17-98f1d35ccd04d14e778e772384f35ae9d87c79ef`. The main receipt and A/B
+verification records share attempt `f5d35ed19f0042c3afb6e6775bbcd000`; both record
+the same 1,207 manifest entries (293 native/UI plus 914 installed-A contents).
+Codex checked these existing **local receipt records only**, without accessing
+either installation or Pc-vero. This is not a fresh destination or runtime audit.
+Earlier compiled SHAs below remain evidence for their own historical candidates.
+
+No test time, technical event chronology, race/class matrix, role permutation or
+opposite creation-completion order is inferred. Saving/loading does **not**
+qualify recovery after a crash, disconnect or restart, nor coordinated restoration
+of a committed `CampaignCheckpoint`. This attestation does not qualify the full
+M0-M4 protocol, additional Valen scenarios or World Sync manipulation/interruption.
+ADR-0018 and the native-plugin admission policy remain unchanged.
+
+**Independent reservations at this milestone:** STRE intro/custom-menu
+presentation still needed its 1.7 port (the later presentation milestones above
+record the offline port and scoped human acceptance); CK/AutoMod must be requalified before authoring.
+This scoped milestone does not complete the whole migration or justify closing #99.
+See the [dated attestation and candidate receipt evidence](../audit/2026-10-22-runtime-1.7-multiplayer-acceptance.md)
+and [issue #99](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/99).
+
+The earlier dated 1.7 milestones below retain their original evidence and limits.
+Their statements about multiplayer not yet being tested describe those earlier
+milestones; the scoped current acceptance is recorded above.
+
+## Two-PC DEV workflow preparation (2026-10-22, Refs #99)
+
+**Implemented and validated on local fixtures only.** The tracked helper extends
+the lot-4 explicit worktree/xmake route with clean source/submodule checks, a
+dynamic SHA-256 package, both-destination preflight, native/UI backups, hardlink
+protection, a human Vortex handoff, actual-installation verification and guarded
+restoration. The ignored personal entry now exposes `-Runtime17TwoPc`; ambiguous
+no-mode invocation fails. The later correction below adds explicitly scoped
+installed-main-PC content synchronization. CK import and external native
+dependency copying remain excluded. See the [operational procedure](../development/RUNTIME_1_7_TWO_PC_DEV.md)
+and [dated evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md).
+
+Historically, the initial 27-case PowerShell suite passed on local fake A/B installations, including
+wrong branch/commit, stale artifact, missing/inaccessible destinations, invalid
+manifests, CK divergence, hardlinks, partial-copy recovery and restoration
+refusals. The compiler and human Vortex steps were simulated. Real entry WhatIf
+performed no destination IO. The retained 293-file candidate and 914 repository
+content hashes remain verifiable against the earlier accepted references.
+
+The subsequent human preflight exposed an incorrect INI path in the helper:
+`SkyrimTogetherReborn/STServer.ini` instead of `SkyrimTogetherReborn/config/STServer.ini`.
+The correction now requires the installed configuration for policy verification,
+records an optional staging copy's presence/hash, and distinguishes absence from
+denied access or IO errors. Better Grabbing policy and configuration preservation
+remain blocking checks. **33 local fixture cases PASS**, including a complete
+simulated deployment with no staging INI. Read-only inspection confirmed both
+main-PC INIs under `config/`, identical hashes and unchanged contents; no INI was
+created, copied or edited. See the [same-day correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#same-day-ini-path-correction).
+
+The next human attempt exposed the old preflight's content-hash gate on a Valen
+WAV in B staging. The workflow now builds native/UI from the experimental
+worktree, captures an independent snapshot of the **managed contents installed
+on A**, plans identical/replace/create per manifest path, and copies the same
+candidate to both stagings. The pinned reference defines content scope; historical
+content hashes no longer veto an initial destination difference. Source stability,
+post-copy hashes, external dependencies and INI protection remain blocking.
+Per-file journals retain partial progress; guarded restoration prepares each PC's
+pre-run installed bytes for human Vortex redeployment, even when its original
+staging differed. Out-of-manifest files are preserved, including old UI bundles.
+**42 local fixture cases PASS** (compiler/Vortex simulated), covering WAV provenance,
+source/copy/final-hash failures, hardlinks, private data and recovery. See the
+[content synchronization correction evidence](../audit/2026-10-22-runtime-1.7-two-pc-workflow.md#installed-main-pc-content-synchronization-correction).
+
+**The workflow preparation above performed no real compilation or deployment.
+The compiler-only correction below adds native-build evidence. Pc-vero remains
+NON AUDITÉ PAR CODEX**, with no incompatibility inferred. The maintainer supplied
+its actual installed-game share after preparation; the private JSON was updated
+without probing that share. The maintainer owns any later two-PC execution.
+No agent application launch, access to that PC, runtime smoke, admission, World
+Sync or multiplayer validation follows from these changes.
+
+## Runtime17TwoPc native build-path correction (2026-10-22, Refs #99)
+
+**Confirmed C1083 cause and real native build PASS.** A new long-output reproduction
+failed on `SEMemoryBlock.cpp`. Holding all other compiler arguments constant, the
+relative `/Fo` failed while the same absolute output passed: the path spells 267
+characters before collapsing `..`, versus 253 after resolution. This is not an
+empty output argument or a universal 253-character path limit.
+
+The corrected helper allocates a short unique local build directory and records
+receipt/builddir/commit links without moving source or historical receipts. It
+preserves path/identity guards and gives pre-copy failures a new-execution message
+instead of destination-restoration advice. **45 fixture cases PASS**. On clean
+code commit `d2fee200399af846a41c06657b0901920b125a13`, the corrected build helper
+then compiled and linked all default native targets and packaged to a new local
+receipt: **293 native/UI files verified**, matching client/server/BuildInfo
+identity. Compiler-generated objects, headers, PCHs, PDBs and final outputs were
+checked. Existing warnings remain; no native/gameplay test executable was run.
+
+The original failed run's 73 files remain unchanged by size/hash. No content
+capture, staging, real deployment or Pc-vero access occurred. The private config
+now selects `C:\STRE-R17`; the normal user command is unchanged. See the
+[diagnosis and native-build evidence](../audit/2026-10-22-runtime17-c1083-build-path.md)
+for controlled comparisons, compiled provenance and correct resumption.
+
+## Better Grabbing 2.0 main-PC Solo qualification (2026-10-21, Refs #99)
+
+**Three independent PASS results on the main PC: DLL/provenance, SKSE loading,
+and human Solo manipulation.** The maintainer installed/deployed the official
+2.0 package and performed the smoke; Codex inspected files and logs without
+launching or controlling applications. The
+[dated evidence](../audit/2026-10-21-better-grabbing-2.md) records the Nexus
+download/install chain, exact archive/DLL hashes, runtime capture and limits.
+
+| Independent verdict | Evidence/result |
+|---|---|
+| DLL/provenance | PASS: Nexus mod 134769/file 806222; archive, staging and deployed DLL match; PE version 2.0.0.0; explicit Address Library V5 declaration |
+| SKSE loading | PASS: SKSE 2.3.1 reports BetterGrabbing.dll 02000000 loaded correctly, handle 1; fresh plugin log identifies 2-0-0-0 and Plugin loaded; no Address Library/runtime compatibility error in these logs |
+| Solo manipulation | Human PASS: menu, validated save, hold-E grab, translation, rotation, release, subsequent character/camera/interactions and normal Quit; logs corroborate loading, not each object transform |
+| Multiplayer admission / World Sync | NOT TESTED on 1.7; these static/runtime/Solo results do not qualify them |
+
+The only active SKSE plugin DLL is the inspected 2.0 binary. Vortex reused its
+old `1-17` staging directory name when replacing the files; the retained 1.17
+download has different DLL bytes and is not active. All 293 STRE payload files,
+914 accepted installed content files and three EXE/SKSE/AL inputs still match
+the accepted receipts. Installed `sRequiredNativePlugins=BetterGrabbing.dll`
+is retained. Postflight also preserves the DLL, its configuration and server
+policy hashes. No STRE code, deployment, policy or save was changed by the agent.
+No second-PC operation or multiplayer launch has been performed or authorized.
+
+The smoke's new client segment is 12:40:14.219-12:41:19.204 Europe/Paris;
+SKSE/plugin initialization and an ordinary Solo Continue/load are corroborated.
+Normal Quit is human-attested, with no inferred exit code. Retained diagnostics
+are the existing Discord error 4, animation warnings, disabled intro/menu guard
+and CEF diagnostics; none is an Address Library/plugin-loading failure.
+
+## Steam 1.7.104 Solo gameplay acceptance (2026-10-21, Refs #99)
+
+**Scoped Solo PASS, performed and attested by the maintainer.** New Game /
+Alternate Start reaches the STRE inn; RaceMenu and creation work; local sitting,
+walking to Valen/opening dialogue, and save/reload were reported successful.
+The [lot-5 audit](../audit/2026-10-21-runtime-1.7.104-lot5-solo.md) separates
+that report from captured technical evidence and records the remaining limits.
+Compiled identity remains `runtime17-efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7`;
+all 293 deployed files, three EXE/SKSE/AL inputs and 914 installed content files
+still match the accepted lot-4 receipts. No code, binary, content or policy change.
+
+| Functionality | Human attestation | Technical evidence | Accepted scope |
+|---|---|---|---|
+| New Game / Alternate Start | PASS, arrival in inn | Fresh stage-20 gate, offline Solo authorization, correct creation cell/marker | PASS for this Solo run |
+| RaceMenu / creation | PASS | Open at 11:49:05.766, close at 11:49:12.218 | PASS for the exercised flow; race/sex matrix untested |
+| Character Build applied | Creation reported | `class.thief`, BuildVersion 5, three selections, local application complete, level 1, 11 resolved item grants, five equipment entries, zero class spell grants | PASS for this local Thief build; exhaustive kits/attributes/spells and final visual fidelity untested |
+| Local seating | PASS | One MoveTo, one Activate, entry confirmed, terminal observation closure; no subsequent seating trace in the captured segment | PASS for Solo Marker01/Seat01 |
+| Controls after creation | Walking to/interacting with Valen reported | Controls unlocked | Limited PASS; intermittent control loss is not proven permanently fixed |
+| Valen dialogue | Access/opening confirmed | Local Thief class projection stage 114; no dialogue-navigation event captured | Limited human PASS; branches, conditions, skip and closure not comprehensively tested |
+| Save / load | PASS | Quick-save boundary, same SKSE co-save written/read, native loading completion, matching `.ess`/`.skse` pair present | PASS for this save/reload; original reload UI route not established |
+| Continue | PASS, intended save loaded | Later MainMenu.Continue event, exact quick-save target resolved as Ordinary/AllowVanilla, SKSE co-save read and native loading completion | PASS for the exercised ordinary Solo Continue path |
+| Solo persistence | PASS: appearance, equipment, spells, creation state and dialogues retained | Same save target/co-save and completed native load corroborated; no per-property comparison in logs | Human PASS for the checked character; not an exhaustive class/race/sex or dialogue matrix |
+| Multiplayer / collective recovery / World Sync | Not tested on 1.7 | Solo evidence cannot qualify these | NOT TESTED |
+
+The new client-log segment is 11:48:43.897–12:01:26.821 Europe/Paris, with one
+observed initialization sequence; no PID, exit code or second process is inferred.
+Seat entry is confirmed at 11:49:18.908 and observation ends at 11:49:23.911
+(`sinceEnterMs=5005`, `actionsDropped=0`). No repeat activation/observation loop
+appears after closure in this capture. The ordinary reload completes at
+11:52:13.576; this does not prove Continue or collective restoration.
+
+No gameplay failure was reported or demonstrated by these logs. Retained
+diagnostics include the successful native UI queue fallback for RaceMenu,
+Discord error 4, animation-signature warnings and CEF CPU/GCM/configuration
+messages. Optional `DialogueProgress` and intro/custom menu remain disabled by
+their historical runtime guards. The old SkyUI Show All Saves compatibility
+problem remains separate and is not cleared by this quick-save/reload.
+
+The later [Continue/persistence capture](../audit/2026-10-21-better-grabbing-2.md#additional-solo-attestation-and-corroboration)
+adds explicit human acceptance of the intended save and all listed properties.
+Continue is observed at 12:20:25.347, its target resolved at 12:20:25.513 and
+native loading completed at 12:20:28.069 Europe/Paris. This session precedes
+the Better Grabbing 2.0 installation and is not plugin-loading evidence.
+
+The [manual protocol](../features/alternate-start/TEST_PLAN.md#steam-17104-manual-qualification-sequence)
+retains the repeatable Solo check and preparation of two fresh roster-2 completion
+orders. Continue/persistence and Better Grabbing's main-PC runtime/Solo smoke
+have now been exercised as scoped above. Future A/B/server consistency and
+actual admission remain prerequisites before multiplayer testing. No policy
+bypass or second-PC deployment is authorized by this preparation. ADR-0018
+is unchanged.
+
+## Steam 1.7.104 local DEV main-menu acceptance (2026-10-21, Refs #99)
+
+**PASS: official launcher to usable vanilla main menu, keyboard/mouse and
+normal Quit (exit0).** The maintainer supplied visual/input acceptance because
+Computer Use denied application access. STRE intro/custom presentation remains
+**disabled** by its historical1.6 guard; this is not custom-menu acceptance.
+The [resumed lot-4 evidence](../audit/2026-10-21-runtime-1.7.104-lot4-resume.md)
+owns chronology, hashes, local workflow and limitations.
+
+Steam1.7.104.0 is the sole future development target by maintainer decision;
+the ordinary main-PC Windows/Steam/Vortex environment and normal profile writes
+are authorized. This supersedes the earlier isolation prerequisite below.
+The branch remains separate from main. CK/AutoMod requires1.7 requalification
+before authoring; no guard/ABI or native source changed in this resumed lot.
+
+Compiled source `efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7`, identity
+`runtime17-efdeab46623fbd25fafa5c8a7fa7e0cb4ebebda7` in both client and server.
+The actual DEV entry routes explicitly to the worktree, uses fresh output
+directories and excludes CK import/remote deployment. It is a local ignored
+script modification, not a versioned tool change. All293 deployed file hashes
+match the new candidate at the actual game destination, including51 UI files.
+Sixteen divergent installed content files were preserved/backed up; all914
+content files remain unchanged. Two obsolete test executables were archived
+and removed; no extra root executable/DLL remains in the runtime directory.
+
+Exact EXE1.7.104/SKSE2.3.1/AL hashes still match lot3. The maintainer disabled
+the old Better Grabbing, CCExtender and CKPE proxy through Vortex; zero SKSE
+plugin DLLs and no root winhttp proxy remain. The live module list confirms
+SKSE1.7.104, deployed EarlyLoad/libcef and Windows SYSTEM32 WINHTTP. SKSE reports
+`init complete`; native UI registration and `MAIN_MENU_ENTERED campaign=none`
+are logged; CEF requests installed UI resources. One launch, no startup fix or
+retry. Non-blocking Discord/CEF/animation diagnostics are retained in the audit.
+
+Full TPTests **459 cases/49,287 assertions PASS**, Python **234 tests PASS**,
+and three local routing rejection checks PASS. Bounded preservation verified
+12,613 records, with nine expected deployment/profile metadata/log changes;
+historical artifacts, saves/state, primary checkout/main and its pre-existing
+dirty STATUS remain preserved. No matching crash event/new dump or residual
+game/CEF process was found after exit in the inspected scope.
+
+During resumed lot 4, no solo, multiplayer, Valen, creation/appearance/seating,
+native save/load or campaign recovery test ran. No server, Pc-vero, push, PR,
+manual CI, merge or release. Historical1.6 results do not establish1.7 compatibility.
+That execution stopped after the vanilla menu; subsequent Solo evidence is
+recorded separately above and does not qualify custom presentation or multiplayer.
+
+## Steam 1.7.104 isolated-startup preparation (2026-10-20, Refs #99)
+
+Lot 4 has explicit authorization for an isolated main-PC main-menu smoke.
+**Preflight BLOCKED before launch; runtime smoke NOT RUN**, not a runtime FAIL.
+The [dated evidence](../audit/2026-10-20-runtime-1.7.104-lot4.md) establishes that
+the existing launch path shares Windows Documents/AppData and the launcher's
+HKCU selection: `--exePath` persists TitlePath/TitleExe, path routing only
+changes CWD/DLL directories/PATH, and SKSE writes under CSIDL_MYDOCUMENTS.
+General launch permission is not missing; a verified independent profile is.
+
+The exact three lot-3 input hashes, six binary hashes and 51 UI hashes match.
+Compiled source remains `b07bf205adc5bb3693d079ad2dc854e9c57ac59b`, identity
+`runtime17-b07bf205adc5bb3693d079ad2dc854e9c57ac59b` in client and server.
+All seven prior commits and their receipts are retained; no rebuild, gate,
+gameplay, protocol or content change. The 18 static qualifications remain valid
+for the same inspected bytes; no new engine compatibility is established.
+
+Executed offline: 12 TPTests cases / 3,421 assertions PASS; 7 bootstrap source
+checks PASS; 4 SKSE resource checks PASS using exact extracted production
+function bodies and private fixtures (no DLL execution); 16 assembled main-menu
+package checks PASS. An independent payload contains 1,205 files / 824,987,268
+bytes, including the exact three client binaries, UI, CEF/Discord dependencies
+and unchanged tracked Data. All copies have matching SHA256, one hardlink and
+no symlink/junction ancestors. No full game, effective load order or Windows
+test account was provisioned; this is an offline payload, not a deployment.
+
+Installed BetterGrabbing resource0.1.12.0 and CCExtender fixed resource1.12.0.0
+are statically predicted to be rejected by the exact SKSE2.3.1 V5 metadata
+policy. The installed `winhttp.dll` imports CKPE.dll and is another source
+contamination risk. These files are untouched and excluded from the payload.
+No multiplayer Better Grabbing admission requirement was relaxed.
+
+The automatic receipt has 14 offline PASS checks and 5 blocked environment/
+isolation conditions, with `launch_allowed=false`. No Skyrim/STRE/SKSE-loader/
+server process, native initialization, visible menu, input or normal-exit
+acceptance exists for this lot. No user visual attestation was requested or
+invented. The precise remaining preparation is a separate maintainer-provisioned
+Windows test profile and coherent legitimate Steam environment on this PC,
+followed by a fresh preflight. See the [runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md)
+and [menu-only procedure](../features/main-menu/TEST_PLAN.md#first-main-menu-only-runtime-gate).
+Save/Continue, creation, appearance, seating and campaign tests remain outside
+the authorization and unvalidated on 1.7.
+
+Receipts: `_audit/rt17-lot4/DELIVERY.md`, `inputs.json`,
+`candidate-verification.json`, `packaging-manifest.json`, `preflight.json`,
+host/path/plugin inventories and protected before/after comparison. All 11,360
+protected file records match; metadata for 21,087 installed files and the
+226-file profile set also match. Registry selection, prior artifacts, primary
+dirty STATUS and main remain preserved within that bounded scope. No shared profile
+redirection, production/Vortex/Pc-vero deployment, Steam update, push, PR,
+manual CI, merge or release occurred.
+
+## Steam 1.7.104 static native qualification (2026-10-20, Refs #99)
+
+Lot 3 continues `feat/skyrim-1.7-runtime` from
+`90da92ccdb097d2520b86631ce42e0e56fc455d6`, retaining all five earlier local
+commits and their artifacts. The maintainer deliberately updated Steam and
+activated SKSE before this lot. Independently copied Skyrim 1.7.104.0,
+SKSE 0.2.3.1 and matching AL104 were inspected without executing the game.
+Exact paths/hashes, native instructions, ownership boundaries and divergences
+are recorded in the [lot-3 audit](../audit/2026-10-20-runtime-1.7.104-lot3.md).
+
+The [finite register](../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) now has
+**18/18 mandatory static qualifications**: ten ExactSource from lot 2 and eight
+ExactBinary (B02/B03/C06/C07/C08/C09/C12/C13). Consequently the unchanged
+`NativeAdmissionReady(NativeContracts)` expression evaluates true. This prepares
+an experimental candidate for a separately authorized smoke; **no 1.7 engine
+validation or global compatibility claim exists**. The version/store/AL/SKSE
+preflight and missing-evidence fail-closed policy remain in place.
+
+Implemented: most-recent selection now reads native remembered filename240/
+length248 rather than list[0]; shared bounded manual index mapping and regression
+tests; trace names reflect that BSString; MenuControls byte83 is correctly named
+inputProcessingBlocked without changing toggle values; SkillsMenu's four-plus-two
+NOP writes become one complete six-byte instruction. Production FinalAppearance
+and LocalSeating guards admit the exact qualified 1.7.104 target. Life9, native
+ownership/retirement boundaries and furniture events were inspected; real
+destruction/private-base reclamation, visual appearance and controls are still
+unvalidated. O02/O03/D01 retain their guarded fallback/disabled behavior.
+
+The three dormant RTTI conclusions and 45-initializer lot 2 inventory stand.
+No ADR-0018 authority, sealed roster, per-player native save, collective recovery,
+Valen/content, Better Grabbing admission or network/schema rule changed.
+
+Executed lot-3 Windows x64 Debug evidence, source
+`b07bf205adc5bb3693d079ad2dc854e9c57ac59b`:
+
+- Targeted TPTests: **12 cases / 3,421 assertions PASS**; full TPTests:
+  **459 cases / 49,287 assertions PASS**.
+- Full Python discovery: **234 tests PASS**. An initial sandbox run failed
+  on temporary-fixture permissions; the complete host run passed.
+- Actual client/launcher, EarlyLoad, TPProcess and server DLL/launcher linked;
+  Angular production build succeeded. **51 UI files** are independently retained.
+- Client EXE and server DLL both embed `runtime17-b07bf205adc5bb3693d079ad2dc854e9c57ac59b`.
+  The new six-binary SHA-256 manifest is `_audit/rt17-lot3/candidate-manifest.json`;
+  human-readable receipts are `BINARIES.md` and `DELIVERY.md` there.
+- Static receipt: exact three input hashes/PEs, **319 literal references**,
+  nine reviewed byte anchors and all **256 CRC entries** checked. This does
+  not substitute for the per-contract signature/ownership analysis.
+- **9,329 protected records unchanged**, including prior lot artifacts and
+  the bounded installed-content/save/state inventory. Primary HEAD, main,
+  primary pre-existing dirty STATUS and unrelated STATUS sections are preserved.
+  Coverage is explicit local paths, not an exhaustive personal/remote scan.
+
+Toolchain: VS2022 BuildTools / MSVC14.44.35207 / SDK10.0.26100.0 /
+xmake3.0.9+HEAD.2b184e178; Node20.19.5 / pnpm8.15.9; Python3.14.
+No source changed after this compiled identity; the later receipt commit is
+documentation only. Warnings in successful builds are retained in the logs.
+
+Historical evidence remains unchanged: lot 2 source
+`faed1a01e5390ac6e5ddfd4735073cd1653d1123`, receipt 90da92cc, 456 C++ cases /
+49,256 assertions and 233 Python tests; lot 1 source cf207f69/97779fbf,
+receipt 824ddd37, 454 C++ cases /49,109 assertions and 232 Python tests.
+Their binaries retain their own source identities and manifests.
+
+No deployment, installed Steam/Vortex mutation, Skyrim/server/CK/xEdit launch,
+manual CI, push, PR, merge or release occurred in this lot. No content/save/
+database migration was performed. Follow the [experimental runbook](../development/EXPERIMENTAL_RUNTIME_1_7.md)
+and feature plans only after explicit maintainer authorization; the
+[compatibility matrix](../testing/COMPATIBILITY_MATRIX.md) retains stable support.
 
 ## Local Character Creation seating termination correction (2026-10-18, Refs #91)
 

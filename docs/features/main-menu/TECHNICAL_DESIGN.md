@@ -1,5 +1,11 @@
 # Main Menu technical design
 
+Steam 1.7.104.0 / SKSE 2.3.1 is the sole presentation target. The optional
+adapters use the exact O02 qualification and reject other runtimes. See
+[the targeted native proof](../../audit/2026-10-22-runtime-1.7-presentation.md),
+[the native register](../../development/RUNTIME_1_7_NATIVE_CONTRACTS.md) and
+[STATUS](../../project/STATUS.md) for current implementation and executed scope.
+
 > **Status:** feature-local design for [#86](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/issues/86).
 > Owner: native client / UI. Actual evidence lives in [STATUS](../../project/STATUS.md).
 
@@ -81,10 +87,13 @@ render frames, so a menu refresh cannot replay the intro.
 
 `MainMenuRuntime.cpp` and its `MainMenuPrompt.cpp` adapter contain feature-specific
 version checks, relocation IDs, call-site offsets and virtual slots. Both accept
-exactly `1.6.1170.0`. The hook adapter validates readable/executable memory, direct-call opcodes and rel32 range
-before changing the MainMenu virtual entries or either music call site. All
-write permissions are acquired before any patch; failure keeps originals.
-Each music call site retains its own original.
+exactly `1.7.104.0` through `STRE::MainMenu::SupportsPresentation`. The adapter
+checks readable/executable memory, the original MainMenu/CursorMenu methods,
+all five bytes at each music call, the expected
+target and the hook's rel32 range before writing. `WithWritablePatches` acquires
+all permissions before committing and restores them in reverse order; failed
+acquisition leaves patches and original pointers untouched. Each music call
+retains its own original. Permission restoration failures are logged explicitly.
 
 Main Menu Show/Hide messages delimit presentation. Intro input is consumed at
 the existing MenuControls ProcessEvent hook before native dispatch; the public
@@ -93,9 +102,11 @@ second hook is stacked on that function. Scaleform/user input messages to the
 Main Menu are also suppressed during capture. Held buttons are swallowed through
 their release; native menu actions resume with fresh presses.
 
-The music hooks return the upstream predicate's “already playing” result only
-while intro audio owns presentation. The normal native predicate is restored
-afterward; no user volume, music setting or campaign lock is modified.
+The exact 1.7 callers invoke a no-argument music trigger and ignore its return
+value. The hooks omit this side-effecting call only while intro audio owns
+presentation, then chain normally to the retained trigger. They do not emulate
+an “already playing” predicate. No user volume, music setting or campaign lock
+is modified.
 A short renewable render lease prevents stale input/music capture. End-of-frame
 maintenance stops media after menu close or lost rendering. Device reset
 disables this optional presentation rather than attempting unsafe device recovery.
@@ -122,8 +133,12 @@ does not alter presentation state.
 
 ### Native prompt audit and choice
 
-The installed 1.6.1170 `Skyrim - Interface.bsa` was inspected read-only. Its
-`startmenu.swf` embeds `Components.CrossPlatformButtons` and its own key exports;
+The original 1.6.1170 resource audit was rechecked against the installed 1.7
+Interface BSA: `sharedcomponents.swf` is byte-identical and the required
+Esc/Space exports, English/French keyboard mappings and native font are present.
+Hashes are in the targeted audit; resource overrides still need human QA. The
+original `startmenu.swf` inspection found that it
+embeds `Components.CrossPlatformButtons` and its own key exports;
 menu ActionScript chooses art through `SetPlatform`/`PCArt` and composes the
 control and label. `Shared.ButtonTextArtHolder` uses the delegate callback
 `GetButtonFromUserEvent` for semantic prompts. These are movie components, not a
@@ -199,7 +214,7 @@ rendered through inherited
 The native MenuCursor Win32 visibility counter is another mechanism; it must
 not be borrowed to hide this movie.
 
-The 1.6.1170 adapter now also preflights CursorMenu's primary vtable (AE ID
+The 1.7.104 adapter also preflights CursorMenu's primary vtable (AE ID
 215246), slot 6, before any presentation patch. Its hook skips only that draw
 while the published state is PlayingIntro and the existing input/render lease
 is live. Close, skip, EOS, fallback, disable/reset and lease expiry therefore
@@ -263,8 +278,9 @@ viewport copy and movie/delegate release from `IntroPrompt`. `MenuSubtitle`
 reuses that inert host plus the same plain-text formatter/native font. It needs
 no keyboard mapping, so missing keyboard art cannot suppress the subtitle.
 The intro prompt still releases at intro exit and retains its own once-only
-initialization guard. Both hosts stay behind the same 1.6.1170 adapter and use
-only previously audited native methods. No new native relocation is introduced.
+initialization guard. Both hosts stay behind the same exact 1.7.104 adapter and
+use the qualified GFx interfaces. Field/viewport assertions guard the C++ layouts.
+No new native relocation is introduced for either text host.
 A library/font/text-layout failure affects only its own display component.
 
 `ResolveText` parses the catalog once for both labels. Locale selection is shared;
@@ -284,7 +300,7 @@ powerofthree, GPL-3.0-or-later per its vcpkg manifest.
 
 Reviewed Manager, VideoPlayer, Hooks, ImGui Renderer and CMake/vcpkg inputs.
 The adaptation is confined to the before-menu PostDisplay ordering and the two
-menu-music predicate interception points in MainMenuRuntime, with attribution in
+menu-music interception points in MainMenuRuntime, with attribution in
 that source. STRE supplies version/preflight checks, separate originals,
 process-local policy, input suppression and existing-renderer integration.
 The decoder, config and controller are new STRE code; upstream OpenCV decoding,
@@ -301,9 +317,13 @@ Video provenance is separate and belongs to the [product contract](README.md).
 Client Windows links add `mfuuid`, `ole32`, `oleaut32` and `windowscodecs`. The hidden
 Windows media smoke in TPTests additionally uses the OS encoder to generate a
 temporary H.264 fixture; it is not a runtime dependency or a shipped video.
-No executable/DLL is added to Data/SKSE/Plugins. The existing playable workflow
-copies GameFiles/Skyrim to Data and binaries to SkyrimTogetherReborn. The existing
-XMake install and dev staging flow therefore need no new deploy script.
+No executable/DLL is added to Data/SKSE/Plugins. The current
+[Runtime17TwoPc workflow](../../development/RUNTIME_1_7_TWO_PC_DEV.md) takes
+native/UI artifacts from the worktree build and managed contents from an
+installed-A snapshot. Personal configuration and campaign state are preserved.
+GameFiles edits do not automatically replace that installed content source.
+This port requires no media/INI change. The private uncleared intro is excluded
+from the common payload and B synchronization. No deploy routing changes are needed.
 
 Repo-authored INI/media never belong in the Alternate Start CK manifest or its
 auto-import filter. Explicit CK import is only for files actually authored in
@@ -314,5 +334,6 @@ No ADR is proposed: this feature extends the existing MainMenuRuntime boundary
 and rendering/input infrastructure without a new plugin, global pipeline,
 third-party decoder dependency, authority or persistent contract. Under the
 [ADR policy](../../architecture/ADRs/README.md), these reversible local choices
-belong here. A future runtime port edits this adapter and validates its hooks,
-not the state machine or decoder. 1.7.x is explicitly unvalidated.
+belong here. A future runtime port must qualify its own adapter; this exact
+1.7.104 qualification does not cover other 1.7 builds. In-game presentation
+acceptance remains separate from the static proof and offline tests.
