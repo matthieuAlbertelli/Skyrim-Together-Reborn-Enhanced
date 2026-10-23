@@ -128,7 +128,7 @@ Les prérequis d’exécution sont **SKSE64 2.3.1** et l’**Address Library cor
 
 Commencez par le [guide d’installation](docs/user/INSTALLATION.md), le [guide de compilation](docs/development/BUILDING.md) et la [matrice de compatibilité](docs/testing/COMPATIBILITY_MATRIX.md). Les versions de développement sont destinées aux tests : elles ne garantissent ni une campagne terminée ni la compatibilité avec tous les mods.
 
-**STRE 0.5.0-alpha.1 en préparation :** un candidat Alpha non publié pour ce runtime exact. Cette préparation ne fournit aucun téléchargement public jouable en 1.7. Consultez les [notes du candidat](docs/production/releases/0.5.0-alpha.1.md) ; la publication et la validation du paquet restent à effectuer.
+**STRE 0.5.0-alpha.1 en préparation :** un candidat Alpha non publié pour ce runtime exact, limité au Solo et à la coopération à deux avec exploration à pied comme périmètre de qualification. La synchronisation des montures n’est pas garantie. Cette préparation ne fournit aucun téléchargement public jouable en 1.7. Consultez les [notes du candidat](docs/production/releases/0.5.0-alpha.1.md) ; la publication et la validation du paquet restent à effectuer.
 
 ### Téléchargement historique — Alpha
 

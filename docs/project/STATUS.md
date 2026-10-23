@@ -1,7 +1,7 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 23, 2026.
+> **Last updated:** October 24, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
@@ -9,7 +9,45 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## 0.5.0-alpha.1 local release preparation — not published (2026-10-23)
+## 0.5.0-alpha.1 release follow-up — publication blocked (2026-10-24)
+
+The maintainer authorizes publication of the preparation branch and the later
+Ready/squash/tag/Alpha-release sequence **only if the release gates pass**.
+The local starting HEAD is `b69b5ac08ba9a5dab8e872cc733e887baa54ddcb`;
+main remains `968badb4b91e4a40c686fb8128e7496d2ef89c41` at this inspection.
+No new public player package or download is claimed.
+
+The maintainer reports having performed human tests. The supplied statement
+does not identify the tested artifact or individual scenario outcomes. It is
+recorded as **execution reported, results not yet documented**, not seventeen
+PASS verdicts or a FAIL. The indispensable clarification is the tested candidate
+identity and the outcomes for save integrity, committed collective checkpoints
+and restore, loss/duplication of items, character controls and progression.
+Reuse valid observations; no general repetition of the seventeen tests is
+requested. Earlier identified Solo/two-player/presentation PASS below remains
+accepted within its recorded scope and is not relabelled as this package's
+acceptance. The final tagged artifact will still require its applicable package
+and smoke evidence under RELEASE_PROCESS.
+
+The targeted reactive-forms follow-up checked the official npm 5.0.2 tarball
+against its published SHA-512 integrity: 27 files, no complete licence text.
+The published gitHead remains `88252925b028143099b6364517c9a5310f5e02f3`.
+An older MIT text was found before commit
+`5cee6fef2b59499df86cbfcdf17dd468b41ac884`, which removed LICENSE while
+explicitly describing a complete library rewrite. That text is not automatically
+assigned to 5.0.2; no copyright is invented and the collector's refusal remains.
+Minimal resolution: a verifiable notice or confirmation from the relevant
+rightsholder covering that exact version. Other distribution-rights and
+corresponding-source questions retain the preceding remediation verdicts;
+no new permission has been supplied and no general licence audit is restarted.
+
+The preparation changes may be reviewed and checked in PR CI independently.
+Ready/merge/tag and public binary upload remain suspended while indispensable
+rights, complete packaging or campaign-critical evidence are unresolved.
+The historical prepackage is preserved; no rebuild, DEV deployment, application
+launch, private voice integration or remote-PC access accompanies this follow-up.
+
+## 0.5.0-alpha.1 local release preparation — historical snapshot (2026-10-23)
 
 The exact Steam 1.7.104.0 port and DEV workflow are integrated into main at
 `968badb4b91e4a40c686fb8128e7496d2ef89c41`. A separate local preparation branch

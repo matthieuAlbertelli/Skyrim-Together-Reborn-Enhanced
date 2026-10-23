@@ -39,8 +39,11 @@ No publication date or tagged-package acceptance is assigned yet.
   departure coordination and content integration fixes accumulated since 0.4.
   Open seating defects remain separately tracked; this is not a blanket fix.
 
-- Packaging now extracts readable CEF/Chromium licence notices from the pinned
-  runtime resources, with fail-closed fixture tests; no CEF execution is needed.
+- Packaging extracts readable CEF/Chromium notices and verifies versioned native
+  and UI notices before playable assembly, with a final integrity check. Missing
+  or mismatched notices stop packaging; the reactive-forms 5.0.2 text remains
+  unresolved. This does not clear the other recorded redistribution rights.
+  Fixture tests and offline extraction require no CEF execution.
 
 ### Evidence and limitations
 

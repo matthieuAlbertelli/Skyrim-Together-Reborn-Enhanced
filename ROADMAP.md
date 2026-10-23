@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 21 October 2026.
+> **Last updated:** 24 October 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -159,8 +159,9 @@ not completion of the 21-class, housing or full v1 campaign program.
 
 The maintainer approved Solo and two-player cooperative play on Steam
 1.7.104.0 Windows x64, with on-foot exploration as the qualification scope.
-Mount synchronization is not guaranteed; MOUNT-01 is N/A, not PASS. The 17
-necessary human scenarios remain unexecuted. ADR-0018 is unchanged; corruption,
+Mount synchronization is not guaranteed; MOUNT-01 is N/A, not PASS. The
+applicable human matrix remains a release gate; its reported observations and
+remaining evidence belong in STATUS. ADR-0018 is unchanged; corruption,
 inventory loss, lasting loss of controls and unrecoverable progression remain
 blockers. The broader 2–4-player and 1–10-player objectives are not Alpha evidence.
 

@@ -124,7 +124,7 @@ Runtime prerequisites are **SKSE64 2.3.1** and the **Address Library matching Sk
 
 Start with the [installation guide](docs/user/INSTALLATION.md), [build guide](docs/development/BUILDING.md) and [compatibility matrix](docs/testing/COMPATIBILITY_MATRIX.md). Development builds are for testing, not a promise of a finished campaign or compatibility with every mod.
 
-**Preparing STRE 0.5.0-alpha.1:** an unpublished Alpha candidate for this exact runtime. No public 1.7 player download is available from this preparation. Read the [candidate release notes](docs/production/releases/0.5.0-alpha.1.md); publication and package validation remain pending.
+**Preparing STRE 0.5.0-alpha.1:** an unpublished Alpha candidate for this exact runtime, scoped to Solo and two-player cooperation with on-foot exploration as the qualification scope. Mount synchronization is not guaranteed. No public 1.7 player download is available from this preparation. Read the [candidate release notes](docs/production/releases/0.5.0-alpha.1.md); publication and package validation remain pending.
 
 ### Historical download — Alpha
 
