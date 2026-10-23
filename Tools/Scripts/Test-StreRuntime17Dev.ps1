@@ -113,10 +113,20 @@ $module = Get-Module Stre.Runtime17Dev
         Check ($source.submodules.Count -eq 1) 'Missing submodule evidence'
     }
     Case 'wrong branch rejected' {
-        Invoke-FixtureGit $f.repo @('branch','-m','feat/arbitrary')
+        Invoke-FixtureGit $f.repo @('branch','-m','unreviewed/arbitrary')
         try { Reject { Get-R17Source $f.repo } 'Wrong source branch' } finally { Invoke-FixtureGit $f.repo @('branch','-m','feat/skyrim-1.7-runtime') }
     }
     Case 'wrong expected commit rejected' { Reject { Get-R17Source $f.repo ('0'*40) } 'Source commit mismatch' }
+    foreach ($branch in @('feat/selected-work','fix/selected-work','refactor/selected-work','docs/selected-work','test/selected-work','chore/selected-work','art/selected-work','audio/valen-voice-production-v1','codex/fix-dev-source')) {
+        Case "governed branch $branch accepted without origin/main ancestry" {
+            Invoke-FixtureGit $f.repo @('branch','-m',$branch)
+            try {
+                $selected=Get-R17Source $f.repo $f.commit
+                Check ($selected.repository -eq $f.repo -and $selected.branch -ceq $branch -and $selected.commit -ceq $f.commit -and $selected.identity -ceq "runtime17-$($f.commit)") 'Selected source changed'
+                Reject { Get-R17Source $f.repo ('0'*40) } 'Source commit mismatch'
+            } finally { Invoke-FixtureGit $f.repo @('branch','-m','feat/skyrim-1.7-runtime') }
+        }
+    }
     Case 'dirty source rejected' {
         Put (Join-Path $f.repo 'untracked.cpp') 'uncommitted'
         try { Reject { Get-R17Source $f.repo } 'Commit or isolate' } finally { Remove-Item -LiteralPath (Join-Path $f.repo 'untracked.cpp') }
@@ -633,7 +643,7 @@ $module = Get-Module Stre.Runtime17Dev
         Check ((Get-R17Hash (Join-Path $latest 'manifest.json')) -eq $manifestHash) 'Frozen manifest rewritten'
     }
     foreach ($invalid in @(
-        @{name='unauthorized branch'; change={param($r) $r.candidate.source.branch='feat/arbitrary'}; pattern='Invalid retained candidate provenance'},
+        @{name='unauthorized branch'; change={param($r) $r.candidate.source.branch='unreviewed/arbitrary'}; pattern='Invalid retained candidate provenance'},
         @{name='inconsistent identity'; change={param($r) $r.candidate.source.identity='runtime17-'+('0'*40)}; pattern='Invalid retained candidate provenance'},
         @{name='changed frozen native manifest'; change={param($r) $r.candidate.files[0].sha256='0'*64}; pattern='Hash/size mismatch'},
         @{name='changed frozen content manifest'; change={param($r) $r.candidate.contentFiles[0].bytes++}; pattern='frozen candidate integrity.*mismatch'}
@@ -667,6 +677,120 @@ $module = Get-Module Stre.Runtime17Dev
         Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath (Get-LatestRun)
         Check ((Read-R17Json (Join-Path (Get-LatestRun) 'receipt.json')).status -eq 'INSTALLED_VERIFIED') 'Restored fixture evidence did not verify'
     }
+    Case 'development branch full A/B cycle keeps explicit source and historical receipt' {
+        $script:Active=New-Fixture
+        Invoke-FixtureGit $script:Active.repo @('branch','-m','audio/valen-voice-production-v1')
+        $private=Get-PrivateRows $script:Active
+        $messages=@(Invoke-R17Workflow -ConfigPath $script:Active.configPath -ExpectedCommit $script:Active.commit 6>&1)
+        $display=$messages | Out-String
+        Check ($display.Contains($script:Active.repo) -and $display.Contains('branch=audio/valen-voice-production-v1') -and $display.Contains("commit=$($script:Active.commit)")) 'Explicit selected source was not displayed'
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($before.status -eq 'INSTALLED_VERIFIED' -and $before.candidate.source.branch -ceq 'audio/valen-voice-production-v1') 'Wrong development candidate'
+        Check (((Read-R17Json (Join-Path $latest 'verified-A.json')).files | Where-Object path -eq 'SkyrimTogetherReborn/SkyrimTogether.exe').provenance -ceq 'development checkout build') 'Mislabelled development payload'
+        Invoke-FixtureGit $script:Active.repo @('branch','-m','fix/later-work')
+        Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest
+        $after=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($after.candidate.source.branch -ceq $before.candidate.source.branch -and $after.candidate.source.identity -ceq $before.candidate.source.identity -and $after.configSha256 -ceq $before.configSha256) 'Historical development receipt relabelled'
+        foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'development private files preserved' }
+    }
+    Case 'dirty selected development source fails without build or checkout fallback' {
+        $path=Join-Path $script:Active.repo 'uncommitted.txt'; Put $path 'preserve this work'
+        $receiptCount=@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory).Count
+        try {
+            Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath } 'Commit or isolate'
+            Check ((Get-Content -LiteralPath $path -Raw) -ceq 'preserve this work') 'Dirty file changed'
+            Check (((Invoke-R17Git $script:Active.repo @('branch','--show-current')) -join '') -ceq 'fix/later-work') 'Branch changed'
+            Check (@(Get-ChildItem -LiteralPath $script:Active.config.receipts -Directory).Count -eq $receiptCount) 'Dirty checkout entered build'
+        } finally { Remove-Item -LiteralPath $path }
+    }
+    Case 'entry-selected A/B cycle ignores historical repository and records effective source' {
+        $script:Active=New-Fixture
+        Invoke-FixtureGit $script:Active.repo @('branch','-m','feat/script-checkout')
+        $private=Get-PrivateRows $script:Active
+        $script:OldCheckout=Join-Path $script:Active.root 'historical Runtime17 checkout MUST NOT BE PROBED'
+        $script:Active.config.repository=$script:OldCheckout
+        Write-R17Json $script:Active.config $script:Active.configPath
+        $configHash=Get-R17Hash $script:Active.configPath
+        $script:OriginalOrdinary=(Get-Item Function:Assert-R17Ordinary).ScriptBlock
+        function script:Assert-R17Ordinary {
+            param($Path,[switch]$AllowMissing)
+            if ($Path -eq $script:OldCheckout) { throw 'Historical checkout probed' }
+            & $script:OriginalOrdinary $Path -AllowMissing:$AllowMissing
+        }
+        try {
+            Invoke-R17Workflow -ConfigPath $script:Active.configPath -SourceRepository $script:Active.repo -ExpectedCommit $script:Active.commit
+            $latest=Get-LatestRun; $receipt=Read-R17Json (Join-Path $latest 'receipt.json')
+            Check ($receipt.schema -eq 3 -and $receipt.sourceSelection -ceq 'script-checkout' -and $receipt.status -eq 'INSTALLED_VERIFIED') 'Missing new receipt source contract'
+            Check ($receipt.source.repository -eq $script:Active.repo -and $receipt.candidate.source.repository -eq $script:Active.repo -and $receipt.candidate.source.branch -ceq 'feat/script-checkout') 'Wrong source/candidate'
+            Check ($receipt.configSha256 -eq $configHash -and (Get-R17Hash $script:Active.configPath) -eq $configHash) 'Private configuration rewritten'
+            Check ($receipt.build.repository -eq $script:Active.repo) 'Build layout lost effective source'
+            foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'entry-selected private files preserved' }
+        } finally { Set-Item Function:script:Assert-R17Ordinary $script:OriginalOrdinary }
+    }
+    Case 'schema 3 Verify restores context without rebuilding or relabelling candidate' {
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        $manifest=Get-R17Hash (Join-Path $latest 'manifest.json')
+        Invoke-FixtureGit $script:Active.repo @('commit','--allow-empty','-qm','later source documentation')
+        $script:FixtureBuild=(Get-Item Function:Invoke-R17Build).ScriptBlock
+        function script:Invoke-R17Build { throw 'Resume rebuilt the candidate' }
+        try { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest }
+        finally { Set-Item Function:script:Invoke-R17Build $script:FixtureBuild }
+        $after=Read-R17Json (Join-Path $latest 'receipt.json')
+        Check ($after.source.commit -eq $before.source.commit -and $after.configSha256 -eq $before.configSha256 -and $after.candidate.source.identity -ceq $before.candidate.source.identity -and (Get-R17Hash (Join-Path $latest 'manifest.json')) -eq $manifest) 'Original context changed'
+        Check ((Read-R17Json (Join-Path $latest 'verified-B.json')).verificationHead -ne $before.source.commit) 'Verification HEAD not independently recorded'
+    }
+    foreach ($invalid in @(
+        @{name='source repository'; change={param($r) $r.source.repository+='-other'}},
+        @{name='candidate identity'; change={param($r) $r.candidate.source.identity='runtime17-'+('0'*40)}},
+        @{name='selection marker'; change={param($r) $r.sourceSelection='config'}},
+        @{name='schema downgrade'; change={param($r) $r.schema=2}}
+    )) {
+        Case "schema 3 refuses changed $($invalid.name) in every resume mode" {
+            $latest=Get-LatestRun; $path=Join-Path $latest 'receipt.json'; $original=[IO.File]::ReadAllBytes($path)
+            try {
+                $bad=Read-R17Json $path; & $invalid.change $bad; Write-R17Json $bad $path
+                foreach ($mode in @('Verify','RestoreStaging','VerifyRestored')) {
+                    Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode $mode -ReceiptPath $latest } 'Receipt source context'
+                }
+            } finally { [IO.File]::WriteAllBytes($path,$original) }
+        }
+    }
+    Case 'schema 3 configuration pin and frozen manifest still block' {
+        $latest=Get-LatestRun; $path=$script:Active.configPath; $original=[IO.File]::ReadAllBytes($path)
+        try {
+            [IO.File]::AppendAllText($path,"`n")
+            foreach ($mode in @('Verify','RestoreStaging','VerifyRestored')) {
+                Reject { Invoke-R17Workflow -ConfigPath $path -Mode $mode -ReceiptPath $latest } 'Receipt/configuration mismatch'
+            }
+        } finally { [IO.File]::WriteAllBytes($path,$original) }
+        $path=Join-Path $latest 'receipt.json'; $original=[IO.File]::ReadAllBytes($path)
+        try {
+            $bad=Read-R17Json $path; $bad.candidate.files[0].sha256='0'*64; Write-R17Json $bad $path
+            Reject { Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode Verify -ReceiptPath $latest } 'Hash/size mismatch'
+        } finally { [IO.File]::WriteAllBytes($path,$original) }
+    }
+    Case 'schema 3 restoration uses original context despite dirty source and never builds' {
+        $latest=Get-LatestRun; $before=Read-R17Json (Join-Path $latest 'receipt.json')
+        $path=Join-Path $script:Active.repo 'README-untracked.md'; Put $path 'human work'
+        $private=Get-PrivateRows $script:Active
+        $script:FixtureBuild=(Get-Item Function:Invoke-R17Build).ScriptBlock
+        function script:Invoke-R17Build { throw 'Restoration rebuilt the candidate' }
+        try {
+            Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode RestoreStaging -ReceiptPath $latest
+            $null=Read-Host 'fixture human deploy'
+            Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode VerifyRestored -ReceiptPath $latest
+            $after=Read-R17Json (Join-Path $latest 'receipt.json')
+            Check ($after.status -eq 'RESTORED_VERIFIED' -and $after.configSha256 -eq $before.configSha256 -and $after.source.commit -eq $before.source.commit) 'Restoration changed context'
+            Check ((Get-Content -LiteralPath $path -Raw) -ceq 'human work') 'Dirty source was modified'
+            foreach ($item in $private) { Assert-R17State $item.root @($item.state) 'restored private files preserved' }
+        } finally { Set-Item Function:script:Invoke-R17Build $script:FixtureBuild; Remove-Item -LiteralPath $path }
+    }
+    Case 'contradictory workflow modes fail before work' {
+        Reject { Invoke-R17Workflow -ConfigPath $f.configPath -ReceiptPath $f.root } 'BuildDeploy cannot resume'
+        Reject { Invoke-R17Workflow -ConfigPath $f.configPath -Mode Verify } 'Resume requires'
+        Reject { Invoke-R17Workflow -ConfigPath $f.configPath -Mode Verify -ReceiptPath $f.root -SourceRepository $f.repo } 'original source context'
+        Reject { Invoke-R17Workflow -ConfigPath $f.configPath -Mode RestoreStaging -ReceiptPath $f.root -ExpectedCommit $f.commit } 'ExpectedCommit applies'
+    }
     Case 'WhatIf cannot touch destinations, enumerate processes or build' {
         $plan=Read-R17Json $f.configPath
         # Deliberately invalid UNC strings. They are displayed, never resolved.
@@ -680,6 +804,21 @@ $module = Get-Module Stre.Runtime17Dev
         $WhatIfPreference=$true
         try { $result=Invoke-R17Workflow -ConfigPath $path -PlanOnly } finally { $WhatIfPreference=$false }
         Check (!$result.destinationIO -and $result.missingGameRoots -contains 'B') 'Plan is not inert'
+    }
+    Case 'entry-selected WhatIf ignores old source, preserves outputs and reports exact source' {
+        $config=Read-R17Json $f.configPath; $config.repository='\\must-not-be-resolved.invalid\old-checkout'
+        $config.targets[0].gameRoot='\\must-not-be-resolved.invalid\game'; $config.targets[1].stagingRoot='\\must-not-be-resolved.invalid\stage'
+        $path=Join-Path $f.root 'entry-plan.json'; Write-R17Json $config $path
+        $before=Get-R17Hash $path; $runs=@(Get-ChildItem -LiteralPath $f.config.receipts).Count
+        $result=Invoke-R17Workflow -ConfigPath $path -SourceRepository $f.repo -ExpectedCommit $f.commit -PlanOnly
+        Check ($result.repository -eq $f.repo -and $result.source.commit -ceq $f.commit -and !$result.destinationIO) 'Incorrect entry plan'
+        Check ((Get-R17Hash $path) -eq $before -and @(Get-ChildItem -LiteralPath $f.config.receipts).Count -eq $runs) 'Plan wrote configuration/receipts'
+        $latest=Get-LatestRun; $before=Get-R17Hash (Join-Path $latest 'receipt.json')
+        foreach ($mode in @('Verify','RestoreStaging','VerifyRestored')) {
+            $plan=Invoke-R17Workflow -ConfigPath $script:Active.configPath -Mode $mode -ReceiptPath $latest -PlanOnly
+            Check ($plan.repository -eq $script:Active.repo -and $plan.steps -like '*no build') 'Resume plan chose a new source/build'
+        }
+        Check ((Get-R17Hash (Join-Path $latest 'receipt.json')) -eq $before) 'Plan rewrote receipt'
     }
     Write-R17Json @{utc=[datetime]::UtcNow; scope='LOCAL FIXTURES ONLY; no native compilation or real deployment'; cases=$script:Results; count=$script:Results.Count} (Join-Path $OutputRoot 'results.json')
     Write-Host "$($script:Results.Count) local cases PASS. Evidence: $OutputRoot"
