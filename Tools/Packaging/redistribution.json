@@ -392,30 +392,6 @@
       "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
     },
     {
-      "id": "cpp-httplib",
-      "version": "v0.14.0",
-      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
-      "licenceStatus": "NOTICE_COMPLETE",
-      "notices": [
-        {
-          "repository": "https://github.com/yhirose/cpp-httplib",
-          "revision": "v0.14.0",
-          "source": "https://raw.githubusercontent.com/yhirose/cpp-httplib/v0.14.0/LICENSE",
-          "file": "cpp-httplib--LICENSE",
-          "sha256": "4b45cbe16d7b71b89ae6127e26e0d90a029198ca5e958ad8e3d0b8bbed364d8b"
-        }
-      ],
-      "guard": {
-        "kind": "xmake",
-        "package": "cpp-httplib",
-        "version": "v0.14.0",
-        "path": "include/httplib.h",
-        "sha256": "bd74c41e854c04569658f36cd8bc9010d86caa0e89d2cd89b7fe4eb8e11843fe"
-      },
-      "licence": "MIT",
-      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
-    },
-    {
       "id": "sol2",
       "version": "v3.3.0",
       "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
@@ -508,30 +484,6 @@
         "sha256": "93da03ddf6d5b9bdf40ae4ded9939067c9ed0b6de93f787f7e8d187609b6b02d"
       },
       "licence": "BSD-3-Clause",
-      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
-    },
-    {
-      "id": "openssl",
-      "version": "1.1.1-w",
-      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
-      "licenceStatus": "BLOCKED",
-      "notices": [
-        {
-          "repository": "https://github.com/openssl/openssl",
-          "revision": "OpenSSL_1_1_1w",
-          "source": "https://raw.githubusercontent.com/openssl/openssl/OpenSSL_1_1_1w/LICENSE",
-          "file": "openssl--LICENSE",
-          "sha256": "c32913b33252e71190af2066f08115c69bc9fddadf3bf29296e20c835389841c"
-        }
-      ],
-      "guard": {
-        "kind": "xmake",
-        "package": "openssl",
-        "version": "1.1.1-w",
-        "path": "include/openssl/opensslv.h",
-        "sha256": "0ca12c2aba8bfbe24c4c06861e9d57b939c5e72d1c08f3798a442d698deb7599"
-      },
-      "licence": "OpenSSL and original SSLeay (not Apache-2.0)",
       "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
     },
     {
@@ -712,7 +664,6 @@
   },
   "unresolved": [
     "TiltedCore and TiltedConnect/Hooks/Reverse/UI permission",
-    "OpenSSL 1.1.1w GPL combination (notices alone insufficient)",
     "DXIL and D3DCompiler exact REDIST terms; DXC exact binary/source mapping",
     "Inherited UI art/sounds and logo/Valen model/texture provenance",
     "Corresponding sources and LGPL/CitizenFX/Chromium/FFmpeg obligations"
@@ -1012,5 +963,6 @@
         "output": "UI/assets/bold-italic.ttf"
       }
     ]
-  }
+  },
+  "platformScope": "Windows x64 player package; OpenSSL 1.1.1-w pin remains for inherited non-Windows/transitive builds. Removing this inventory entry is conditional on Windows linker/package verification; it is not historical or cross-platform rights clearance."
 }
