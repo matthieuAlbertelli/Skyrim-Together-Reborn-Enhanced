@@ -24,6 +24,15 @@ No publication date or tagged-package acceptance is assigned yet.
 
 ### Changed
 
+- Remove optional Discord Rich Presence/SDK and its packaged DLL; retain the
+  authentication field with a zero client value and unchanged campaign identity.
+- Replace reactive-forms with Angular native FormControl without changing server
+  search/filter behavior, and replace Futura with verified Apache-2.0 Roboto
+  Condensed 2.137 normal/italic 400/700.
+- Remove inherited server-directory announcements and cpp-httplib. Direct
+  connections and UI list browsing remain; legacy bAnnounceServer still restricts
+  time-command privileges. Windows linker inputs no longer include OpenSSL;
+  inherited non-Windows/transitive pins are retained.
 - Development targets **Skyrim SE Steam 1.7.104.0, Windows x64** exclusively,
   with SKSE64 2.3.1, matching Address Library and external Better Grabbing 2.0.
   The runtime port is integrated into main. Historical 1.6 releases remain
@@ -41,8 +50,9 @@ No publication date or tagged-package acceptance is assigned yet.
 
 - Packaging extracts readable CEF/Chromium notices and verifies versioned native
   and UI notices before playable assembly, with a final integrity check. Missing
-  or mismatched notices stop packaging; the reactive-forms 5.0.2 text remains
-  unresolved. This does not clear the other recorded redistribution rights.
+  or mismatched notices stop packaging. The dependency cleanup removes the
+  unresolved reactive-forms component and verifies packaged font bytes/licences.
+  This does not clear the other recorded redistribution rights.
   Fixture tests and offline extraction require no CEF execution.
 
 ### Evidence and limitations

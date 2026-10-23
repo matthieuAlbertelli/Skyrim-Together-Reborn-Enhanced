@@ -1,27 +1,42 @@
 # Verified redistribution notices
 
 This is an offline extension of `Tools/Scripts/collect-cef-notices.mjs`, not a
-release approval system. The current Windows playable packaging **must stop**:
-`@ngneat/reactive-forms` 5.0.2 has no verified full licence text. Other rights
-questions remain open even after that text is obtained. Do not remove the gate
-or manufacture a copyright to produce an artifact.
+release approval system. The current Windows candidate removes Discord SDK,
+reactive-forms and Futura, and removes the server announcement/httplib dependency.
+Full technical notice assembly passes; other rights questions remain open.
+Missing or changed provenance/notices must still stop packaging.
 
 `redistribution.json` records versions, upstream sources, exact text hashes and
 installed header/source fingerprints for the dependency set observed in the
-historical `feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72` candidate. Normalized LF is
-used only for source fingerprints; licence files retain their original bytes.
+historical `feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72` candidate, updated for the
+`f2c9947d3ddd103247a0a9d7d2192c4e21f423c0` dependency cleanup. The current
+Windows inventory has 21 native entries / 28 native notice texts. Its four final
+linker records contain no OpenSSL/libssl/libcrypto; the inherited 1.1.1-w pin is
+retained for non-Windows/transitive builds. This is not historical rights
+clearance. Normalized LF is used only for textual source fingerprints; licence
+files and binary font hashes retain their original bytes.
 The neighbouring `.gitattributes` prevents checkout newline rewriting of those
 texts. `reviewOnly` records delivered components outside the verified-notice
 subset and their outstanding rights/source questions. `external` and
 `buildOnly` distinguish separately installed prerequisites and build tools.
 This is a scoped inventory, not a licence grant or exhaustive SBOM attestation.
 
-The UI inventory is based on the production build's 17 notice sections and the
-installed versions/repository metadata corresponding to the lockfile. Seven of
-eight identifier-only sections have verified replacement text. Nine existing
-full sections are retained byte-for-byte. Elf/Loadoff texts come from preserved
+The UI inventory covers the production build's 16 remaining notice sections and
+installed versions/repository metadata corresponding to the lockfile. All seven
+identifier-only sections have verified replacement text. Nine existing full
+sections are retained byte-for-byte. Elf/Loadoff texts come from preserved
 original Git objects identified by the publisher's exact npm `gitHead`; the
-archive does not grant new rights. Missing reactive-forms text remains blocking.
+archive does not grant new rights. reactive-forms is absent from the lockfile,
+production dependency graph and Webpack module statistics; its historical rights
+finding is not reinterpreted as permission.
+
+Roboto Condensed's six existing TTFs exactly match Google Fonts revision
+`55aaf47ca89416e720a2449368943ff87fb6d02a`, version 2.137 (2017), copyright 2011
+Google Inc., Apache-2.0. This is not the later OFL font. The four used variants
+(normal/italic 400/700) and their exact upstream URLs/SHA-256 are in `fonts`.
+The collector verifies source and distributed bytes, includes the original
+Apache licence, and rejects missing/changed packaged fonts. Unused light files
+remain source-only. Futura is absent from current source and output.
 
 ## Checks and assembly
 
@@ -62,7 +77,9 @@ The final packaging step verifies both the file hashes and completeness against
 the inventory before artifact upload. No cache, node_modules, local receipt or
 private path is copied into the player package. The receipt explicitly has
 `releaseReady: false`; even a technically complete notice bundle cannot resolve
-Discord/Tilted/OpenSSL/font/asset permissions or the human qualification gates.
+remaining Tilted/Microsoft/asset permissions, corresponding-source obligations
+or the human qualification gates. Removed components' historical findings remain
+in the dated review evidence.
 Keep the original CEF credits, including their third-party terms, intact.
 
 ## Corresponding-source procedure (prepared, not executed)

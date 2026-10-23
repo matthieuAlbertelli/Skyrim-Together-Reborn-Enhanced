@@ -9,7 +9,76 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## 0.5.0-alpha.1 release follow-up — publication blocked (2026-10-24)
+## 0.5.0-alpha.1 technical dependency cleanup (2026-10-24)
+
+The preparation remains **unpublished** and PR #102 remains Draft. This mission
+authorizes technical preparation and a normal push of the preparation branch
+only; no Ready, merge, tag or public asset upload follows from these results.
+Frozen compiled source: `f2c9947d3ddd103247a0a9d7d2192c4e21f423c0`, product
+`0.5.0-alpha.1`, Release Windows x64 / exact Skyrim Steam 1.7.104.0.
+Later test/documentation commits do not change this binary identity.
+
+- Discord Game SDK/service and its DLL requirement are removed. Authentication
+  still serializes the same `uint64_t DiscordId` in the same position; the client
+  explicitly sends zero. Server Player/bindings, admission and campaign contracts
+  are unchanged. A native fixture checks zero and a nonzero legacy value.
+- Server search uses Angular FormControl with subscription-time initial value,
+  native valueChanges, the existing 300 ms leading throttle and unchanged
+  filtering. reactive-forms is absent from the lockfile, installed production
+  graph and production module statistics; no other locked version changed.
+- Futura is removed. The existing Roboto Condensed 2.137 TTFs match Google Fonts
+  commit `55aaf47ca89416e720a2449368943ff87fb6d02a` byte-for-byte and declare
+  Apache-2.0. Normal/italic 400 and 700 are shipped with the exact licence;
+  source and packaged font hashes are verified by the notice collector.
+- The inherited server announcement service and cpp-httplib dependency are
+  removed. No periodic call to the old public directory remains. Angular list
+  browsing and direct connection remain. `LiveServices:bAnnounceServer` is kept
+  as a legacy permission setting: true still restricts time changes to admins;
+  it no longer announces a server. The command predicates remain unchanged.
+  OpenSSL 1.1.1-w is confirmed inherited from STR v1.7.0/v1.8.4. Windows
+  GameNetworkingSockets uses BCrypt; the four delivered-target linker records
+  contain no OpenSSL/libssl/libcrypto. The inherited pin remains for other
+  platforms/transitive builds, without a cross-platform removal or rights claim.
+
+Executed local checks: Release launcher/client/server build PASS; Angular
+production build PASS; frozen pnpm 8.15.9 install PASS; pnpm 9.15.9 frozen-lock
+compatibility probe on copied manifests PASS. TPTests **463 cases / 49,400
+assertions PASS**, including authentication/campaign; **93 Runtime17TwoPc
+synthetic cases PASS**; **3 real Angular/RxJS component tests PASS**;
+**30 notice tests PASS**. Full notice assembly and extraction verification now
+pass: 21 native inventory entries, 28 native texts, 16 UI sections (seven
+completed, nine preserved), Roboto licence and the four original CEF notices.
+No general notice/provenance gate was disabled.
+
+**32 offline Chrome production-bundle renders** cover creation, three classes,
+equipment, lobby, trading and recovery in EN/FR at 1920x1080 and 1280x720.
+Four font variants load, measured panels stay in the viewport, and no measured
+visible text overflow or JavaScript error occurs. This is synthetic presentation
+evidence, not CEF/gameplay or human acceptance. Existing hard-coded French
+creation/trading text remains French with either language setting. A missing
+decorative `/assets/trade/leather-grain.svg` is also proved in the old ZIP and
+retained as an independent existing packaging limitation, not a font regression.
+
+New local archive: `STRE-v0.5.0-alpha.1-PREPACKAGE-f2c9947d-windows-x64.zip`,
+**1,252 files**, SHA-256
+`fbacbd0ee6aca6f73cdfddbe6ce2117a256173bb53c5ae270117259f628d21bf`.
+Extraction hashes PASS; 14 AMD64 PE files, no unresolved imports, identical
+compiled identity in client/runner/server. All 914 tracked GameFiles entries,
+including 671 silent timing WAVs, match the historical content hashes. No
+Discord DLL, Futura, private voices/intro, external game/SKSE/plugin dependency,
+personal configuration or save is included. The historical feb58b8e archive and
+receipts are unchanged. Evidence is retained locally under
+`C:/STRE-A05/release-review/technical-finalization-20261024/` and is not published.
+
+Technical preparation is **READY FOR RELEASE REVIEW**, with the existing
+decorative-resource limitation disclosed. This is not redistribution clearance
+or release acceptance. Remaining Tilted/Microsoft/asset permissions,
+corresponding-source/LGPL obligations and scoped human package/campaign evidence
+remain independent gates. Solo/two-player/on-foot scope, MOUNT-01 N/A,
+ADR-0018 and all historical bounded PASS remain unchanged. No installation,
+DEV deployment, forbidden application or remote-PC access occurred.
+
+## 0.5.0-alpha.1 release follow-up — historical publication block (2026-10-24)
 
 The maintainer authorizes publication of the preparation branch and the later
 Ready/squash/tag/Alpha-release sequence **only if the release gates pass**.
