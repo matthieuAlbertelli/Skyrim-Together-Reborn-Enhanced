@@ -18,16 +18,28 @@
 
 **Skyrim Together Reborn Enhanced (STRE)** extends Skyrim Together Reborn with cooperative mechanics, explicit server authority and systems designed for coherent small-group campaigns without turning Skyrim into an MMO.
 
+> **Skyrim 1.7 port:** STRE has been ported to **Skyrim Special Edition
+> 1.7.104.0 (Steam, Windows x64)**. The port is integrated into `main`,
+> and current development targets this runtime exclusively. Skyrim 1.6
+> is no longer maintained by the current development branch.
+>
+> This is a development milestone, not a new public release announcement.
+> See the [current project status](docs/project/STATUS.md) and
+> [compatibility matrix](docs/testing/COMPATIBILITY_MATRIX.md) for the
+> validated scope and remaining limitations.
+
 ## Install and play
 
-The current public build is **STRE `0.4.0-alpha.1`**.
+Current development targets **Skyrim Special Edition `1.7.104.0` (Steam, Windows x64)**.
+The historical public build **STRE `0.4.0-alpha.1`** targets Skyrim `1.6.1170`
+and must not be used with `1.7.104.0`.
 
 - [Download STRE releases](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases)
 - [Player installation guide](docs/user/INSTALLATION.md)
 
-Download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
+For historical public releases, download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
 
-The sole future development target is Steam Skyrim Special Edition `1.7.104.0` on Windows x64. Historical `0.4.0-alpha.1` targets `1.6.1170`; its results are not 1.7 validation. See the installation guide and STATUS for the bounded development test scope. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
+See the installation guide and STATUS for the development setup, validated scope and remaining limitations. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
 
 ## Current capabilities
 
