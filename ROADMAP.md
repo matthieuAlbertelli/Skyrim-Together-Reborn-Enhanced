@@ -150,15 +150,22 @@ Each symptom becomes an issue with exact roles, saves/logs and reproduction evid
 
 Intermediate alphas integrate demonstrable vertical slices and reduce risk toward the v1 product definition. A `0.x` Milestone is created only when its scope can be justified from dependency order and available validation capacity; version assignments must not be fabricated for planning neatness.
 
-### Proposed 0.5.0-alpha.1 slice — approval pending
+### Approved 0.5.0-alpha.1 slice — qualification pending
 
 Prepare the integrated Steam 1.7.104.0 Windows port with its current headquarters,
 Character Build, Valen/Helgen, seating and presentation integrations, bilingual
 onboarding and a reproducible player package. This is a feature-incomplete Alpha,
 not completion of the 21-class, housing or full v1 campaign program.
 
-Before tagging, the maintainer must approve a bounded target Milestone and its
-applicable outcome/failure/recovery matrix under RELEASE_PROCESS. No such 0.5
+The maintainer approved Solo and two-player cooperative play on Steam
+1.7.104.0 Windows x64, with on-foot exploration as the qualification scope.
+Mount synchronization is not guaranteed; MOUNT-01 is N/A, not PASS. The 17
+necessary human scenarios remain unexecuted. ADR-0018 is unchanged; corruption,
+inventory loss, lasting loss of controls and unrecoverable progression remain
+blockers. The broader 2–4-player and 1–10-player objectives are not Alpha evidence.
+
+Before tagging, formalize the target Milestone and satisfy the applicable
+outcome/failure/recovery matrix under RELEASE_PROCESS. No such 0.5
 Milestone was present at the 2026-10-23 preparation check. The proposed slice
 does not waive campaign-critical evidence or P0 blockers; known lesser defects
 need explicit dispositions. The [preparation plan](docs/production/releases/0.5.0-alpha.1-preparation.md)

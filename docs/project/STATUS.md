@@ -19,8 +19,13 @@ Cumulative release documentation is measured from the real 0.4 tag, and the
 installation guide now describes a player package rather than private DEV lots.
 
 At preparation inspection, the proposed version/tag was free and no 0.5 target
-Milestone existed. The proposed Alpha slice, defect disposition and missing
-campaign-critical 1.7 evidence remain gates; no release policy is relaxed.
+Milestone existed. On 2026-10-23 the maintainer approved the product slice:
+Solo and two-player cooperation on Steam 1.7.104.0 Windows x64, with on-foot
+exploration as qualification scope. Mount synchronization is not guaranteed;
+MOUNT-01 is N/A, not PASS. The 17 necessary human scenarios remain unexecuted.
+The Milestone has not been created, redistribution rights remain open and
+publication remains prohibited. ADR-0018 and critical integrity/progression
+gates are unchanged; the broader player-count objectives are not test evidence.
 The [preparation plan](../production/releases/0.5.0-alpha.1-preparation.md) records
 compatibility review, package validation and the future coordinated publication.
 The [EN/FR notes](../production/releases/0.5.0-alpha.1.md) explicitly distinguish
@@ -69,8 +74,8 @@ actual package uses Data-root layout; extraction and SHA-256 checks PASS.
 
 **A — Technical/documentary preparation: READY for local review.** The
 prepackage is useful and identified; this is not public-package acceptance.
-**B — Prerequisites before tag: MISSING.** Approve the bounded Milestone/ROADMAP
-gate; resolve defect dispositions (including untriaged progression/seating
+**B — Prerequisites before tag: MISSING.** Formalize the approved slice in a
+Milestone and satisfy its ROADMAP gate; resolve defect dispositions (including untriaged progression/seating
 reports), essential 1.7 campaign-failure/recovery and applicable World Sync
 coverage; complete dependency redistribution/notice review, including Discord
 SDK3.2.1 and linked-library notices; obtain exact accepted-HEAD PR CI/review and
