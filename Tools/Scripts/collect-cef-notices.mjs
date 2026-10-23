@@ -1,7 +1,8 @@
 
 // Extract the notices already embedded in the pinned CEF runtime; never launch it.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
+import { prepareVerifiedNotices, verifyBundle, hash, within } from './verified-notices.mjs';
 import { fileURLToPath } from 'node:url';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
 
@@ -32,7 +33,7 @@ export function readNotice(pak, id) {
   return result;
 }
 
-export function collect(runtimeRoot) {
+export function collect(runtimeRoot, options) {
   const pak = readFileSync(join(runtimeRoot, 'resources.pak'));
   // CEF 141.0.11 / Chromium 141.0.7390.123, cef_pack_resources.h.
   const notices = [
@@ -45,17 +46,35 @@ export function collect(runtimeRoot) {
     if (marker && !bytes.includes(Buffer.from(marker))) throw Error(`Invalid notice content: ${name}`);
     return [name, bytes];
   });
-  const out = join(runtimeRoot, 'Licenses');
-  // Refuse stale differing notices, and validate everything before writing.
-  for (const [name, bytes] of notices) {
-    const p = join(out, name);
-    if (existsSync(p) && !readFileSync(p).equals(bytes)) throw Error(`Stale notice: ${name}`);
+  const files = new Map(notices.map(([name, bytes]) => [`Licenses/${name}`, bytes]));
+  if (options) {
+    const verified = prepareVerifiedNotices(runtimeRoot, options.repoRoot, options.cachePath, options.depsRoot, options.uiRoot);
+    for (const [name, bytes] of verified) files.set(name, bytes);
+    files.set('Licenses/notice-bundle.json', Buffer.from(JSON.stringify({
+      schemaVersion: 1, releaseReady: false,
+      files: [...files].map(([path, bytes]) => ({ path, sha256: hash(bytes) }))
+    }, null, 2) + '\n'));
   }
-  mkdirSync(out, { recursive: true });
-  for (const [name, bytes] of notices) writeFileSync(join(out, name), bytes);
-  return notices.map(([name, bytes]) => ({ name, bytes: bytes.length }));
+  // Refuse stale differing notices, and validate everything before writing.
+  for (const [name, bytes] of files) {
+    const p = within(runtimeRoot, name);
+    // Only the reviewed Angular text is completed; all other differing outputs are refused.
+    if (name !== 'UI/3rdpartylicenses.txt' && existsSync(p) && !readFileSync(p).equals(bytes)) throw Error(`Stale notice: ${name}`);
+  }
+  for (const [name, bytes] of files) {
+    const p = within(runtimeRoot, name);
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, bytes);
+  }
+  return [...files].map(([name, bytes]) => ({ name, bytes: bytes.length }));
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv.length !== 3) throw Error('Usage: node collect-cef-notices.mjs <runtime-output-directory>');
-  console.log(JSON.stringify(collect(resolve(process.argv[2])), null, 2));
+  const args = process.argv.slice(2);
+  if (args[0] === '--verify' && args.length === 2) {
+    console.log(JSON.stringify(verifyBundle(resolve(args[1])), null, 2));
+  } else {
+    if (![1, 5].includes(args.length)) throw Error('Usage: collect-cef-notices.mjs <runtime> [<repo> <xmake-cache> <build-deps> <ui-root>] | --verify <packaged-runtime>');
+    const options = args.length === 5 ? { repoRoot: resolve(args[1]), cachePath: resolve(args[2]), depsRoot: resolve(args[3]), uiRoot: resolve(args[4]) } : undefined;
+    console.log(JSON.stringify(collect(resolve(args[0]), options), null, 2));
+  }
 }

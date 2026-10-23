@@ -31,6 +31,25 @@ compatibility review, package validation and the future coordinated publication.
 The [EN/FR notes](../production/releases/0.5.0-alpha.1.md) explicitly distinguish
 the unpublished candidate from the historical public 1.6 archive.
 
+Local licence remediation (2026-10-23), with no rebuild: **29 collector fixture
+checks PASS**. Offline verification against actual build inputs covers 23 native
+components / 30 exact notice files; OpenSSL remains blocked for combined-work
+rights despite its complete notice. Seven of eight identifier-only UI sections
+have verified full texts, and nine existing full sections are preserved byte for
+byte. `@ngneat/reactive-forms` 5.0.2 still lacks verified copyright/permission
+text: the full collector correctly refuses the isolated assembly before any new
+notice output. All four CEF notices re-extract identically to the historical ZIP.
+No complete new package or human acceptance is claimed. Windows playable
+packaging now gates assembly and final notice integrity; normal PR builds retain
+CEF extraction and run the fixture tests. No CI was dispatched: the existing
+Windows/Linux successes cover **28310786971a63096f94293021594c79423664bf only**.
+The [versioned notice inventory and source procedure](../../Tools/Packaging/README.md)
+record the bounded correction. Discord/Tilted permissions, OpenSSL combination,
+Futura, exact Microsoft redistribution terms and inherited asset rights remain
+open, as do corresponding-source/LGPL obligations. The five local remediation
+reports preserve the decision dossier; no rightsholder request has been sent.
+The historical ZIP and compiled identity below remain unchanged.
+
 First frozen source `a5c9bbc6fc63ef6aac3c5611da17cf44b0f784af`: local Release
 x64/Angular production build PASS; TPTests **462 cases / 49,390 assertions PASS**.
 Python Valen **107 tests**, presentation **16 tests**, PowerShell synthetic

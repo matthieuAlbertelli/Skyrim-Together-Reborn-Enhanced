@@ -42,3 +42,10 @@ resources.pak, using the resource IDs of the pinned cef_pack_resources.h.
 The source CEF revision is 7e73ac45f2979537f677e785383a04998f90d51d.
 Angular's production build retains UI/3rdpartylicenses.txt.
 These notices do not license external game/mod assets or private media.
+
+Verified native and UI notice texts are versioned under Tools/Packaging/licenses.
+Tools/Packaging/redistribution.json identifies their exact versions, provenance
+and remaining rights questions. The collector checks these texts before playable
+packaging; it refuses incomplete UI notices. See Tools/Packaging/README.md for
+the corresponding-source procedure and unresolved licence boundaries.
+Including a notice does not settle all rights to distribute the combined work.

@@ -77,6 +77,12 @@ jobs:
           Get-ChildItem "str-build/SkyrimTogetherReborn" -Filter "*Tests.exe" -File -ErrorAction SilentlyContinue |
             Remove-Item -Force
 
+      - name: Verify notices survived final Data-root assembly
+        shell: pwsh
+        run: |
+          node Tools/Scripts/collect-cef-notices.mjs --verify str-build/SkyrimTogetherReborn
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
