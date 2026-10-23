@@ -16,6 +16,8 @@
 
 **Alpha:** all STRE features and integrations are works in progress.<br>**Alpha :** toutes les fonctionnalités et intégrations STRE sont en cours de développement.
 
+**0.5.0-alpha.1 is an unpublished candidate; no public 1.7 player package is available from this preparation.** [Candidate notes EN/FR](docs/production/releases/0.5.0-alpha.1.md).<br>**0.5.0-alpha.1 est un candidat non publié ; aucun paquet jouable public 1.7 n’est disponible dans cette préparation.**
+
 **Development target / Cible de développement :** Skyrim Special Edition **1.7.104.0 — Steam, Windows x64**.
 
 The historical **0.4.0-alpha.1** release targets Skyrim **1.6.1170**, not **1.7.104.0**. The port in `main` is not a new public release announcement.<br>L’ancienne version **0.4.0-alpha.1** cible Skyrim **1.6.1170**, pas **1.7.104.0**. Le portage dans `main` ne constitue pas l’annonce d’une nouvelle version publique.

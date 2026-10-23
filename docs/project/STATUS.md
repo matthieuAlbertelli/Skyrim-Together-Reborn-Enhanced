@@ -9,6 +9,32 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
+## 0.5.0-alpha.1 local release preparation — not published (2026-10-23)
+
+The exact Steam 1.7.104.0 port and DEV workflow are integrated into main at
+`968badb4b91e4a40c686fb8128e7496d2ef89c41`. A separate local preparation branch
+retains the four bilingual README commits through `c50cf8d2`; no audio-production
+commit is included. VERSION now identifies **0.5.0-alpha.1, unpublished**.
+Cumulative release documentation is measured from the real 0.4 tag, and the
+installation guide now describes a player package rather than private DEV lots.
+
+At preparation inspection, the proposed version/tag was free and no 0.5 target
+Milestone existed. The proposed Alpha slice, defect disposition and missing
+campaign-critical 1.7 evidence remain gates; no release policy is relaxed.
+The [preparation plan](../production/releases/0.5.0-alpha.1-preparation.md) records
+compatibility review, package validation and the future coordinated publication.
+The [EN/FR notes](../production/releases/0.5.0-alpha.1.md) explicitly distinguish
+the unpublished candidate from the historical public 1.6 archive.
+
+Local build/package results will be recorded with their frozen source and
+archive identity; no historical gameplay PASS is reassigned to them. Removed
+historical receipts are not recreated. Source preparation authorizes no public
+release, game/editor/server launch, installed-content change or deployment.
+
+The dated implementation entries below remain historical evidence: in
+particular the original Runtime17TwoPc entry describes the audio checkout at
+that earlier checkpoint, not its present filesystem state.
+
 ## Runtime17TwoPc no-argument entry and script-checkout source — local fixtures only
 
 The normal ignored `./build-and-deploy-dev.ps1` invocation now selects the 1.7

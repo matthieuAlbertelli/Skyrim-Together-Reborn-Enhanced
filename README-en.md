@@ -124,10 +124,12 @@ Runtime prerequisites are **SKSE64 2.3.1** and the **Address Library matching Sk
 
 Start with the [installation guide](docs/user/INSTALLATION.md), [build guide](docs/development/BUILDING.md) and [compatibility matrix](docs/testing/COMPATIBILITY_MATRIX.md). Development builds are for testing, not a promise of a finished campaign or compatibility with every mod.
 
+**Preparing STRE 0.5.0-alpha.1:** an unpublished Alpha candidate for this exact runtime. No public 1.7 player download is available from this preparation. Read the [candidate release notes](docs/production/releases/0.5.0-alpha.1.md); publication and package validation remain pending.
+
 ### Historical download — Alpha
 
 <p>
-  <a href="https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases"><img src="https://img.shields.io/badge/Legacy%20release-0.4.0--alpha.1-545B66?style=flat-square&amp;labelColor=303640" alt="Legacy release: 0.4.0-alpha.1"></a>
+  <a href="https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases/tag/stre-v0.4.0-alpha.1"><img src="https://img.shields.io/badge/Legacy%20release-0.4.0--alpha.1-545B66?style=flat-square&amp;labelColor=303640" alt="Legacy release: 0.4.0-alpha.1"></a>
 </p>
 
 The historical **STRE 0.4.0-alpha.1** release targets **Skyrim 1.6.1170**. **Do not use that archive with Skyrim 1.7.104.0.** The port in `main` is not a new public release announcement.

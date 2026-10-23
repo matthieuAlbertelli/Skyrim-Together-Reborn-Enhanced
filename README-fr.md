@@ -128,10 +128,12 @@ Les prérequis d’exécution sont **SKSE64 2.3.1** et l’**Address Library cor
 
 Commencez par le [guide d’installation](docs/user/INSTALLATION.md), le [guide de compilation](docs/development/BUILDING.md) et la [matrice de compatibilité](docs/testing/COMPATIBILITY_MATRIX.md). Les versions de développement sont destinées aux tests : elles ne garantissent ni une campagne terminée ni la compatibilité avec tous les mods.
 
+**STRE 0.5.0-alpha.1 en préparation :** un candidat Alpha non publié pour ce runtime exact. Cette préparation ne fournit aucun téléchargement public jouable en 1.7. Consultez les [notes du candidat](docs/production/releases/0.5.0-alpha.1.md) ; la publication et la validation du paquet restent à effectuer.
+
 ### Téléchargement historique — Alpha
 
 <p>
-  <a href="https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases"><img src="https://img.shields.io/static/v1?label=Version+historique&amp;message=0.4.0-alpha.1&amp;color=545B66&amp;labelColor=303640&amp;style=flat-square" alt="Version historique : 0.4.0-alpha.1"></a>
+  <a href="https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases/tag/stre-v0.4.0-alpha.1"><img src="https://img.shields.io/static/v1?label=Version+historique&amp;message=0.4.0-alpha.1&amp;color=545B66&amp;labelColor=303640&amp;style=flat-square" alt="Version historique : 0.4.0-alpha.1"></a>
 </p>
 
 L’ancienne version **STRE 0.4.0-alpha.1** cible **Skyrim 1.6.1170**. **N’utilisez pas cette archive avec Skyrim 1.7.104.0.** Le portage dans `main` ne constitue pas l’annonce d’une nouvelle version publique.
