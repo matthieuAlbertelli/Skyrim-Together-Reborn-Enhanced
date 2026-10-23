@@ -35,6 +35,7 @@ Use legitimate, complete Steam game files and the official distributions of:
 
 Dependency sources: [SKSE](https://skse.silverlock.org/),
 [Address Library](https://www.nexusmods.com/skyrimspecialedition/mods/32444),
+[Better Grabbing](https://www.nexusmods.com/skyrimspecialedition/mods/134769?tab=files),
 [EEKs Resource Repository](https://www.nexusmods.com/skyrimspecialedition/mods/31562?tab=files).
 Use the official SkyrimThiago Better Grabbing 2.0 distribution identified by
 the release's dependency checks; a renamed old DLL does not satisfy the policy.
@@ -56,7 +57,8 @@ requirement to bypass a missing plugin.
    manually. Do not add an extra nested Data directory. Manager deployment is
    an explicit human step; verify the files in the actual game installation.
 3. Enable `SkyrimTogether.esp` and `STRE_AlternateStart.esp`, loading required
-   Bethesda masters first. Follow their declared master dependencies; place
+   Bethesda masters first: Skyrim.esm and Update.esm for SkyrimTogether, plus
+   Dragonborn.esm for STRE_AlternateStart. Follow their dependencies; place
    STRE_AlternateStart after SkyrimTogether. Do not enable Live Another Life
    (`Alternate Start - Live Another Life.esp`) with this alternate start.
    Keep plugins/order identical across players. No ESL conversion is required.

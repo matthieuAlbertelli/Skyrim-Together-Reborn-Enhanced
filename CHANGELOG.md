@@ -39,6 +39,9 @@ No publication date or tagged-package acceptance is assigned yet.
   departure coordination and content integration fixes accumulated since 0.4.
   Open seating defects remain separately tracked; this is not a blanket fix.
 
+- Packaging now extracts readable CEF/Chromium licence notices from the pinned
+  runtime resources, with fail-closed fixture tests; no CEF execution is needed.
+
 ### Evidence and limitations
 
 - Earlier identified development candidates have bounded maintainer Solo,

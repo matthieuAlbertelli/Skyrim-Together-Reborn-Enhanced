@@ -130,6 +130,14 @@ jobs:
             -Recurse `
             -Force
 
+      - name: Preserve readable CEF and Chromium notices
+        shell: pwsh
+        run: |
+          node --test Tools/Scripts/test-cef-notices.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node Tools/Scripts/collect-cef-notices.mjs $env:STR_BUILD_DIR
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - id: output-version
         name: Resolve build version
         shell: pwsh

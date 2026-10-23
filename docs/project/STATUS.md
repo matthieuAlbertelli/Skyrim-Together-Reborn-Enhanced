@@ -26,8 +26,24 @@ compatibility review, package validation and the future coordinated publication.
 The [EN/FR notes](../production/releases/0.5.0-alpha.1.md) explicitly distinguish
 the unpublished candidate from the historical public 1.6 archive.
 
-Local build/package results will be recorded with their frozen source and
-archive identity; no historical gameplay PASS is reassigned to them. Removed
+First frozen source `a5c9bbc6fc63ef6aac3c5611da17cf44b0f784af`: local Release
+x64/Angular production build PASS; TPTests **462 cases / 49,390 assertions PASS**.
+Python Valen **107 tests**, presentation **16 tests**, PowerShell synthetic
+outillage **76**, matrix preparation **21** and matrix import **21** cases PASS.
+CK packaging audits **697** managed paths; the ten seat mappings, 41 catalog
+references, MQ101 binary/source and declared plugin-record audits pass. All
+**671 tracked WAVs are silent timing placeholders**, unchanged from main; no
+private voice export is included. **195 local document links** resolve and
+historical changelog entries remain byte-equivalent after newline normalization.
+
+A demonstrated packaging gap is corrected: CEF/Chromium notices already inside
+resources.pak are now extracted to readable files by the Windows workflow.
+Five fixture tests and actual resource extraction PASS. Runtime binaries and
+dependency versions are not changed by this correction. Complete dependency
+notice/redistribution review remains a pre-publication requirement.
+
+The package build will be refreshed from a clean commit containing this narrow
+packaging correction; its source and archive identity will be recorded separately; no historical gameplay PASS is reassigned to them. Removed
 historical receipts are not recreated. Source preparation authorizes no public
 release, game/editor/server launch, installed-content change or deployment.
 
