@@ -115,7 +115,7 @@ function Assert-R17Exact([string]$Root, $Rows, [switch]$Distribution) {
     if (@(Compare-Object @($Rows.path | Sort-Object) @($actual.path | Sort-Object)).Count) { throw "Payload file set mismatch: $Root" }
 }
 function Invoke-R17Git([string]$Repo, [string[]]$Arguments) {
-    $value = @(& git -C $Repo @Arguments)
+    $value = @(& git --no-optional-locks -C $Repo @Arguments)
     if ($LASTEXITCODE) { throw "Git failed: $($Arguments -join ' ')" }
     $value
 }
@@ -198,14 +198,17 @@ function Assert-R17Separate($Paths) {
         $ids[$id] = $path
     }
 }
-function Read-R17Config([string]$Path) {
+function Read-R17Config([string]$Path, [string]$SourceRepository) {
     Assert-R17Local $Path
     Assert-R17Ordinary $Path
     $config = Read-R17Json $Path
     if ($config.schema -ne 1 -or @($config.targets).Count -ne 2 -or ($config.targets.id -join ',') -cne 'A,B') { throw 'Configuration requires schema 1 and ordered targets A,B.' }
-    foreach ($key in @('repository','receipts','referencePath')) { Assert-R17Local $config[$key] }
     # Optional for reading older receipts/configs; new builds always allocate here.
     if (!$config.ContainsKey('buildRoot')) { $config.buildRoot=Join-Path ([IO.Path]::GetPathRoot($config.repository)) 'STRE-R17' }
+    # Only the source changes in memory. Preserve configured destinations, pins
+    # and even the historical default output drive; never probe the old checkout.
+    if ($SourceRepository) { $config.repository=$SourceRepository }
+    foreach ($key in @('repository','receipts','referencePath')) { Assert-R17Local $config[$key] }
     Assert-R17Local $config.buildRoot
     if ($config.referenceSha256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Pin the accepted reference SHA-256 in local configuration.' }
     foreach ($target in $config.targets) {
@@ -620,26 +623,50 @@ function Assert-R17ReceiptTargets($Config, $Receipt) {
 }
 function Invoke-R17Workflow {
     param([string]$ConfigPath, [string]$Mode='BuildDeploy', [string]$ReceiptPath,
-        [string]$ExpectedCommit, [int]$Jobs=6, [switch]$PlanOnly)
-    $config = Read-R17Config $ConfigPath
+        [string]$ExpectedCommit, [int]$Jobs=6, [switch]$PlanOnly, [string]$SourceRepository)
+    if ($Mode -notin @('BuildDeploy','Verify','RestoreStaging','VerifyRestored')) { throw 'Unknown workflow mode.' }
+    if ($Mode -eq 'BuildDeploy' -and $ReceiptPath) { throw 'BuildDeploy cannot resume a receipt; select a verification/restoration mode.' }
+    if ($Mode -ne 'BuildDeploy' -and (!$ReceiptPath -or $SourceRepository)) { throw 'Resume requires a receipt and its original source context, not a new SourceRepository.' }
+    if ($Mode -in @('RestoreStaging','VerifyRestored') -and $ExpectedCommit) { throw 'ExpectedCommit applies to BuildDeploy/Verify, not restoration.' }
+    $effectiveRepository=$SourceRepository
+    if ($Mode -ne 'BuildDeploy') {
+        Assert-R17Local $ConfigPath; Assert-R17Ordinary $ConfigPath
+        Assert-R17Local $ReceiptPath; Assert-R17Ordinary $ReceiptPath
+        $receipt=Read-R17Json (Join-Path $ReceiptPath 'receipt.json')
+        if ($receipt.configSha256 -ne (Get-R17Hash $ConfigPath) -or $receipt.schema -notin @(2,3)) {
+            throw 'Receipt/configuration mismatch (schema 2 or 3 required; do not reinterpret an older native-only receipt).'
+        }
+        if ($receipt.schema -eq 3) {
+            # Schema 3 pins the original config bytes AND records the sole
+            # override: the entry checkout. Never replace it with today's entry.
+            if ($receipt.sourceSelection -cne 'script-checkout' -or !$receipt.source.repository -or
+                $receipt.source.repository -cne $receipt.candidate.source.repository -or
+                $receipt.source.commit -cne $receipt.candidate.source.commit -or
+                $receipt.source.branch -cne $receipt.candidate.source.branch -or
+                $receipt.source.identity -cne $receipt.candidate.source.identity) { throw 'Receipt source context mismatch.' }
+            $effectiveRepository=$receipt.source.repository
+        } elseif ($receipt.ContainsKey('sourceSelection')) { throw 'Receipt source context/schema mismatch.' }
+    }
+    $config = Read-R17Config $ConfigPath $effectiveRepository
+    # A new entry-selected plan validates local source metadata only. The older
+    # direct-helper plan remains configuration-only; neither probes destinations.
+    $source = if ($SourceRepository) { Get-R17Source $config.repository $ExpectedCommit } else { $null }
     if ($PlanOnly) {
         [pscustomobject]@{mode=$Mode; destinationIO=$false; repository=$config.repository;
+            source=$source; receiptPath=$ReceiptPath;
             buildRoot=$config.buildRoot; targets=$config.targets; missingGameRoots=@($config.targets | Where-Object {!$_.gameRoot} | ForEach-Object { $_.id });
-            steps='build fresh; snapshot installed A content; preflight both; backup both; stage both; human Vortex deploy; verify actual Data'}
+            steps=$(if ($Mode -eq 'BuildDeploy') {'build fresh; snapshot installed A content; preflight both; backup both; stage both; human Vortex deploy; verify actual Data'} else {"$Mode retained receipt; no build"})}
         return
     }
     foreach ($target in $config.targets) { if (!$target.gameRoot) { throw "Configure actual gameRoot for $($target.id) before execution." } }
     Assert-R17Stopped
     # Rollback uses saved installed bytes even if current source is dirty or has
     # evolved. Verify still records the current documentation/source HEAD.
-    $source = if ($Mode -notin @('RestoreStaging','VerifyRestored')) { Get-R17Source $config.repository $ExpectedCommit } else { $null }
-    if ($source) { Write-Host "Selected source: $($source.repository); branch=$($source.branch); commit=$($source.commit)" }
+    if (!$source -and $Mode -notin @('RestoreStaging','VerifyRestored')) { $source=Get-R17Source $config.repository $ExpectedCommit }
+    if ($source) { Write-Host "Selected source: $($source.repository); branch=$($source.branch); commit=$($source.commit); mode=$Mode" }
+    else { Write-Host "Retained source: $($receipt.source.repository); branch=$($receipt.source.branch); commit=$($receipt.source.commit); mode=$Mode (no build)" }
     $reference = if ($Mode -ne 'RestoreStaging') { Get-R17Reference $config } else { $null }
     if ($Mode -ne 'BuildDeploy') {
-        Assert-R17Local $ReceiptPath
-        Assert-R17Ordinary $ReceiptPath
-        $receipt = Read-R17Json (Join-Path $ReceiptPath 'receipt.json')
-        if ($receipt.configSha256 -ne (Get-R17Hash $ConfigPath) -or $receipt.schema -ne 2) { throw 'Receipt/configuration mismatch (schema 2 required; do not reinterpret an older native-only receipt).' }
         $rows=@(Get-R17DeploymentRows $receipt.candidate)
         $receipt.attemptId=[guid]::NewGuid().ToString('N')
         $receipt.status="${Mode}_PREFLIGHT"
@@ -694,6 +721,7 @@ function Invoke-R17Workflow {
     $run = Join-Path $config.receipts ((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')+'-'+[guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $run | Out-Null
     $receipt = @{schema=2; status='BUILDING'; configSha256=Get-R17Hash $ConfigPath; source=$source; preflight=$null; candidate=$null}
+    if ($SourceRepository) { $receipt.schema=3; $receipt.sourceSelection='script-checkout' }
     Write-R17Json $receipt (Join-Path $run 'receipt.json')
     Write-Host "Receipt: $run"
     try {

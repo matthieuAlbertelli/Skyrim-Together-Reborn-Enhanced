@@ -9,12 +9,57 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## Runtime17TwoPc selected development branch — local fixtures only
+## Runtime17TwoPc no-argument entry and script-checkout source — local fixtures only
+
+The normal ignored `./build-and-deploy-dev.ps1` invocation now selects the 1.7
+two-PC workflow and the Git root containing that script (`$PSScriptRoot`).
+`-Runtime17TwoPc` is an optional alias. The helper loads from that root and
+receives the same source through build/candidate/receipt creation. A caller's
+different working directory and the private config's historical `repository`
+cannot redirect it. Source path, branch, full SHA and mode are displayed.
+Unsupported, dirty, detached, missing-helper or pre-1.7 sources fail explicitly;
+helper/native child errors propagate. Legacy remains explicit, never a fallback.
+
+New entry-selected receipts use schema 3, recording the source override while
+keeping the original private configuration hash. Resume reads that context
+without rebuilding. Schema-2 receipts retain their original source/configuration
+contract; no old receipt is relabelled or regenerated. Destinations, dependency/
+scope pins, output roots, source/submodule provenance, BuildInfo, manifests,
+backups, private-file preservation and A/B checks remain in force. WhatIf reads
+local metadata only, with no destination probes, process guard, build or writes.
+See the [entry and receipt runbook](../development/RUNTIME_1_7_TWO_PC_DEV.md).
+
+Validation on the updated sources: **93 helper fixtures PASS** (83 retained +
+10 added) and **25 actual-entry cases PASS**. The personal entry was copied
+byte-for-byte into disposable local checkouts, with inert helpers; real wrapper/
+module checks exercised WhatIf and source refusals. Cases include foreign cwd,
+historical source exclusion, exact SHA/branch display, alias and resume routing,
+error propagation, schema-3 A/B simulation, context/config/manifest corruption,
+restoration and unchanged private bytes. PowerShell syntax and diff checks pass.
+The earlier 83+4 results below remain historical. No native build, real A/B
+deployment, CK import, game/editor launch or remote-PC access was performed.
+
+The validated routing prefix was installed in the ignored personal entry with
+its former bytes backed up privately; the entire historical Legacy body and
+private JSON remain unchanged. No tracked file in the primary audio checkout
+was changed. That checkout still has its protected STATUS edit, lacks the
+Runtime17 helper/module and runtime compatibility contract, and uses the older
+BuildInfo identity. Its configured receipt directory is also nested inside the
+primary checkout, which the unchanged output-isolation gate refuses. It is
+correctly selected but **not ready for a build**.
+Its work must be preserved and those prerequisites addressed separately; no
+branch switch, stash, merge or tracked-source copy was performed. Retain both
+temporary worktrees until a clean compatible source is actually usable. The old
+configuration/direct-helper and explicit lot-4 routes still have their original
+local dependencies. Existing gameplay/presentation acceptances and release gates
+are unchanged.
+
+## Historical Runtime17TwoPc selected development branch — local fixtures only
 
 The DEV helper accepts attached `main`, the repository's governed work-branch
 prefixes (`feat/`, `fix/`, `refactor/`, `docs/`, `test/`, `chore/`, `art/`,
-`audio/`) and `codex/` task branches. The existing private `repository` field
-selects the checkout. The local entry loads its helper from that checkout; the
+`audio/`) and `codex/` task branches. At this milestone, the private `repository` field
+selected the checkout. The local entry loaded its helper from that checkout; the
 helper displays path, branch and full SHA before compilation. No automatic
 branch switch, checkout fallback or development-branch ancestry gate was added.
 Main still requires exact equality with an explicitly fetched `origin/main`.
@@ -33,9 +78,9 @@ Four additional checks of a copied personal entry with inert mock helpers pass:
 two explicitly selected paths containing spaces, argument/WhatIf forwarding,
 and UNC-source rejection before resolution (plus entry parsing).
 
-This correction is prepared as a local commit from the integrated migration.
-The operational configuration still selects the experimental worktree, which
-must remain until the correction is integrated and usable. Existing human
+That correction was prepared from the integrated migration. At that point the
+operational configuration selected the experimental worktree, which was retained.
+Existing human
 gameplay/presentation acceptances and independent release gates are unchanged.
 
 ## Historical Runtime17TwoPc main-source support — local fixtures only

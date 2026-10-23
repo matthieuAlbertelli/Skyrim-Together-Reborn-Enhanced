@@ -53,7 +53,7 @@ match that exact SHA. Unsupported branch names and detached HEADs are refused.
 Development branches need not already be integrated into main. The helper never
 switches branches or falls back to another checkout when the selected source is
 dirty or incompatible. It displays that source's path, attached branch and full
-SHA before compilation. These DEV rules do not broaden the separate Modding
+SHA and mode before compilation. These DEV rules do not broaden the separate Modding
 authoring/ancestry policy.
 
 For `main`, `refs/remotes/origin/main` must resolve to a commit and **HEAD must
@@ -78,30 +78,60 @@ or edit the configuration pin to reuse a receipt with a new source path.
 RestoreStaging/VerifyRestored retain their existing backup and destination gates;
 rollback does not require a clean or current source checkout.
 
+New entry-selected builds use **receipt schema 3**: `configSha256` still pins
+the original private JSON bytes, `sourceSelection` is `script-checkout`, and
+`source.repository` records the only in-memory override to that configuration.
+The candidate and build-layout provenance must agree with this source. Resume
+reconstructs that context from the receipt, never from today's entry location or
+the historical `repository` field. Schema 2 retains its original configuration-
+selected source contract. Neither schema permits changing the configuration pin,
+candidate identity or frozen inputs. Do not downgrade a receipt, relabel it,
+or recreate deleted receipts/backups as if they could still support recovery.
+
 This support is qualified on local fixtures only. **No real deployment from
 main or human A/B validation of that route has been executed.** Historical
 experimental A/B acceptances keep their own source identities.
 
 ## Entry and private configuration
 
-The ignored personal entry routes `-Runtime17TwoPc` to
-`config.repository/Tools/Scripts/Invoke-StreRuntime17Dev.ps1` and its module.
-Its working directory does not select the source. The selected checkout must
-contain a helper that supports the requested branch; no helper fallback occurs.
-The historical body remains behind `-Legacy`, which is not a 1.7 procedure.
-Ambiguous no-mode invocation fails. Run from the personal entry's directory:
+The ignored personal entry defaults to the Skyrim 1.7 two-PC workflow. For a
+new BuildDeploy, it resolves the Git root containing **the script itself**, using
+`$PSScriptRoot`, and loads that root's `Tools/Scripts/Invoke-StreRuntime17Dev.ps1`.
+It passes the same root through the internal `SourceRepository` argument into
+the module, build and receipt. Neither the caller's PowerShell directory nor
+`config.repository` can redirect a new normal build. An absolute-path invocation
+from another directory still selects the script's checkout.
+
+Run from the personal entry's directory, in PowerShell 7.2+:
 
 ```powershell
-pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc
+.\build-and-deploy-dev.ps1
 ```
 
 Use PowerShell 7.2+, Git and the existing xmake/MSVC/Node/pnpm build environment.
 The private config and entry remain ignored. `runtime17-dev.example.json` and
 `Start-StreRuntime17Dev.example.ps1` are generic templates for another machine.
+`-Runtime17TwoPc` remains an optional alias with identical source selection.
+The entry displays path, branch, full SHA and mode. Missing helpers, dirty source,
+detached/unsupported branches, wrong provenance or runtime fail without selecting
+another checkout. A helper or native child failure propagates as a failed entry.
+
+`-Runtime17ConfigPath <absolute-local-json>` selects destinations/pins/output
+settings, not the source of a new build. `-Runtime17ExpectedCommit <full-SHA>`
+pins BuildDeploy/Verify; restoration instead uses the saved candidate/backups.
+`-Runtime17Mode Verify|RestoreStaging|VerifyRestored` requires an absolute local
+`-Runtime17ReceiptRoot`. Resume loads the updated helper beside the entry but
+uses the receipt's original source context; it cannot rebuild. Contradictory
+receipt/build, Legacy/normal or restoration/ExpectedCommit options fail.
+
+The historical personal body requires explicit `-Legacy`, alone and without
+WhatIf; the generic example has no Legacy implementation. The optional historical
+lot-4 `-Runtime17RepositoryRoot`/`-Runtime17Phase` route remains explicit and
+separate. Neither is a fallback. Normal execution does not invoke the CK importer.
 
 | Field | Meaning |
 |---|---|
-| `repository` | Explicit absolute local root of the chosen authorized branch; never inferred from the entry's working directory |
+| `repository` | Historical schema-2/direct-helper source; ignored for a new normal entry-selected build. Keep unchanged for retained receipts. |
 | `receipts` | Existing local directory outside the source worktree and destinations |
 | `buildRoot` | Existing short local build root, e.g. `C:\STRE-R17`, separate from source, receipts and destinations |
 | `referencePath`, `referenceSha256` | Qualification/scope manifest and pinned SHA-256 |
@@ -124,37 +154,39 @@ reference from a divergent destination to bypass a failure.
 
 ### Selecting main after integration
 
-The same explicit configuration mechanism selects a development checkout.
-Use `repository` to select its absolute local path and the existing
-`-Runtime17ConfigPath` option to select the private configuration. Do not point
-the default at an unrelated or dirty checkout just to remove an old worktree.
-Until the development-branch correction is integrated and usable, retain the
-operational experimental checkout and its branch. A local corrective commit
-and fixture PASS alone do not change the active deployment source.
+The same script-location mechanism selects main or a development checkout.
+Place the ignored entry in the checkout intended for work; it must already
+contain the compatible versioned helper/module and runtime changes. Main also
+requires the explicit fetch and exact HEAD alignment described above. Prepare
+the existing submodules and preserve clean tracked/untracked files. No branch
+switch, integration, stash or tracked-source copy is performed by the entry.
 
-After the migration is merged with separate authorization, the maintainer can
-select a clean local checkout of `main` containing this helper. Fetch there
-explicitly and ensure HEAD equals the fetched `origin/main`, with the expected
-submodules. Preserve the existing experimental checkout, entry, configuration,
-reference and receipts. Prepare a **separate private configuration** whose
-`repository` names the selected main checkout and whose local receipts/build
-roots satisfy the same isolation rules. Keep the reviewed destination and
-reference settings; no automatic rerouting or destination change is performed.
+Keep the reviewed private destination/reference/output settings unchanged.
+Select their existing file with `-Runtime17ConfigPath` when it is not beside the
+entry. Never repoint `repository` merely to make a new normal build select main.
+Historical direct calls to `Invoke-StreRuntime17Dev.ps1` without the internal
+`SourceRepository` argument still use configuration-selected schema-2 builds.
+Use the original config/receipt pairing for every resume operation. Changing
+any byte of that config intentionally invalidates its pin.
 
-For the entry supporting this option, select that separate file with
-`-Runtime17ConfigPath '<absolute-private-main-config.json>'` alongside
-`-Runtime17TwoPc`; it loads the helper from `config.repository`. The default
-command and current private config continue to select the experimental checkout.
-Use the original config/receipt pairing for historical Verify/RestoreStaging/
-VerifyRestored operations. Changing `repository` in a config changes its hash
-and intentionally prevents using it with receipts pinned to the old file.
+The currently retained primary audio checkout may be dirty and may lack the
+1.7 helper/runtime changes; an allowed branch name is not sufficient. Preserve
+that work and resolve its prerequisites under separate authorization. Keep the
+experimental/corrective worktrees until a compatible clean checkout is usable;
+fixture PASS alone does not make the primary checkout ready for a real build.
+In particular, selecting a parent checkout may make an existing receipts root
+fall inside that source: the isolation gate still refuses it. Prepare separate
+output/configuration settings for a future run under its own authorization;
+keep the original config bytes for historical receipts. The entry never moves
+outputs or rewrites the private JSON to bypass this check.
 
 Each new build allocates `buildRoot/<GUID>/build`; the complete build-directory
 path is limited to 100 characters as a conservative budget for this project's
 object/PCH/dependency suffixes. The root must be ordinary, writable and local;
 UNC/mapped-network roots, overlap and physical aliases remain rejected. It is
 not a renamed/moved source checkout. If `buildRoot` is omitted, it defaults to
-`STRE-R17` at the root of the repository's drive; prepare that directory first.
+`STRE-R17` at the root of the **configured historical repository's drive**;
+prepare that directory first. Selecting a different source does not move outputs.
 
 `build-layout.json` in the receipt and `receipt-link.json` in the allocated build
 root record both directions, the repository, source commit and directory ID.
@@ -182,8 +214,11 @@ The canonical path is **`SkyrimTogetherReborn/config/STServer.ini`**, as used by
 
 ## Run sequence
 
-1. Read configuration. `-WhatIf` stops here: no destination resolution/IO,
-   process enumeration, compilation or writes.
+1. Resolve the entry checkout and read local configuration/source metadata.
+   `-WhatIf` validates a new entry-selected source and returns a local plan;
+   resume plans read their pinned receipt context. No destination resolution/IO,
+   process enumeration, compilation or writes occur. Git optional index writes
+   are disabled. The historical direct-helper WhatIf remains configuration-only.
 2. Check source root/origin/branch, clean source and submodules, gitlink commits
    and origins, runtime/SKSE/build-identity contract, and local output isolation.
    No automatic fetch; main requires the explicit fetch described above and exact
@@ -281,7 +316,7 @@ pwsh -NoProfile -File .\build-and-deploy-dev.ps1 -Runtime17TwoPc -Runtime17Mode 
 Only `RESTORED_VERIFIED` establishes that scoped installed files match their
 pre-run installed backups. The helper never writes Data. Unavailable B, corrupted
 backups, unknown changes or changed directory identities block recovery. Keep the
-private config unchanged: receipts pin its hash. Schema-2 receipts are required;
+private config unchanged: receipts pin its hash. Schema-2/3 receipts are supported;
 older native-only schema-1 receipts are explicitly rejected, not reinterpreted.
 A failure before complete backups/staging has no target writes to undo; inspect
 its phase before choosing recovery. Unrelated external changes are not undone.
@@ -290,6 +325,7 @@ its phase before choosing recovery. Unrelated external changes are not undone.
 
 ```powershell
 pwsh -NoProfile -File Tools/Scripts/Test-StreRuntime17Dev.ps1 -OutputRoot '<fresh-local-fixture-directory>'
+pwsh -NoProfile -File Tools/Scripts/Test-StreRuntime17Entry.ps1 -OutputRoot '<another-fresh-local-fixture-directory>' -EntryPath '<absolute-test-copy-of-personal-entry.ps1>'
 ```
 
 Use a fresh **absolute local path with a short prefix**, for example a unique
@@ -308,6 +344,14 @@ origin/runtime/SKSE/BuildInfo), a complete main candidate cycle, retained
 experimental verification/restoration and unchanged configuration pins. Remote
 refs are created locally in disposable repositories; no fetch or network access
 occurs in these tests. Fixture success does not validate a real main deployment.
+
+The entry suite copies the supplied **actual entry bytes**, including its inert
+Legacy body, into local fixture checkouts. It requires the routing prefix to
+match the versioned example. Inert helpers test routing/error propagation; the
+real wrapper/module test WhatIf and source refusals before any process guard or
+build. It never executes the supplied entry in place. Without EntryPath it tests
+the generic example. Schema-3 fixtures exercise the effective source through a
+complete simulated A/B cycle and resume, including hash/context corruption.
 Development-source cases cover every admitted prefix, a complete audio-branch
 cycle, source display, dirty-source refusal without fallback, and unchanged
 historical candidate identity after verification from a different work branch.

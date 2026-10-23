@@ -62,9 +62,12 @@ historical; STATUS records later scoped acceptance. The standard build commands
 above do not depend on the branch name. The separate Runtime17TwoPc helper accepts
 clean governed development branches, including `audio/`, or clean `main` exactly
 equal to an explicitly fetched `origin/main`, with the existing provenance
-checks. The private configuration selects a checkout; the helper identifies its
-attached branch and exact SHA without switching or falling back. Merging this port
-does not retarget the private entry/configuration. See its
+checks. The normal `./build-and-deploy-dev.ps1` invocation selects the Git checkout
+containing that ignored script, passes the same root to the helper/build, and
+records the attached branch and exact SHA without switching or falling back.
+`-Runtime17TwoPc` is an optional alias. Private configuration retains destinations,
+pins and output roots; its historical source field does not redirect a new build.
+A dirty or pre-1.7 checkout remains blocked. See its
 [source and receipt rules](RUNTIME_1_7_TWO_PC_DEV.md#source-branches-and-retained-receipts)
 and [main selection procedure](RUNTIME_1_7_TWO_PC_DEV.md#selecting-main-after-integration).
 Main support is fixture-tested; no real main deployment is implied.
