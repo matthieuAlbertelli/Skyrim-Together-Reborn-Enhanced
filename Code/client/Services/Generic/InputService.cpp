@@ -11,7 +11,6 @@
 
 #include <include/internal/cef_types.h>
 #include <Services/ImguiService.h>
-#include <Services/DiscordService.h>
 #include <World.h>
 
 #include "Games/Skyrim/Interface/MenuControls.h"
@@ -288,9 +287,6 @@ LRESULT CALLBACK InputService::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
     const auto pApp = overlay.GetOverlayApp();
     if (!pApp)
         return 0;
-
-    auto& discord = World::Get().ctx().at<DiscordService>();
-    discord.WndProcHandler(hwnd, uMsg, wParam, lParam);
 
     const bool active = uiSurface.IsInteractive();
     if (active)

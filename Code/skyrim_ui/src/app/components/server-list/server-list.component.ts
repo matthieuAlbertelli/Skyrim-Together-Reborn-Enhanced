@@ -11,10 +11,11 @@ import {
   faStar as fasStar,
 } from '@fortawesome/free-solid-svg-icons';
 import { loadingFor } from '@ngneat/loadoff';
-import { FormControl } from '@ngneat/reactive-forms';
+import { FormControl } from '@angular/forms';
 import {
   BehaviorSubject,
   combineLatestWith,
+  defer,
   Observable,
   ReplaySubject,
   share,
@@ -131,7 +132,10 @@ export class ServerListComponent {
 
     this.filteredServerlist$ = this.serverlist$.pipe(
       combineLatestWith(
-        this.formSearch.value$.pipe(
+        // Read at subscription time, including after the list is reopened.
+        defer(() =>
+          this.formSearch.valueChanges.pipe(startWith(this.formSearch.value)),
+        ).pipe(
           map(searchPhrase => searchPhrase?.toLowerCase()),
           distinctUntilChanged(),
           throttleTime(300),

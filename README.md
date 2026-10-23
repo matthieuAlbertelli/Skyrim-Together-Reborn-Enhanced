@@ -1,106 +1,23 @@
 <p align="center">
-  <img src="docs/assets/stre-banner-video.gif"
-       alt="Skyrim Together Reborn Enhanced"
-       width="100%">
+  <a href="README-en.md"><strong>English</strong></a> · <a href="README-fr.md"><strong>Français</strong></a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/stre-banner-video.gif" alt="Skyrim Together Reborn Enhanced" width="100%">
 </p>
 
 # Skyrim Together Reborn Enhanced
 
-<p align="center">
-
-![Version](https://img.shields.io/badge/version-0.4.0--alpha.1-orange)
-![Status](https://img.shields.io/badge/status-Alpha-red)
-![License](https://img.shields.io/badge/license-GPLv3-blue)
-
-</p>
-
-> An immersive, systems-driven cooperative fork of Skyrim Together Reborn.
-
-**Skyrim Together Reborn Enhanced (STRE)** extends Skyrim Together Reborn with cooperative mechanics, explicit server authority and systems designed for coherent small-group campaigns without turning Skyrim into an MMO.
-
-## Install and play
-
-The current public build is **STRE `0.4.0-alpha.1`**.
-
-- [Download STRE releases](https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases)
-- [Player installation guide](docs/user/INSTALLATION.md)
-
-Download the `STRE-v<version>-windows-x64.zip` release asset, not GitHub's automatically generated source archives.
-
-The sole future development target is Steam Skyrim Special Edition `1.7.104.0` on Windows x64. Historical `0.4.0-alpha.1` targets `1.6.1170`; its results are not 1.7 validation. See the installation guide and STATUS for the bounded development test scope. Address Library, matching SKSE64, Better Grabbing and EEKs Fireplace Resource are external dependencies installed separately. STRE does not redistribute Better Grabbing or EEK assets; Embers HD is not required for the Ilinalta fireplace.
-
-## Current capabilities
-
-STRE currently has four substantial first-party verticals:
-
-- **World Sync** — dropped objects use stable `WorldEntityId` identities, local Havok and server-authoritative settlement; movable placed references are lazily adopted; Better Grabbing integration supports multiplayer object manipulation; ownership/stolen provenance is preserved through the supported world/inventory flow.
-- **Player-to-player Trading** — authoritative trade sessions, deterministic mutation plans, idempotent client application, reconciliation and native 3D item preview.
-- **Alternate Start / Character Build** — custom inn bootstrap, RaceMenu + Angular character creation, shared class/loadout catalog, canonical inventory/spells and a solo fallback.
-- **Campaign Continuity** — durable campaign identity, sealed fixed rosters, coordinated native checkpoints, cold-session Resume, and full-roster collective recovery from the exact last committed checkpoint.
-
-See [Current project status](docs/project/STATUS.md) for the maintained implementation/validation snapshot.
+**Skyrim’s adventure, with a party by your side.**<br>**L’aventure de Skyrim, avec votre groupe à vos côtés.**
 
 <p align="center">
-  <img src="docs/features/trading/assets/trade-demo-ui.jpg" alt="STRE trading interface" width="900">
+  <a href="README-en.md"><strong>Read in English</strong></a> · <a href="README-fr.md"><strong>Lire en français</strong></a>
 </p>
 
-<p align="center">
-  <img src="docs/features/trading/assets/trade-demo.gif" alt="STRE trading demonstration" width="900">
-</p>
+**Alpha:** all STRE features and integrations are works in progress.<br>**Alpha :** toutes les fonctionnalités et intégrations STRE sont en cours de développement.
 
-## Architecture principles
+**0.5.0-alpha.1 is an unpublished candidate; no public 1.7 player package is available from this preparation.** [Candidate notes EN/FR](docs/production/releases/0.5.0-alpha.1.md).<br>**0.5.0-alpha.1 est un candidat non publié ; aucun paquet jouable public 1.7 n’est disponible dans cette préparation.**
 
-STRE follows a few explicit rules:
+**Development target / Cible de développement :** Skyrim Special Edition **1.7.104.0 — Steam, Windows x64**.
 
-- shared mutable state has a declared authority;
-- network messages express intents and canonical outcomes rather than trusting local presentation state;
-- Skyrim/CK/UI layers project state but do not silently become its source of truth;
-- network-triggered Skyrim mutations run on the game update path;
-- local engine simulation is reused when it is already the correct abstraction;
-- third-party integration contracts are generalized only after first-party use validates them;
-- features fail closed when metadata cannot be preserved safely.
-
-Read [System overview](docs/architecture/SYSTEM_OVERVIEW.md), [Network protocol rules](docs/architecture/NETWORK_PROTOCOL.md) and the [ADR index](docs/architecture/ADRs/).
-
-## Documentation
-
-- [Player installation](docs/user/INSTALLATION.md)
-- [Documentation portal](docs/README.md)
-- [Current project status](docs/project/STATUS.md)
-- [Vision](docs/project/VISION.md)
-- [Roadmap](ROADMAP.md)
-- [World Sync](docs/features/world-sync/README.md)
-- [Trading](docs/features/trading/README.md)
-- [Alternate Start](docs/features/alternate-start/README.md)
-- [Compatibility matrix](docs/testing/COMPATIBILITY_MATRIX.md)
-- [Changelog](CHANGELOG.md)
-- [Contributing](CONTRIBUTING.md)
-- [Support](SUPPORT.md)
-- [Security policy](SECURITY.md)
-
-English is the canonical language for STRE engineering and project documentation. Localized player-facing content may use its target language.
-
-## Contributing
-
-New to STRE?
-
-1. Read [Contributing](CONTRIBUTING.md).
-2. Review the [current project status](docs/project/STATUS.md).
-3. Choose your [onboarding path](docs/production/ONBOARDING_PATHS.md).
-4. Pick an actionable issue from the GitHub Project.
-## Build and development
-
-See [Building STRE](docs/development/BUILDING.md), [Contributing](CONTRIBUTING.md) and [Code guidelines](CODE_GUIDELINES.md).
-
-## Upstream relationship
-
-STRE is maintained as an independent community fork of `tiltedphoques/TiltedEvolution`.
-
-- [Current upstream baseline](UPSTREAM.md)
-- [Upstream integration strategy](docs/architecture/UPSTREAM_STRATEGY.md)
-
-## Credits and license
-
-Skyrim Together Reborn Enhanced builds on the work of the Tilted Phoques team and all Skyrim Together Reborn contributors. It is not affiliated with or endorsed by the original team, Bethesda Game Studios or ZeniMax Media.
-
-The project is distributed under the GNU General Public License v3.0. See the repository license file and [NOTICE.md](NOTICE.md).
+The historical **0.4.0-alpha.1** release targets Skyrim **1.6.1170**, not **1.7.104.0**. The port in `main` is not a new public release announcement.<br>L’ancienne version **0.4.0-alpha.1** cible Skyrim **1.6.1170**, pas **1.7.104.0**. Le portage dans `main` ne constitue pas l’annonce d’une nouvelle version publique.

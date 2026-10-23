@@ -38,7 +38,6 @@ add_requires(
     "tiltedcore v0.2.9",
     "cryptopp 8.9.0", 
     "spdlog v1.13.0", 
-    "cpp-httplib 0.14.0",
     "gtest v1.14.0", 
     "mem 1.0.0", 
     "glm 0.9.9+8", 
@@ -47,7 +46,6 @@ add_requires(
 )
 if is_plat("windows") then
     add_requires(
-        "discord 3.2.1", 
         "imgui v1.89.7"
     )
 end
@@ -62,7 +60,6 @@ if is_plat("linux") then
     add_requireconfs("*.libcurl", { version = "8.7.1", override = true })
 end
 
-add_requireconfs("cpp-httplib", {configs = {ssl = true}})
 --[[
 add_requireconfs("magnum", { configs = { sdl2 = true }})
 add_requireconfs("magnum-integration",  { configs = { imgui = true }})

@@ -1,7 +1,7 @@
 # STRE Roadmap — Road to v1.0.0
 
 > **Status:** canonical product direction, release objectives and release gates.
-> **Last updated:** 21 October 2026.
+> **Last updated:** 24 October 2026.
 
 This document defines **where STRE is going and what a release must prove**. It does not track transient issue state, assignees, percentages or sprint progress.
 
@@ -16,10 +16,12 @@ A release outcome is satisfied only when its user-visible behavior, failure case
 
 Skyrim Special Edition **Steam 1.7.104.0 is the sole development target**, by
 maintainer decision on 2026-10-20. Future work does not maintain 1.6 compatibility.
-The migration branch remains separate from main until validation. Historical
-1.6 releases and evidence remain historical; they establish no 1.7 acceptance.
-CK/AutoMod must be requalified before authoring on the new target. Runtime,
-content and campaign release gates still require their own executed evidence.
+The runtime port and DEV workflow are integrated into main. Historical 1.6
+releases and evidence remain historical; they establish no 1.7 acceptance.
+Offline AutoMod/Papyrus fixtures, an xEdit fixture cycle and CK read-only
+inspection have bounded qualification recorded in STATUS; production authoring
+is not thereby qualified. Runtime, content and campaign release gates still
+require their own executed evidence.
 
 ## STRE v1.0.0 product definition
 
@@ -147,6 +149,28 @@ Each symptom becomes an issue with exact roles, saves/logs and reproduction evid
 ### `0.x` alpha releases
 
 Intermediate alphas integrate demonstrable vertical slices and reduce risk toward the v1 product definition. A `0.x` Milestone is created only when its scope can be justified from dependency order and available validation capacity; version assignments must not be fabricated for planning neatness.
+
+### Approved 0.5.0-alpha.1 slice — qualification pending
+
+Prepare the integrated Steam 1.7.104.0 Windows port with its current headquarters,
+Character Build, Valen/Helgen, seating and presentation integrations, bilingual
+onboarding and a reproducible player package. This is a feature-incomplete Alpha,
+not completion of the 21-class, housing or full v1 campaign program.
+
+The maintainer approved Solo and two-player cooperative play on Steam
+1.7.104.0 Windows x64, with on-foot exploration as the qualification scope.
+Mount synchronization is not guaranteed; MOUNT-01 is N/A, not PASS. The
+applicable human matrix remains a release gate; its reported observations and
+remaining evidence belong in STATUS. ADR-0018 is unchanged; corruption,
+inventory loss, lasting loss of controls and unrecoverable progression remain
+blockers. The broader 2–4-player and 1–10-player objectives are not Alpha evidence.
+
+Before tagging, formalize the target Milestone and satisfy the applicable
+outcome/failure/recovery matrix under RELEASE_PROCESS. No such 0.5
+Milestone was present at the 2026-10-23 preparation check. The proposed slice
+does not waive campaign-critical evidence or P0 blockers; known lesser defects
+need explicit dispositions. The [preparation plan](docs/production/releases/0.5.0-alpha.1-preparation.md)
+separates these decisions from local build/package checks.
 
 ### v1.0 release candidate
 

@@ -1,15 +1,37 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: October 22, 2026**
+> **Last updated: October 23, 2026**
 
 ## Current development target
 
 Steam **1.7.104.0 only**, by maintainer decision. No future 1.6 support is
-maintained. The migration branch is separate from main pending validation.
+maintained. The exact-runtime port and DEV workflow are integrated into main.
 Target selection is not evidence of gameplay compatibility; [STATUS](../project/STATUS.md)
 owns executed results. All older gameplay observations below are historical
 1.6 evidence unless explicitly dated and identified as 1.7.
+
+## 0.5.0-alpha.1 preparation — no public package acceptance
+
+The local candidate targets exactly Steam **1.7.104.0 / Windows x64**, SKSE64
+**2.3.1**, matching Address Library v13/V5 database and Better Grabbing **2.0**.
+EEKs Fireplace Resource/textures remain external. No other 1.7 runtime, Linux
+client, mixed old/new build, 1.6 save migration or downgrade is established.
+
+Build negotiation still requires identical BUILD_COMMIT. Character Build/catalog
+version **5**, campaign database schema **2**, snapshot/core/outbox codecs **1**
+and native-save fingerprint/metadata versions **1** are unchanged from 0.4 in
+their defining files; unchanged identifiers do not guarantee runtime save
+compatibility. No schema, HEDR or bytecode version was bumped for product VERSION.
+ESP, PEX, UI and runtime binaries must come from the same identified package.
+
+Prior development PASS below retains its original scope. No old PASS is assigned
+to a newly compiled commit or archive. Collective recovery, multiplayer object
+manipulation/interruption and Valen DialogueProgress remain open on 1.7; CK
+writing is untested/dispensed, not a validated capability. Local compilation and
+static content checks are separate from clean-install and gameplay acceptance.
+See [STATUS](../project/STATUS.md) for new preparation results and the
+[candidate gates](../production/releases/0.5.0-alpha.1-preparation.md).
 
 ## Historical 0.4.0-alpha.1 reference platform
 

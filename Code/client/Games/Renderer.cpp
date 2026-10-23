@@ -3,7 +3,6 @@
 #include <Renderer.h>
 
 #include <Systems/RenderSystemD3D11.h>
-#include <Services/DiscordService.h>
 
 #include <World.h>
 #include <D3D11Hook.hpp>

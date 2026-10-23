@@ -13,7 +13,9 @@
 
 namespace
 {
-Console::Setting bAnnounceServer{"LiveServices:bAnnounceServer", "Whether to list the server on the public server list", false};
+// Retained for existing configurations: true still restricts time commands to admins.
+// Public announcement is removed; this legacy key only preserves that permission policy.
+Console::Setting bAnnounceServer{"LiveServices:bAnnounceServer", "Legacy public-server policy: restrict time commands to admins; no public announcement", false};
 }
 
 CommandService::CommandService(World& aWorld, entt::dispatcher& aDispatcher) noexcept

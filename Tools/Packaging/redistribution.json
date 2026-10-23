@@ -1,0 +1,968 @@
+{
+  "schemaVersion": 1,
+  "scope": "Verified notices for Windows x64 dependency set observed in feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72. Not legal release clearance. Drift requires review; no downloads during packaging.",
+  "releaseReady": false,
+  "components": [
+    {
+      "id": "gamenetworkingsockets",
+      "version": "v1.4.1",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/ValveSoftware/GameNetworkingSockets",
+          "revision": "v1.4.1",
+          "source": "https://raw.githubusercontent.com/ValveSoftware/GameNetworkingSockets/v1.4.1/LICENSE",
+          "file": "gamenetworkingsockets--LICENSE",
+          "sha256": "6fedd796d51d7f996e0b3dc7c1c9f6a67603bec7a2cfb9f418e0c6607a1ca647"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "gamenetworkingsockets",
+        "version": "v1.4.1",
+        "path": "include/steam/steamnetworkingsockets.h",
+        "sha256": "a9acca7897e0a61c54f935ef39f92e9433345cd70d509f741eeefb59486af510"
+      },
+      "licence": "BSD-3-Clause",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "protobuf",
+      "version": "26.1",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/protocolbuffers/protobuf",
+          "revision": "v26.1",
+          "source": "https://raw.githubusercontent.com/protocolbuffers/protobuf/v26.1/LICENSE",
+          "file": "protobuf--LICENSE",
+          "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+        },
+        {
+          "repository": "https://github.com/protocolbuffers/protobuf",
+          "revision": "v26.1",
+          "source": "https://raw.githubusercontent.com/protocolbuffers/protobuf/v26.1/third_party/utf8_range/LICENSE",
+          "file": "protobuf--third_party--utf8_range--LICENSE",
+          "sha256": "02de69b64fc36d9e938f418e52723e42f0b2b226d58a9cb3c8dcbdf7059f5074"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "protobuf-cpp",
+        "version": "26.1",
+        "path": "include/google/protobuf/port_def.inc",
+        "sha256": "fba6fe6e655ea4054be3cdfb587058567686195156b35bd1cbd9dde279c5fc48"
+      },
+      "licence": "BSD-3-Clause and utf8_range MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "abseil",
+      "version": "20250127.1",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/abseil/abseil-cpp",
+          "revision": "20250127.1",
+          "source": "https://raw.githubusercontent.com/abseil/abseil-cpp/20250127.1/LICENSE",
+          "file": "abseil--LICENSE",
+          "sha256": "c79a7fea0e3cac04cd43f20e7b648e5a0ff8fa5344e644b0ee09ca1162b62747"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "abseil",
+        "version": "20250127.1",
+        "path": "include/absl/base/config.h",
+        "sha256": "ea08ddd5ada17b5840841f63db7e53c76285d5ebbf69670cbf77803f47c4278b"
+      },
+      "licence": "Apache-2.0",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "libuv",
+      "version": "v1.48.0",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/libuv/libuv",
+          "revision": "v1.48.0",
+          "source": "https://raw.githubusercontent.com/libuv/libuv/v1.48.0/LICENSE",
+          "file": "libuv--LICENSE",
+          "sha256": "16de0c32b265cb7d46a6d3bd614f259dd4d693a5e26b3407b04aae8d73041f0c"
+        },
+        {
+          "repository": "https://github.com/libuv/libuv",
+          "revision": "v1.48.0",
+          "source": "https://raw.githubusercontent.com/libuv/libuv/v1.48.0/LICENSE-extra",
+          "file": "libuv--LICENSE-extra",
+          "sha256": "262c44bd2cdba037e6d2a82fba15f5800d292bc993a6f5d6b6ea487744d02836"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "libuv",
+        "version": "v1.48.0",
+        "path": "include/uv/version.h",
+        "sha256": "78d2e54ced07063130ee64c63f6984d563d828bde13d83c4050e93a4d72256fa"
+      },
+      "licence": "MIT and LICENSE-extra third-party terms",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "snappy",
+      "version": "1.1.10",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/google/snappy",
+          "revision": "1.1.10",
+          "source": "https://raw.githubusercontent.com/google/snappy/1.1.10/COPYING",
+          "file": "snappy--COPYING",
+          "sha256": "55172044f7e241207117448a4d9d6ba1d0925c8ad66b5d4c08c70adfa9cc3de6"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "snappy",
+        "version": "1.1.10",
+        "path": "include/snappy.h",
+        "sha256": "21e2747c646ad8ca0a59828b6cd4e6d7d2eab61dc86d36bc1cb271b5e54422c4"
+      },
+      "licence": "BSD-3-Clause and bundled terms",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "mimalloc",
+      "version": "v2.2.4",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/microsoft/mimalloc",
+          "revision": "v2.2.4",
+          "source": "https://raw.githubusercontent.com/microsoft/mimalloc/v2.2.4/LICENSE",
+          "file": "mimalloc--LICENSE",
+          "sha256": "82ade5d7d9b029044b5fbbc326207fc47c2d44ee4dd71e8a559c36d728217de9"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "mimalloc",
+        "version": "v2.2.4",
+        "path": "include/mimalloc.h",
+        "sha256": "a62aee63dfa22224c9d184ae09f270f9bb7dd4184ff9823b0be97433b04b63ce"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "minhook",
+      "version": "v1.3.3",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/TsudaKageyu/minhook",
+          "revision": "v1.3.3",
+          "source": "https://raw.githubusercontent.com/TsudaKageyu/minhook/v1.3.3/LICENSE.txt",
+          "file": "minhook--LICENSE.txt",
+          "sha256": "d5c2224982b0b95a16b098a561335fa93f3eaf4d0aa964b7843edb986df78dc8"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "minhook",
+        "version": "v1.3.3",
+        "path": "include/MinHook.h",
+        "sha256": "90c0ebe628f33cde497edec646c13adae3f33a6b349acca2a2ea921dc34c2ad7"
+      },
+      "licence": "BSD-2-Clause and HDE BSD terms",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "xbyak",
+      "version": "v7.06",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/herumi/xbyak",
+          "revision": "v7.06",
+          "source": "https://raw.githubusercontent.com/herumi/xbyak/v7.06/COPYRIGHT",
+          "file": "xbyak--COPYRIGHT",
+          "sha256": "7e411d5c5d38501a504843f58afb6824439c828872b35d2ff1e892e73fd1a30d"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "xbyak",
+        "version": "v7.06",
+        "path": "include/xbyak/xbyak.h",
+        "sha256": "24e08896e7bfd9af0922ed408e98a2efbb945b1e05b6e9f4ce97fb78e2c28310"
+      },
+      "licence": "BSD-3-Clause",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "directxtk",
+      "version": "21.11.0",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/microsoft/DirectXTK",
+          "revision": "nov2021",
+          "source": "https://raw.githubusercontent.com/microsoft/DirectXTK/nov2021/LICENSE",
+          "file": "directxtk--LICENSE",
+          "sha256": "8fde2cdc7e691c28ce74758d6e52dce15d477fc4d8c411f0d88f46c19081f26a"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "directxtk",
+        "version": "21.11.0",
+        "path": "include/DirectXTK/CommonStates.h",
+        "sha256": "c8fb7293b9c16768d493f0f33e6655b6fc8e9c1a0e62f5511f80053bf8596402"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "entt",
+      "version": "v3.10.0",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/skypjack/entt",
+          "revision": "v3.10.0",
+          "source": "https://raw.githubusercontent.com/skypjack/entt/v3.10.0/LICENSE",
+          "file": "entt--LICENSE",
+          "sha256": "5ca2b427d322e495a766278589edbd634f262650fc3739ae7c82cef007b9efaf"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "entt",
+        "version": "v3.10.0",
+        "path": "include/entt/config/version.h",
+        "sha256": "ae69571a070dee06adfdca2ce33739bab608a626f81407e9d676ec78a3e484ef"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "hopscotch-map",
+      "version": "v2.3.1",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/Tessil/hopscotch-map",
+          "revision": "v2.3.1",
+          "source": "https://raw.githubusercontent.com/Tessil/hopscotch-map/v2.3.1/LICENSE",
+          "file": "hopscotch-map--LICENSE",
+          "sha256": "edb768f42efbd503dec3cde55c7bc052bcaf82a56e298a4fb905ab53ebe33c9b"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "hopscotch-map",
+        "version": "v2.3.1",
+        "path": "include/tsl/hopscotch_map.h",
+        "sha256": "a8307a27bb2751345ce5fb90c632bf1cabdeda5176a1a4e8ac0a8bd101f1dd41"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "imgui",
+      "version": "v1.89.7",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/ocornut/imgui",
+          "revision": "v1.89.7",
+          "source": "https://raw.githubusercontent.com/ocornut/imgui/v1.89.7/LICENSE.txt",
+          "file": "imgui--LICENSE.txt",
+          "sha256": "438f0d4dd95acd6723a8f2996ec365245de154ff52a390aa644624aa95aabf2c"
+        },
+        {
+          "repository": "https://github.com/ocornut/imgui",
+          "revision": "v1.89.7",
+          "source": "https://raw.githubusercontent.com/ocornut/imgui/v1.89.7/imstb_truetype.h",
+          "extraction": "Verbatim final licence comment, both alternatives retained; MIT option used.",
+          "file": "imgui--imstb_truetype.h--LICENSE.txt",
+          "sha256": "7587efcca32db8f95bf5860dea6dfa4be410ee723e1964db3689c8ddf2a2e4a9"
+        },
+        {
+          "repository": "https://github.com/ocornut/imgui",
+          "revision": "v1.89.7",
+          "source": "https://raw.githubusercontent.com/ocornut/imgui/v1.89.7/imstb_rectpack.h",
+          "extraction": "Verbatim final licence comment, both alternatives retained; MIT option used.",
+          "file": "imgui--imstb_rectpack.h--LICENSE.txt",
+          "sha256": "7587efcca32db8f95bf5860dea6dfa4be410ee723e1964db3689c8ddf2a2e4a9"
+        },
+        {
+          "repository": "https://github.com/ocornut/imgui",
+          "revision": "v1.89.7",
+          "source": "https://raw.githubusercontent.com/ocornut/imgui/v1.89.7/imstb_textedit.h",
+          "extraction": "Verbatim final licence comment, both alternatives retained; MIT option used.",
+          "file": "imgui--imstb_textedit.h--LICENSE.txt",
+          "sha256": "7587efcca32db8f95bf5860dea6dfa4be410ee723e1964db3689c8ddf2a2e4a9"
+        },
+        {
+          "repository": "https://github.com/bluescan/proggyfonts",
+          "revision": "139ec08a38096161291792313ef5803fc4f0e37b",
+          "source": "https://raw.githubusercontent.com/bluescan/proggyfonts/139ec08a38096161291792313ef5803fc4f0e37b/LICENSE",
+          "identity": "ProggyOriginal/ProggyClean.ttf and ImGui v1.89.7 misc/fonts/ProggyClean.ttf share Git blob 0270cdfe3caa811e1b252cdcc5b179989c1b8ad6; embedded font copyright matches imgui_draw.cpp.",
+          "file": "imgui--ProggyClean-LICENSE.txt",
+          "sha256": "fe61d069df303c697e04200f5f8232c2cb09dd3572f4357b323469f7d592d142"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "imgui",
+        "version": "v1.89.7",
+        "path": "include/imgui.h",
+        "sha256": "6f308facef76f7e499b62bc775c195d80e3b37dfa47ace24ed261f84ab5ce14f"
+      },
+      "licence": "MIT including ProggyClean; STB MIT option",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "spdlog",
+      "version": "v1.13.0",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/gabime/spdlog",
+          "revision": "v1.13.0",
+          "source": "https://raw.githubusercontent.com/gabime/spdlog/v1.13.0/LICENSE",
+          "file": "spdlog--LICENSE",
+          "sha256": "4ccecab18d1ff0b61174fe3d6c430541625d3ddb865b0d5887db296f883c76e7"
+        },
+        {
+          "source": "https://raw.githubusercontent.com/gabime/spdlog/v1.13.0/include/spdlog/fmt/bundled/fmt.license.rst",
+          "file": "fmt--LICENSE.rst",
+          "sha256": "825c9324e70f8c839c8ba910543dd4a7daee243b86ef960594c11381a19980b8"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "spdlog",
+        "version": "v1.13.0",
+        "path": "include/spdlog/version.h",
+        "sha256": "144ff0f3ddabf16e471372c1e17aa58fedf889c287576409951af5ae51892367"
+      },
+      "embeddedVersion": "fmt 9.1.0 (FMT_VERSION=90100)",
+      "licence": "MIT (spdlog and bundled fmt 9.1.0)",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "glm",
+      "version": "0.9.9+8",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/g-truc/glm",
+          "revision": "0.9.9.8",
+          "source": "https://raw.githubusercontent.com/g-truc/glm/0.9.9.8/copying.txt",
+          "file": "glm--copying.txt",
+          "sha256": "62d2d642c7d054d4fb4c9b42faad617d6c88fcd91e317f8035aa9f277cc159c3"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "glm",
+        "version": "0.9.9+8",
+        "path": "include/glm/detail/setup.hpp",
+        "sha256": "e1ab417f7dd01647216835a8a2cd6c74d8543289daef65bf3d31ea05cc7679c1"
+      },
+      "licence": "MIT option",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "sol2",
+      "version": "v3.3.0",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/ThePhD/sol2",
+          "revision": "v3.3.0",
+          "source": "https://raw.githubusercontent.com/ThePhD/sol2/v3.3.0/LICENSE.txt",
+          "file": "sol2--LICENSE.txt",
+          "sha256": "4e171f2251b1170c0a6c9e836a36605565eee238cd64abf50ad43a01c9412ce4"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "sol2",
+        "version": "v3.3.0",
+        "path": "include/sol/version.hpp",
+        "sha256": "01e360464fdccd142a68f3dcb80be6437c907eec9980da89374c97006241c50d"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "lua",
+      "version": "v5.4.8",
+      "delivery": "native link input / compiled header; individual dead-code elimination not asserted",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "source": "https://www.lua.org/ftp/lua-5.4.8.tar.gz",
+          "sourceFile": "src/lua.h (copyright comment, exact bytes)",
+          "file": "lua--COPYRIGHT.txt",
+          "sha256": "3095b996addbc7d4b0414ef55166b00b91bff8709a79b667e7177ff0430a366c"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "lua",
+        "version": "v5.4.8",
+        "path": "include/lua/lua.h",
+        "sha256": "3b77329f9deed929a5cbe7a7d5fc81ebbb63fd869a49e0a9302fe9240caf1930"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "cryptopp",
+      "version": "8.9.0",
+      "delivery": "Windows x64 static library; complete Boost compilation/public-domain/CRYPTOGAMS notice retained; ARM Linux CRYPTOGAMS assembly not selected on this target.",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/weidai11/cryptopp",
+          "revision": "CRYPTOPP_8_9_0",
+          "source": "https://raw.githubusercontent.com/weidai11/cryptopp/CRYPTOPP_8_9_0/License.txt",
+          "file": "cryptopp--License.txt",
+          "sha256": "78e4010b682cb94187fe0b57e50116d0ba271ef81104d1ddb35c80c3d81e3169"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "cryptopp",
+        "version": "8.9.0",
+        "path": "include/cryptopp/config_ver.h",
+        "sha256": "c457fa9595a808617c726ecb5857e52d4152f9f66e77618a3fbb3b30c9105e18"
+      },
+      "licence": "Public-domain individual code, Boost-1.0 compilation; CRYPTOGAMS terms retained",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "gtest",
+      "version": "v1.14.0",
+      "delivery": "GoogleTest/GoogleMock are delivered-client/server link inputs; removal by linker not proven. Retain exact notice conservatively.",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/google/googletest",
+          "revision": "v1.14.0",
+          "source": "https://raw.githubusercontent.com/google/googletest/v1.14.0/LICENSE",
+          "file": "gtest--LICENSE",
+          "sha256": "9702de7e4117a8e2b20dafab11ffda58c198aede066406496bef670d40a22138"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "gtest",
+        "version": "v1.14.0",
+        "path": "include/gtest/gtest.h",
+        "sha256": "93da03ddf6d5b9bdf40ae4ded9939067c9ed0b6de93f787f7e8d187609b6b02d"
+      },
+      "licence": "BSD-3-Clause",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "simpleini",
+      "version": "4.17",
+      "delivery": "vendored compiled code",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "source": "https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/blob/feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72/Code/base/simpleini/SimpleIni.h",
+          "file": "simpleini--NOTICE.txt",
+          "sha256": "a74292e66565312b8e3db263d7b6b4759be2e20bcd160e31b1d8d20bfc405611"
+        }
+      ],
+      "guard": {
+        "kind": "source",
+        "path": "Code/base/simpleini/SimpleIni.h",
+        "sha256": "2882d4b3ecd0a3b4adb5687f289a29d6f9001e4e54472cbaf96d2b1f7b043547"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "convertutf",
+      "version": "2001-2004 vendored",
+      "delivery": "vendored compiled code",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "source": "https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/blob/feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72/Code/base/simpleini/ConvertUTF.h",
+          "file": "convertutf--NOTICE.txt",
+          "sha256": "8e2dd9d948191767af52f997e96190d0204704b965fb5ddf544cb5720a5afccd"
+        }
+      ],
+      "guard": {
+        "kind": "source",
+        "path": "Code/base/simpleini/ConvertUTF.h",
+        "sha256": "bfa3649cbbfa1b7b3d3322121f6a29cae3c3e7f7194d84aff0ab0672fda66c68"
+      },
+      "licence": "Unicode permission notice",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    },
+    {
+      "id": "mem",
+      "version": "1.0.0",
+      "delivery": "compiled header",
+      "licenceStatus": "NOTICE_COMPLETE",
+      "notices": [
+        {
+          "repository": "https://github.com/0x1F9F1/mem",
+          "revision": "1.0.0",
+          "source": "https://raw.githubusercontent.com/0x1F9F1/mem/1.0.0/LICENSE.txt",
+          "file": "mem--LICENSE.txt",
+          "sha256": "463b1758a96cbde826ccb452138a4293643dd37af1225aa80c6434156e76a981"
+        }
+      ],
+      "guard": {
+        "kind": "xmake",
+        "package": "mem",
+        "version": "1.0.0",
+        "path": "include/mem/pattern.h",
+        "sha256": "bfc9714a4db7e351004c0b58ae904ee2e1a230b30fa42c89e0eb37f77f3be4dd"
+      },
+      "licence": "MIT",
+      "obligations": "Retain all included copyright, permission, conditions, disclaimers and applicable third-party notices. This entry does not settle source or combined-work rights."
+    }
+  ],
+  "ui": {
+    "@angular/animations": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "notices": [
+        {
+          "repository": "https://github.com/angular/angular",
+          "revision": "16.1.2",
+          "source": "https://raw.githubusercontent.com/angular/angular/16.1.2/LICENSE",
+          "file": "angular--LICENSE",
+          "sha256": "3b7a34b78350f58838dc24122f3594922d89ac7713e54a3511afb3d3a180bb46"
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@angular/common": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "notices": [
+        {
+          "repository": "https://github.com/angular/angular",
+          "revision": "16.1.2",
+          "source": "https://raw.githubusercontent.com/angular/angular/16.1.2/LICENSE",
+          "file": "angular--LICENSE",
+          "sha256": "3b7a34b78350f58838dc24122f3594922d89ac7713e54a3511afb3d3a180bb46"
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@angular/core": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "notices": [
+        {
+          "repository": "https://github.com/angular/angular",
+          "revision": "16.1.2",
+          "source": "https://raw.githubusercontent.com/angular/angular/16.1.2/LICENSE",
+          "file": "angular--LICENSE",
+          "sha256": "3b7a34b78350f58838dc24122f3594922d89ac7713e54a3511afb3d3a180bb46"
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@angular/forms": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "notices": [
+        {
+          "repository": "https://github.com/angular/angular",
+          "revision": "16.1.2",
+          "source": "https://raw.githubusercontent.com/angular/angular/16.1.2/LICENSE",
+          "file": "angular--LICENSE",
+          "sha256": "3b7a34b78350f58838dc24122f3594922d89ac7713e54a3511afb3d3a180bb46"
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@angular/platform-browser": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "notices": [
+        {
+          "repository": "https://github.com/angular/angular",
+          "revision": "16.1.2",
+          "source": "https://raw.githubusercontent.com/angular/angular/16.1.2/LICENSE",
+          "file": "angular--LICENSE",
+          "sha256": "3b7a34b78350f58838dc24122f3594922d89ac7713e54a3511afb3d3a180bb46"
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@ngneat/elf": {
+      "version": "2.3.2",
+      "repository": "https://github.com/ngneat/elf",
+      "notices": [
+        {
+          "repository": "https://github.com/ngneat/elf",
+          "revision": "c539add77835329b6490392761d166b7b9a9f343",
+          "npmIntegrity": "sha512-BMVJos82l9/l00U4G+fjTb1k85SiNDnpn2TbfFq6AWssJO6TmU4Y8SptSEjoYDKIXCne9XW+Ou/jufV6IEINIQ==",
+          "source": "https://raw.githubusercontent.com/ngneat-archive/elf/c539add77835329b6490392761d166b7b9a9f343/LICENSE.md",
+          "file": "ngneat-elf--LICENSE.txt",
+          "sha256": "e6550cda019a5f2a4f54428d032ff59b92ceccea75979b7dfe8675eb7c90d464",
+          "provenance": "Original Git object retained by public archive; commit equals publisher npm gitHead. Not a licence granted by the archive."
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    },
+    "@ngneat/loadoff": {
+      "version": "2.1.0",
+      "repository": "https://github.com/ngneat/loadoff",
+      "notices": [
+        {
+          "repository": "https://github.com/ngneat/loadoff",
+          "revision": "dcee163aff37e27a94857c79bf4871e2ab75ac79",
+          "npmIntegrity": "sha512-N2Kfu7LaDu5t94nSNJU1T6/Uq4k2EAm5I0GHmglFR4dZRQAFGg1WNLT/t6zivcZiqN5wtNBZJS+FLvYKRuZGeA==",
+          "source": "https://raw.githubusercontent.com/ngneat-archive/loadoff/dcee163aff37e27a94857c79bf4871e2ab75ac79/LICENSE",
+          "file": "ngneat-loadoff--LICENSE.txt",
+          "sha256": "ddff8483d23bc0db3d29adfba628214495fcfde8617fe4c2807a8b0ac30534a9",
+          "provenance": "Original Git object retained by public archive; commit equals publisher npm gitHead. Not a licence granted by the archive."
+        }
+      ],
+      "status": "NOTICE_COMPLETE",
+      "reason": ""
+    }
+  },
+  "unresolved": [
+    "TiltedCore and TiltedConnect/Hooks/Reverse/UI permission",
+    "DXIL and D3DCompiler exact REDIST terms; DXC exact binary/source mapping",
+    "Inherited UI art/sounds and logo/Valen model/texture provenance",
+    "Corresponding sources and LGPL/CitizenFX/Chromium/FFmpeg obligations"
+  ],
+  "external": [
+    "Skyrim game files",
+    "SKSE",
+    "Address Library",
+    "Better Grabbing",
+    "EEK/Embers"
+  ],
+  "buildOnly": [
+    "Catch2 tests",
+    "Recast (not in delivered native link inputs)",
+    "Node/pnpm/xmake/CMake/Ninja/Python tools"
+  ],
+  "uiPackages": {
+    "@angular/animations": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "sectionSha256": null
+    },
+    "@angular/cdk": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/components.git",
+      "sectionSha256": "5dcb37445d4296ac7d96f232f6cb752964f91e2d9766c3aa276d361240b971d8"
+    },
+    "@angular/common": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "sectionSha256": null
+    },
+    "@angular/core": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "sectionSha256": null
+    },
+    "@angular/forms": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "sectionSha256": null
+    },
+    "@angular/platform-browser": {
+      "version": "16.1.2",
+      "repository": "https://github.com/angular/angular.git",
+      "sectionSha256": null
+    },
+    "@fortawesome/angular-fontawesome": {
+      "version": "0.13.0",
+      "repository": "https://github.com/FortAwesome/angular-fontawesome",
+      "sectionSha256": "91328c1c225d659fe5f3d150a2fc743cceead37b9b3d3e00fea38e05457d88cf"
+    },
+    "@fortawesome/fontawesome-svg-core": {
+      "version": "6.4.0",
+      "repository": "https://github.com/FortAwesome/Font-Awesome",
+      "sectionSha256": "4d83c45352022675fc6ae1dbc769e51feaf2cb567d1429af0d64ed00e1768522"
+    },
+    "@fortawesome/free-regular-svg-icons": {
+      "version": "6.4.0",
+      "repository": "https://github.com/FortAwesome/Font-Awesome",
+      "sectionSha256": "b53e1cfef4f9955a45f303174d210ce89acb6f4c119e40fe2b55ac6a52f751f5"
+    },
+    "@fortawesome/free-solid-svg-icons": {
+      "version": "6.4.0",
+      "repository": "https://github.com/FortAwesome/Font-Awesome",
+      "sectionSha256": "6ea0e64f6acac864f6ce26c60d6c1aaba7713743bc50582506bdfbff4fea36be"
+    },
+    "@ngneat/elf": {
+      "version": "2.3.2",
+      "repository": "https://github.com/ngneat/elf",
+      "sectionSha256": null
+    },
+    "@ngneat/loadoff": {
+      "version": "2.1.0",
+      "repository": "https://github.com/ngneat/loadoff",
+      "sectionSha256": null
+    },
+    "@ngneat/transloco": {
+      "version": "4.3.0",
+      "repository": "https://github.com/ngneat/transloco",
+      "sectionSha256": "18fcb3516aebcd353a13b0de1c3bc24f63e0bf8987731bd7a1f42b6b55dd9449"
+    },
+    "flat": {
+      "version": "5.0.2",
+      "repository": "git://github.com/hughsk/flat.git",
+      "sectionSha256": "1587c3d745c62e4f6424f3ebef5b4dcde24fc9220cb18fa2123c259fa5aa9778"
+    },
+    "rxjs": {
+      "version": "7.8.1",
+      "repository": "https://github.com/reactivex/rxjs.git",
+      "sectionSha256": "3c986428e7d49bc1a69a59d8ec21ea3f4866bc178f42f07d2aeb52ee3d19d0d9"
+    },
+    "zone.js": {
+      "version": "0.13.1",
+      "repository": "git://github.com/angular/angular.git",
+      "sectionSha256": "5ca56e7813dca29c065b22e330da621f6ebbffc8cf852fa60307928a2c163482"
+    }
+  },
+  "uiElisionReview": {
+    "@ngneat/elf-entities@4.4.4": "Imported only by browser/e2e mocks; no production notice entry. Production environment excludes mocks. Re-review if inputs change.",
+    "@ngneat/elf-devtools@1.3.0": "No source import; no production notice entry.",
+    "@angular/router@16.1.2": "No source import; no production notice entry.",
+    "@angular/compiler / platform-browser-dynamic@16.1.2": "Production AOT transformation; no notice entry. Covered by the same exact Angular 16.1.2 LICENSE; do not assert absence of every inlined instruction.",
+    "tslib@2.5.3": "Helpers may be inlined; installed 0BSD licence imposes no attribution obligation. Not a new runtime dependency."
+  },
+  "reviewOnly": [
+    {
+      "id": "stre",
+      "version": "0.5.0-alpha.1 source feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72",
+      "provenance": "This repository; original TiltedEvolution, CitizenFX and Steamless attributions",
+      "delivery": "client, launcher, server",
+      "notices": [
+        "LICENSE",
+        "NOTICE.md",
+        "STRE/Licenses/MainMenuVideo-GPL-3.0.txt"
+      ],
+      "status": "ACTION_REQUIRED_CORRESPONDING_SOURCE_AND_LAUNCHER_BOUNDARY"
+    },
+    {
+      "id": "cef-chromium",
+      "version": "CEF 141.0.11+g7e73ac4 / Chromium 141.0.7390.123",
+      "provenance": "CEF revision 7e73ac45f2979537f677e785383a04998f90d51d; pinned xmake recipe; embedded resources.pak",
+      "delivery": "DLLs, static wrapper, resources, locales; includes ANGLE/V8/ICU/FFmpeg",
+      "notices": [
+        "Licenses/CEF-LICENSE.txt",
+        "Licenses/Chromium-CREDITS.html",
+        "Licenses/credits.css",
+        "Licenses/credits.js"
+      ],
+      "status": "NOTICES_EXTRACTED_SOURCE_OBLIGATIONS_OPEN"
+    },
+    {
+      "id": "tiltedcore",
+      "version": "v0.2.9",
+      "provenance": "https://github.com/tiltedphoques/TiltedCore/tree/v0.2.9",
+      "delivery": "static link input",
+      "notices": [],
+      "status": "BLOCKED_PERMISSION"
+    },
+    {
+      "id": "TiltedConnect",
+      "version": "293fab99288b7414bd129ace25ae018114cefb2a",
+      "provenance": "https://github.com/tiltedphoques/TiltedConnect/tree/293fab99288b7414bd129ace25ae018114cefb2a",
+      "delivery": "static submodule compilation",
+      "notices": [],
+      "status": "BLOCKED_PERMISSION"
+    },
+    {
+      "id": "TiltedHooks",
+      "version": "d7c175b86975679eb05883c097d7eb1c2165226a",
+      "provenance": "https://github.com/tiltedphoques/TiltedHooks/tree/d7c175b86975679eb05883c097d7eb1c2165226a",
+      "delivery": "static submodule compilation",
+      "notices": [],
+      "status": "BLOCKED_PERMISSION"
+    },
+    {
+      "id": "TiltedReverse",
+      "version": "55ee3f29c62fea247148e57b94ec4941055139ed",
+      "provenance": "https://github.com/tiltedphoques/TiltedReverse/tree/55ee3f29c62fea247148e57b94ec4941055139ed",
+      "delivery": "static submodule compilation",
+      "notices": [],
+      "status": "BLOCKED_PERMISSION"
+    },
+    {
+      "id": "TiltedUI",
+      "version": "a2b9a671626d6489e6e2d9ee02adf61d7d9673dd",
+      "provenance": "https://github.com/tiltedphoques/TiltedUI/tree/a2b9a671626d6489e6e2d9ee02adf61d7d9673dd",
+      "delivery": "static submodule compilation",
+      "notices": [],
+      "status": "BLOCKED_PERMISSION"
+    },
+    {
+      "id": "sqlite",
+      "version": "3.53.4 (xmake 3.53.0+400)",
+      "provenance": "sqlite source ID bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+      "delivery": "server static link input",
+      "notices": [],
+      "status": "PUBLIC_DOMAIN_DECLARATION_RECORDED_IN_REVIEW"
+    },
+    {
+      "id": "zlib",
+      "version": "1.3.1",
+      "provenance": "xmake zlib 1.3.1; zlib licence",
+      "delivery": "native link input",
+      "notices": [],
+      "status": "BINARY_ATTRIBUTION_NOT_REQUIRED_SOURCE_NOTICE_MUST_REMAIN"
+    },
+    {
+      "id": "dxcompiler.dll",
+      "version": "1.8.2505.0",
+      "provenance": "CEF payload SHA256 ef7b3e6d6c77badb6a59ef1c092cea19a9565582c0edebc4574ae431656904ad",
+      "delivery": "Windows DLL",
+      "notices": [],
+      "status": "BLOCKED_EXACT_BINARY_TERMS_MAPPING"
+    },
+    {
+      "id": "dxil.dll",
+      "version": "101.7.2308.24",
+      "provenance": "CEF payload SHA256 436f128f22050ae27323da61321a469de0678def7a4e6d86f9ccad4858724f0a",
+      "delivery": "Windows DLL",
+      "notices": [],
+      "status": "BLOCKED_EXACT_BINARY_TERMS_MAPPING"
+    },
+    {
+      "id": "d3dcompiler_47.dll",
+      "version": "10.0.26100.4654",
+      "provenance": "CEF payload SHA256 c8e25abd3d45dfb55966a74613258c39b4a83ea2ac77f2f80903499f4d5c03f0",
+      "delivery": "Windows DLL",
+      "notices": [],
+      "status": "BLOCKED_EXACT_BINARY_TERMS_MAPPING"
+    },
+    {
+      "id": "inherited-assets",
+      "version": "Git trees of compiled source feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72",
+      "provenance": "GameFiles/Skyrim logo NIFs, Valen NIF/DDS; Code/skyrim_ui assets and nine UI WAVs; per-file historical inventory retained outside Git",
+      "delivery": "UI art/sounds, meshes/textures",
+      "notices": [],
+      "status": "BLOCKED_ASSET_PROVENANCE_PERMISSION"
+    },
+    {
+      "id": "main-menu-video-adaptation",
+      "version": "upstream ec692f0745972ba3b381e2b1df5c4c56218ee8e0 plus STRE changes",
+      "provenance": "https://github.com/powerof3/MainMenuVideo; Code/client/Games/Skyrim/MainMenuRuntime.cpp",
+      "delivery": "adapted hook ordering in STRE, no upstream decoder/media shipped",
+      "notices": [
+        "NOTICE.md",
+        "STRE/Licenses/MainMenuVideo-GPL-3.0.txt"
+      ],
+      "status": "NOTICE_PRESENT_CORRESPONDING_SOURCE_REQUIRED"
+    },
+    {
+      "id": "stre-menu-visuals",
+      "version": "tracked MP4 and three branding PNGs at compiled source",
+      "provenance": "Matthieu Albertelli contribution; docs/features/main-menu/README.md",
+      "delivery": "player package; private music intro excluded",
+      "notices": [
+        "NOTICE.md"
+      ],
+      "status": "DOCUMENTED_GPL_CONTRIBUTION"
+    },
+    {
+      "id": "ntdll_x64.lib",
+      "version": "tracked blob at compiled source feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72",
+      "provenance": "launcher import library, original generation not established",
+      "delivery": "link input, not shipped separately",
+      "notices": [],
+      "status": "ACTION_REQUIRED_IMPORT_ONLY_PROVENANCE"
+    }
+  ],
+  "fonts": {
+    "id": "roboto-condensed",
+    "version": "2.137; 2017",
+    "license": "Apache-2.0",
+    "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+    "notices": [
+      {
+        "file": "RobotoCondensed-2.137--LICENSE.txt",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/LICENSE.txt"
+      }
+    ],
+    "files": [
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/regular-normal.ttf",
+        "sha256": "6a2cfb7e61dd09d77526fd314b256894094f96e3a6f3149d9f8000c1132ef4b8",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Regular.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/regular-normal.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/regular-italic.ttf",
+        "sha256": "351cc12eb1d11769056069a6c14f84e45c46bb18d1b7327bae45720aa9753f28",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Italic.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/regular-italic.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/bold-normal.ttf",
+        "sha256": "03b4e8042b9af4bf3349428fa734ed583f2d5d83287e1f42cf4d514c909146ef",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Bold.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/bold-normal.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/bold-italic.ttf",
+        "sha256": "aecb99256fe43e06356bcf1af7a2a384fe9334dc21508f37c6259beae67e190e",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-BoldItalic.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/bold-italic.ttf"
+      }
+    ]
+  },
+  "platformScope": "Windows x64 player package; OpenSSL 1.1.1-w pin remains for inherited non-Windows/transitive builds. Removing this inventory entry is conditional on Windows linker/package verification; it is not historical or cross-platform rights clearance."
+}

@@ -38,7 +38,6 @@ local function build_server()
         "sol2",
         "glm",
         "entt",
-        "cpp-httplib",
         "tiltedcore")
 end
 
