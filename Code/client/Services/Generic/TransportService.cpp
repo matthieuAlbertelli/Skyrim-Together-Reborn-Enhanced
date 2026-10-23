@@ -25,7 +25,6 @@
 #include <Packet.hpp>
 
 #include <ScriptExtender.h>
-#include <Services/DiscordService.h>
 
 #include <TlHelp32.h>
 #include <algorithm>
@@ -230,9 +229,8 @@ void TransportService::OnConnected()
 
     PlayerCharacter* pPlayer = PlayerCharacter::Get();
 
-    // null if discord is not active
-    // TODO: think about user opt out
-    request.DiscordId = m_world.ctx().at<DiscordService>().GetUser().id;
+    // Retain the legacy wire field; STRE no longer uses the optional Discord SDK.
+    request.DiscordId = 0;
     auto* pNpc = Cast<TESNPC>(pPlayer->baseForm);
     if (pNpc)
     {

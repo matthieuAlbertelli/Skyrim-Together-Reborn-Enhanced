@@ -718,7 +718,6 @@
     }
   },
   "unresolved": [
-    "Discord Game SDK 3.2.1 redistribution/wrapper/GPL terms",
     "TiltedCore and TiltedConnect/Hooks/Reverse/UI permission",
     "OpenSSL 1.1.1w GPL combination (notices alone insufficient)",
     "Futura embedding/distribution",
@@ -858,14 +857,6 @@
         "Licenses/credits.js"
       ],
       "status": "NOTICES_EXTRACTED_SOURCE_OBLIGATIONS_OPEN"
-    },
-    {
-      "id": "discord-game-sdk",
-      "version": "3.2.1",
-      "provenance": "Pinned discord_gamesdk recipe; discord_game_sdk.dll SHA256 a6b6d7df00a58dc50248d91048578d0fe52182286b487ef89a961fd10467dbd1",
-      "delivery": "DLL and compiled C++ wrapper",
-      "notices": [],
-      "status": "BLOCKED_EXACT_LEGACY_TERMS"
     },
     {
       "id": "tiltedcore",

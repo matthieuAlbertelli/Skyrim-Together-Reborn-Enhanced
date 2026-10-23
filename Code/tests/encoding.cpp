@@ -511,3 +511,29 @@ TEST_CASE("StringCache", "[encoding.string_cache]")
         REQUIRE(update == recvUpdate);
     }
 }
+
+TEST_CASE("Legacy Discord identity remains first in authentication payload", "[encoding.authentication]")
+{
+    const uint64_t identity = GENERATE(uint64_t{0}, uint64_t{0x123456789abcdef0});
+    AuthenticationRequest request;
+    request.DiscordId = identity;
+    request.Token = "token-without-discord";
+    request.Username = "STRE player";
+    Buffer buffer(4096);
+    Buffer::Writer writer(&buffer);
+    request.Serialize(writer);
+
+    Buffer::Reader wire(&buffer);
+    uint64_t opcode{};
+    wire.ReadBits(opcode, 8);
+    REQUIRE(Serialization::ReadVarInt(wire) == identity);
+
+    Buffer::Reader reader(&buffer);
+    const ClientMessageFactory factory;
+    auto message = factory.Extract(reader);
+    REQUIRE(message);
+    auto decoded = CastUnique<AuthenticationRequest>(std::move(message));
+    REQUIRE(decoded->DiscordId == identity);
+    REQUIRE(decoded->Username == request.Username);
+    REQUIRE(decoded->Token == request.Token);
+}
