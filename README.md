@@ -7,11 +7,24 @@
 # Skyrim Together Reborn Enhanced
 
 <p align="center">
+  <a href="docs/project/STATUS.md"><strong>Current development</strong></a>
+</p>
 
-![Version](https://img.shields.io/badge/version-0.4.0--alpha.1-orange)
-![Status](https://img.shields.io/badge/status-Alpha-red)
-![License](https://img.shields.io/badge/license-GPLv3-blue)
-
+<p align="center">
+  <a href="docs/testing/COMPATIBILITY_MATRIX.md"><img src="https://img.shields.io/badge/Skyrim%20SE-1.7.104.0-365F7B?style=flat-square&amp;labelColor=303640" alt="Skyrim SE: 1.7.104.0"></a>
+  <a href="docs/project/STATUS.md"><img src="https://img.shields.io/badge/Development-Alpha-8A6826?style=flat-square&amp;labelColor=303640" alt="Development: Alpha"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-545B66?style=flat-square&amp;labelColor=303640" alt="License: GPLv3"></a>
+  <br>
+  <a href="docs/project/VISION.md"><img src="https://img.shields.io/badge/Players-1%E2%80%9310%20target-8A6826?style=flat-square&amp;labelColor=303640" alt="Players: 1–10 target"></a>
+  <a href="docs/architecture/CAMPAIGN_STATE.md"><img src="https://img.shields.io/badge/Shared%20Campaign-2F6B64?style=flat-square&amp;labelColor=303640" alt="Shared Campaign"></a>
+  <a href="docs/project/VISION.md"><img src="https://img.shields.io/badge/Immersion--first-2F6B64?style=flat-square&amp;labelColor=303640" alt="Immersion-first"></a>
+  <br>
+  <a href="docs/features/alternate-start/README.md"><img src="https://img.shields.io/badge/Alternate%20Start-2F6B64?style=flat-square&amp;labelColor=303640" alt="Alternate Start"></a>
+  <a href="docs/features/alternate-start/README.md"><img src="https://img.shields.io/badge/Classes%20%26%20Loadouts-2F6B64?style=flat-square&amp;labelColor=303640" alt="Classes &amp; Loadouts"></a>
+  <a href="docs/features/alternate-start/HEADQUARTERS_INN.md"><img src="https://img.shields.io/badge/Shared%20Inn%20Hub-Alpha-8A6826?style=flat-square&amp;labelColor=303640" alt="Shared Inn Hub: Alpha"></a>
+  <a href="docs/features/trading/README.md"><img src="https://img.shields.io/badge/Player%20Trading-2F6B64?style=flat-square&amp;labelColor=303640" alt="Player Trading"></a>
+  <br>
+  <a href="docs/features/world-sync/BETTER_GRABBING_INTEGRATION.md"><img src="https://img.shields.io/badge/Integration-Better%20Grabbing%202.0-2F6B64?style=flat-square&amp;labelColor=303640" alt="Integration: Better Grabbing 2.0"></a>
 </p>
 
 > An immersive, systems-driven cooperative fork of Skyrim Together Reborn.
@@ -29,6 +42,10 @@
 > validated scope and remaining limitations.
 
 ## Install and play
+
+<p>
+  <a href="https://github.com/matthieuAlbertelli/Skyrim-Together-Reborn-Enhanced/releases"><img src="https://img.shields.io/badge/Legacy%20release-0.4.0--alpha.1-545B66?style=flat-square&amp;labelColor=303640" alt="Legacy release: 0.4.0-alpha.1"></a>
+</p>
 
 Current development targets **Skyrim Special Edition `1.7.104.0` (Steam, Windows x64)**.
 The historical public build **STRE `0.4.0-alpha.1`** targets Skyrim `1.6.1170`
