@@ -713,7 +713,6 @@
   "unresolved": [
     "TiltedCore and TiltedConnect/Hooks/Reverse/UI permission",
     "OpenSSL 1.1.1w GPL combination (notices alone insufficient)",
-    "Futura embedding/distribution",
     "DXIL and D3DCompiler exact REDIST terms; DXC exact binary/source mapping",
     "Inherited UI art/sounds and logo/Valen model/texture provenance",
     "Corresponding sources and LGPL/CitizenFX/Chromium/FFmpeg obligations"
@@ -902,14 +901,6 @@
       "status": "BINARY_ATTRIBUTION_NOT_REQUIRED_SOURCE_NOTICE_MUST_REMAIN"
     },
     {
-      "id": "futura-condensed-medium",
-      "version": "FuturaBT-MediumCondensed; Bitstream 1990",
-      "provenance": "UI font SHA256 45544645ce9b9a79c3cd7600625a4d19d207296fb79277170484318f52226798",
-      "delivery": "OTF loaded by production CSS",
-      "notices": [],
-      "status": "BLOCKED_EMBEDDING_AND_REDISTRIBUTION_PERMISSION"
-    },
-    {
       "id": "dxcompiler.dll",
       "version": "1.8.2505.0",
       "provenance": "CEF payload SHA256 ef7b3e6d6c77badb6a59ef1c092cea19a9565582c0edebc4574ae431656904ad",
@@ -970,5 +961,56 @@
       "notices": [],
       "status": "ACTION_REQUIRED_IMPORT_ONLY_PROVENANCE"
     }
-  ]
+  ],
+  "fonts": {
+    "id": "roboto-condensed",
+    "version": "2.137; 2017",
+    "license": "Apache-2.0",
+    "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+    "notices": [
+      {
+        "file": "RobotoCondensed-2.137--LICENSE.txt",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/LICENSE.txt"
+      }
+    ],
+    "files": [
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/regular-normal.ttf",
+        "sha256": "6a2cfb7e61dd09d77526fd314b256894094f96e3a6f3149d9f8000c1132ef4b8",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Regular.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/regular-normal.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/regular-italic.ttf",
+        "sha256": "351cc12eb1d11769056069a6c14f84e45c46bb18d1b7327bae45720aa9753f28",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Italic.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/regular-italic.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/bold-normal.ttf",
+        "sha256": "03b4e8042b9af4bf3349428fa734ed583f2d5d83287e1f42cf4d514c909146ef",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-Bold.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/bold-normal.ttf"
+      },
+      {
+        "path": "Code/skyrim_ui/src/assets/fonts/roboto-condensed/bold-italic.ttf",
+        "sha256": "aecb99256fe43e06356bcf1af7a2a384fe9334dc21508f37c6259beae67e190e",
+        "source": "https://raw.githubusercontent.com/google/fonts/55aaf47ca89416e720a2449368943ff87fb6d02a/apache/robotocondensed/RobotoCondensed-BoldItalic.ttf",
+        "version": "2.137; 2017",
+        "license": "Apache-2.0",
+        "copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+        "output": "UI/assets/bold-italic.ttf"
+      }
+    ]
+  }
 }

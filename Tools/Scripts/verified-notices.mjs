@@ -145,11 +145,25 @@ export function prepareUiNotices(repoRoot, manifest, uiRoot, original) {
   files.set('UI/3rdpartylicenses.txt', Buffer.from(rendered.join('')));
   return files;
 }
+export function prepareFontNotices(runtimeRoot, repoRoot, manifest) {
+  const files = new Map();
+  if (!manifest.fonts) return files;
+  if (!manifest.fonts.files?.length || !manifest.fonts.notices?.length) throw Error('Incomplete font provenance');
+  for (const font of manifest.fonts.files) {
+    if (!font.source?.startsWith('https://') || !/^[a-f0-9]{64}$/.test(font.sha256)) throw Error('Missing font provenance/hash');
+    // Binary TTF hashes must never undergo text/newline normalization.
+    if (hash(readInside(repoRoot, font.path)) !== font.sha256 ||
+        hash(readInside(runtimeRoot, font.output)) !== font.sha256) throw Error(`Font source/output mismatch: ${font.path}`);
+  }
+  for (const notice of manifest.fonts.notices) files.set(`Licenses/ThirdParty/${notice.file}`, noticeBytes(repoRoot, notice));
+  return files;
+}
 export function prepareVerifiedNotices(runtimeRoot, repoRoot, cachePath, depsRoot, uiRoot) {
   const manifest = loadInventory(repoRoot);
   const files = prepareNativeNotices(repoRoot, manifest, packageRoots(cachePath, depsRoot));
   const ui = prepareUiNotices(repoRoot, manifest, uiRoot, readFileSync(join(runtimeRoot, 'UI/3rdpartylicenses.txt')));
   for (const [name, bytes] of ui) files.set(name, bytes);
+  for (const [name, bytes] of prepareFontNotices(runtimeRoot, repoRoot, manifest)) files.set(name, bytes);
   files.set('Licenses/redistribution.json', Buffer.from(JSON.stringify(manifest, null, 2) + '\n'));
   return files;
 }
@@ -166,11 +180,14 @@ export function verifyBundle(runtimeRoot) {
     if (!names.has(required)) throw Error(`Incomplete bundle inventory: ${required}`);
   }
   const manifest = JSON.parse(readInside(runtimeRoot, 'Licenses/redistribution.json'));
-  for (const item of [...manifest.components, ...Object.values(manifest.ui)]) {
+  for (const item of [...manifest.components, ...Object.values(manifest.ui), ...(manifest.fonts ? [manifest.fonts] : [])]) {
     for (const notice of item.notices) {
       const path = `Licenses/ThirdParty/${notice.file}`;
       if (!names.has(path) || hash(readInside(runtimeRoot, path)) !== notice.sha256) throw Error(`Unaccounted notice: ${path}`);
     }
+  }
+  for (const font of manifest.fonts?.files ?? []) {
+    if (hash(readInside(runtimeRoot, font.output)) !== font.sha256) throw Error(`Packaged font changed: ${font.output}`);
   }
   const sections = parseUiSections(readInside(runtimeRoot, 'UI/3rdpartylicenses.txt').toString());
   for (const name of Object.keys(manifest.uiPackages)) {

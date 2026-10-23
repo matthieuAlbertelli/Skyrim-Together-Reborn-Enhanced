@@ -114,3 +114,17 @@ test('collector has no network, subprocess or application entry points',()=>{
     assert.doesNotMatch(text,/from ['"](?:node:)?(?:https?|child_process|net|tls)['"]|\b(?:fetch|execSync|spawnSync)\s*\(/);
   }
 });
+
+test('font provenance covers source, packaged TTF and required licence', t => {
+  const f = fixture(t), bytes = Buffer.from([0, 1, 13, 10, 255, 0, 12]);
+  const notice = f.manifest.components[0].notices[0];
+  f.manifest.fonts = { files: [{ path: 'fonts/synthetic.ttf', output: 'UI/assets/synthetic.ttf',
+    sha256: hash(bytes), source: 'https://example.invalid/SYNTHETIC/font.ttf' }], notices: [notice] };
+  put(f.repo, 'fonts/synthetic.ttf', bytes); put(f.runtime, 'UI/assets/synthetic.ttf', bytes); f.save();
+  collect(f.runtime, f.options); assert.equal(verifyBundle(f.runtime).releaseReady, false);
+  put(f.repo, 'fonts/synthetic.ttf', 'modified source');
+  assert.throws(() => collect(f.runtime, f.options), /Font source\/output mismatch/);
+  put(f.repo, 'fonts/synthetic.ttf', bytes); put(f.runtime, 'UI/assets/synthetic.ttf', 'modified output');
+  assert.throws(() => collect(f.runtime, f.options), /Font source\/output mismatch/);
+  assert.throws(() => verifyBundle(f.runtime), /Packaged font changed/);
+});
