@@ -42,10 +42,56 @@ Five fixture tests and actual resource extraction PASS. Runtime binaries and
 dependency versions are not changed by this correction. Complete dependency
 notice/redistribution review remains a pre-publication requirement.
 
-The package build will be refreshed from a clean commit containing this narrow
-packaging correction; its source and archive identity will be recorded separately; no historical gameplay PASS is reassigned to them. Removed
-historical receipts are not recreated. Source preparation authorizes no public
-release, game/editor/server launch, installed-content change or deployment.
+Final clean compiled source: **`feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72`**, product
+**0.5.0-alpha.1**, Release / Windows x64. The build output was refreshed in place
+from that source after the packaging fix; TPTests again passed **462 cases /
+49,390 assertions**. Local tools: xmake 3.0.9, MSVC 14.44.35207 / VS2022,
+Node20.19.5, cached pnpm8.15.9 with the frozen v6 lockfile. CI uses pnpm9; the
+local tool difference is recorded, not disguised as a CI run. No player
+prerequisite was installed or updated. The four gitlinks remain unchanged.
+
+Local archive (not a future tag asset):
+`STRE-v0.5.0-alpha.1-PREPACKAGE-feb58b8e-windows-x64.zip`.
+SHA-256: `e42bf3c43a258d488bd588a6e3eb2b6e10400e00c8d2099caf96f49d1a204410`.
+It contains **1,216 files**, **274,378,385 ZIP bytes**;
+all extracted hashes match its inventory. Client/launcher and server identities
+contain the same full `runtime17-` source SHA. **15 AMD64 PE files** were
+inspected statically; their imports resolve to bundled or local Windows system
+DLLs/API sets. This is dependency inspection on this machine, not a fresh-player
+runtime test. UI production output and licence notices are present.
+
+All **914** tracked GameFiles payload files match the source, including the
+671 silent WAVs. ESPs retain their declared Bethesda masters. Private intro,
+private voice exports, external game/mod dependencies, personal configs,
+saves/campaigns, logs/receipts, test executables and build-only files were not
+found in the assembled package. PDBs remain outside the player archive. The
+actual package uses Data-root layout; extraction and SHA-256 checks PASS.
+
+**A — Technical/documentary preparation: READY for local review.** The
+prepackage is useful and identified; this is not public-package acceptance.
+**B — Prerequisites before tag: MISSING.** Approve the bounded Milestone/ROADMAP
+gate; resolve defect dispositions (including untriaged progression/seating
+reports), essential 1.7 campaign-failure/recovery and applicable World Sync
+coverage; complete dependency redistribution/notice review, including Discord
+SDK3.2.1 and linked-library notices; obtain exact accepted-HEAD PR CI/review and
+identified clean-install acceptance. The official Discord archive request for
+notice inspection returned HTTP403; no dependency was replaced to bypass it.
+**C — Final public package: NOT READY.** No final merged/tagged artifact or
+its human acceptance exists. CK writing remains untested/dispensed; full v1
+completion and a new ABI audit are not invented prerequisites for this slice.
+
+Evidence (source/tool identities, test logs, content and PE inventories,
+checksums, extraction and preservation checks) is stored outside the worktree
+in the local preparation directory, not committed as receipts. Subsequent
+status-only commits do not change this compiled/archive identity and require
+no relabelling. Older development PASS remains scoped to its original candidate;
+removed historical receipts are not recreated.
+
+The primary audio HEAD/branch, clean status, tracked source content and six
+protected baseline hashes (including index, personal DEV entry and private
+config/reference) were unchanged at final checking. No game/editor/server was
+launched, no installed content was changed, and no remote-PC access, deployment,
+push, remote PR, tag or release was performed.
 
 The dated implementation entries below remain historical evidence: in
 particular the original Runtime17TwoPc entry describes the audio checkout at
