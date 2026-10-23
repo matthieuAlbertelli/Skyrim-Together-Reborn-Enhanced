@@ -708,13 +708,6 @@
       ],
       "status": "NOTICE_COMPLETE",
       "reason": ""
-    },
-    "@ngneat/reactive-forms": {
-      "version": "5.0.2",
-      "repository": "https://github.com/ngneat/reactive-forms",
-      "notices": [],
-      "status": "BLOCKED",
-      "reason": "Official npm 5.0.2 tarball integrity verified; no full notice at published gitHead 88252925b028143099b6364517c9a5310f5e02f3. Historical LICENSE was removed in complete rewrite commit 5cee6fef2b59499df86cbfcdf17dd468b41ac884; applicability of that older text to 5.0.2 is not established. Rightsholder clarification required; no invented copyright."
     }
   },
   "unresolved": [
@@ -723,7 +716,6 @@
     "Futura embedding/distribution",
     "DXIL and D3DCompiler exact REDIST terms; DXC exact binary/source mapping",
     "Inherited UI art/sounds and logo/Valen model/texture provenance",
-    "reactive-forms 5.0.2 full copyright/permission text",
     "Corresponding sources and LGPL/CitizenFX/Chromium/FFmpeg obligations"
   ],
   "external": [
@@ -797,11 +789,6 @@
     "@ngneat/loadoff": {
       "version": "2.1.0",
       "repository": "https://github.com/ngneat/loadoff",
-      "sectionSha256": null
-    },
-    "@ngneat/reactive-forms": {
-      "version": "5.0.2",
-      "repository": "https://github.com/ngneat/reactive-forms",
       "sectionSha256": null
     },
     "@ngneat/transloco": {
