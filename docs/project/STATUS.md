@@ -9,7 +9,68 @@ operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
 
-## 0.5.0-alpha.1 technical dependency cleanup (2026-10-24)
+## 0.5.0-alpha.1 identified prepackage — maintainer human qualification
+
+Recorded on 2026-10-24 from the maintainer's explicit attestation, not a new
+Codex runtime test. The verdict is **PASS humain déclaré par le mainteneur**
+(maintainer-declared human PASS) for the following identified artifact:
+
+- source/build: `de411d1b3774ef9f456fa706c11e99fcd6471cd3`;
+- branch: `codex/skyrim-1.7-alpha-release`;
+- archive: `STRE-v0.5.0-alpha.1-PREPACKAGE-de411d1b-windows-x64.zip`;
+- SHA-256: `71f2f5bdea5d1b789e1f4c9fb77921f2874bbe1addc5024c7a51ae3d3c914c3b`;
+- target: Skyrim Special Edition Steam **1.7.104.0**, Windows x64;
+- environment reported by the maintainer: two PCs; no Codex access to either
+  game installation or to the second PC accompanies this consolidation.
+
+| Reported human scope | Recorded outcome |
+|---|---|
+| Clean installation, startup and Solo | **9/9 PASS**, as the reported aggregate; no invented mapping to nine unnamed cases |
+| Connection and campaign creation with two players | **PASS humain déclaré par le mainteneur** |
+| Reciprocal appearance, seating, movement and controls | **PASS humain déclaré par le mainteneur** |
+| Collective checkpoint | **PASS humain déclaré par le mainteneur** |
+| Disconnect, lock and collective restoration | **PASS humain déclaré par le mainteneur** |
+| World Sync, trading and progression | **PASS humain déclaré par le mainteneur**, limited to the scenarios actually tried |
+
+The maintainer states that all performed tests passed. This is an acceptance of
+that reported scope on this package, not a complete 17-case or exhaustive
+campaign matrix. No new logs were supplied or analyzed by Codex. Test execution
+dates, durations, exact objects/quests, player-order permutations, checkpoint
+IDs, save fingerprints and per-machine traces are not inferred. In particular,
+no crash/server-restart, failed-restore, mid-ACK loss, late-join/replacement
+rejection, repeated-recovery or unreported WorldEntity interruption/materialization
+scenario acquires a human PASS from this statement. Mounts remain outside the
+qualified scope: **MOUNT-01 N/A**, not PASS. No general test repetition is requested.
+
+The independent reconstruction at this source passed Release Windows x64 and
+Angular production builds, 463 native cases / 49,400 assertions, three Angular
+component tests and 30 notice tests. The ZIP has 1,252 files; 914 tracked
+GameFiles match the source, including 671 silent timing WAVs. Fourteen AMD64
+PE files have no unresolved static imports on the reconstruction host; archive
+extraction/hashes and full notice verification pass. Discord SDK, reactive-forms
+and Futura are absent; verified Roboto Condensed and CEF/third-party notices are
+included. These technical checks remain distinct from the human attestation.
+The earlier `f2c9947d` package and `C:/STRE-A05` local receipts were deleted;
+their versioned historical findings below are preserved, not reconstructed.
+The new archive and evidence remain under `C:/STRE-RC05/`. Subsequent documentary
+commits do not change or relabel the tested archive's compiled identity.
+
+The reported seating/progression/World Sync success does not establish permanent
+resolution of intermittent #91 or the inherited #5/#3/#4 symptoms. Their existing
+issue evidence and release-specific disposition requirements remain separate;
+see the [candidate gate review](../production/releases/0.5.0-alpha.1-preparation.md#known-defect-dispositions).
+Valen DialogueProgress, CK writing (untested/dispensed), broader failure matrices
+and the known missing decorative trade texture remain independent limitations.
+
+This consolidates candidate qualification; it does not publish a release.
+Technical notice failures removed by the dependency cleanup are resolved; the
+remaining Tilted/Microsoft/asset permissions and corresponding-source/LGPL
+obligations have not received new evidence and were not generally re-audited.
+Release Milestone, defect dispositions and exact final-source/artifact gates
+remain governed by [RELEASE_PROCESS](../production/RELEASE_PROCESS.md).
+PR review/merge preparation is separate from permission to distribute binaries.
+
+## 0.5.0-alpha.1 technical dependency cleanup — historical build (2026-10-24)
 
 The preparation remains **unpublished** and PR #102 remains Draft. This mission
 authorizes technical preparation and a normal push of the preparation branch

@@ -1,7 +1,7 @@
 # Compatibility matrix
 
 > **Status: Source of truth for known compatibility**
-> **Last updated: October 23, 2026**
+> **Last updated: October 24, 2026**
 
 ## Current development target
 
@@ -11,7 +11,7 @@ Target selection is not evidence of gameplay compatibility; [STATUS](../project/
 owns executed results. All older gameplay observations below are historical
 1.6 evidence unless explicitly dated and identified as 1.7.
 
-## 0.5.0-alpha.1 preparation — no public package acceptance
+## 0.5.0-alpha.1 prepackage — bounded human qualification, unpublished
 
 The local candidate targets exactly Steam **1.7.104.0 / Windows x64**, SKSE64
 **2.3.1**, matching Address Library v13/V5 database and Better Grabbing **2.0**.
@@ -25,13 +25,27 @@ their defining files; unchanged identifiers do not guarantee runtime save
 compatibility. No schema, HEDR or bytecode version was bumped for product VERSION.
 ESP, PEX, UI and runtime binaries must come from the same identified package.
 
-Prior development PASS below retains its original scope. No old PASS is assigned
-to a newly compiled commit or archive. Collective recovery, multiplayer object
-manipulation/interruption and Valen DialogueProgress remain open on 1.7; CK
-writing is untested/dispensed, not a validated capability. Local compilation and
-static content checks are separate from clean-install and gameplay acceptance.
-See [STATUS](../project/STATUS.md) for new preparation results and the
-[candidate gates](../production/releases/0.5.0-alpha.1-preparation.md).
+The maintainer identifies the rebuilt `de411d1b` prepackage and declares human
+PASS for clean installation/startup/Solo (9/9), two-player connection/campaign
+creation, reciprocal appearance/seating/movement/controls, collective checkpoint,
+disconnect/lock/collective restoration, and World Sync/trading/progression within
+the tried scope. [STATUS](../project/STATUS.md#050-alpha1-identified-prepackage--maintainer-human-qualification)
+owns the full source SHA, ZIP checksum and exact attestation limits. These are
+human-declared results, not Codex-executed gameplay or newly analyzed logs.
+
+| Candidate scope | Evidence boundary |
+|---|---|
+| Clean install, startup, Solo | Maintainer-declared **9/9 PASS** as an aggregate; individual unnamed cases are not invented |
+| Two-player campaign, appearance, seating, movement, controls | Maintainer-declared **PASS** on the identified package; no inferred player-order or race/class permutations |
+| Collective checkpoint and disconnect/lock/collective restoration | Maintainer-declared **PASS** for the reported path; crash/restart, failed restore and other unreported failure variants are not covered |
+| World Sync, trading, progression | Maintainer-declared **PASS** within the tried scope; no exhaustive object, quest, loot or interruption matrix |
+| Mounts | Outside qualification; **MOUNT-01 N/A**, not PASS |
+| Older builds and future artifacts | Prior PASS remains identified separately; no 1.6 migration, mixed builds, or automatic final tagged-artifact acceptance |
+
+Valen DialogueProgress remains unported; CK writing is untested/dispensed, not a
+validated capability. Intermittent seating and inherited gameplay reports are
+not closed by this result. Remaining release gates are in the
+[candidate plan](../production/releases/0.5.0-alpha.1-preparation.md).
 
 ## Historical 0.4.0-alpha.1 reference platform
 
@@ -66,12 +80,12 @@ See [STATUS](../project/STATUS.md) for executed evidence and the
 | Experimental deployment | Maintainer-operated two-PC workflow has a retained local A/B `INSTALLED_VERIFIED` receipt; candidate and evidence limits are in STATUS. No fresh destination audit or Codex access to Pc-vero |
 | Address Library | v13 / exact `versionlib-1-7-104-0.bin`; formats 2/5 parse, but format coexistence is not runtime coexistence |
 | SKSE | Official `2.3.1`, DLL `skse64_1_7_104.dll`, file resource `0.2.3.1`; loading/startup hooks do not attest initialized plugins |
-| Better Grabbing | Official 2.0: main-PC DLL/provenance, actual SKSE 2.3.1 loading and human Solo smoke PASS; V5 declaration present; multiplayer manipulation/interruption remains untested; required native-plugin policy retained |
+| Better Grabbing | Official 2.0: main-PC DLL/provenance, actual SKSE 2.3.1 loading and human Solo smoke PASS; V5 declaration present; the identified prepackage now has bounded human World Sync PASS above, without exhaustive manipulation/interruption coverage; required native-plugin policy retained |
 | Vanilla main menu | Official launcher, visible entries, keyboard/mouse and normal Quit PASS2026-10-21; maintainer visual/input evidence plus logs/exit0 |
 | STRE intro/custom menu | Exact 1.7.104 adapters ported; offline builds/tests PASS and maintainer-attested human PASS for the progressive A-D presentation trial. Deployed candidate and exact scope in STATUS; no inferred controller, resolution/language matrix, per-PC runtime verdict or exhaustive failure coverage |
 | Solo gameplay | Bounded maintainer-run New Game/creation, local Thief build, seating, Valen access, quick-save/reload, Continue and checked-character persistence; exact human/technical scope in STATUS; no exhaustive appearance/class/dialogue compatibility claim |
 | Reported two-player path | Maintainer-attested PASS: admission/lobby, creation, reciprocal appearances, seating, movement and saving/loading. Logs checked by the maintainer, not Codex; exact candidate and accepted scope are in STATUS |
-| World Sync and collective recovery | Not qualified by the reported two-player path. No inferred manipulation/interruption, crash/disconnect/restart or coordinated-checkpoint recovery PASS; presentation has its separate exact-target gate, while unrelated optional dialogue/diagnostic paths remain guarded |
+| World Sync and collective recovery | The earlier development two-player path did not qualify these domains. The identified de411d1b prepackage now has maintainer-declared collective checkpoint, disconnect/lock/restoration and bounded World Sync PASS above. No inferred crash/restart, failed-restore or exhaustive manipulation/interruption PASS; optional dialogue/diagnostic guards remain |
 | CK/Papyrus/content | Exact 1.7.104 wrapper/protection tests PASS; real AutoMod GLOB and two Papyrus fixture compilations PASS. Maintainer-attested xEdit 4.1.5f fixture cycle PASS, with bounded log corroboration. CK 1.6.1378.1 human PASS only for startup, Skyrim.esm load without active file, TimeScale inspection and normal exit without saving; reported non-blocking MASTERFILE warning retained. CK fixture creation/write/save/reopen: **NON TESTÉ / dispensé par décision du mainteneur**, not an automatic migration-PR prerequisite. Production authoring/import remain unqualified. Inventory/hash continuity observed, archive/source provenance incomplete. See STATUS and the [toolchain evidence](../audit/2026-10-22-runtime-1.7-toolchain.md). DEV build/deployment remains separate from authoring |
 | Campaigns | New isolated test campaign only after capability prerequisites; no 1.6 campaign/save migration guarantee |
 | Linux/CI | No Linux execution or manually triggered CI in this mission |
@@ -108,6 +122,10 @@ smoke must still verify availability of all external textures.
   apply; the roster-2 result does not supersede them.
 
 ## Campaign continuity
+
+The detailed table below retains historical 1.6 evidence. The identified 1.7
+prepackage has only the separately stated human scope above; these older rows
+are not silently requalified on 1.7.
 
 | Scenario | Evidence/state |
 |---|---|
