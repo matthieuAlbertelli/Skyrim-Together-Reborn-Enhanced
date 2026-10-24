@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 # remote command, credentials, server configuration write or Vortex API.
 $script:RootFiles = @(
     'SkyrimTogether.exe','EarlyLoad.dll','TPProcess.exe','SkyrimTogetherServer.exe',
-    'STServer.dll','libcef.dll','discord_game_sdk.dll','chrome_100_percent.pak',
+    'STServer.dll','libcef.dll','chrome_100_percent.pak',
     'chrome_200_percent.pak','chrome_elf.dll','d3dcompiler_47.dll','dxcompiler.dll',
     'dxil.dll','icudtl.dat','libEGL.dll','libGLESv2.dll','resources.pak',
     'v8_context_snapshot.bin','vk_swiftshader.dll','vulkan-1.dll'

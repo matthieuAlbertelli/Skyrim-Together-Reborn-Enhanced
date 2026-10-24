@@ -1,13 +1,293 @@
 # Current STRE Status
 
 > **Status:** source of truth for implemented and validated state.
-> **Last updated:** October 23, 2026.
+> **Last updated:** October 24, 2026.
 
 This document describes **the repository's actual current state**. Product
 direction and release gates belong in [`ROADMAP.md`](../../ROADMAP.md),
 operational progress belongs in the GitHub Project governed by
 [`docs/production/GITHUB_GOVERNANCE.md`](../production/GITHUB_GOVERNANCE.md),
 and technical detail belongs in each feature's documentation.
+
+## 0.5.0-alpha.1 identified prepackage — maintainer human qualification
+
+Recorded on 2026-10-24 from the maintainer's explicit attestation, not a new
+Codex runtime test. The verdict is **PASS humain déclaré par le mainteneur**
+(maintainer-declared human PASS) for the following identified artifact:
+
+- source/build: `de411d1b3774ef9f456fa706c11e99fcd6471cd3`;
+- branch: `codex/skyrim-1.7-alpha-release`;
+- archive: `STRE-v0.5.0-alpha.1-PREPACKAGE-de411d1b-windows-x64.zip`;
+- SHA-256: `71f2f5bdea5d1b789e1f4c9fb77921f2874bbe1addc5024c7a51ae3d3c914c3b`;
+- target: Skyrim Special Edition Steam **1.7.104.0**, Windows x64;
+- environment reported by the maintainer: two PCs; no Codex access to either
+  game installation or to the second PC accompanies this consolidation.
+
+| Reported human scope | Recorded outcome |
+|---|---|
+| Clean installation, startup and Solo | **9/9 PASS**, as the reported aggregate; no invented mapping to nine unnamed cases |
+| Connection and campaign creation with two players | **PASS humain déclaré par le mainteneur** |
+| Reciprocal appearance, seating, movement and controls | **PASS humain déclaré par le mainteneur** |
+| Collective checkpoint | **PASS humain déclaré par le mainteneur** |
+| Disconnect, lock and collective restoration | **PASS humain déclaré par le mainteneur** |
+| World Sync, trading and progression | **PASS humain déclaré par le mainteneur**, limited to the scenarios actually tried |
+
+The maintainer states that all performed tests passed. This is an acceptance of
+that reported scope on this package, not a complete 17-case or exhaustive
+campaign matrix. No new logs were supplied or analyzed by Codex. Test execution
+dates, durations, exact objects/quests, player-order permutations, checkpoint
+IDs, save fingerprints and per-machine traces are not inferred. In particular,
+no crash/server-restart, failed-restore, mid-ACK loss, late-join/replacement
+rejection, repeated-recovery or unreported WorldEntity interruption/materialization
+scenario acquires a human PASS from this statement. Mounts remain outside the
+qualified scope: **MOUNT-01 N/A**, not PASS. No general test repetition is requested.
+
+The independent reconstruction at this source passed Release Windows x64 and
+Angular production builds, 463 native cases / 49,400 assertions, three Angular
+component tests and 30 notice tests. The ZIP has 1,252 files; 914 tracked
+GameFiles match the source, including 671 silent timing WAVs. Fourteen AMD64
+PE files have no unresolved static imports on the reconstruction host; archive
+extraction/hashes and full notice verification pass. Discord SDK, reactive-forms
+and Futura are absent; verified Roboto Condensed and CEF/third-party notices are
+included. These technical checks remain distinct from the human attestation.
+The earlier `f2c9947d` package and `C:/STRE-A05` local receipts were deleted;
+their versioned historical findings below are preserved, not reconstructed.
+The new archive and evidence remain under `C:/STRE-RC05/`. Subsequent documentary
+commits do not change or relabel the tested archive's compiled identity.
+
+The reported seating/progression/World Sync success does not establish permanent
+resolution of intermittent #91 or the inherited #5/#3/#4 symptoms. Their existing
+issue evidence and release-specific disposition requirements remain separate;
+see the [candidate gate review](../production/releases/0.5.0-alpha.1-preparation.md#known-defect-dispositions).
+Valen DialogueProgress, CK writing (untested/dispensed), broader failure matrices
+and the known missing decorative trade texture remain independent limitations.
+
+This consolidates candidate qualification; it does not publish a release.
+Technical notice failures removed by the dependency cleanup are resolved; the
+remaining Tilted/Microsoft/asset permissions and corresponding-source/LGPL
+obligations have not received new evidence and were not generally re-audited.
+Release Milestone, defect dispositions and exact final-source/artifact gates
+remain governed by [RELEASE_PROCESS](../production/RELEASE_PROCESS.md).
+PR review/merge preparation is separate from permission to distribute binaries.
+
+## 0.5.0-alpha.1 technical dependency cleanup — historical build (2026-10-24)
+
+The preparation remains **unpublished** and PR #102 remains Draft. This mission
+authorizes technical preparation and a normal push of the preparation branch
+only; no Ready, merge, tag or public asset upload follows from these results.
+Frozen compiled source: `f2c9947d3ddd103247a0a9d7d2192c4e21f423c0`, product
+`0.5.0-alpha.1`, Release Windows x64 / exact Skyrim Steam 1.7.104.0.
+Later test/documentation commits do not change this binary identity.
+
+- Discord Game SDK/service and its DLL requirement are removed. Authentication
+  still serializes the same `uint64_t DiscordId` in the same position; the client
+  explicitly sends zero. Server Player/bindings, admission and campaign contracts
+  are unchanged. A native fixture checks zero and a nonzero legacy value.
+- Server search uses Angular FormControl with subscription-time initial value,
+  native valueChanges, the existing 300 ms leading throttle and unchanged
+  filtering. reactive-forms is absent from the lockfile, installed production
+  graph and production module statistics; no other locked version changed.
+- Futura is removed. The existing Roboto Condensed 2.137 TTFs match Google Fonts
+  commit `55aaf47ca89416e720a2449368943ff87fb6d02a` byte-for-byte and declare
+  Apache-2.0. Normal/italic 400 and 700 are shipped with the exact licence;
+  source and packaged font hashes are verified by the notice collector.
+- The inherited server announcement service and cpp-httplib dependency are
+  removed. No periodic call to the old public directory remains. Angular list
+  browsing and direct connection remain. `LiveServices:bAnnounceServer` is kept
+  as a legacy permission setting: true still restricts time changes to admins;
+  it no longer announces a server. The command predicates remain unchanged.
+  OpenSSL 1.1.1-w is confirmed inherited from STR v1.7.0/v1.8.4. Windows
+  GameNetworkingSockets uses BCrypt; the four delivered-target linker records
+  contain no OpenSSL/libssl/libcrypto. The inherited pin remains for other
+  platforms/transitive builds, without a cross-platform removal or rights claim.
+
+Executed local checks: Release launcher/client/server build PASS; Angular
+production build PASS; frozen pnpm 8.15.9 install PASS; pnpm 9.15.9 frozen-lock
+compatibility probe on copied manifests PASS. TPTests **463 cases / 49,400
+assertions PASS**, including authentication/campaign; **93 Runtime17TwoPc
+synthetic cases PASS**; **3 real Angular/RxJS component tests PASS**;
+**30 notice tests PASS**. Full notice assembly and extraction verification now
+pass: 21 native inventory entries, 28 native texts, 16 UI sections (seven
+completed, nine preserved), Roboto licence and the four original CEF notices.
+No general notice/provenance gate was disabled.
+
+**32 offline Chrome production-bundle renders** cover creation, three classes,
+equipment, lobby, trading and recovery in EN/FR at 1920x1080 and 1280x720.
+Four font variants load, measured panels stay in the viewport, and no measured
+visible text overflow or JavaScript error occurs. This is synthetic presentation
+evidence, not CEF/gameplay or human acceptance. Existing hard-coded French
+creation/trading text remains French with either language setting. A missing
+decorative `/assets/trade/leather-grain.svg` is also proved in the old ZIP and
+retained as an independent existing packaging limitation, not a font regression.
+
+New local archive: `STRE-v0.5.0-alpha.1-PREPACKAGE-f2c9947d-windows-x64.zip`,
+**1,252 files**, SHA-256
+`fbacbd0ee6aca6f73cdfddbe6ce2117a256173bb53c5ae270117259f628d21bf`.
+Extraction hashes PASS; 14 AMD64 PE files, no unresolved imports, identical
+compiled identity in client/runner/server. All 914 tracked GameFiles entries,
+including 671 silent timing WAVs, match the historical content hashes. No
+Discord DLL, Futura, private voices/intro, external game/SKSE/plugin dependency,
+personal configuration or save is included. The historical feb58b8e archive and
+receipts are unchanged. Evidence is retained locally under
+`C:/STRE-A05/release-review/technical-finalization-20261024/` and is not published.
+
+Technical preparation is **READY FOR RELEASE REVIEW**, with the existing
+decorative-resource limitation disclosed. This is not redistribution clearance
+or release acceptance. Remaining Tilted/Microsoft/asset permissions,
+corresponding-source/LGPL obligations and scoped human package/campaign evidence
+remain independent gates. Solo/two-player/on-foot scope, MOUNT-01 N/A,
+ADR-0018 and all historical bounded PASS remain unchanged. No installation,
+DEV deployment, forbidden application or remote-PC access occurred.
+
+## 0.5.0-alpha.1 release follow-up — historical publication block (2026-10-24)
+
+The maintainer authorizes publication of the preparation branch and the later
+Ready/squash/tag/Alpha-release sequence **only if the release gates pass**.
+The local starting HEAD is `b69b5ac08ba9a5dab8e872cc733e887baa54ddcb`;
+main remains `968badb4b91e4a40c686fb8128e7496d2ef89c41` at this inspection.
+No new public player package or download is claimed.
+
+The maintainer reports having performed human tests. The supplied statement
+does not identify the tested artifact or individual scenario outcomes. It is
+recorded as **execution reported, results not yet documented**, not seventeen
+PASS verdicts or a FAIL. The indispensable clarification is the tested candidate
+identity and the outcomes for save integrity, committed collective checkpoints
+and restore, loss/duplication of items, character controls and progression.
+Reuse valid observations; no general repetition of the seventeen tests is
+requested. Earlier identified Solo/two-player/presentation PASS below remains
+accepted within its recorded scope and is not relabelled as this package's
+acceptance. The final tagged artifact will still require its applicable package
+and smoke evidence under RELEASE_PROCESS.
+
+The targeted reactive-forms follow-up checked the official npm 5.0.2 tarball
+against its published SHA-512 integrity: 27 files, no complete licence text.
+The published gitHead remains `88252925b028143099b6364517c9a5310f5e02f3`.
+An older MIT text was found before commit
+`5cee6fef2b59499df86cbfcdf17dd468b41ac884`, which removed LICENSE while
+explicitly describing a complete library rewrite. That text is not automatically
+assigned to 5.0.2; no copyright is invented and the collector's refusal remains.
+Minimal resolution: a verifiable notice or confirmation from the relevant
+rightsholder covering that exact version. Other distribution-rights and
+corresponding-source questions retain the preceding remediation verdicts;
+no new permission has been supplied and no general licence audit is restarted.
+
+The preparation changes may be reviewed and checked in PR CI independently.
+Ready/merge/tag and public binary upload remain suspended while indispensable
+rights, complete packaging or campaign-critical evidence are unresolved.
+The historical prepackage is preserved; no rebuild, DEV deployment, application
+launch, private voice integration or remote-PC access accompanies this follow-up.
+
+## 0.5.0-alpha.1 local release preparation — historical snapshot (2026-10-23)
+
+The exact Steam 1.7.104.0 port and DEV workflow are integrated into main at
+`968badb4b91e4a40c686fb8128e7496d2ef89c41`. A separate local preparation branch
+retains the four bilingual README commits through `c50cf8d2`; no audio-production
+commit is included. VERSION now identifies **0.5.0-alpha.1, unpublished**.
+Cumulative release documentation is measured from the real 0.4 tag, and the
+installation guide now describes a player package rather than private DEV lots.
+
+At preparation inspection, the proposed version/tag was free and no 0.5 target
+Milestone existed. On 2026-10-23 the maintainer approved the product slice:
+Solo and two-player cooperation on Steam 1.7.104.0 Windows x64, with on-foot
+exploration as qualification scope. Mount synchronization is not guaranteed;
+MOUNT-01 is N/A, not PASS. The 17 necessary human scenarios remain unexecuted.
+The Milestone has not been created, redistribution rights remain open and
+publication remains prohibited. ADR-0018 and critical integrity/progression
+gates are unchanged; the broader player-count objectives are not test evidence.
+The [preparation plan](../production/releases/0.5.0-alpha.1-preparation.md) records
+compatibility review, package validation and the future coordinated publication.
+The [EN/FR notes](../production/releases/0.5.0-alpha.1.md) explicitly distinguish
+the unpublished candidate from the historical public 1.6 archive.
+
+Local licence remediation (2026-10-23), with no rebuild: **29 collector fixture
+checks PASS**. Offline verification against actual build inputs covers 23 native
+components / 30 exact notice files; OpenSSL remains blocked for combined-work
+rights despite its complete notice. Seven of eight identifier-only UI sections
+have verified full texts, and nine existing full sections are preserved byte for
+byte. `@ngneat/reactive-forms` 5.0.2 still lacks verified copyright/permission
+text: the full collector correctly refuses the isolated assembly before any new
+notice output. All four CEF notices re-extract identically to the historical ZIP.
+No complete new package or human acceptance is claimed. Windows playable
+packaging now gates assembly and final notice integrity; normal PR builds retain
+CEF extraction and run the fixture tests. No CI was dispatched: the existing
+Windows/Linux successes cover **28310786971a63096f94293021594c79423664bf only**.
+The [versioned notice inventory and source procedure](../../Tools/Packaging/README.md)
+record the bounded correction. Discord/Tilted permissions, OpenSSL combination,
+Futura, exact Microsoft redistribution terms and inherited asset rights remain
+open, as do corresponding-source/LGPL obligations. The five local remediation
+reports preserve the decision dossier; no rightsholder request has been sent.
+The historical ZIP and compiled identity below remain unchanged.
+
+First frozen source `a5c9bbc6fc63ef6aac3c5611da17cf44b0f784af`: local Release
+x64/Angular production build PASS; TPTests **462 cases / 49,390 assertions PASS**.
+Python Valen **107 tests**, presentation **16 tests**, PowerShell synthetic
+outillage **76**, matrix preparation **21** and matrix import **21** cases PASS.
+CK packaging audits **697** managed paths; the ten seat mappings, 41 catalog
+references, MQ101 binary/source and declared plugin-record audits pass. All
+**671 tracked WAVs are silent timing placeholders**, unchanged from main; no
+private voice export is included. **195 local document links** resolve and
+historical changelog entries remain byte-equivalent after newline normalization.
+
+A demonstrated packaging gap is corrected: CEF/Chromium notices already inside
+resources.pak are now extracted to readable files by the Windows workflow.
+Five fixture tests and actual resource extraction PASS. Runtime binaries and
+dependency versions are not changed by this correction. Complete dependency
+notice/redistribution review remains a pre-publication requirement.
+
+Final clean compiled source: **`feb58b8e1ace4c1ed8a488dbbee6eeecd75ddf72`**, product
+**0.5.0-alpha.1**, Release / Windows x64. The build output was refreshed in place
+from that source after the packaging fix; TPTests again passed **462 cases /
+49,390 assertions**. Local tools: xmake 3.0.9, MSVC 14.44.35207 / VS2022,
+Node20.19.5, cached pnpm8.15.9 with the frozen v6 lockfile. CI uses pnpm9; the
+local tool difference is recorded, not disguised as a CI run. No player
+prerequisite was installed or updated. The four gitlinks remain unchanged.
+
+Local archive (not a future tag asset):
+`STRE-v0.5.0-alpha.1-PREPACKAGE-feb58b8e-windows-x64.zip`.
+SHA-256: `e42bf3c43a258d488bd588a6e3eb2b6e10400e00c8d2099caf96f49d1a204410`.
+It contains **1,216 files**, **274,378,385 ZIP bytes**;
+all extracted hashes match its inventory. Client/launcher and server identities
+contain the same full `runtime17-` source SHA. **15 AMD64 PE files** were
+inspected statically; their imports resolve to bundled or local Windows system
+DLLs/API sets. This is dependency inspection on this machine, not a fresh-player
+runtime test. UI production output and licence notices are present.
+
+All **914** tracked GameFiles payload files match the source, including the
+671 silent WAVs. ESPs retain their declared Bethesda masters. Private intro,
+private voice exports, external game/mod dependencies, personal configs,
+saves/campaigns, logs/receipts, test executables and build-only files were not
+found in the assembled package. PDBs remain outside the player archive. The
+actual package uses Data-root layout; extraction and SHA-256 checks PASS.
+
+**A — Technical/documentary preparation: READY for local review.** The
+prepackage is useful and identified; this is not public-package acceptance.
+**B — Prerequisites before tag: MISSING.** Formalize the approved slice in a
+Milestone and satisfy its ROADMAP gate; resolve defect dispositions (including untriaged progression/seating
+reports), essential 1.7 campaign-failure/recovery and applicable World Sync
+coverage; complete dependency redistribution/notice review, including Discord
+SDK3.2.1 and linked-library notices; obtain exact accepted-HEAD PR CI/review and
+identified clean-install acceptance. The official Discord archive request for
+notice inspection returned HTTP403; no dependency was replaced to bypass it.
+**C — Final public package: NOT READY.** No final merged/tagged artifact or
+its human acceptance exists. CK writing remains untested/dispensed; full v1
+completion and a new ABI audit are not invented prerequisites for this slice.
+
+Evidence (source/tool identities, test logs, content and PE inventories,
+checksums, extraction and preservation checks) is stored outside the worktree
+in the local preparation directory, not committed as receipts. Subsequent
+status-only commits do not change this compiled/archive identity and require
+no relabelling. Older development PASS remains scoped to its original candidate;
+removed historical receipts are not recreated.
+
+The primary audio HEAD/branch, clean status, tracked source content and six
+protected baseline hashes (including index, personal DEV entry and private
+config/reference) were unchanged at final checking. No game/editor/server was
+launched, no installed content was changed, and no remote-PC access, deployment,
+push, remote PR, tag or release was performed.
+
+The dated implementation entries below remain historical evidence: in
+particular the original Runtime17TwoPc entry describes the audio checkout at
+that earlier checkpoint, not its present filesystem state.
 
 ## Runtime17TwoPc no-argument entry and script-checkout source — local fixtures only
 

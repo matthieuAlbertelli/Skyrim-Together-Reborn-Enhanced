@@ -18,7 +18,6 @@
 #include <Services/OverlayService.h>
 #include <Services/UiSurfaceService.h>
 #include <Services/PapyrusService.h>
-#include <Services/DiscordService.h>
 #include <Services/ObjectService.h>
 #include <Services/QuestService.h>
 #include <Services/ActorValueService.h>
@@ -89,7 +88,6 @@ World::World()
     ctx().emplace<CharacterService>(*this, m_dispatcher, m_transport);
     ctx().emplace<DebugService>(m_dispatcher, *this, m_transport, ctx().at<ImguiService>());
     ctx().emplace<PapyrusService>(m_dispatcher);
-    ctx().emplace<DiscordService>(m_dispatcher);
     ctx().emplace<ObjectService>(*this, m_dispatcher, m_transport);
     ctx().emplace<CalendarService>(*this, m_dispatcher, m_transport);
     ctx().emplace<QuestService>(*this, m_dispatcher);

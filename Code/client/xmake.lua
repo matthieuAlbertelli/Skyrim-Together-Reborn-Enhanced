@@ -28,7 +28,7 @@ target(name)
 
     after_install(function(target)
         -- copy dlls
-        for _, pkg_with_dlls in ipairs({"cef", "discord"}) do
+        for _, pkg_with_dlls in ipairs({"cef"}) do
             local linkdir = target:pkg(pkg_with_dlls):get("linkdirs")
             local bindir = path.join(linkdir, "..", "bin")
             os.cp(bindir, target:installdir())
@@ -80,7 +80,6 @@ target(name)
         "hopscotch-map",
         "cryptopp",
         "gamenetworkingsockets",
-        "discord",
         "imgui",
         "cef",
         "minhook",

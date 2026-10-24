@@ -4,19 +4,77 @@ All notable STRE-specific changes are documented here. Upstream Skyrim Together 
 
 ## [Unreleased]
 
+## [0.5.0-alpha.1] — unpublished candidate
+
+This cumulative candidate covers changes since `stre-v0.4.0-alpha.1`.
+No publication date or tagged-package acceptance is assigned yet.
+
 ### Added
 
-- Native startup/Main Menu presentation for Skyrim 1.6.1170 / SKSE 2.2.6:
-  once-per-process optional trailer, configurable keyboard/controller skip,
-  native Scaleform keyboard prompt, intro-only cursor/input suppression and
-  bounded vanilla fallback. No 1.7.x support is claimed.
-- Distributed silent forward/reverse ping-pong background, independent
-  center-left emblem/SKYRIM assets, localized subtitle and feathered backdrop.
-  The local intro is excluded while its music permission is pending; packages
-  without it open directly on the background and unchanged vanilla menu.
-  Contract and asset provenance: [Main Menu](docs/features/main-menu/README.md).
-- Policy, decoder and packaging coverage, with Main Menu Video GPL attribution.
-  Actual automated and human validation: [STATUS](docs/project/STATUS.md).
+- Native optional startup trailer and branded animated main menu, now ported to
+  the exact Steam 1.7.104.0 runtime. The distributed silent background, separate
+  emblem/SKYRIM assets, subtitle and backdrop retain their provenance and GPL
+  notices. The private intro/music is excluded; absence proceeds to the menu.
+- Collective Character Build completion gates departure toward Helgen, with a
+  shared lead and journal quest, plus the versioned Valen dialogue matrix and
+  its synthetic audit/authoring protections. These are Alpha integrations;
+  broad dialogue and campaign continuity acceptance is not implied.
+- Guarded AutoMod/Papyrus tooling and official-xEdit validation contracts;
+  bilingual project presentation and a player-oriented 1.7 installation guide.
+
+### Changed
+
+- Remove optional Discord Rich Presence/SDK and its packaged DLL; retain the
+  authentication field with a zero client value and unchanged campaign identity.
+- Replace reactive-forms with Angular native FormControl without changing server
+  search/filter behavior, and replace Futura with verified Apache-2.0 Roboto
+  Condensed 2.137 normal/italic 400/700.
+- Remove inherited server-directory announcements and cpp-httplib. Direct
+  connections and UI list browsing remain; legacy bAnnounceServer still restricts
+  time-command privileges. Windows linker inputs no longer include OpenSSL;
+  inherited non-Windows/transitive pins are retained.
+- Development targets **Skyrim SE Steam 1.7.104.0, Windows x64** exclusively,
+  with SKSE64 2.3.1, matching Address Library and external Better Grabbing 2.0.
+  The runtime port is integrated into main. Historical 1.6 releases remain
+  immutable and are not compatible player packages for this target.
+- DEV deployment accepts explicitly selected supported branches, and the
+  no-argument personal entry builds its own checkout. Source/provenance,
+  clean-tree, submodule and historical receipt protections remain enforced.
+  This workflow is not used to manufacture a public release.
+
+### Fixed
+
+- Local native seating-entry completion and cell-transition fences, with
+  departure coordination and content integration fixes accumulated since 0.4.
+  Open seating defects remain separately tracked; this is not a blanket fix.
+
+- Packaging extracts readable CEF/Chromium notices and verifies versioned native
+  and UI notices before playable assembly, with a final integrity check. Missing
+  or mismatched notices stop packaging. The dependency cleanup removes the
+  unresolved reactive-forms component and verifies packaged font bytes/licences.
+  This does not clear the other recorded redistribution rights.
+  Fixture tests and offline extraction require no CEF execution.
+
+### Evidence and limitations
+
+- Earlier identified development candidates have bounded maintainer Solo,
+  two-player admission/creation/appearance/seating/movement/save-load and
+  presentation acceptance. STATUS preserves their scope; none is a test of
+  this new build/archive. Historical receipts removed during cleanup are not
+  reconstructed or claimed to remain available.
+- Collective Recovery and multiplayer World Sync still lack complete 1.7
+  qualification. Valen DialogueProgress is not ported. CK write/save/reopen
+  remains untested and waived for migration, not validated for authoring.
+- The 21-class/v1 program, housing, wider Valen matrix and full campaign remain
+  unfinished. Critical progression/corruption defects cannot be waived merely
+  by calling this an Alpha. Release disposition and essential evidence remain
+  required under RELEASE_PROCESS.
+- Exact-build peer matching remains mandatory. No mixed 0.4/0.5 peers, 1.6-save
+  migration or downgrade of 0.5 campaign/save state is supported by evidence.
+- External EEK assets/textures are not redistributed; clean-install availability
+  must be checked. Unintegrated private Valen voices and private intro are absent.
+- See [candidate notes](docs/production/releases/0.5.0-alpha.1.md) and
+  [preparation gates](docs/production/releases/0.5.0-alpha.1-preparation.md).
 
 ## [0.4.0-alpha.1] - 2026-09-19
 

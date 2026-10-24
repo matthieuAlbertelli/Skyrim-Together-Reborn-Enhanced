@@ -16,7 +16,6 @@
 
 #include <Services/OverlayService.h>
 #include <Services/ImguiService.h>
-#include <Services/DiscordService.h>
 #include <Services/CampaignRuntimeGateService.h>
 
 #include <NvidiaUtil.h>
@@ -54,7 +53,6 @@ void* TiltedOnlineApp::GetMainAddress() const
 bool TiltedOnlineApp::BeginMain()
 {
     World::Create();
-    World::Get().ctx().at<DiscordService>().Init();
     World::Get().ctx().emplace<RenderSystemD3D11>(World::Get().ctx().at<OverlayService>(), World::Get().ctx().at<ImguiService>());
 
     // TODO: Figure out a way to un-blacklist NvCamera64.dll (see DllBlocklist.cpp). Then this hack can be removed

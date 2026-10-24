@@ -80,3 +80,20 @@ The carried upstream base remained unchanged:
 this release. The immutable annotated tag and published GitHub Release are the
 authoritative identity of this player release. Subsequent documentation commits
 on main do not move the tag or replace any published asset.
+
+
+## Unpublished 0.5.0-alpha.1 candidate identity (2026-10-23)
+
+- Intended product/tag: `0.5.0-alpha.1` / `stre-v0.5.0-alpha.1`; neither a tag nor
+  a release is created by this preparation.
+- Verified main base: `968badb4b91e4a40c686fb8128e7496d2ef89c41`.
+- Accepted bilingual documentation tip retained without rewriting:
+  `c50cf8d25b987b3e456fcbb4e7035165c4cb0e21` (four README commits above main).
+- Upstream base remains `ca3f32348d3217e766b45afa9cce8a645f3a6444`;
+  no upstream integration is performed.
+- Identity/ancestry review date: **2026-10-23**, not a publication date.
+- The local frozen build SHA and artifact hashes belong to the preparation
+  evidence. The future merged/tagged SHA is unknown and must be verified after
+  approval; a local PREPACKAGE must never be relabelled as that tagged artifact.
+
+The latest published release remains the immutable 0.4.0-alpha.1 above.
